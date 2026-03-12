@@ -15,7 +15,17 @@
       "Bash(ls /Users/mattihernesniemi/astro-cms/src/*.d.ts 2>/dev/null; cat /Users/mattihernesniemi/astro-cms/tsconfig.json 2>/dev/null)",
       "Bash(pkill -f \"astro\" 2>/dev/null; sleep 1; echo \"cleaned\")",
       "Bash(grep -r \"cache\" /Users/mattihernesniemi/astro-cms/node_modules/.pnpm/astro@*/node_modules/astro/dist/types/public/config.d.ts 2>/dev/null | head -5 || echo \"Checking astro version...\"\nnpx astro --version 2>/dev/null)",
-      "Bash(pkill -f \"astro\" 2>/dev/null; sleep 1; echo \"done\")"
+      "Bash(pkill -f \"astro\" 2>/dev/null; sleep 1; echo \"done\")",
+      "WebSearch",
+      "WebFetch(domain:payloadcms.com)",
+      "WebFetch(domain:www.buildwithmatija.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:ryanschiang.com)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:orm.drizzle.team)",
+      "Bash(sqlite3 data/cms.db \".schema cms_posts\" 2>&1)",
+      "Bash(sqlite3 data/cms.db \".schema cms_posts_translations\" 2>&1)",
+      "Bash(sqlite3 data/cms.db \".schema cms_authors\" 2>&1)"
     ]
   }
 }

@@ -36,6 +36,8 @@ export default defineConfig({
       timestamps: true,
       fields: {
         name: fields.text({ required: true }),
+        test: fields.text({ translatable: true }),
+        description: fields.text({ translatable: true }),
         slug: fields.slug({ from: "name", unique: true }),
         role: fields.text({ required: true }),
         bio: fields.richText({ translatable: true }),
@@ -80,6 +82,9 @@ export default defineConfig({
         title: fields.text({
           required: true,
           indexed: true,
+          translatable: true,
+        }),
+        description: fields.text({
           translatable: true,
         }),
         slug: fields.slug({ from: "title", unique: true, translatable: true }),

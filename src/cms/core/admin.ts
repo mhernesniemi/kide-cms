@@ -82,7 +82,59 @@ export const formatFieldValue = (
 export const getListColumns = (collection: CollectionConfig, viewConfig?: { columns?: string[] }) =>
   viewConfig?.columns?.length ? viewConfig.columns : ["title" in collection.fields ? "title" : Object.keys(collection.fields)[0], "_status", "_updatedAt"];
 
-export const getFieldSets = (collection: CollectionConfig, viewConfig?: { layout?: Array<{ fields: string[]; width?: string }> }) =>
-  viewConfig?.layout?.length
-    ? viewConfig.layout
-    : [{ fields: Object.keys(collection.fields), width: "full" }];
+export const getFieldSets = (collection: CollectionConfig, viewConfig?: { layout?: Array<{ fields: string[]; width?: string }> }) => {
+  if (!viewConfig?.layout?.length) {
+    return [{ fields: Object.keys(collection.fields), width: "full" }];
+  }
+
+  const allFields = Object.keys(collection.fields);
+  const listedFields = new Set(viewConfig.layout.flatMap((set) => set.fields));
+  const unlisted = allFields.filter((f) => !listedFields.has(f));
+
+  if (unlisted.length === 0) return viewConfig.layout;
+
+  // Insert unlisted fields in config-defined order next to their nearest neighbor
+  const layout = viewConfig.layout.map((set) => ({ ...set, fields: [...set.fields] }));
+
+  for (const field of unlisted) {
+    const configIndex = allFields.indexOf(field);
+
+    // Walk backwards in config order to find the nearest preceding field that's already placed
+    let inserted = false;
+    for (let i = configIndex - 1; i >= 0; i--) {
+      const prev = allFields[i];
+      for (const set of layout) {
+        const pos = set.fields.indexOf(prev);
+        if (pos !== -1) {
+          set.fields.splice(pos + 1, 0, field);
+          inserted = true;
+          break;
+        }
+      }
+      if (inserted) break;
+    }
+
+    // No preceding neighbor found — insert before the nearest following field
+    if (!inserted) {
+      for (let i = configIndex + 1; i < allFields.length; i++) {
+        const next = allFields[i];
+        for (const set of layout) {
+          const pos = set.fields.indexOf(next);
+          if (pos !== -1) {
+            set.fields.splice(pos, 0, field);
+            inserted = true;
+            break;
+          }
+        }
+        if (inserted) break;
+      }
+    }
+
+    // Fallback: add to first group
+    if (!inserted) {
+      layout[0].fields.push(field);
+    }
+  }
+
+  return layout;
+};

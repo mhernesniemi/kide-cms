@@ -56,20 +56,11 @@ const generateColumnDef = (fieldName: string, field: FieldConfig): string => {
 const generateMainTable = (collection: CollectionConfig): string => {
   const tableName = `cms_${snakeCase(collection.slug)}`;
   const varName = `cms${pascalCase(collection.slug)}`;
-  const translatableFields = new Set(getTranslatableFieldNames(collection));
-
   const columns: string[] = [
     `  _id: text("_id").primaryKey(),`,
   ];
 
   for (const [fieldName, field] of Object.entries(collection.fields)) {
-    if (translatableFields.has(fieldName) && config.locales) continue;
-    columns.push(generateColumnDef(fieldName, field));
-  }
-
-  // Translatable fields also go on the main table (default locale values)
-  for (const [fieldName, field] of Object.entries(collection.fields)) {
-    if (!translatableFields.has(fieldName) || !config.locales) continue;
     columns.push(generateColumnDef(fieldName, field));
   }
 

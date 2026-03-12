@@ -67,6 +67,7 @@ if ((kind === "post" || kind === "page") && !document) {
               <div class="story-card__body">
                 <span class="badge">{String(post.category ?? "Editorial")}</span>
                 <h2>{String(post.title)}</h2>
+                {post.description && <p class="story-card__description">{String(post.description)}</p>}
                 <p>{String(post.excerpt ?? "")}</p>
               </div>
             </a>
@@ -81,6 +82,7 @@ if ((kind === "post" || kind === "page") && !document) {
         <div class="article-header">
           <span class="badge">{String(document.category ?? "Editorial")}</span>
           <h1>{String(document.title)}</h1>
+          {document.description && <p class="article-description">{String(document.description)}</p>}
           <p>{String(document.excerpt ?? "")}</p>
         </div>
         <RichTextContent content={document.body} />

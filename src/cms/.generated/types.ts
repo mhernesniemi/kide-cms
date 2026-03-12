@@ -25,6 +25,8 @@ export type UsersDocument = UsersInput & {
 
 export type AuthorsInput = {
   name: string;
+  test?: string;
+  description?: string;
   slug?: string;
   role: string;
   bio?: RichTextDocument;
@@ -32,6 +34,8 @@ export type AuthorsInput = {
 };
 
 export type AuthorsTranslationInput = {
+  test?: string;
+  description?: string;
   bio?: RichTextDocument;
 };
 
@@ -46,6 +50,7 @@ export type AuthorsDocument = AuthorsInput & {
 
 export type PostsInput = {
   title: string;
+  description?: string;
   slug?: string;
   excerpt?: string;
   body?: RichTextDocument;
@@ -59,6 +64,7 @@ export type PostsInput = {
 
 export type PostsTranslationInput = {
   title?: string;
+  description?: string;
   slug?: string;
   excerpt?: string;
   body?: RichTextDocument;

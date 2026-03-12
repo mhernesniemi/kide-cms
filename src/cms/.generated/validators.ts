@@ -17,6 +17,8 @@ export const UsersUpdateSchema = z.object({
 
 export const AuthorsCreateSchema = z.object({
   name: z.string(),
+  test: z.string().optional(),
+  description: z.string().optional(),
   slug: z.string().optional(),
   role: z.string(),
   bio: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
@@ -25,6 +27,8 @@ export const AuthorsCreateSchema = z.object({
 
 export const AuthorsUpdateSchema = z.object({
   name: z.string().optional(),
+  test: z.string().optional(),
+  description: z.string().optional(),
   slug: z.string().optional(),
   role: z.string().optional(),
   bio: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
@@ -33,6 +37,7 @@ export const AuthorsUpdateSchema = z.object({
 
 export const PostsCreateSchema = z.object({
   title: z.string(),
+  description: z.string().optional(),
   slug: z.string().optional(),
   excerpt: z.string().max(300).optional(),
   body: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
@@ -46,6 +51,7 @@ export const PostsCreateSchema = z.object({
 
 export const PostsUpdateSchema = z.object({
   title: z.string().optional(),
+  description: z.string().optional(),
   slug: z.string().optional(),
   excerpt: z.string().max(300).optional(),
   body: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),

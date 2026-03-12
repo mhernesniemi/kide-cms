@@ -84,6 +84,7 @@ const latestPosts = await cms.posts.find({
             <div class="story-card__body">
               <span class="badge">{String(post.category ?? "Editorial")}</span>
               <h3>{String(post.title)}</h3>
+              {post.description && <p class="story-card__description">{String(post.description)}</p>}
               <p>{String(post.excerpt ?? "")}</p>
             </div>
           </a>
