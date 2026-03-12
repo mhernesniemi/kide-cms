@@ -4,7 +4,7 @@ export default defineConfig({
   database: { dialect: "sqlite" },
   locales: {
     default: "en",
-    supported: ["en", "fi", "sv"],
+    supported: ["en", "fi"],
   },
   collections: [
     defineCollection({
@@ -15,7 +15,10 @@ export default defineConfig({
       fields: {
         email: fields.email({ required: true, unique: true }),
         name: fields.text({ required: true }),
-        role: fields.select({ options: ["admin", "editor", "viewer"], defaultValue: "editor" }),
+        role: fields.select({
+          options: ["admin", "editor", "viewer"],
+          defaultValue: "editor",
+        }),
         password: fields.text({ required: true }),
       },
       seed: [
@@ -51,11 +54,18 @@ export default defineConfig({
             children: [
               {
                 type: "paragraph",
-                children: [{ type: "text", value: "Leads the editorial direction across product, design, and growth." }],
+                children: [
+                  {
+                    type: "text",
+                    value:
+                      "Leads the editorial direction across product, design, and growth.",
+                  },
+                ],
               },
             ],
           },
-          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
+          avatar:
+            "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
         },
       ],
     }),
@@ -67,11 +77,21 @@ export default defineConfig({
       drafts: true,
       versions: { max: 20 },
       fields: {
-        title: fields.text({ required: true, indexed: true, translatable: true }),
+        title: fields.text({
+          required: true,
+          indexed: true,
+          translatable: true,
+        }),
         slug: fields.slug({ from: "title", unique: true, translatable: true }),
-        excerpt: fields.text({ maxLength: 300, translatable: true, admin: { rows: 3 } }),
+        excerpt: fields.text({
+          maxLength: 300,
+          translatable: true,
+          admin: { rows: 3 },
+        }),
         body: fields.richText({ translatable: true, admin: { rows: 14 } }),
-        cover: fields.image({ admin: { placeholder: "/images/post-cover.jpg" } }),
+        cover: fields.image({
+          admin: { placeholder: "/images/post-cover.jpg" },
+        }),
         category: fields.select({
           options: ["Product", "Design", "Engineering", "Business"],
           defaultValue: "Product",
@@ -86,9 +106,11 @@ export default defineConfig({
       },
       seed: [
         {
-          title: "Launch faster with an editorial system your team can actually own",
+          title:
+            "Launch faster with an editorial system your team can actually own",
           slug: "launch-faster-with-an-editorial-system-your-team-can-actually-own",
-          excerpt: "A code-first CMS can feel deeply custom without becoming fragile. Here is what that looks like in practice.",
+          excerpt:
+            "A code-first CMS can feel deeply custom without becoming fragile. Here is what that looks like in practice.",
           body: {
             type: "root",
             children: [
@@ -119,12 +141,14 @@ export default defineConfig({
               },
             ],
           },
-          cover: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80",
+          cover:
+            "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80",
           category: "Engineering",
           author: "author_maya",
           tags: ["astro", "cms", "content systems"],
           metadata: {
-            ogTitle: "Launch faster with an editorial system your team can actually own",
+            ogTitle:
+              "Launch faster with an editorial system your team can actually own",
           },
           sortOrder: 10,
           _status: "published",
@@ -132,9 +156,11 @@ export default defineConfig({
             {
               locale: "fi",
               values: {
-                title: "Julkaise nopeammin sisaltojarjestelmalla jonka tiimi oikeasti omistaa",
+                title:
+                  "Julkaise nopeammin sisaltojarjestelmalla jonka tiimi oikeasti omistaa",
                 slug: "julkaise-nopeammin-sisaltojarjestelmalla-jonka-tiimi-oikeasti-omistaa",
-                excerpt: "Koodilahtoinen CMS voi tuntua aidosti omalta ilman haurasta monimutkaisuutta.",
+                excerpt:
+                  "Koodilahtoinen CMS voi tuntua aidosti omalta ilman haurasta monimutkaisuutta.",
               },
             },
           ],
@@ -180,13 +206,16 @@ export default defineConfig({
         {
           title: "AstroCMS",
           slug: "home",
-          summary: "A monolithic, code-first CMS experience built inside Astro.",
+          summary:
+            "A monolithic, code-first CMS experience built inside Astro.",
           layout: "landing",
-          heroImage: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80",
+          heroImage:
+            "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80",
           blocks: [
             {
               type: "hero",
-              heading: "Operate your content system in code, not in a maze of settings",
+              heading:
+                "Operate your content system in code, not in a maze of settings",
               eyebrow: "Astro-native CMS",
               body: "Define collections once, manage content in an admin, and publish straight from the same app.",
               ctaLabel: "Open admin",
@@ -219,7 +248,8 @@ export default defineConfig({
               values: {
                 title: "AstroCMS",
                 slug: "etusivu",
-                summary: "Astroon rakennettu monoliittinen ja koodilahtoinen CMS-kokemus.",
+                summary:
+                  "Astroon rakennettu monoliittinen ja koodilahtoinen CMS-kokemus.",
               },
             },
           ],
