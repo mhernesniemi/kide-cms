@@ -1,7 +1,6 @@
 ---
 import {
   ArrowUpRight,
-  Boxes,
   Clock3,
   FileText,
   Globe2,
@@ -9,22 +8,21 @@ import {
   Newspaper,
   PencilRuler,
   Plus,
-  SquarePen,
 } from "lucide-react";
 
-import FieldControl from "../../components/admin/FieldControl.astro";
-import AdminCard from "../../components/admin/AdminCard.astro";
-import { Badge } from "../../components/admin/ui/badge";
-import { buttonVariants } from "../../components/admin/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/admin/ui/card";
-import { Separator } from "../../components/admin/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/admin/ui/table";
-import config from "../../cms/collections.config";
-import views from "../../cms/admin/views";
-import { cms } from "../../cms/.generated/api";
-import { formatFieldValue, getFieldSets, getListColumns, humanize, resolveAdminRoute } from "../../cms/core/admin";
-import AdminLayout from "../../layouts/AdminLayout.astro";
-import { cn } from "../../lib/utils";
+import AdminCard from "@/components/admin/AdminCard.astro";
+import DocumentsDataTable from "@/components/admin/DocumentsDataTable";
+import FieldControl from "@/components/admin/FieldControl.astro";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import config from "@/cms/collections.config";
+import views from "@/cms/admin/views";
+import { cms } from "@/cms/.generated/api";
+import { formatFieldValue, getFieldSets, getListColumns, humanize, resolveAdminRoute } from "@/cms/core/admin";
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { cn } from "@/lib/utils";
 
 export const prerender = false;
 
@@ -35,7 +33,6 @@ const locales = localeConfig?.supported ?? [];
 const defaultLocale = localeConfig?.default ?? "en";
 const requestedLocale = Astro.url.searchParams.get("locale") ?? defaultLocale;
 
-const theme = (views as Record<string, any>).theme ?? {};
 const getCollectionView = (slug: string) => (views as Record<string, any>)[slug] ?? {};
 const getFormAction = (collectionSlug: string, documentId?: string) =>
   documentId ? `/api/cms/${collectionSlug}/${documentId}` : `/api/cms/${collectionSlug}`;
@@ -46,21 +43,21 @@ const collectionIconMap = {
   authors: PencilRuler,
 };
 
-const getCollectionIcon = (slug: string) => collectionIconMap[slug as keyof typeof collectionIconMap] ?? Boxes;
-const getStatusVariant = (status?: string) => (status === "published" ? "success" : "outline");
+const getCollectionIcon = (slug: string) => collectionIconMap[slug as keyof typeof collectionIconMap] ?? FileText;
+const getStatusVariant = (status?: string) => (status === "published" ? "default" : "secondary");
 const getFieldSetTitle = (fields: string[], index: number) => {
-  if (fields.includes("body") || fields.includes("blocks")) return "Body";
+  if (fields.includes("body") || fields.includes("blocks")) return "Content";
   if (fields.some((field) => ["category", "author", "tags", "cover", "metadata", "sortOrder", "layout", "heroImage"].includes(field))) {
     return "Settings";
   }
-  return index === 0 ? "Content" : "Configuration";
+  return index === 0 ? "Details" : "Configuration";
 };
 const getFieldSetDescription = (fields: string[]) => {
-  if (fields.includes("body") || fields.includes("blocks")) return "Long-form content and presentation blocks.";
+  if (fields.includes("body") || fields.includes("blocks")) return "Long-form content and structured presentation fields.";
   if (fields.some((field) => ["category", "author", "tags", "cover", "metadata", "sortOrder", "layout", "heroImage"].includes(field))) {
-    return "Publishing metadata and structural settings.";
+    return "Metadata, taxonomy, and publication settings.";
   }
-  return "Core document fields.";
+  return "Core document fields from the collection schema.";
 };
 
 let collection: any = null;
@@ -70,7 +67,6 @@ let docs: Array<Record<string, unknown>> = [];
 let doc: Record<string, unknown> | null = null;
 let baseDoc: Record<string, unknown> | null = null;
 let relationOptionsByField: Record<string, Array<{ value: string; label: string }>> = {};
-let relationLabelMapByField: Record<string, Record<string, string>> = {};
 let versions: Array<{ version: number; createdAt: string }> = [];
 let summaries: Array<Record<string, unknown>> = [];
 
@@ -106,10 +102,6 @@ if (route.kind === "dashboard") {
         value: String(item._id),
         label: String(item.title ?? item.name ?? item.slug ?? item._id),
       }));
-
-      relationLabelMapByField[fieldName] = Object.fromEntries(
-        relationOptionsByField[fieldName].map((option) => [option.value, option.label]),
-      );
     }
   }
 
@@ -141,89 +133,88 @@ const translatableFields =
         .filter(([, field]: [string, any]) => field.translatable)
         .map(([fieldName]) => fieldName)
     : [];
-
 const translationMode = !!collection && route.kind === "edit" && selectedLocale !== defaultLocale && translatableFields.length > 0;
 const sharedFields = collection ? Object.keys(collection.fields).filter((fieldName) => !translatableFields.includes(fieldName)) : [];
 const fieldSets = collection ? getFieldSets(collection, viewConfig.edit) : [];
 const primaryFieldSets = fieldSets.filter((set: { width?: string }) => set.width !== "1/3");
-const sidebarFieldSets =
-  fieldSets.filter((set: { width?: string }) => set.width === "1/3").length > 0
-    ? fieldSets.filter((set: { width?: string }) => set.width === "1/3")
-    : fieldSets.length > 1
-      ? fieldSets.slice(1)
-      : [];
+const sidebarFieldSets = fieldSets.filter((set: { width?: string }) => set.width === "1/3");
+const mainFieldSets = primaryFieldSets.length > 0 ? primaryFieldSets : fieldSets.slice(0, 1);
+const effectiveSidebarFieldSets = sidebarFieldSets.length > 0 ? sidebarFieldSets : fieldSets.slice(mainFieldSets.length);
 const listColumns = collection ? getListColumns(collection, viewConfig.list) : [];
 const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
 const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
 const totalDocuments = summaries.reduce((sum, summary) => sum + Number(summary.count), 0);
+
+const tableRows =
+  collection && route.kind === "list"
+    ? docs.map((entry) => ({
+        id: String(entry._id),
+        editHref: `/admin/${collection.slug}/${entry._id}`,
+        status: String(entry._status ?? "draft"),
+        locales: [defaultLocale, ...(Array.isArray(entry._availableLocales) ? entry._availableLocales.map((locale) => String(locale)) : [])],
+        searchText: String(entry.title ?? entry.name ?? entry.slug ?? entry._id ?? ""),
+        values: Object.fromEntries(
+          listColumns.map((column) => [
+            column,
+            column.startsWith("_")
+              ? String(entry[column] ?? "—")
+              : formatFieldValue(collection.fields[column], entry[column]),
+          ]),
+        ),
+      }))
+    : [];
+
+const collectionStats =
+  collection && route.kind === "list"
+    ? [
+        { label: "Documents", value: String(docs.length) },
+        { label: "Locales", value: String(locales.length || 1) },
+        { label: "Draft workflow", value: collection.drafts ? "Enabled" : "Disabled" },
+      ]
+    : [];
 ---
 
 <AdminLayout
   title={route.kind === "dashboard" ? "AstroCMS Admin" : `${collection?.labels?.plural ?? "Admin"} | AstroCMS`}
   collections={config.collections}
   activeCollection={route.kind === "dashboard" ? null : route.collectionSlug}
-  theme={theme}
 >
   {route.kind === "dashboard" && (
     <section class="space-y-6">
-      <div class="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[linear-gradient(135deg,#f8fbff_0%,#ffffff_62%)] shadow-sm">
-        <div class="grid gap-6 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_16rem] lg:px-8">
-          <div class="space-y-4">
-            <div class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-blue-700">
-              <Boxes className="size-3.5" />
-              Runtime admin
-            </div>
-            <div class="space-y-3">
-              <h1 class="text-3xl font-bold tracking-tight text-[var(--admin-foreground)] sm:text-4xl">
-                Content operations with the same feel as your commerce admin
-              </h1>
-              <p class="max-w-3xl text-base leading-7 text-[var(--admin-foreground-secondary)]">
-                The admin now uses a Tailwind + shadcn-style system inspired by <code class="rounded bg-slate-100 px-1.5 py-0.5 text-sm">hoikka</code>:
-                restrained blue accents, calm surfaces, compact controls, and a more serious dashboard rhythm.
-              </p>
-            </div>
-          </div>
-          <div class="grid gap-3 rounded-2xl bg-zinc-950 p-5 text-white shadow-sm">
-            <div>
-              <div class="text-xs uppercase tracking-[0.18em] text-blue-400">Collections</div>
-              <div class="mt-2 text-4xl font-semibold">{config.collections.length}</div>
-            </div>
-            <Separator className="bg-zinc-800" />
-            <div>
-              <div class="text-xs uppercase tracking-[0.18em] text-blue-400">Documents</div>
-              <div class="mt-2 text-2xl font-semibold">{totalDocuments}</div>
-            </div>
-          </div>
+      <div class="flex flex-col gap-3">
+        <p class="text-sm font-medium text-muted-foreground">CMS admin</p>
+        <div class="space-y-2">
+          <h1 class="text-3xl font-semibold tracking-tight">Content operations</h1>
+          <p class="max-w-3xl text-sm leading-6 text-muted-foreground">
+            Runtime-generated views, typed local API access, and a neutral editing surface built with actual shadcn/ui components.
+          </p>
         </div>
       </div>
 
-      <div class="grid gap-4 md:grid-cols-3">
+      <div class="grid gap-4 md:grid-cols-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Single schema</CardTitle>
-            <CardDescription>The admin remains runtime-driven from the collection config.</CardDescription>
+          <CardHeader className="gap-0">
+            <CardDescription>Total documents</CardDescription>
+            <CardTitle className="text-3xl">{totalDocuments}</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0 text-sm text-[var(--admin-foreground-secondary)]">
-            Add a field or collection and the control surface follows without hand-maintained page duplication.
-          </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Local API</CardTitle>
-            <CardDescription>Admin actions still talk to the same generated content runtime.</CardDescription>
+          <CardHeader className="gap-0">
+            <CardDescription>Collections</CardDescription>
+            <CardTitle className="text-3xl">{config.collections.length}</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0 text-sm text-[var(--admin-foreground-secondary)]">
-            CRUD, publishing, versions, and translations all stay in plain TypeScript instead of a scattered endpoint layer.
-          </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Reference-matched</CardTitle>
-            <CardDescription>Sidebar, card structure, and table styling echo the `hoikka` dashboard.</CardDescription>
+          <CardHeader className="gap-0">
+            <CardDescription>Locales</CardDescription>
+            <CardTitle className="text-3xl">{locales.length || 1}</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0 text-sm text-[var(--admin-foreground-secondary)]">
-            The admin now feels closer to your ecommerce tooling rather than a separate experimental interface.
-          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="gap-0">
+            <CardDescription>Storage</CardDescription>
+            <CardTitle className="text-xl">JSON runtime</CardTitle>
+          </CardHeader>
         </Card>
       </div>
 
@@ -231,45 +222,47 @@ const totalDocuments = summaries.reduce((sum, summary) => sum + Number(summary.c
         {summaries.map((summary) => {
           const Icon = getCollectionIcon(summary.collection.slug);
           return (
-            <Card className="overflow-hidden">
-              <CardHeader className="flex flex-row items-start justify-between gap-4">
-                <div class="space-y-2">
-                  <div class="inline-flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-                    <Icon className="size-4" />
-                  </div>
-                  <div>
-                    <CardTitle>{summary.collection.labels.plural}</CardTitle>
-                    <CardDescription>{summary.collection.slug}</CardDescription>
-                  </div>
-                </div>
-                <Badge variant="outline">{summary.count} items</Badge>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div class="space-y-3">
-                  {summary.items.length > 0 ? (
-                    summary.items.map((item) => (
-                      <a
-                        href={`/admin/${summary.collection.slug}/${item._id}`}
-                        class="flex items-center justify-between gap-3 rounded-lg border border-[var(--admin-border)] px-3 py-3 transition-colors hover:bg-[var(--admin-hover)]"
-                      >
-                        <div class="min-w-0">
-                          <div class="truncate font-medium text-[var(--admin-foreground)]">
-                            {String(item.title ?? item.name ?? item.slug ?? item._id)}
-                          </div>
-                          <div class="mt-1 text-xs text-[var(--admin-foreground-tertiary)]">{String(item._updatedAt ?? "")}</div>
-                        </div>
-                        <Badge variant={getStatusVariant(String(item._status ?? "draft"))}>{String(item._status ?? "draft")}</Badge>
-                      </a>
-                    ))
-                  ) : (
-                    <div class="rounded-lg border border-dashed border-[var(--admin-border)] px-4 py-6 text-sm text-[var(--admin-foreground-tertiary)]">
-                      No documents yet.
+            <Card>
+              <CardHeader>
+                <div class="flex items-start justify-between gap-4">
+                  <div class="space-y-2">
+                    <div class="flex size-9 items-center justify-center rounded-lg border bg-muted/40">
+                      <Icon className="size-4" />
                     </div>
-                  )}
+                    <div>
+                      <CardTitle>{summary.collection.labels.plural}</CardTitle>
+                      <CardDescription>{summary.collection.slug}</CardDescription>
+                    </div>
+                  </div>
+                  <Badge variant="outline">{summary.count} items</Badge>
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {summary.items.length > 0 ? (
+                  summary.items.map((item) => (
+                    <a
+                      href={`/admin/${summary.collection.slug}/${item._id}`}
+                      class="flex items-center justify-between gap-3 rounded-lg border px-3 py-3 transition-colors hover:bg-muted/50"
+                    >
+                      <div class="min-w-0">
+                        <div class="truncate font-medium">{String(item.title ?? item.name ?? item.slug ?? item._id)}</div>
+                        <div class="mt-1 text-xs text-muted-foreground">{String(item._updatedAt ?? "")}</div>
+                      </div>
+                      <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
+                    </a>
+                  ))
+                ) : (
+                  <div class="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+                    No entries yet.
+                  </div>
+                )}
                 <div class="flex gap-2">
-                  <a href={`/admin/${summary.collection.slug}`} class={cn(buttonVariants({ variant: "outline", size: "sm" }), "flex-1")}>Open</a>
-                  <a href={`/admin/${summary.collection.slug}/new`} class={cn(buttonVariants({ size: "sm" }), "flex-1")}>New</a>
+                  <a href={`/admin/${summary.collection.slug}`} class={cn(buttonVariants({ variant: "outline", size: "sm" }), "flex-1")}>
+                    Open
+                  </a>
+                  <a href={`/admin/${summary.collection.slug}/new`} class={cn(buttonVariants({ size: "sm" }), "flex-1")}>
+                    New
+                  </a>
                 </div>
               </CardContent>
             </Card>
@@ -281,21 +274,19 @@ const totalDocuments = summaries.reduce((sum, summary) => sum + Number(summary.c
 
   {route.kind !== "dashboard" && collection && (
     <section class="space-y-6">
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div class="space-y-3">
-          <div class="inline-flex items-center gap-2 rounded-full bg-[var(--admin-muted)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-[var(--admin-foreground-tertiary)]">
-            {route.kind === "list" ? "Collection view" : "Document editor"}
-          </div>
+      <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div class="space-y-2">
+          <div class="text-sm font-medium text-muted-foreground">{collection.slug}</div>
           <div class="space-y-1">
-            <h1 class="text-3xl font-bold tracking-tight">
+            <h1 class="text-3xl font-semibold tracking-tight">
               {route.kind === "list" && collection.labels.plural}
               {route.kind === "new" && `New ${collection.labels.singular}`}
               {route.kind === "edit" && String(doc?.title ?? doc?.name ?? doc?.slug ?? collection.labels.singular)}
             </h1>
-            <p class="text-base text-[var(--admin-foreground-secondary)]">
-              {route.kind === "list" && `Manage every ${collection.labels.plural.toLowerCase()} document from one table.`}
-              {route.kind === "new" && "Create a new document using the schema-defined form."}
-              {route.kind === "edit" && "Edit content, metadata, versions, and translations in one workspace."}
+            <p class="max-w-3xl text-sm leading-6 text-muted-foreground">
+              {route.kind === "list" && "Filter, inspect, and edit schema-driven content from a proper data table."}
+              {route.kind === "new" && "Create a new document using the collection schema."}
+              {route.kind === "edit" && "Edit structured content, metadata, locale variants, and version history in one workspace."}
             </p>
           </div>
         </div>
@@ -307,7 +298,7 @@ const totalDocuments = summaries.reduce((sum, summary) => sum + Number(summary.c
             </a>
           )}
           {route.kind === "list" && (
-            <a href={`/admin/${collection.slug}/new`} class={buttonVariants({ variant: "default" })}>
+            <a href={`/admin/${collection.slug}/new`} class={buttonVariants({ size: "sm" })}>
               <Plus className="size-4" />
               New {collection.labels.singular}
             </a>
@@ -317,101 +308,32 @@ const totalDocuments = summaries.reduce((sum, summary) => sum + Number(summary.c
 
       {route.kind === "list" && (
         <>
-          <div class="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>Total documents</CardDescription>
-                <CardTitle className="text-3xl">{docs.length}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>Locales enabled</CardDescription>
-                <CardTitle className="flex items-center gap-2 text-3xl">
-                  <Languages className="size-5 text-blue-600" />
-                  {locales.length || 1}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>Draft workflow</CardDescription>
-                <CardTitle className="text-3xl">{collection.drafts ? "On" : "Off"}</CardTitle>
-              </CardHeader>
-            </Card>
+          <div class="grid gap-4 sm:grid-cols-3">
+            {collectionStats.map((item) => (
+              <Card>
+                <CardHeader className="gap-0">
+                  <CardDescription>{item.label}</CardDescription>
+                  <CardTitle className="text-2xl">{item.value}</CardTitle>
+                </CardHeader>
+              </Card>
+            ))}
           </div>
 
           <Card>
-            <CardHeader className="flex flex-col gap-2 border-b border-[var(--admin-border)] md:flex-row md:items-end md:justify-between">
-              <div>
-                <CardTitle>{collection.labels.plural}</CardTitle>
-                <CardDescription>
-                  Columns and sort behavior are coming from the admin view config, styled to match the `hoikka` data tables.
-                </CardDescription>
-              </div>
-              <a href={`/admin/${collection.slug}/new`} class={buttonVariants({ variant: "outline", size: "sm" })}>
-                <Plus className="size-4" />
-                Add {collection.labels.singular}
-              </a>
+            <CardHeader className="border-b">
+              <CardTitle>{collection.labels.plural}</CardTitle>
+              <CardDescription>
+                Interactive data table powered by TanStack Table and shadcn/ui primitives.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    {listColumns.map((column) => (
-                      <TableHead>{humanize(column)}</TableHead>
-                    ))}
-                    <TableHead>Locales</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {docs.length > 0 ? (
-                    docs.map((entry) => (
-                      <TableRow>
-                        {listColumns.map((column) => (
-                          <TableCell>
-                            {column === "_status" ? (
-                              <Badge variant={getStatusVariant(String(entry[column] ?? "draft"))}>{String(entry[column] ?? "draft")}</Badge>
-                            ) : column.startsWith("_") ? (
-                              String(entry[column] ?? "—")
-                            ) : (
-                              <span class="font-medium text-[var(--admin-foreground)]">
-                                {formatFieldValue(collection.fields[column], entry[column], relationLabelMapByField[column])}
-                              </span>
-                            )}
-                          </TableCell>
-                        ))}
-                        <TableCell>
-                          <div class="flex flex-wrap gap-2">
-                            <span class="rounded-full bg-[var(--admin-muted)] px-2.5 py-1 text-xs font-medium text-[var(--admin-foreground-secondary)]">
-                              {defaultLocale}
-                            </span>
-                            {Array.isArray(entry._availableLocales) &&
-                              entry._availableLocales.map((locale) => (
-                                <span class="rounded-full border border-[var(--admin-border)] px-2.5 py-1 text-xs font-medium text-[var(--admin-foreground-tertiary)]">
-                                  {String(locale)}
-                                </span>
-                              ))}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <a href={`/admin/${collection.slug}/${entry._id}`} class={buttonVariants({ variant: "ghost", size: "sm" })}>
-                            <SquarePen className="size-4" />
-                            Edit
-                          </a>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={listColumns.length + 2} className="px-6 py-12 text-center text-[var(--admin-foreground-tertiary)]">
-                        No documents yet. Create the first {collection.labels.singular.toLowerCase()} to populate this table.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+            <CardContent className="pt-4">
+              <DocumentsDataTable
+                client:load
+                title={collection.labels.plural}
+                columns={listColumns.map((column) => ({ key: column, label: humanize(column) }))}
+                data={tableRows}
+                searchPlaceholder={`Filter ${collection.labels.plural.toLowerCase()}...`}
+              />
             </CardContent>
           </Card>
         </>
@@ -436,14 +358,14 @@ const totalDocuments = summaries.reduce((sum, summary) => sum + Number(summary.c
             </div>
           )}
 
-          <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]">
             <div class="space-y-6">
               {!translationMode && (
                 <form method="post" action={getFormAction(collection.slug, route.kind === "edit" ? route.documentId : undefined)} class="space-y-6">
                   <input type="hidden" name="_action" value={route.kind === "new" ? "create" : "update"} />
                   <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
 
-                  {(primaryFieldSets.length > 0 ? primaryFieldSets : fieldSets).map((set, index) => (
+                  {mainFieldSets.map((set, index) => (
                     <AdminCard title={getFieldSetTitle(set.fields, index)} description={getFieldSetDescription(set.fields)}>
                       <div class="grid gap-5">
                         {set.fields.map((fieldName) => (
@@ -459,10 +381,10 @@ const totalDocuments = summaries.reduce((sum, summary) => sum + Number(summary.c
                   ))}
 
                   <Card>
-                    <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-                      <div class="text-sm text-[var(--admin-foreground-tertiary)]">
-                        Saves go through the generated local API and preserve version history.
-                      </div>
+                    <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+                      <p class="text-sm text-muted-foreground">
+                        Saves go through the generated local API and preserve document versions automatically.
+                      </p>
                       <div class="flex flex-wrap gap-2">
                         <button class={buttonVariants({ variant: "outline" })} type="submit" name="_intent" value="save">
                           Save
@@ -490,16 +412,14 @@ const totalDocuments = summaries.reduce((sum, summary) => sum + Number(summary.c
 
               {translationMode && (
                 <>
-                  <Card className="border-blue-100 bg-blue-50/70">
-                    <CardContent className="flex items-start gap-3 p-4">
-                      <Languages className="mt-0.5 size-5 text-blue-600" />
-                      <div>
-                        <div class="font-medium text-blue-900">Editing {selectedLocale} translation</div>
-                        <p class="mt-1 text-sm text-blue-800/80">
-                          Only translatable fields are editable here. Shared structure stays on the default locale entry.
-                        </p>
-                      </div>
-                    </CardContent>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Languages className="size-4" />
+                        {selectedLocale} translation
+                      </CardTitle>
+                      <CardDescription>Only translatable fields are editable in this locale view.</CardDescription>
+                    </CardHeader>
                   </Card>
 
                   <form method="post" action={getFormAction(collection.slug, route.documentId)} class="space-y-6">
@@ -507,7 +427,7 @@ const totalDocuments = summaries.reduce((sum, summary) => sum + Number(summary.c
                     <input type="hidden" name="locale" value={selectedLocale} />
                     <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
 
-                    <AdminCard title="Translation content" description="Localized fields for the selected language.">
+                    <AdminCard title="Localized content" description="Translated fields for the selected locale.">
                       <div class="grid gap-5">
                         {translatableFields.map((fieldName) => (
                           <FieldControl
@@ -521,7 +441,7 @@ const totalDocuments = summaries.reduce((sum, summary) => sum + Number(summary.c
                     </AdminCard>
 
                     <Card>
-                      <CardContent className="flex justify-end p-4">
+                      <CardContent className="flex justify-end py-4">
                         <button class={buttonVariants({ variant: "default" })} type="submit">
                           Save translation
                         </button>
@@ -534,8 +454,8 @@ const totalDocuments = summaries.reduce((sum, summary) => sum + Number(summary.c
 
             <div class="space-y-6">
               {!translationMode &&
-                sidebarFieldSets.map((set, index) => (
-                  <AdminCard title={getFieldSetTitle(set.fields, index + primaryFieldSets.length)} description={getFieldSetDescription(set.fields)}>
+                effectiveSidebarFieldSets.map((set, index) => (
+                  <AdminCard title={getFieldSetTitle(set.fields, index + mainFieldSets.length)} description={getFieldSetDescription(set.fields)}>
                     <div class="grid gap-5">
                       {set.fields.map((fieldName) => (
                         <FieldControl
@@ -567,58 +487,58 @@ const totalDocuments = summaries.reduce((sum, summary) => sum + Number(summary.c
 
               {route.kind === "edit" && (
                 <>
-                  <AdminCard title="Document info" description="Operational details for this entry.">
+                  <AdminCard title="Document info" description="Operational metadata for this entry.">
                     <div class="grid gap-4 text-sm">
                       <div class="flex items-center justify-between gap-3">
-                        <span class="text-[var(--admin-foreground-tertiary)]">Status</span>
+                        <span class="text-muted-foreground">Status</span>
                         <Badge variant={getStatusVariant(String(doc?._status ?? "draft"))}>{String(doc?._status ?? "draft")}</Badge>
                       </div>
                       <Separator />
                       <div class="flex items-start justify-between gap-3">
-                        <span class="text-[var(--admin-foreground-tertiary)]">ID</span>
-                        <code class="max-w-[12rem] break-all rounded bg-[var(--admin-muted)] px-2 py-1 text-xs">{String(doc?._id ?? route.documentId)}</code>
+                        <span class="text-muted-foreground">ID</span>
+                        <code class="max-w-[16rem] break-all rounded bg-muted px-2 py-1 text-xs">{String(doc?._id ?? route.documentId)}</code>
                       </div>
                       <Separator />
                       <div class="flex items-center justify-between gap-3">
-                        <span class="text-[var(--admin-foreground-tertiary)]">Created</span>
+                        <span class="text-muted-foreground">Created</span>
                         <span>{String(doc?._createdAt ?? "—")}</span>
                       </div>
                       <Separator />
                       <div class="flex items-center justify-between gap-3">
-                        <span class="text-[var(--admin-foreground-tertiary)]">Updated</span>
+                        <span class="text-muted-foreground">Updated</span>
                         <span>{String(doc?._updatedAt ?? "—")}</span>
                       </div>
                     </div>
                   </AdminCard>
 
                   {doc?.slug && (
-                    <AdminCard title="Public route" description="Open the public-facing document in a new tab.">
+                    <AdminCard title="Public route" description="Open the document in a new tab.">
                       <a
                         href={cms.meta.getRouteForDocument(collection.slug, doc)}
                         target="_blank"
-                        class="flex items-center justify-between gap-3 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-muted)] px-3 py-3 text-sm text-[var(--admin-foreground-secondary)] transition-colors hover:bg-[var(--admin-hover)]"
+                        class="flex items-center justify-between gap-3 rounded-lg border px-3 py-3 text-sm transition-colors hover:bg-muted/50"
                       >
                         <span class="truncate">{cms.meta.getRouteForDocument(collection.slug, doc)}</span>
-                        <ArrowUpRight className="size-4 shrink-0" />
+                        <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
                       </a>
                     </AdminCard>
                   )}
 
                   {versions.length > 0 && (
-                    <AdminCard title="Version history" description="Recent snapshots stored by the content runtime.">
+                    <AdminCard title="Version history" description="Recent snapshots captured by the runtime.">
                       <div class="grid gap-3">
                         {versions
                           .slice()
                           .reverse()
                           .map((version) => (
-                            <div class="rounded-lg border border-[var(--admin-border)] p-3">
+                            <div class="rounded-lg border px-3 py-3">
                               <div class="flex items-start justify-between gap-3">
                                 <div>
-                                  <div class="flex items-center gap-2 font-medium text-[var(--admin-foreground)]">
-                                    <Clock3 className="size-4 text-[var(--admin-foreground-tertiary)]" />
+                                  <div class="flex items-center gap-2 font-medium">
+                                    <Clock3 className="size-4 text-muted-foreground" />
                                     v{version.version}
                                   </div>
-                                  <div class="mt-1 text-xs text-[var(--admin-foreground-tertiary)]">{version.createdAt}</div>
+                                  <div class="mt-1 text-xs text-muted-foreground">{version.createdAt}</div>
                                 </div>
                                 <form method="post" action={getFormAction(collection.slug, route.documentId)}>
                                   <input type="hidden" name="_action" value="restore" />

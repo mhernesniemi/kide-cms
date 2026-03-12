@@ -350,20 +350,47 @@ select {
 }
 
 [data-admin] {
-  --admin-background: oklch(0.985 0.002 247);
-  --admin-surface: oklch(1 0 0);
-  --admin-muted: oklch(0.968 0.003 264);
-  --admin-muted-strong: oklch(0.929 0.006 264);
-  --admin-foreground: oklch(0.145 0.015 285);
-  --admin-foreground-secondary: oklch(0.373 0.013 285);
-  --admin-foreground-tertiary: oklch(0.446 0.011 264);
-  --admin-muted-foreground: oklch(0.556 0.01 264);
-  --admin-placeholder: oklch(0.708 0.01 264);
-  --admin-border: oklch(0.929 0.006 264);
-  --admin-input-border: oklch(0.872 0.009 264);
-  --admin-hover: oklch(0.985 0.002 247);
-  --admin-destructive-subtle: oklch(0.971 0.013 17.38);
-  --admin-accent-subtle: oklch(0.932 0.032 255);
+  background: var(--background);
+  color: var(--foreground);
+  color-scheme: light dark;
+  font-family: "Geist Variable", var(--font-sans), system-ui, sans-serif;
+}
+
+body[data-admin] {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Geist Variable", var(--font-sans), system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  body[data-admin] {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+  }
 }
 
 [data-admin] *:focus-visible {

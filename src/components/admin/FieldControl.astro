@@ -2,10 +2,10 @@
 import type { FieldConfig } from "../../cms/core/define";
 import { serializeFieldValue } from "../../cms/core/values";
 import { humanize } from "../../cms/core/admin";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
-import { cn } from "../../lib/utils";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 type RelationOption = {
   value: string;
@@ -32,15 +32,15 @@ const serializedValue = serializeFieldValue(field, value);
 const rows = field.admin?.rows ?? (field.type === "richText" ? 10 : field.type === "json" || field.type === "blocks" ? 12 : 5);
 const inputMode = field.type === "number" ? "decimal" : undefined;
 const controlClass = cn(
-  "w-full",
-  readOnly && "cursor-not-allowed bg-[var(--admin-muted)] text-[var(--admin-foreground-tertiary)]",
+  "w-full shadow-none",
+  readOnly && "cursor-not-allowed bg-muted text-muted-foreground",
 );
 ---
 
 <div class="grid gap-2">
-  <Label for={name}>{label}{field.required ? " *" : ""}</Label>
-  {field.description && <p class="text-sm text-[var(--admin-foreground-tertiary)]">{field.description}</p>}
-  {field.admin?.help && <p class="text-sm text-[var(--admin-foreground-tertiary)]">{field.admin.help}</p>}
+  <Label htmlFor={name}>{label}{field.required ? " *" : ""}</Label>
+  {field.description && <p class="text-xs leading-5 text-muted-foreground">{field.description}</p>}
+  {field.admin?.help && <p class="text-xs leading-5 text-muted-foreground">{field.admin.help}</p>}
 
   {(field.type === "text" || field.type === "slug" || field.type === "email" || field.type === "image" || field.type === "date") && (
     <Input
@@ -69,10 +69,10 @@ const controlClass = cn(
   )}
 
   {field.type === "boolean" && (
-    <span class="inline-flex items-center gap-3 rounded-lg border border-[var(--admin-input-border)] bg-[var(--admin-surface)] px-3 py-2 text-sm">
+    <span class="inline-flex items-center gap-3 rounded-md border border-input bg-background px-3 py-2 text-sm">
       <input type="hidden" name={name} value="false" />
       <input
-        class="size-4 rounded border-[var(--admin-input-border)] text-blue-600 focus:ring-blue-500"
+        class="size-4 rounded border-input text-primary focus:ring-primary"
         id={name}
         type="checkbox"
         name={name}
@@ -80,15 +80,15 @@ const controlClass = cn(
         defaultChecked={Boolean(value)}
         disabled={readOnly}
       />
-      <span class="text-[var(--admin-foreground-secondary)]">{Boolean(value) ? "Enabled" : "Disabled"}</span>
+      <span class="text-muted-foreground">{Boolean(value) ? "Enabled" : "Disabled"}</span>
     </span>
   )}
 
   {field.type === "select" && (
     <select
       class={cn(
-        "flex h-10 w-full rounded-lg border border-[var(--admin-input-border)] bg-[var(--admin-surface)] px-3 py-2 text-sm text-[var(--admin-foreground)] shadow-sm transition-colors hover:border-[color-mix(in_oklab,var(--admin-input-border)_70%,var(--admin-foreground)_30%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-surface)] disabled:cursor-not-allowed disabled:bg-[var(--admin-muted)] disabled:text-[var(--admin-foreground-tertiary)]",
-        readOnly && "cursor-not-allowed bg-[var(--admin-muted)] text-[var(--admin-foreground-tertiary)]",
+        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+        readOnly && "cursor-not-allowed bg-muted text-muted-foreground",
       )}
       id={name}
       name={name}
@@ -106,8 +106,8 @@ const controlClass = cn(
   {field.type === "relation" && (
     <select
       class={cn(
-        "flex h-10 w-full rounded-lg border border-[var(--admin-input-border)] bg-[var(--admin-surface)] px-3 py-2 text-sm text-[var(--admin-foreground)] shadow-sm transition-colors hover:border-[color-mix(in_oklab,var(--admin-input-border)_70%,var(--admin-foreground)_30%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-surface)] disabled:cursor-not-allowed disabled:bg-[var(--admin-muted)] disabled:text-[var(--admin-foreground-tertiary)]",
-        readOnly && "cursor-not-allowed bg-[var(--admin-muted)] text-[var(--admin-foreground-tertiary)]",
+        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+        readOnly && "cursor-not-allowed bg-muted text-muted-foreground",
       )}
       id={name}
       name={name}
