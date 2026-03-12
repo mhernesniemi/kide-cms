@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   type Column,
   type ColumnDef,
@@ -12,7 +12,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
+} from "@tanstack/react-table";
 import {
   ArrowDown,
   ArrowUp,
@@ -23,11 +23,11 @@ import {
   MoreHorizontal,
   Search,
   SquarePen,
-} from "lucide-react"
+} from "lucide-react";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -36,57 +36,42 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type DataTableColumn = {
-  key: string
-  label: string
-}
+  key: string;
+  label: string;
+};
 
 type DataTableRow = {
-  id: string
-  editHref: string
-  status?: string
-  locales: string[]
-  searchText: string
-  values: Record<string, string>
-}
+  id: string;
+  editHref: string;
+  status?: string;
+  locales: string[];
+  searchText: string;
+  values: Record<string, string>;
+};
 
 type DocumentsDataTableProps = {
-  collectionSlug: string
-  draftsEnabled?: boolean
-  title: string
-  searchPlaceholder?: string
-  columns: DataTableColumn[]
-  data: DataTableRow[]
-}
+  collectionSlug: string;
+  draftsEnabled?: boolean;
+  title: string;
+  searchPlaceholder?: string;
+  columns: DataTableColumn[];
+  data: DataTableRow[];
+};
 
-const statusVariant = (status?: string) =>
-  status === "published" ? "default" : status ? "secondary" : "outline"
+const statusVariant = (status?: string) => (status === "published" ? "default" : status ? "secondary" : "outline");
 
-function DataTableColumnHeader({
-  column,
-  title,
-}: {
-  column: Column<DataTableRow, unknown>
-  title: string
-}) {
+function DataTableColumnHeader({ column, title }: { column: Column<DataTableRow, unknown>; title: string }) {
   if (!column.getCanSort()) {
-    return <span>{title}</span>
+    return <span>{title}</span>;
   }
 
-  const sorted = column.getIsSorted()
-  const SortIcon =
-    sorted === "asc" ? ArrowUp : sorted === "desc" ? ArrowDown : ArrowUpDown
+  const sorted = column.getIsSorted();
+  const SortIcon = sorted === "asc" ? ArrowUp : sorted === "desc" ? ArrowDown : ArrowUpDown;
 
   return (
     <Button
@@ -98,7 +83,7 @@ function DataTableColumnHeader({
       <span>{title}</span>
       <SortIcon className="size-4 text-muted-foreground" />
     </Button>
-  )
+  );
 }
 
 export default function DocumentsDataTable({
@@ -109,42 +94,30 @@ export default function DocumentsDataTable({
   columns,
   data,
 }: DocumentsDataTableProps) {
-  const [actionError, setActionError] = React.useState<string | null>(null)
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
-  const [columnVisibility, setColumnVisibility] = React.useState<
-    Record<string, boolean>
-  >({
+  const [actionError, setActionError] = React.useState<string | null>(null);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({
     search: false,
-  })
-  const [rowSelection, setRowSelection] = React.useState({})
-  const [isPending, startTransition] = React.useTransition()
+  });
+  const [rowSelection, setRowSelection] = React.useState({});
+  const [isPending, startTransition] = React.useTransition();
 
-  const primaryColumnKey =
-    columns.find((column) => !column.key.startsWith("_"))?.key ?? columns[0]?.key
+  const primaryColumnKey = columns.find((column) => !column.key.startsWith("_"))?.key ?? columns[0]?.key;
 
   const runAction = React.useCallback(
-    async (
-      action: "publish" | "unpublish" | "delete",
-      rows: DataTableRow[]
-    ) => {
+    async (action: "publish" | "unpublish" | "delete", rows: DataTableRow[]) => {
       if (!rows.length) {
-        return
+        return;
       }
 
-      setActionError(null)
+      setActionError(null);
 
       if (
         action === "delete" &&
-        !window.confirm(
-          rows.length === 1
-            ? "Delete this document?"
-            : `Delete ${rows.length} documents?`
-        )
+        !window.confirm(rows.length === 1 ? "Delete this document?" : `Delete ${rows.length} documents?`)
       ) {
-        return
+        return;
       }
 
       try {
@@ -153,30 +126,28 @@ export default function DocumentsDataTable({
             const endpoint =
               action === "delete"
                 ? `/api/cms/${collectionSlug}/${row.id}`
-                : `/api/cms/${collectionSlug}/${row.id}/${action}`
+                : `/api/cms/${collectionSlug}/${row.id}/${action}`;
 
             const response = await fetch(endpoint, {
               method: action === "delete" ? "DELETE" : "POST",
               headers: {
                 Accept: "application/json",
               },
-            })
+            });
 
             if (!response.ok) {
-              throw new Error(`Failed to ${action} document.`)
+              throw new Error(`Failed to ${action} document.`);
             }
-          })
-        )
+          }),
+        );
 
-        window.location.reload()
+        window.location.reload();
       } catch (error) {
-        setActionError(
-          error instanceof Error ? error.message : "Document action failed."
-        )
+        setActionError(error instanceof Error ? error.message : "Document action failed.");
       }
     },
-    [collectionSlug]
-  )
+    [collectionSlug],
+  );
 
   const tableColumns = React.useMemo<ColumnDef<DataTableRow>[]>(
     () => [
@@ -184,10 +155,8 @@ export default function DocumentsDataTable({
         id: "select",
         header: ({ table }) => (
           <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
+            checked={table.getIsAllPageRowsSelected()}
+            indeterminate={table.getIsSomePageRowsSelected()}
             onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
             aria-label="Select all"
           />
@@ -205,9 +174,7 @@ export default function DocumentsDataTable({
       {
         id: "search",
         accessorFn: (row) =>
-          [row.searchText, ...Object.values(row.values), row.locales.join(" ")]
-            .join(" ")
-            .toLowerCase(),
+          [row.searchText, ...Object.values(row.values), row.locales.join(" ")].join(" ").toLowerCase(),
         header: () => null,
         cell: () => null,
         enableSorting: false,
@@ -216,27 +183,18 @@ export default function DocumentsDataTable({
       ...columns.map<ColumnDef<DataTableRow>>((column) => ({
         accessorFn: (row) => row.values[column.key] ?? "",
         id: column.key,
-        header: ({ column: headerColumn }) => (
-          <DataTableColumnHeader column={headerColumn} title={column.label} />
-        ),
+        header: ({ column: headerColumn }) => <DataTableColumnHeader column={headerColumn} title={column.label} />,
         cell: ({ row }) => {
-          const value = row.original.values[column.key] ?? "—"
+          const value = row.original.values[column.key] ?? "—";
           if (column.key === "_status") {
             return (
-              <Badge
-                variant={
-                  statusVariant(row.original.status) as
-                    | "default"
-                    | "secondary"
-                    | "outline"
-                }
-              >
+              <Badge variant={statusVariant(row.original.status) as "default" | "secondary" | "outline"}>
                 {row.original.status ?? value}
               </Badge>
-            )
+            );
           }
 
-          const isPrimary = column.key === primaryColumnKey
+          const isPrimary = column.key === primaryColumnKey;
           return (
             <>
               {isPrimary ? (
@@ -250,15 +208,13 @@ export default function DocumentsDataTable({
                 <div className="text-muted-foreground">{value}</div>
               )}
             </>
-          )
+          );
         },
       })),
       {
         accessorFn: (row) => row.locales.join(", "),
         id: "locales",
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Locales" />
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Locales" />,
         cell: ({ row }) => (
           <div className="flex flex-wrap gap-1.5">
             {row.original.locales.map((locale) => (
@@ -278,12 +234,7 @@ export default function DocumentsDataTable({
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="rounded-md"
-                    aria-label="Open actions menu"
-                  >
+                  <Button variant="ghost" size="icon-sm" className="rounded-md" aria-label="Open actions menu">
                     <MoreHorizontal />
                     <span className="sr-only">Open menu</span>
                   </Button>
@@ -292,9 +243,7 @@ export default function DocumentsDataTable({
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => window.location.assign(row.original.editHref)}
-                >
+                <DropdownMenuItem onClick={() => window.location.assign(row.original.editHref)}>
                   <SquarePen className="size-4" />
                   Edit document
                 </DropdownMenuItem>
@@ -304,7 +253,7 @@ export default function DocumentsDataTable({
                       disabled={isPending || row.original.status === "published"}
                       onClick={() =>
                         startTransition(() => {
-                          void runAction("publish", [row.original])
+                          void runAction("publish", [row.original]);
                         })
                       }
                     >
@@ -314,7 +263,7 @@ export default function DocumentsDataTable({
                       disabled={isPending || row.original.status !== "published"}
                       onClick={() =>
                         startTransition(() => {
-                          void runAction("unpublish", [row.original])
+                          void runAction("unpublish", [row.original]);
                         })
                       }
                     >
@@ -328,7 +277,7 @@ export default function DocumentsDataTable({
                   disabled={isPending}
                   onClick={() =>
                     startTransition(() => {
-                      void runAction("delete", [row.original])
+                      void runAction("delete", [row.original]);
                     })
                   }
                 >
@@ -340,8 +289,8 @@ export default function DocumentsDataTable({
         ),
       },
     ],
-    [columns, draftsEnabled, isPending, primaryColumnKey]
-  )
+    [columns, draftsEnabled, isPending, primaryColumnKey],
+  );
 
   const table = useReactTable({
     data,
@@ -362,10 +311,10 @@ export default function DocumentsDataTable({
       columnVisibility,
       rowSelection,
     },
-  })
+  });
 
-  const searchColumn = table.getColumn("search")
-  const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original)
+  const searchColumn = table.getColumn("search");
+  const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original);
 
   return (
     <div className="space-y-4">
@@ -391,9 +340,7 @@ export default function DocumentsDataTable({
               <DropdownMenuTrigger
                 render={
                   <Button variant="secondary" size="sm" disabled={isPending}>
-                    {isPending
-                      ? "Working..."
-                      : `${selectedRows.length} selected`}
+                    {isPending ? "Working..." : `${selectedRows.length} selected`}
                     <ChevronDown className="size-4" />
                   </Button>
                 }
@@ -402,11 +349,7 @@ export default function DocumentsDataTable({
                 <DropdownMenuLabel>Selected actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {selectedRows.length === 1 && (
-                  <DropdownMenuItem
-                    onClick={() =>
-                      window.location.assign(selectedRows[0].editHref)
-                    }
-                  >
+                  <DropdownMenuItem onClick={() => window.location.assign(selectedRows[0].editHref)}>
                     <SquarePen className="size-4" />
                     Edit document
                   </DropdownMenuItem>
@@ -417,7 +360,7 @@ export default function DocumentsDataTable({
                       disabled={isPending}
                       onClick={() =>
                         startTransition(() => {
-                          void runAction("publish", selectedRows)
+                          void runAction("publish", selectedRows);
                         })
                       }
                     >
@@ -427,7 +370,7 @@ export default function DocumentsDataTable({
                       disabled={isPending}
                       onClick={() =>
                         startTransition(() => {
-                          void runAction("unpublish", selectedRows)
+                          void runAction("unpublish", selectedRows);
                         })
                       }
                     >
@@ -441,7 +384,7 @@ export default function DocumentsDataTable({
                   disabled={isPending}
                   onClick={() =>
                     startTransition(() => {
-                      void runAction("delete", selectedRows)
+                      void runAction("delete", selectedRows);
                     })
                   }
                 >
@@ -494,12 +437,7 @@ export default function DocumentsDataTable({
                   .filter((header) => header.column.id !== "search")
                   .map((header) => (
                     <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
               </TableRow>
@@ -513,18 +451,13 @@ export default function DocumentsDataTable({
                     .getVisibleCells()
                     .filter((cell) => cell.column.id !== "search")
                     .map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
+                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                     ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={tableColumns.length - 1}
-                  className="h-24 text-center text-muted-foreground"
-                >
+                <TableCell colSpan={tableColumns.length - 1} className="h-24 text-center text-muted-foreground">
                   No documents found.
                 </TableCell>
               </TableRow>
@@ -535,8 +468,7 @@ export default function DocumentsDataTable({
 
       <div className="flex items-center justify-between px-1">
         <div className="text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected
+          {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -551,17 +483,12 @@ export default function DocumentsDataTable({
           <div className="text-sm text-muted-foreground">
             Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
+          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
             Next
             <ChevronRight className="size-4" />
           </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }

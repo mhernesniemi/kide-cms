@@ -1,17 +1,7 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useState, useEffect, useCallback } from "react";
-import {
-  Bold,
-  Italic,
-  Heading2,
-  Heading3,
-  List,
-  ListOrdered,
-  Quote,
-  Undo,
-  Redo,
-} from "lucide-react";
+import { useState } from "react";
+import { Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Undo, Redo } from "lucide-react";
 
 // -----------------------------------------------
 // CMS AST ↔ Tiptap JSON conversion
@@ -62,9 +52,7 @@ const cmsNodeToTiptap = (node: CmsNode): any => {
   if (node.type === "list-item") {
     const content = (node.children ?? []).map(cmsNodeToTiptap).filter(Boolean);
     // Tiptap expects list items to contain paragraphs
-    const wrapped = content.map((c: any) =>
-      c.type === "paragraph" ? c : { type: "paragraph", content: [c] },
-    );
+    const wrapped = content.map((c: any) => (c.type === "paragraph" ? c : { type: "paragraph", content: [c] }));
     return { type: "listItem", ...(wrapped.length > 0 ? { content: wrapped } : {}) };
   }
   if (node.type === "quote") {
@@ -156,9 +144,7 @@ const ToolbarButton = ({
     disabled={disabled}
     title={title}
     className={`inline-flex size-8 items-center justify-center rounded-md transition-colors ${
-      active
-        ? "bg-accent text-accent-foreground"
-        : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+      active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
     } disabled:opacity-50`}
   >
     {children}
@@ -277,18 +263,10 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
 
         <div className="mx-1 h-5 w-px bg-border" />
 
-        <ToolbarButton
-          onClick={() => editor.chain().focus().undo().run()}
-          disabled={!editor.can().undo()}
-          title="Undo"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Undo">
           <Undo className="size-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().redo().run()}
-          disabled={!editor.can().redo()}
-          title="Redo"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title="Redo">
           <Redo className="size-4" />
         </ToolbarButton>
       </div>

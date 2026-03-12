@@ -31,12 +31,10 @@ const {
 const label = field.label ?? humanize(name);
 const placeholder = field.admin?.placeholder ?? "";
 const serializedValue = serializeFieldValue(field, value);
-const rows = field.admin?.rows ?? (field.type === "richText" ? 10 : field.type === "json" || field.type === "blocks" ? 12 : 5);
+const rows =
+  field.admin?.rows ?? (field.type === "richText" ? 10 : field.type === "json" || field.type === "blocks" ? 12 : 5);
 const inputMode = field.type === "number" ? "decimal" : undefined;
-const controlClass = cn(
-  "w-full shadow-none",
-  readOnly && "cursor-not-allowed bg-muted text-muted-foreground",
-);
+const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg-muted text-muted-foreground");
 ---
 
 <div class="grid gap-2">
@@ -44,137 +42,147 @@ const controlClass = cn(
   {field.description && <p class="text-xs leading-5 text-muted-foreground">{field.description}</p>}
   {field.admin?.help && <p class="text-xs leading-5 text-muted-foreground">{field.admin.help}</p>}
 
-  {field.type === "image" && !readOnly && (
-    <ImagePicker
-      client:load
-      name={name}
-      value={serializedValue}
-      placeholder={placeholder}
-    />
-  )}
+  {
+    field.type === "image" && !readOnly && (
+      <ImagePicker client:load name={name} value={serializedValue} placeholder={placeholder} />
+    )
+  }
 
-  {field.type === "image" && readOnly && (
-    <Input
-      className={controlClass}
-      type="text"
-      id={name}
-      name={name}
-      defaultValue={serializedValue}
-      placeholder={placeholder}
-      readOnly={readOnly}
-    />
-  )}
-
-  {(field.type === "text" || field.type === "slug" || field.type === "email" || field.type === "date") && (
-    <Input
-      className={controlClass}
-      type={field.type === "email" ? "email" : field.type === "date" ? "date" : "text"}
-      id={name}
-      name={name}
-      defaultValue={serializedValue}
-      placeholder={placeholder}
-      readOnly={readOnly}
-      required={field.required}
-    />
-  )}
-
-  {field.type === "number" && (
-    <Input
-      className={controlClass}
-      type="number"
-      id={name}
-      name={name}
-      defaultValue={serializedValue}
-      inputMode={inputMode}
-      readOnly={readOnly}
-      required={field.required}
-    />
-  )}
-
-  {field.type === "boolean" && (
-    <span class="inline-flex items-center gap-3 rounded-md border border-input bg-background px-3 py-2 text-sm">
-      <input type="hidden" name={name} value="false" />
-      <input
-        class="size-4 rounded border-input text-primary focus:ring-primary"
+  {
+    field.type === "image" && readOnly && (
+      <Input
+        className={controlClass}
+        type="text"
         id={name}
-        type="checkbox"
         name={name}
-        value="true"
-        defaultChecked={Boolean(value)}
-        disabled={readOnly}
+        defaultValue={serializedValue}
+        placeholder={placeholder}
+        readOnly={readOnly}
       />
-      <span class="text-muted-foreground">{Boolean(value) ? "Enabled" : "Disabled"}</span>
-    </span>
-  )}
+    )
+  }
 
-  {field.type === "select" && (
-    <select
-      class={cn(
-        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
-        readOnly && "cursor-not-allowed bg-muted text-muted-foreground",
-      )}
-      id={name}
-      name={name}
-      disabled={readOnly}
-    >
-      <option value="">Select an option</option>
-      {field.options.map((option) => (
-        <option value={option} selected={String(value ?? "") === option}>
-          {option}
-        </option>
-      ))}
-    </select>
-  )}
+  {
+    (field.type === "text" || field.type === "slug" || field.type === "email" || field.type === "date") && (
+      <Input
+        className={controlClass}
+        type={field.type === "email" ? "email" : field.type === "date" ? "date" : "text"}
+        id={name}
+        name={name}
+        defaultValue={serializedValue}
+        placeholder={placeholder}
+        readOnly={readOnly}
+        required={field.required}
+      />
+    )
+  }
 
-  {field.type === "relation" && (
-    <select
-      class={cn(
-        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
-        readOnly && "cursor-not-allowed bg-muted text-muted-foreground",
-      )}
-      id={name}
-      name={name}
-      disabled={readOnly}
-    >
-      <option value="">Select a document</option>
-      {relationOptions.map((option) => (
-        <option value={option.value} selected={String(value ?? "") === option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
-  )}
+  {
+    field.type === "number" && (
+      <Input
+        className={controlClass}
+        type="number"
+        id={name}
+        name={name}
+        defaultValue={serializedValue}
+        inputMode={inputMode}
+        readOnly={readOnly}
+        required={field.required}
+      />
+    )
+  }
 
-  {field.type === "richText" && !readOnly && (
-    <RichTextEditor
-      client:load
-      name={name}
-      initialValue={serializedValue}
-      rows={rows}
-    />
-  )}
+  {
+    field.type === "boolean" && (
+      <span class="inline-flex items-center gap-3 rounded-md border border-input bg-background px-3 py-2 text-sm">
+        <input type="hidden" name={name} value="false" />
+        <input
+          class="size-4 rounded border-input text-primary focus:ring-primary"
+          id={name}
+          type="checkbox"
+          name={name}
+          value="true"
+          checked={Boolean(value)}
+          disabled={readOnly}
+        />
+        <span class="text-muted-foreground">{Boolean(value) ? "Enabled" : "Disabled"}</span>
+      </span>
+    )
+  }
 
-  {field.type === "richText" && readOnly && (
-    <Textarea
-      className={controlClass}
-      id={name}
-      name={name}
-      rows={rows}
-      readOnly={readOnly}
-      defaultValue={serializedValue}
-    />
-  )}
+  {
+    field.type === "select" && (
+      <select
+        class={cn(
+          "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+          readOnly && "cursor-not-allowed bg-muted text-muted-foreground",
+        )}
+        id={name}
+        name={name}
+        disabled={readOnly}
+      >
+        <option value="">Select an option</option>
+        {field.options.map((option) => (
+          <option value={option} selected={String(value ?? "") === option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    )
+  }
 
-  {(field.type === "array" || field.type === "json" || field.type === "blocks") && (
-    <Textarea
-      className={controlClass}
-      id={name}
-      name={name}
-      rows={rows}
-      placeholder={placeholder}
-      readOnly={readOnly}
-      required={field.required}
-      defaultValue={serializedValue}
-    />
-  )}
+  {
+    field.type === "relation" && (
+      <select
+        class={cn(
+          "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+          readOnly && "cursor-not-allowed bg-muted text-muted-foreground",
+        )}
+        id={name}
+        name={name}
+        disabled={readOnly}
+      >
+        <option value="">Select a document</option>
+        {relationOptions.map((option) => (
+          <option value={option.value} selected={String(value ?? "") === option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    )
+  }
+
+  {
+    field.type === "richText" && !readOnly && (
+      <RichTextEditor client:load name={name} initialValue={serializedValue} rows={rows} />
+    )
+  }
+
+  {
+    field.type === "richText" && readOnly && (
+      <Textarea
+        className={controlClass}
+        id={name}
+        name={name}
+        rows={rows}
+        readOnly={readOnly}
+        defaultValue={serializedValue}
+      />
+    )
+  }
+
+  {
+    (field.type === "array" || field.type === "json" || field.type === "blocks") && (
+      <Textarea
+        className={controlClass}
+        id={name}
+        name={name}
+        rows={rows}
+        placeholder={placeholder}
+        readOnly={readOnly}
+        required={field.required}
+        defaultValue={serializedValue}
+      />
+    )
+  }
 </div>

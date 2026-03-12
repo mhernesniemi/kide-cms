@@ -1,5 +1,5 @@
 import * as argon2 from "argon2";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { getDb } from "./db";
@@ -23,17 +23,11 @@ export const createSession = async (userId: string): Promise<{ token: string; ex
   return { token, expiresAt };
 };
 
-export const validateSession = async (
-  token: string,
-): Promise<{ userId: string; expiresAt: string } | null> => {
+export const validateSession = async (token: string): Promise<{ userId: string; expiresAt: string } | null> => {
   const db = await getDb();
   const schema = await import("../.generated/schema");
 
-  const rows = await db
-    .select()
-    .from(schema.cmsSessions)
-    .where(eq(schema.cmsSessions._id, token))
-    .limit(1);
+  const rows = await db.select().from(schema.cmsSessions).where(eq(schema.cmsSessions._id, token)).limit(1);
 
   if (rows.length === 0) return null;
 
@@ -75,11 +69,7 @@ export const getSessionUser = async (request: Request): Promise<SessionUser | nu
 
   if (!tables.users) return null;
 
-  const userRows = await db
-    .select()
-    .from(tables.users.main)
-    .where(eq(tables.users.main._id, session.userId))
-    .limit(1);
+  const userRows = await db.select().from(tables.users.main).where(eq(tables.users.main._id, session.userId)).limit(1);
 
   if (userRows.length === 0) return null;
 
@@ -97,5 +87,4 @@ export const SESSION_COOKIE_NAME = "cms_session";
 export const setSessionCookie = (token: string, expiresAt: string) =>
   `${SESSION_COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Expires=${new Date(expiresAt).toUTCString()}`;
 
-export const clearSessionCookie = () =>
-  `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+export const clearSessionCookie = () => `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;

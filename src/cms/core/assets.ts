@@ -75,10 +75,7 @@ export const assets = {
     const db = await getDb();
     const schema = await import("../.generated/schema");
 
-    let query = db
-      .select()
-      .from(schema.cmsAssets)
-      .orderBy(desc(schema.cmsAssets._createdAt));
+    let query = db.select().from(schema.cmsAssets).orderBy(desc(schema.cmsAssets._createdAt));
 
     if (options.limit) query = query.limit(options.limit) as any;
     if (options.offset) query = query.offset(options.offset) as any;
@@ -94,11 +91,7 @@ export const assets = {
     const db = await getDb();
     const schema = await import("../.generated/schema");
 
-    const rows = await db
-      .select()
-      .from(schema.cmsAssets)
-      .where(eq(schema.cmsAssets._id, id))
-      .limit(1);
+    const rows = await db.select().from(schema.cmsAssets).where(eq(schema.cmsAssets._id, id)).limit(1);
 
     if (rows.length === 0) return null;
     const row = rows[0] as any;
@@ -109,11 +102,7 @@ export const assets = {
     const db = await getDb();
     const schema = await import("../.generated/schema");
 
-    const rows = await db
-      .select()
-      .from(schema.cmsAssets)
-      .where(eq(schema.cmsAssets._id, id))
-      .limit(1);
+    const rows = await db.select().from(schema.cmsAssets).where(eq(schema.cmsAssets._id, id)).limit(1);
 
     if (rows.length === 0) return;
 
@@ -132,9 +121,7 @@ export const assets = {
   async count(): Promise<number> {
     const db = await getDb();
     const schema = await import("../.generated/schema");
-    const rows = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(schema.cmsAssets);
+    const rows = await db.select({ count: sql<number>`count(*)` }).from(schema.cmsAssets);
     return Number(rows[0]?.count ?? 0);
   },
 };

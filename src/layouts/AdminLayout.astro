@@ -3,7 +3,6 @@ import "../styles/global.css";
 
 import { Boxes, FileText, Image, LayoutGrid, LogOut, Newspaper, PencilRuler, Users } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -60,20 +59,22 @@ const navItems = collections.map((collection) => ({
         <Separator />
 
         <nav class="flex-1 space-y-1 px-3 py-4">
-          {navItems.map((item) => (
-            <a
-              href={`/admin/${item.slug}`}
-              class={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                activeCollection === item.slug
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-              )}
-            >
-              <item.Icon className="size-4 shrink-0" />
-              <span>{item.labels.plural}</span>
-            </a>
-          ))}
+          {
+            navItems.map((item) => (
+              <a
+                href={`/admin/${item.slug}`}
+                class={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  activeCollection === item.slug
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                )}
+              >
+                <item.Icon className="size-4 shrink-0" />
+                <span>{item.labels.plural}</span>
+              </a>
+            ))
+          }
           <a
             href="/admin/assets"
             class={cn(
@@ -88,29 +89,36 @@ const navItems = collections.map((collection) => ({
 
         <div class="mt-auto px-3 pb-4">
           <Separator className="mb-4" />
-          {user && (
-            <div class="mb-3 flex items-center gap-3 rounded-lg px-3 py-2">
-              <div class="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                {user.name.charAt(0).toUpperCase()}
+          {
+            user && (
+              <div class="mb-3 flex items-center gap-3 rounded-lg px-3 py-2">
+                <div class="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="truncate text-sm font-medium">{user.name}</div>
+                  <div class="truncate text-xs text-muted-foreground">{user.role}</div>
+                </div>
               </div>
-              <div class="min-w-0 flex-1">
-                <div class="truncate text-sm font-medium">{user.name}</div>
-                <div class="truncate text-xs text-muted-foreground">{user.role}</div>
-              </div>
-            </div>
-          )}
+            )
+          }
           <div class="space-y-2">
             <a href="/" class={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full justify-start")}>
               View site
             </a>
-            {user && (
-              <form method="post" action="/api/cms/auth/logout">
-                <button type="submit" class={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}>
-                  <LogOut className="size-4" />
-                  Sign out
-                </button>
-              </form>
-            )}
+            {
+              user && (
+                <form method="post" action="/api/cms/auth/logout">
+                  <button
+                    type="submit"
+                    class={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
+                  >
+                    <LogOut className="size-4" />
+                    Sign out
+                  </button>
+                </form>
+              )
+            }
           </div>
         </div>
       </aside>
@@ -130,20 +138,22 @@ const navItems = collections.map((collection) => ({
             <a href="/" class={buttonVariants({ variant: "outline", size: "sm" })}>View site</a>
           </div>
           <div class="flex gap-2 overflow-x-auto px-4 pb-4">
-            {navItems.map((item) => (
-              <a
-                href={`/admin/${item.slug}`}
-                class={cn(
-                  "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm whitespace-nowrap transition-colors",
-                  activeCollection === item.slug
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-card text-muted-foreground",
-                )}
-              >
-                <item.Icon className="size-4" />
-                {item.labels.plural}
-              </a>
-            ))}
+            {
+              navItems.map((item) => (
+                <a
+                  href={`/admin/${item.slug}`}
+                  class={cn(
+                    "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm whitespace-nowrap transition-colors",
+                    activeCollection === item.slug
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-card text-muted-foreground",
+                  )}
+                >
+                  <item.Icon className="size-4" />
+                  {item.labels.plural}
+                </a>
+              ))
+            }
           </div>
         </header>
 

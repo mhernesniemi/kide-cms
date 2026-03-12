@@ -31,7 +31,12 @@ type BaseFieldConfig<TType extends string, TValue = unknown> = {
   translatable?: boolean;
   admin?: AdminFieldComponent;
   access?: {
-    update?: (context: { user?: { id: string; role?: string; email?: string } | null; doc?: Record<string, unknown> | null; operation: string; collection: string }) => boolean | Promise<boolean>;
+    update?: (context: {
+      user?: { id: string; role?: string; email?: string } | null;
+      doc?: Record<string, unknown> | null;
+      operation: string;
+      collection: string;
+    }) => boolean | Promise<boolean>;
   };
 };
 
@@ -161,7 +166,10 @@ export type HookContext = {
 };
 
 export type CollectionHooks = {
-  beforeCreate?: (data: Record<string, unknown>, context: HookContext) => Record<string, unknown> | Promise<Record<string, unknown>>;
+  beforeCreate?: (
+    data: Record<string, unknown>,
+    context: HookContext,
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>;
   afterCreate?: (doc: Record<string, unknown>, context: HookContext) => void | Promise<void>;
   beforeUpdate?: (
     data: Record<string, unknown>,
@@ -171,7 +179,10 @@ export type CollectionHooks = {
   afterUpdate?: (doc: Record<string, unknown>, context: HookContext) => void | Promise<void>;
   beforeDelete?: (doc: Record<string, unknown>, context: HookContext) => void | Promise<void>;
   afterDelete?: (doc: Record<string, unknown>, context: HookContext) => void | Promise<void>;
-  beforePublish?: (doc: Record<string, unknown>, context: HookContext) => Record<string, unknown> | Promise<Record<string, unknown>>;
+  beforePublish?: (
+    doc: Record<string, unknown>,
+    context: HookContext,
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>;
   afterPublish?: (doc: Record<string, unknown>, context: HookContext) => void | Promise<void>;
 };
 
@@ -196,9 +207,9 @@ export const fields = {
   blocks: (options: Omit<BlocksFieldConfig, "type">) => createField<BlocksFieldConfig>("blocks", options),
 };
 
-export const defineCollection = <T extends CollectionConfig>(collection: T): T => collection;
+export const defineCollection = (collection: CollectionConfig): CollectionConfig => collection;
 
-export const defineConfig = <T extends CMSConfig>(config: T): T => config;
+export const defineConfig = (config: CMSConfig): CMSConfig => config;
 
 export const defineAccess = <T extends AccessConfig>(config: T): T => config;
 

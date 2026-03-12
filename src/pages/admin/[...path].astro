@@ -1,14 +1,5 @@
 ---
-import {
-  ArrowUpRight,
-  Clock3,
-  FileText,
-  Globe2,
-  Languages,
-  Newspaper,
-  PencilRuler,
-  Plus,
-} from "lucide-react";
+import { ArrowUpRight, Clock3, FileText, Globe2, Languages, Newspaper, PencilRuler, Plus } from "lucide-react";
 
 import AdminCard from "@/components/admin/AdminCard.astro";
 import DocumentsDataTable from "@/components/admin/DocumentsDataTable";
@@ -49,14 +40,23 @@ const getCollectionIcon = (slug: string) => collectionIconMap[slug as keyof type
 const getStatusVariant = (status?: string) => (status === "published" ? "default" : "secondary");
 const getFieldSetTitle = (fields: string[], index: number) => {
   if (fields.includes("body") || fields.includes("blocks")) return "Content";
-  if (fields.some((field) => ["category", "author", "tags", "cover", "metadata", "sortOrder", "layout", "heroImage"].includes(field))) {
+  if (
+    fields.some((field) =>
+      ["category", "author", "tags", "cover", "metadata", "sortOrder", "layout", "heroImage"].includes(field),
+    )
+  ) {
     return "Settings";
   }
   return index === 0 ? "Details" : "Configuration";
 };
 const getFieldSetDescription = (fields: string[]) => {
-  if (fields.includes("body") || fields.includes("blocks")) return "Long-form content and structured presentation fields.";
-  if (fields.some((field) => ["category", "author", "tags", "cover", "metadata", "sortOrder", "layout", "heroImage"].includes(field))) {
+  if (fields.includes("body") || fields.includes("blocks"))
+    return "Long-form content and structured presentation fields.";
+  if (
+    fields.some((field) =>
+      ["category", "author", "tags", "cover", "metadata", "sortOrder", "layout", "heroImage"].includes(field),
+    )
+  ) {
     return "Metadata, taxonomy, and publication settings.";
   }
   return "Core document fields from the collection schema.";
@@ -70,18 +70,25 @@ let doc: Record<string, unknown> | null = null;
 let baseDoc: Record<string, unknown> | null = null;
 let relationOptionsByField: Record<string, Array<{ value: string; label: string }>> = {};
 let versions: Array<{ version: number; createdAt: string }> = [];
-let summaries: Array<Record<string, unknown>> = [];
+let summaries: Array<{
+  collection: { slug: string; labels: { singular: string; plural: string } };
+  count: number;
+  items: Array<Record<string, unknown>>;
+}> = [];
 
 if (route.kind === "dashboard") {
   const collectionResults = await Promise.allSettled(
     config.collections.map(async (entry) => {
       const api = cmsRuntime[entry.slug];
-      const items = await api.find({
-        status: "any",
-        limit: 3,
-        sort: { field: "_updatedAt", direction: "desc" },
-        locale: defaultLocale,
-      }, runtimeContext);
+      const items = await api.find(
+        {
+          status: "any",
+          limit: 3,
+          sort: { field: "_updatedAt", direction: "desc" },
+          locale: defaultLocale,
+        },
+        runtimeContext,
+      );
       const count = await api.count({ status: "any" }, runtimeContext);
       return { collection: entry, count, items };
     }),
@@ -94,14 +101,20 @@ if (route.kind === "dashboard") {
   collectionApi = cmsRuntime[route.collectionSlug];
   viewConfig = getCollectionView(route.collectionSlug);
 
-  for (const [fieldName, field] of Object.entries(collection.fields)) {
+  for (const [fieldName, field] of Object.entries(collection.fields) as [
+    string,
+    import("@/cms/core/define").FieldConfig,
+  ][]) {
     if (field.type === "relation") {
-      const relatedDocs = await cmsRuntime[field.collection].find({
-        status: "any",
-        limit: 100,
-        sort: { field: "_updatedAt", direction: "desc" },
-        locale: defaultLocale,
-      }, runtimeContext);
+      const relatedDocs = await cmsRuntime[field.collection].find(
+        {
+          status: "any",
+          limit: 100,
+          sort: { field: "_updatedAt", direction: "desc" },
+          locale: defaultLocale,
+        },
+        runtimeContext,
+      );
 
       relationOptionsByField[fieldName] = relatedDocs.map((item: Record<string, unknown>) => ({
         value: String(item._id),
@@ -111,11 +124,14 @@ if (route.kind === "dashboard") {
   }
 
   if (route.kind === "list") {
-    docs = await collectionApi.find({
-      status: "any",
-      locale: defaultLocale,
-      sort: viewConfig.list?.defaultSort ?? { field: "_updatedAt", direction: "desc" },
-    }, runtimeContext);
+    docs = await collectionApi.find(
+      {
+        status: "any",
+        locale: defaultLocale,
+        sort: viewConfig.list?.defaultSort ?? { field: "_updatedAt", direction: "desc" },
+      },
+      runtimeContext,
+    );
   }
 
   if (route.kind === "edit") {
@@ -132,19 +148,22 @@ if (route.kind === "dashboard") {
 }
 
 const selectedLocale = route.kind === "new" ? defaultLocale : requestedLocale;
-const translatableFields =
-  collection
-    ? Object.entries(collection.fields)
-        .filter(([, field]: [string, any]) => field.translatable)
-        .map(([fieldName]) => fieldName)
-    : [];
-const translationMode = !!collection && route.kind === "edit" && selectedLocale !== defaultLocale && translatableFields.length > 0;
-const sharedFields = collection ? Object.keys(collection.fields).filter((fieldName) => !translatableFields.includes(fieldName)) : [];
+const translatableFields = collection
+  ? Object.entries(collection.fields)
+      .filter(([, field]: [string, any]) => field.translatable)
+      .map(([fieldName]) => fieldName)
+  : [];
+const translationMode =
+  !!collection && route.kind === "edit" && selectedLocale !== defaultLocale && translatableFields.length > 0;
+const sharedFields = collection
+  ? Object.keys(collection.fields).filter((fieldName) => !translatableFields.includes(fieldName))
+  : [];
 const fieldSets = collection ? getFieldSets(collection, viewConfig.edit) : [];
 const primaryFieldSets = fieldSets.filter((set: { width?: string }) => set.width !== "1/3");
 const sidebarFieldSets = fieldSets.filter((set: { width?: string }) => set.width === "1/3");
 const mainFieldSets = primaryFieldSets.length > 0 ? primaryFieldSets : fieldSets.slice(0, 1);
-const effectiveSidebarFieldSets = sidebarFieldSets.length > 0 ? sidebarFieldSets : fieldSets.slice(mainFieldSets.length);
+const effectiveSidebarFieldSets =
+  sidebarFieldSets.length > 0 ? sidebarFieldSets : fieldSets.slice(mainFieldSets.length);
 const listColumns = collection ? getListColumns(collection, viewConfig.list) : [];
 const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
 const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
@@ -156,7 +175,10 @@ const tableRows =
         id: String(entry._id),
         editHref: `/admin/${collection.slug}/${entry._id}`,
         status: String(entry._status ?? "draft"),
-        locales: [defaultLocale, ...(Array.isArray(entry._availableLocales) ? entry._availableLocales.map((locale) => String(locale)) : [])],
+        locales: [
+          defaultLocale,
+          ...(Array.isArray(entry._availableLocales) ? entry._availableLocales.map((locale) => String(locale)) : []),
+        ],
         searchText: String(entry.title ?? entry.name ?? entry.slug ?? entry._id ?? ""),
         values: Object.fromEntries(
           listColumns.map((column) => [
@@ -184,196 +206,328 @@ const collectionStats =
   collections={config.collections}
   activeCollection={route.kind === "dashboard" ? null : route.collectionSlug}
 >
-  {route.kind === "dashboard" && (
-    <section class="space-y-6">
-      <div class="flex flex-col gap-3">
-        <p class="text-sm font-medium text-muted-foreground">CMS admin</p>
-        <div class="space-y-2">
-          <h1 class="text-3xl font-semibold tracking-tight">Content operations</h1>
-          <p class="max-w-3xl text-sm leading-6 text-muted-foreground">
-            Runtime-generated views, typed local API access, and a neutral editing surface built with actual shadcn/ui components.
-          </p>
-        </div>
-      </div>
-
-      <div class="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="gap-0">
-            <CardDescription>Total documents</CardDescription>
-            <CardTitle className="text-3xl">{totalDocuments}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="gap-0">
-            <CardDescription>Collections</CardDescription>
-            <CardTitle className="text-3xl">{config.collections.length}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="gap-0">
-            <CardDescription>Locales</CardDescription>
-            <CardTitle className="text-3xl">{locales.length || 1}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="gap-0">
-            <CardDescription>Storage</CardDescription>
-            <CardTitle className="text-xl">SQLite</CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
-
-      <div class="grid gap-4 xl:grid-cols-3">
-        {summaries.map((summary) => {
-          const Icon = getCollectionIcon(summary.collection.slug);
-          return (
-            <Card>
-              <CardHeader>
-                <div class="flex items-start justify-between gap-4">
-                  <div class="space-y-2">
-                    <div class="flex size-9 items-center justify-center rounded-lg border bg-muted/40">
-                      <Icon className="size-4" />
-                    </div>
-                    <div>
-                      <CardTitle>{summary.collection.labels.plural}</CardTitle>
-                      <CardDescription>{summary.collection.slug}</CardDescription>
-                    </div>
-                  </div>
-                  <Badge variant="outline">{summary.count} items</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {summary.items.length > 0 ? (
-                  summary.items.map((item) => (
-                    <a
-                      href={`/admin/${summary.collection.slug}/${item._id}`}
-                      class="flex items-center justify-between gap-3 rounded-lg border px-3 py-3 transition-colors hover:bg-muted/50"
-                    >
-                      <div class="min-w-0">
-                        <div class="truncate font-medium">{String(item.title ?? item.name ?? item.slug ?? item._id)}</div>
-                        <div class="mt-1 text-xs text-muted-foreground">{String(item._updatedAt ?? "")}</div>
-                      </div>
-                      <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
-                    </a>
-                  ))
-                ) : (
-                  <div class="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
-                    No entries yet.
-                  </div>
-                )}
-                <div class="flex gap-2">
-                  <a href={`/admin/${summary.collection.slug}`} class={cn(buttonVariants({ variant: "outline", size: "sm" }), "flex-1")}>
-                    Open
-                  </a>
-                  <a href={`/admin/${summary.collection.slug}/new`} class={cn(buttonVariants({ size: "sm" }), "flex-1")}>
-                    New
-                  </a>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    </section>
-  )}
-
-  {route.kind !== "dashboard" && collection && (
-    <section class="space-y-6">
-      <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div class="space-y-2">
-          <div class="text-sm font-medium text-muted-foreground">{collection.slug}</div>
-          <div class="space-y-1">
-            <h1 class="text-3xl font-semibold tracking-tight">
-              {route.kind === "list" && collection.labels.plural}
-              {route.kind === "new" && `New ${collection.labels.singular}`}
-              {route.kind === "edit" && String(doc?.title ?? doc?.name ?? doc?.slug ?? collection.labels.singular)}
-            </h1>
+  {
+    route.kind === "dashboard" && (
+      <section class="space-y-6">
+        <div class="flex flex-col gap-3">
+          <p class="text-sm font-medium text-muted-foreground">CMS admin</p>
+          <div class="space-y-2">
+            <h1 class="text-3xl font-semibold tracking-tight">Content operations</h1>
             <p class="max-w-3xl text-sm leading-6 text-muted-foreground">
-              {route.kind === "list" && "Filter, inspect, and edit schema-driven content from a proper data table."}
-              {route.kind === "new" && "Create a new document using the collection schema."}
-              {route.kind === "edit" && "Edit structured content, metadata, locale variants, and version history in one workspace."}
+              Runtime-generated views, typed local API access, and a neutral editing surface built with actual shadcn/ui
+              components.
             </p>
           </div>
         </div>
 
-        <div class="flex flex-wrap gap-2">
-          {route.kind !== "list" && (
-            <a href={`/admin/${collection.slug}`} class={buttonVariants({ variant: "outline" })}>
-              Back to list
-            </a>
-          )}
-          {route.kind === "list" && (
-            <a href={`/admin/${collection.slug}/new`} class={buttonVariants({ size: "sm" })}>
-              <Plus className="size-4" />
-              New {collection.labels.singular}
-            </a>
-          )}
+        <div class="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="gap-0">
+              <CardDescription>Total documents</CardDescription>
+              <CardTitle className="text-3xl">{totalDocuments}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="gap-0">
+              <CardDescription>Collections</CardDescription>
+              <CardTitle className="text-3xl">{config.collections.length}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="gap-0">
+              <CardDescription>Locales</CardDescription>
+              <CardTitle className="text-3xl">{locales.length || 1}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="gap-0">
+              <CardDescription>Storage</CardDescription>
+              <CardTitle className="text-xl">SQLite</CardTitle>
+            </CardHeader>
+          </Card>
         </div>
-      </div>
 
-      {route.kind === "list" && (
-        <>
-          <div class="grid gap-4 sm:grid-cols-3">
-            {collectionStats.map((item) => (
+        <div class="grid gap-4 xl:grid-cols-3">
+          {summaries.map((summary) => {
+            const Icon = getCollectionIcon(summary.collection.slug);
+            return (
               <Card>
-                <CardHeader className="gap-0">
-                  <CardDescription>{item.label}</CardDescription>
-                  <CardTitle className="text-2xl">{item.value}</CardTitle>
+                <CardHeader>
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="space-y-2">
+                      <div class="flex size-9 items-center justify-center rounded-lg border bg-muted/40">
+                        <Icon className="size-4" />
+                      </div>
+                      <div>
+                        <CardTitle>{summary.collection.labels.plural}</CardTitle>
+                        <CardDescription>{summary.collection.slug}</CardDescription>
+                      </div>
+                    </div>
+                    <Badge variant="outline">{summary.count} items</Badge>
+                  </div>
                 </CardHeader>
+                <CardContent className="space-y-3">
+                  {summary.items.length > 0 ? (
+                    summary.items.map((item) => (
+                      <a
+                        href={`/admin/${summary.collection.slug}/${item._id}`}
+                        class="flex items-center justify-between gap-3 rounded-lg border px-3 py-3 transition-colors hover:bg-muted/50"
+                      >
+                        <div class="min-w-0">
+                          <div class="truncate font-medium">
+                            {String(item.title ?? item.name ?? item.slug ?? item._id)}
+                          </div>
+                          <div class="mt-1 text-xs text-muted-foreground">{String(item._updatedAt ?? "")}</div>
+                        </div>
+                        <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
+                      </a>
+                    ))
+                  ) : (
+                    <div class="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+                      No entries yet.
+                    </div>
+                  )}
+                  <div class="flex gap-2">
+                    <a
+                      href={`/admin/${summary.collection.slug}`}
+                      class={cn(buttonVariants({ variant: "outline", size: "sm" }), "flex-1")}
+                    >
+                      Open
+                    </a>
+                    <a
+                      href={`/admin/${summary.collection.slug}/new`}
+                      class={cn(buttonVariants({ size: "sm" }), "flex-1")}
+                    >
+                      New
+                    </a>
+                  </div>
+                </CardContent>
               </Card>
-            ))}
+            );
+          })}
+        </div>
+      </section>
+    )
+  }
+
+  {
+    route.kind !== "dashboard" && collection && (
+      <section class="space-y-6">
+        <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div class="space-y-2">
+            <div class="text-sm font-medium text-muted-foreground">{collection.slug}</div>
+            <div class="space-y-1">
+              <h1 class="text-3xl font-semibold tracking-tight">
+                {route.kind === "list" && collection.labels.plural}
+                {route.kind === "new" && `New ${collection.labels.singular}`}
+                {route.kind === "edit" && String(doc?.title ?? doc?.name ?? doc?.slug ?? collection.labels.singular)}
+              </h1>
+              <p class="max-w-3xl text-sm leading-6 text-muted-foreground">
+                {route.kind === "list" && "Filter, inspect, and edit schema-driven content from a proper data table."}
+                {route.kind === "new" && "Create a new document using the collection schema."}
+                {route.kind === "edit" &&
+                  "Edit structured content, metadata, locale variants, and version history in one workspace."}
+              </p>
+            </div>
           </div>
 
-          <Card>
-            <CardHeader className="border-b">
-              <CardTitle>{collection.labels.plural}</CardTitle>
-              <CardDescription>
-                Interactive data table powered by TanStack Table and shadcn/ui primitives.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <DocumentsDataTable
-                client:load
-                collectionSlug={collection.slug}
-                draftsEnabled={collection.drafts}
-                title={collection.labels.plural}
-                columns={listColumns.map((column) => ({ key: column, label: humanize(column) }))}
-                data={tableRows}
-                searchPlaceholder={`Filter ${collection.labels.plural.toLowerCase()}...`}
-              />
-            </CardContent>
-          </Card>
-        </>
-      )}
+          <div class="flex flex-wrap gap-2">
+            {route.kind !== "list" && (
+              <a href={`/admin/${collection.slug}`} class={buttonVariants({ variant: "outline" })}>
+                Back to list
+              </a>
+            )}
+            {route.kind === "list" && (
+              <a href={`/admin/${collection.slug}/new`} class={buttonVariants({ size: "sm" })}>
+                <Plus className="size-4" />
+                New {collection.labels.singular}
+              </a>
+            )}
+          </div>
+        </div>
 
-      {(route.kind === "new" || route.kind === "edit") && (
-        <>
-          {locales.length > 1 && route.kind === "edit" && translatableFields.length > 0 && (
-            <div class="flex flex-wrap gap-2">
-              {locales.map((locale) => (
-                <a
-                  href={`/admin/${collection.slug}/${route.documentId}?locale=${locale}`}
-                  class={buttonVariants({
-                    variant: selectedLocale === locale ? "secondary" : "outline",
-                    size: "sm",
-                  })}
-                >
-                  <Globe2 className="size-4" />
-                  {locale}
-                </a>
+        {route.kind === "list" && (
+          <>
+            <div class="grid gap-4 sm:grid-cols-3">
+              {collectionStats.map((item) => (
+                <Card>
+                  <CardHeader className="gap-0">
+                    <CardDescription>{item.label}</CardDescription>
+                    <CardTitle className="text-2xl">{item.value}</CardTitle>
+                  </CardHeader>
+                </Card>
               ))}
             </div>
-          )}
 
-          <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]">
-            <div class="space-y-6">
-              {!translationMode && (
-                <form method="post" action={getFormAction(collection.slug, route.kind === "edit" ? route.documentId : undefined)} class="space-y-6">
-                  <input type="hidden" name="_action" value={route.kind === "new" ? "create" : "update"} />
-                  <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
+            <Card>
+              <CardHeader className="border-b">
+                <CardTitle>{collection.labels.plural}</CardTitle>
+                <CardDescription>
+                  Interactive data table powered by TanStack Table and shadcn/ui primitives.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <DocumentsDataTable
+                  client:load
+                  collectionSlug={collection.slug}
+                  draftsEnabled={collection.drafts}
+                  title={collection.labels.plural}
+                  columns={listColumns.map((column) => ({ key: column, label: humanize(column) }))}
+                  data={tableRows}
+                  searchPlaceholder={`Filter ${collection.labels.plural.toLowerCase()}...`}
+                />
+              </CardContent>
+            </Card>
+          </>
+        )}
 
-                  {mainFieldSets.map((set, index) => (
-                    <AdminCard title={getFieldSetTitle(set.fields, index)} description={getFieldSetDescription(set.fields)}>
+        {(route.kind === "new" || route.kind === "edit") && (
+          <>
+            {locales.length > 1 && route.kind === "edit" && translatableFields.length > 0 && (
+              <div class="flex flex-wrap gap-2">
+                {locales.map((locale) => (
+                  <a
+                    href={`/admin/${collection.slug}/${route.documentId}?locale=${locale}`}
+                    class={buttonVariants({
+                      variant: selectedLocale === locale ? "secondary" : "outline",
+                      size: "sm",
+                    })}
+                  >
+                    <Globe2 className="size-4" />
+                    {locale}
+                  </a>
+                ))}
+              </div>
+            )}
+
+            <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]">
+              <div class="space-y-6">
+                {!translationMode && (
+                  <form
+                    method="post"
+                    action={getFormAction(collection.slug, route.kind === "edit" ? route.documentId : undefined)}
+                    class="space-y-6"
+                  >
+                    <input type="hidden" name="_action" value={route.kind === "new" ? "create" : "update"} />
+                    <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
+
+                    {mainFieldSets.map((set, index) => (
+                      <AdminCard
+                        title={getFieldSetTitle(set.fields, index)}
+                        description={getFieldSetDescription(set.fields)}
+                      >
+                        <div class="grid gap-5">
+                          {set.fields.map((fieldName) => (
+                            <FieldControl
+                              name={fieldName}
+                              field={collection.fields[fieldName]}
+                              value={getCurrentValue(fieldName)}
+                              relationOptions={relationOptionsByField[fieldName] ?? []}
+                            />
+                          ))}
+                        </div>
+                      </AdminCard>
+                    ))}
+
+                    <Card>
+                      <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+                        <p class="text-sm text-muted-foreground">
+                          Saves go through the generated local API and preserve document versions automatically.
+                        </p>
+                        <div class="flex flex-wrap gap-2">
+                          <button
+                            class={buttonVariants({ variant: "outline" })}
+                            type="submit"
+                            name="_intent"
+                            value="save"
+                          >
+                            Save
+                          </button>
+                          {collection.drafts && (
+                            <button
+                              class={buttonVariants({ variant: "default" })}
+                              type="submit"
+                              name="_intent"
+                              value="publish"
+                            >
+                              Publish
+                            </button>
+                          )}
+                          {route.kind === "edit" && collection.drafts && doc?._status === "published" && (
+                            <button
+                              class={buttonVariants({ variant: "secondary" })}
+                              type="submit"
+                              name="_action"
+                              value="unpublish"
+                            >
+                              Move to draft
+                            </button>
+                          )}
+                          {route.kind === "edit" && (
+                            <button
+                              class={buttonVariants({ variant: "destructive" })}
+                              type="submit"
+                              name="_action"
+                              value="delete"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </form>
+                )}
+
+                {translationMode && (
+                  <>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <Languages className="size-4" />
+                          {selectedLocale} translation
+                        </CardTitle>
+                        <CardDescription>Only translatable fields are editable in this locale view.</CardDescription>
+                      </CardHeader>
+                    </Card>
+
+                    <form method="post" action={getFormAction(collection.slug, route.documentId)} class="space-y-6">
+                      <input type="hidden" name="_action" value="save-translation" />
+                      <input type="hidden" name="locale" value={selectedLocale} />
+                      <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
+
+                      <AdminCard title="Localized content" description="Translated fields for the selected locale.">
+                        <div class="grid gap-5">
+                          {translatableFields.map((fieldName) => (
+                            <FieldControl
+                              name={fieldName}
+                              field={collection.fields[fieldName]}
+                              value={getCurrentValue(fieldName)}
+                              relationOptions={relationOptionsByField[fieldName] ?? []}
+                            />
+                          ))}
+                        </div>
+                      </AdminCard>
+
+                      <Card>
+                        <CardContent className="flex justify-end py-4">
+                          <button class={buttonVariants({ variant: "default" })} type="submit">
+                            Save translation
+                          </button>
+                        </CardContent>
+                      </Card>
+                    </form>
+                  </>
+                )}
+              </div>
+
+              <div class="space-y-6">
+                {!translationMode &&
+                  effectiveSidebarFieldSets.map((set, index) => (
+                    <AdminCard
+                      title={getFieldSetTitle(set.fields, index + mainFieldSets.length)}
+                      description={getFieldSetDescription(set.fields)}
+                    >
                       <div class="grid gap-5">
                         {set.fields.map((fieldName) => (
                           <FieldControl
@@ -387,186 +541,108 @@ const collectionStats =
                     </AdminCard>
                   ))}
 
-                  <Card>
-                    <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
-                      <p class="text-sm text-muted-foreground">
-                        Saves go through the generated local API and preserve document versions automatically.
-                      </p>
-                      <div class="flex flex-wrap gap-2">
-                        <button class={buttonVariants({ variant: "outline" })} type="submit" name="_intent" value="save">
-                          Save
-                        </button>
-                        {collection.drafts && (
-                          <button class={buttonVariants({ variant: "default" })} type="submit" name="_intent" value="publish">
-                            Publish
-                          </button>
-                        )}
-                        {route.kind === "edit" && collection.drafts && doc?._status === "published" && (
-                          <button class={buttonVariants({ variant: "secondary" })} type="submit" name="_action" value="unpublish">
-                            Move to draft
-                          </button>
-                        )}
-                        {route.kind === "edit" && (
-                          <button class={buttonVariants({ variant: "destructive" })} type="submit" name="_action" value="delete">
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </form>
-              )}
-
-              {translationMode && (
-                <>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Languages className="size-4" />
-                        {selectedLocale} translation
-                      </CardTitle>
-                      <CardDescription>Only translatable fields are editable in this locale view.</CardDescription>
-                    </CardHeader>
-                  </Card>
-
-                  <form method="post" action={getFormAction(collection.slug, route.documentId)} class="space-y-6">
-                    <input type="hidden" name="_action" value="save-translation" />
-                    <input type="hidden" name="locale" value={selectedLocale} />
-                    <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
-
-                    <AdminCard title="Localized content" description="Translated fields for the selected locale.">
-                      <div class="grid gap-5">
-                        {translatableFields.map((fieldName) => (
-                          <FieldControl
-                            name={fieldName}
-                            field={collection.fields[fieldName]}
-                            value={getCurrentValue(fieldName)}
-                            relationOptions={relationOptionsByField[fieldName] ?? []}
-                          />
-                        ))}
-                      </div>
-                    </AdminCard>
-
-                    <Card>
-                      <CardContent className="flex justify-end py-4">
-                        <button class={buttonVariants({ variant: "default" })} type="submit">
-                          Save translation
-                        </button>
-                      </CardContent>
-                    </Card>
-                  </form>
-                </>
-              )}
-            </div>
-
-            <div class="space-y-6">
-              {!translationMode &&
-                effectiveSidebarFieldSets.map((set, index) => (
-                  <AdminCard title={getFieldSetTitle(set.fields, index + mainFieldSets.length)} description={getFieldSetDescription(set.fields)}>
+                {translationMode && (
+                  <AdminCard
+                    title="Shared fields"
+                    description="Read-only fields inherited from the default locale document."
+                  >
                     <div class="grid gap-5">
-                      {set.fields.map((fieldName) => (
+                      {sharedFields.map((fieldName) => (
                         <FieldControl
                           name={fieldName}
                           field={collection.fields[fieldName]}
-                          value={getCurrentValue(fieldName)}
+                          value={getSharedValue(fieldName)}
                           relationOptions={relationOptionsByField[fieldName] ?? []}
+                          readOnly={true}
                         />
                       ))}
                     </div>
                   </AdminCard>
-                ))}
+                )}
 
-              {translationMode && (
-                <AdminCard title="Shared fields" description="Read-only fields inherited from the default locale document.">
-                  <div class="grid gap-5">
-                    {sharedFields.map((fieldName) => (
-                      <FieldControl
-                        name={fieldName}
-                        field={collection.fields[fieldName]}
-                        value={getSharedValue(fieldName)}
-                        relationOptions={relationOptionsByField[fieldName] ?? []}
-                        readOnly={true}
-                      />
-                    ))}
-                  </div>
-                </AdminCard>
-              )}
-
-              {route.kind === "edit" && (
-                <>
-                  <AdminCard title="Document info" description="Operational metadata for this entry.">
-                    <div class="grid gap-4 text-sm">
-                      <div class="flex items-center justify-between gap-3">
-                        <span class="text-muted-foreground">Status</span>
-                        <Badge variant={getStatusVariant(String(doc?._status ?? "draft"))}>{String(doc?._status ?? "draft")}</Badge>
+                {route.kind === "edit" && (
+                  <>
+                    <AdminCard title="Document info" description="Operational metadata for this entry.">
+                      <div class="grid gap-4 text-sm">
+                        <div class="flex items-center justify-between gap-3">
+                          <span class="text-muted-foreground">Status</span>
+                          <Badge variant={getStatusVariant(String(doc?._status ?? "draft"))}>
+                            {String(doc?._status ?? "draft")}
+                          </Badge>
+                        </div>
+                        <Separator />
+                        <div class="flex items-start justify-between gap-3">
+                          <span class="text-muted-foreground">ID</span>
+                          <code class="max-w-[16rem] break-all rounded bg-muted px-2 py-1 text-xs">
+                            {String(doc?._id ?? route.documentId)}
+                          </code>
+                        </div>
+                        <Separator />
+                        <div class="flex items-center justify-between gap-3">
+                          <span class="text-muted-foreground">Created</span>
+                          <span>{String(doc?._createdAt ?? "—")}</span>
+                        </div>
+                        <Separator />
+                        <div class="flex items-center justify-between gap-3">
+                          <span class="text-muted-foreground">Updated</span>
+                          <span>{String(doc?._updatedAt ?? "—")}</span>
+                        </div>
                       </div>
-                      <Separator />
-                      <div class="flex items-start justify-between gap-3">
-                        <span class="text-muted-foreground">ID</span>
-                        <code class="max-w-[16rem] break-all rounded bg-muted px-2 py-1 text-xs">{String(doc?._id ?? route.documentId)}</code>
-                      </div>
-                      <Separator />
-                      <div class="flex items-center justify-between gap-3">
-                        <span class="text-muted-foreground">Created</span>
-                        <span>{String(doc?._createdAt ?? "—")}</span>
-                      </div>
-                      <Separator />
-                      <div class="flex items-center justify-between gap-3">
-                        <span class="text-muted-foreground">Updated</span>
-                        <span>{String(doc?._updatedAt ?? "—")}</span>
-                      </div>
-                    </div>
-                  </AdminCard>
-
-                  {doc?.slug && (
-                    <AdminCard title="Public route" description="Open the document in a new tab.">
-                      <a
-                        href={cms.meta.getRouteForDocument(collection.slug, doc)}
-                        target="_blank"
-                        class="flex items-center justify-between gap-3 rounded-lg border px-3 py-3 text-sm transition-colors hover:bg-muted/50"
-                      >
-                        <span class="truncate">{cms.meta.getRouteForDocument(collection.slug, doc)}</span>
-                        <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
-                      </a>
                     </AdminCard>
-                  )}
 
-                  {versions.length > 0 && (
-                    <AdminCard title="Version history" description="Recent snapshots captured by the runtime.">
-                      <div class="grid gap-3">
-                        {versions
-                          .slice()
-                          .reverse()
-                          .map((version) => (
-                            <div class="rounded-lg border px-3 py-3">
-                              <div class="flex items-start justify-between gap-3">
-                                <div>
-                                  <div class="flex items-center gap-2 font-medium">
-                                    <Clock3 className="size-4 text-muted-foreground" />
-                                    v{version.version}
+                    {doc?.slug && (
+                      <AdminCard title="Public route" description="Open the document in a new tab.">
+                        <a
+                          href={cms.meta.getRouteForDocument(collection.slug, doc)}
+                          target="_blank"
+                          class="flex items-center justify-between gap-3 rounded-lg border px-3 py-3 text-sm transition-colors hover:bg-muted/50"
+                        >
+                          <span class="truncate">{cms.meta.getRouteForDocument(collection.slug, doc)}</span>
+                          <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
+                        </a>
+                      </AdminCard>
+                    )}
+
+                    {versions.length > 0 && (
+                      <AdminCard title="Version history" description="Recent snapshots captured by the runtime.">
+                        <div class="grid gap-3">
+                          {versions
+                            .slice()
+                            .reverse()
+                            .map((version) => (
+                              <div class="rounded-lg border px-3 py-3">
+                                <div class="flex items-start justify-between gap-3">
+                                  <div>
+                                    <div class="flex items-center gap-2 font-medium">
+                                      <Clock3 className="size-4 text-muted-foreground" />v{version.version}
+                                    </div>
+                                    <div class="mt-1 text-xs text-muted-foreground">{version.createdAt}</div>
                                   </div>
-                                  <div class="mt-1 text-xs text-muted-foreground">{version.createdAt}</div>
+                                  <form method="post" action={getFormAction(collection.slug, route.documentId)}>
+                                    <input type="hidden" name="_action" value="restore" />
+                                    <input type="hidden" name="version" value={String(version.version)} />
+                                    <input
+                                      type="hidden"
+                                      name="redirectTo"
+                                      value={Astro.url.pathname + Astro.url.search}
+                                    />
+                                    <button class={buttonVariants({ variant: "outline", size: "sm" })} type="submit">
+                                      Restore
+                                    </button>
+                                  </form>
                                 </div>
-                                <form method="post" action={getFormAction(collection.slug, route.documentId)}>
-                                  <input type="hidden" name="_action" value="restore" />
-                                  <input type="hidden" name="version" value={String(version.version)} />
-                                  <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
-                                  <button class={buttonVariants({ variant: "outline", size: "sm" })} type="submit">
-                                    Restore
-                                  </button>
-                                </form>
                               </div>
-                            </div>
-                          ))}
-                      </div>
-                    </AdminCard>
-                  )}
-                </>
-              )}
+                            ))}
+                        </div>
+                      </AdminCard>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        </>
-      )}
-    </section>
-  )}
+          </>
+        )}
+      </section>
+    )
+  }
 </AdminLayout>

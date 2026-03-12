@@ -5,14 +5,21 @@ import { cms } from "../cms/.generated/api";
 
 export const prerender = false;
 
+type AnyRecord = Record<string, any>;
+
 const locale = Astro.url.searchParams.get("locale") ?? "en";
-const homePage = await cms.pages.findOne({ slug: locale === "en" ? "home" : locale === "fi" ? "etusivu" : "home", locale, status: "published" });
-const latestPosts = await cms.posts.find({
+const homePage = (await cms.pages.findOne({
+  slug: locale === "en" ? "home" : locale === "fi" ? "etusivu" : "home",
+  locale,
+  status: "published",
+})) as AnyRecord | null;
+const latestPosts = (await cms.posts.find({
   locale,
   status: "published",
   limit: 3,
   sort: { field: "sortOrder", direction: "desc" },
-});
+})) as AnyRecord[];
+const blocks = (homePage?.blocks ?? []) as AnyRecord[];
 ---
 
 <PublicLayout title="AstroCMS" description={String(homePage?.summary ?? "A code-first CMS built inside Astro.")}>
@@ -33,41 +40,53 @@ const latestPosts = await cms.posts.find({
         </div>
       </div>
       <div class="hero-shell__visual">
-        {homePage?.heroImage ? <img src={String(homePage.heroImage)} alt={String(homePage.title ?? "AstroCMS")} /> : <div class="visual-placeholder" />}
+        {
+          homePage?.heroImage ? (
+            <img src={String(homePage.heroImage)} alt={String(homePage.title ?? "AstroCMS")} />
+          ) : (
+            <div class="visual-placeholder" />
+          )
+        }
       </div>
     </section>
 
-    {Array.isArray(homePage?.blocks) && (
-      <section class="blocks-stack">
-        {homePage.blocks.map((block) => (
-          <article class="content-block">
-            {block.type === "hero" && (
-              <>
-                <span class="eyebrow">{String(block.eyebrow ?? "")}</span>
-                <h2>{String(block.heading ?? "")}</h2>
-                <p>{String(block.body ?? "")}</p>
-                {block.ctaHref && block.ctaLabel && <a class="button button--secondary" href={String(block.ctaHref)}>{String(block.ctaLabel)}</a>}
-              </>
-            )}
+    {
+      blocks.length > 0 && (
+        <section class="blocks-stack">
+          {blocks.map((block) => (
+            <article class="content-block">
+              {block.type === "hero" && (
+                <>
+                  <span class="eyebrow">{String(block.eyebrow ?? "")}</span>
+                  <h2>{String(block.heading ?? "")}</h2>
+                  <p>{String(block.body ?? "")}</p>
+                  {block.ctaHref && block.ctaLabel && (
+                    <a class="button button--secondary" href={String(block.ctaHref)}>
+                      {String(block.ctaLabel)}
+                    </a>
+                  )}
+                </>
+              )}
 
-            {block.type === "text" && (
-              <>
-                {block.heading && <h2>{String(block.heading)}</h2>}
-                <RichTextContent content={block.content} />
-              </>
-            )}
+              {block.type === "text" && (
+                <>
+                  {block.heading && <h2>{String(block.heading)}</h2>}
+                  <RichTextContent content={block.content} />
+                </>
+              )}
 
-            {block.type === "gallery" && Array.isArray(block.images) && (
-              <div class="gallery-grid">
-                {block.images.map((image) => (
-                  <img src={String(image)} alt="" />
-                ))}
-              </div>
-            )}
-          </article>
-        ))}
-      </section>
-    )}
+              {block.type === "gallery" && Array.isArray(block.images) && (
+                <div class="gallery-grid">
+                  {block.images.map((image: string) => (
+                    <img src={image} alt="" />
+                  ))}
+                </div>
+              )}
+            </article>
+          ))}
+        </section>
+      )
+    }
 
     <section class="collection-strip">
       <div class="section-heading">
@@ -78,17 +97,19 @@ const latestPosts = await cms.posts.find({
         <a class="button button--ghost" href="/blog">View all posts</a>
       </div>
       <div class="story-grid">
-        {latestPosts.map((post) => (
-          <a class="story-card" href={`/blog/${post.slug}`}>
-            {post.cover && <img src={String(post.cover)} alt={String(post.title)} />}
-            <div class="story-card__body">
-              <span class="badge">{String(post.category ?? "Editorial")}</span>
-              <h3>{String(post.title)}</h3>
-              {post.description && <p class="story-card__description">{String(post.description)}</p>}
-              <p>{String(post.excerpt ?? "")}</p>
-            </div>
-          </a>
-        ))}
+        {
+          latestPosts.map((post) => (
+            <a class="story-card" href={`/blog/${post.slug}`}>
+              {post.cover && <img src={String(post.cover)} alt={String(post.title)} />}
+              <div class="story-card__body">
+                <span class="badge">{String(post.category ?? "Editorial")}</span>
+                <h3>{String(post.title)}</h3>
+                {post.description && <p class="story-card__description">{String(post.description)}</p>}
+                <p>{String(post.excerpt ?? "")}</p>
+              </div>
+            </a>
+          ))
+        }
       </div>
     </section>
   </main>

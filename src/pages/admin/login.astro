@@ -11,9 +11,7 @@ export const prerender = false;
 
 const error = Astro.url.searchParams.get("error");
 const errorMessage =
-  error === "invalid" ? "Invalid email or password." :
-  error === "missing" ? "Email and password are required." :
-  null;
+  error === "invalid" ? "Invalid email or password." : error === "missing" ? "Email and password are required." : null;
 ---
 
 <!doctype html>
@@ -44,43 +42,28 @@ const errorMessage =
             <CardDescription>Enter your credentials to continue</CardDescription>
           </CardHeader>
           <CardContent>
-            {errorMessage && (
-              <div class="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {errorMessage}
-              </div>
-            )}
+            {
+              errorMessage && (
+                <div class="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {errorMessage}
+                </div>
+              )
+            }
             <form method="post" action="/api/cms/auth/login" class="grid gap-4">
               <div class="grid gap-2">
                 <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="admin@example.com"
-                  required
-                  autoFocus
-                />
+                <Input id="email" name="email" type="email" placeholder="admin@example.com" required autoFocus />
               </div>
               <div class="grid gap-2">
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="Enter password"
-                  required
-                />
+                <Input id="password" name="password" type="password" placeholder="Enter password" required />
               </div>
-              <button class={buttonVariants({ className: "w-full" })} type="submit">
-                Sign in
-              </button>
+              <button class={buttonVariants({ className: "w-full" })} type="submit"> Sign in </button>
             </form>
           </CardContent>
         </Card>
 
-        <p class="text-center text-xs text-muted-foreground">
-          Default: admin@example.com / changeme
-        </p>
+        <p class="text-center text-xs text-muted-foreground">Default: admin@example.com / changeme</p>
       </div>
     </div>
   </body>

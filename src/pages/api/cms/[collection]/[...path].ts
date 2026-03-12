@@ -53,11 +53,18 @@ const extractDataFromForm = async (request: Request) => {
     redirectTo: String(formData.get("redirectTo") ?? "/admin"),
     locale: formData.get("locale") ? String(formData.get("locale")) : undefined,
     version: formData.get("version") ? Number(formData.get("version")) : undefined,
-    data: Object.fromEntries(entries.filter(([key]) => !key.startsWith("_") && key !== "redirectTo" && key !== "locale" && key !== "version")),
+    data: Object.fromEntries(
+      entries.filter(([key]) => !key.startsWith("_") && key !== "redirectTo" && key !== "locale" && key !== "version"),
+    ),
   };
 };
 
-const handleHtmlMutation = async (collectionSlug: string, documentId: string | undefined, request: Request, locals: App.Locals) => {
+const handleHtmlMutation = async (
+  collectionSlug: string,
+  documentId: string | undefined,
+  request: Request,
+  locals: App.Locals,
+) => {
   const { action, data, intent, redirectTo, locale, version } = await extractDataFromForm(request);
   const collectionApi = cmsRuntime[collectionSlug];
   const collection = getCollection(collectionSlug);
@@ -140,14 +147,17 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
     return Response.json(doc);
   }
 
-  const docs = await cmsRuntime[collectionSlug].find({
-    where: parseJsonQuery(url.searchParams.get("where")),
-    sort: parseJsonQuery(url.searchParams.get("sort")),
-    limit: url.searchParams.get("limit") ? Number(url.searchParams.get("limit")) : undefined,
-    offset: url.searchParams.get("offset") ? Number(url.searchParams.get("offset")) : undefined,
-    locale,
-    status,
-  }, ctx);
+  const docs = await cmsRuntime[collectionSlug].find(
+    {
+      where: parseJsonQuery(url.searchParams.get("where")),
+      sort: parseJsonQuery(url.searchParams.get("sort")),
+      limit: url.searchParams.get("limit") ? Number(url.searchParams.get("limit")) : undefined,
+      offset: url.searchParams.get("offset") ? Number(url.searchParams.get("offset")) : undefined,
+      locale,
+      status,
+    },
+    ctx,
+  );
 
   return Response.json(docs);
 };

@@ -80,9 +80,14 @@ export const formatFieldValue = (
 };
 
 export const getListColumns = (collection: CollectionConfig, viewConfig?: { columns?: string[] }) =>
-  viewConfig?.columns?.length ? viewConfig.columns : ["title" in collection.fields ? "title" : Object.keys(collection.fields)[0], "_status", "_updatedAt"];
+  viewConfig?.columns?.length
+    ? viewConfig.columns
+    : ["title" in collection.fields ? "title" : Object.keys(collection.fields)[0], "_status", "_updatedAt"];
 
-export const getFieldSets = (collection: CollectionConfig, viewConfig?: { layout?: Array<{ fields: string[]; width?: string }> }) => {
+export const getFieldSets = (
+  collection: CollectionConfig,
+  viewConfig?: { layout?: Array<{ fields: string[]; width?: string }> },
+) => {
   if (!viewConfig?.layout?.length) {
     return [{ fields: Object.keys(collection.fields), width: "full" }];
   }

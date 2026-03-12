@@ -2,13 +2,18 @@ import { sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import type { CMSConfig, CollectionConfig, FieldConfig } from "./define";
-import { getCollectionMap, getTranslatableFieldNames } from "./define";
+import { getTranslatableFieldNames } from "./define";
 import { getDb } from "./db";
 import { hashPassword } from "./auth";
 import { cloneValue, slugify } from "./values";
+import seedData from "../seed.data";
 
 const isJsonField = (field: FieldConfig) =>
-  field.type === "richText" || field.type === "array" || field.type === "json" || field.type === "blocks" || (field.type === "relation" && field.hasMany);
+  field.type === "richText" ||
+  field.type === "array" ||
+  field.type === "json" ||
+  field.type === "blocks" ||
+  (field.type === "relation" && field.hasMany);
 
 const serializeForDb = (collection: CollectionConfig, data: Record<string, unknown>): Record<string, unknown> => {
   const result: Record<string, unknown> = {};
@@ -26,10 +31,9 @@ const serializeForDb = (collection: CollectionConfig, data: Record<string, unkno
 export const seedDatabase = async (config: CMSConfig) => {
   const db = await getDb();
   const schema = await import("../.generated/schema");
-  const collectionMap = getCollectionMap(config);
-
   for (const collection of config.collections) {
-    if (!collection.seed || collection.seed.length === 0) continue;
+    const collectionSeed = seedData[collection.slug];
+    if (!collectionSeed || collectionSeed.length === 0) continue;
 
     const tables = schema.cmsTables[collection.slug as keyof typeof schema.cmsTables] as {
       main: any;
@@ -45,12 +49,14 @@ export const seedDatabase = async (config: CMSConfig) => {
 
     console.log(`  Seeding ${collection.labels.plural}...`);
 
-    for (const seedDoc of collection.seed) {
+    for (const seedDoc of collectionSeed) {
       const now = new Date().toISOString();
       const docId = typeof seedDoc._id === "string" ? String(seedDoc._id) : nanoid();
 
       // Separate translations from the seed data
-      const translations = seedDoc._translations as Array<{ locale: string; values: Record<string, unknown> }> | undefined;
+      const translations = seedDoc._translations as
+        | Array<{ locale: string; values: Record<string, unknown> }>
+        | undefined;
       const { _id, _translations, _status, ...fieldData } = seedDoc as Record<string, unknown>;
 
       // Auto-generate slugs

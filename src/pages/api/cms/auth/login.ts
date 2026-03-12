@@ -39,11 +39,7 @@ export const POST: APIRoute = async ({ request }) => {
     return Response.json({ error: "Users collection not configured." }, { status: 500 });
   }
 
-  const rows = await db
-    .select()
-    .from(tables.users.main)
-    .where(eq(tables.users.main.email, email))
-    .limit(1);
+  const rows = await db.select().from(tables.users.main).where(eq(tables.users.main.email, email)).limit(1);
 
   if (rows.length === 0) {
     if (contentType.includes("application/json")) {

@@ -18,8 +18,9 @@ if (rawSegments.length > 0 && supportedLocales.includes(rawSegments[0])) {
 }
 
 let kind: "blogIndex" | "post" | "page" = "page";
-let document: Record<string, unknown> | null = null;
-let latestPosts: Array<Record<string, unknown>> = [];
+type AnyRecord = Record<string, any>;
+let document: AnyRecord | null = null;
+let latestPosts: AnyRecord[] = [];
 
 if (segments[0] === "blog" && segments.length === 1) {
   kind = "blogIndex";
@@ -49,88 +50,105 @@ if ((kind === "post" || kind === "page") && !document) {
 }
 ---
 
-<PublicLayout title={String(document?.title ?? "AstroCMS")} description={String(document?.excerpt ?? document?.summary ?? "AstroCMS content")}>
+<PublicLayout
+  title={String(document?.title ?? "AstroCMS")}
+  description={String(document?.excerpt ?? document?.summary ?? "AstroCMS content")}
+>
   <main class="content-shell">
-    {kind === "blogIndex" && (
-      <section class="collection-strip">
-        <div class="section-heading">
-          <div>
-            <span class="eyebrow">Editorial output</span>
-            <h1>Blog</h1>
-          </div>
-          <a class="button button--ghost" href="/admin/posts">Manage posts</a>
-        </div>
-        <div class="story-grid">
-          {latestPosts.map((post) => (
-            <a class="story-card" href={`/blog/${post.slug}`}>
-              {post.cover && <img src={String(post.cover)} alt={String(post.title)} />}
-              <div class="story-card__body">
-                <span class="badge">{String(post.category ?? "Editorial")}</span>
-                <h2>{String(post.title)}</h2>
-                {post.description && <p class="story-card__description">{String(post.description)}</p>}
-                <p>{String(post.excerpt ?? "")}</p>
-              </div>
+    {
+      kind === "blogIndex" && (
+        <section class="collection-strip">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Editorial output</span>
+              <h1>Blog</h1>
+            </div>
+            <a class="button button--ghost" href="/admin/posts">
+              Manage posts
             </a>
-          ))}
-        </div>
-      </section>
-    )}
-
-    {kind === "post" && document && (
-      <article class="article-shell">
-        {document.cover && <img class="article-cover" src={String(document.cover)} alt={String(document.title)} />}
-        <div class="article-header">
-          <span class="badge">{String(document.category ?? "Editorial")}</span>
-          <h1>{String(document.title)}</h1>
-          {document.description && <p class="article-description">{String(document.description)}</p>}
-          <p>{String(document.excerpt ?? "")}</p>
-        </div>
-        <RichTextContent content={document.body} />
-      </article>
-    )}
-
-    {kind === "page" && document && (
-      <article class="page-shell">
-        <div class="article-header">
-          <span class="eyebrow">{String(document.layout ?? "Page")}</span>
-          <h1>{String(document.title)}</h1>
-          {document.summary && <p>{String(document.summary)}</p>}
-        </div>
-
-        {document.heroImage && <img class="article-cover" src={String(document.heroImage)} alt={String(document.title)} />}
-
-        {Array.isArray(document.blocks) && (
-          <section class="blocks-stack">
-            {document.blocks.map((block) => (
-              <article class="content-block">
-                {block.type === "hero" && (
-                  <>
-                    <span class="eyebrow">{String(block.eyebrow ?? "")}</span>
-                    <h2>{String(block.heading ?? "")}</h2>
-                    <p>{String(block.body ?? "")}</p>
-                    {block.ctaHref && block.ctaLabel && <a class="button" href={String(block.ctaHref)}>{String(block.ctaLabel)}</a>}
-                  </>
-                )}
-
-                {block.type === "text" && (
-                  <>
-                    {block.heading && <h2>{String(block.heading)}</h2>}
-                    <RichTextContent content={block.content} />
-                  </>
-                )}
-
-                {block.type === "gallery" && Array.isArray(block.images) && (
-                  <div class="gallery-grid">
-                    {block.images.map((image) => (
-                      <img src={String(image)} alt="" />
-                    ))}
-                  </div>
-                )}
-              </article>
+          </div>
+          <div class="story-grid">
+            {latestPosts.map((post) => (
+              <a class="story-card" href={`/blog/${post.slug}`}>
+                {post.cover && <img src={String(post.cover)} alt={String(post.title)} />}
+                <div class="story-card__body">
+                  <span class="badge">{String(post.category ?? "Editorial")}</span>
+                  <h2>{String(post.title)}</h2>
+                  {post.description && <p class="story-card__description">{String(post.description)}</p>}
+                  <p>{String(post.excerpt ?? "")}</p>
+                </div>
+              </a>
             ))}
-          </section>
-        )}
-      </article>
-    )}
+          </div>
+        </section>
+      )
+    }
+
+    {
+      kind === "post" && document && (
+        <article class="article-shell">
+          {document.cover && <img class="article-cover" src={String(document.cover)} alt={String(document.title)} />}
+          <div class="article-header">
+            <span class="badge">{String(document.category ?? "Editorial")}</span>
+            <h1>{String(document.title)}</h1>
+            {document.description && <p class="article-description">{String(document.description)}</p>}
+            <p>{String(document.excerpt ?? "")}</p>
+          </div>
+          <RichTextContent content={document.body} />
+        </article>
+      )
+    }
+
+    {
+      kind === "page" && document && (
+        <article class="page-shell">
+          <div class="article-header">
+            <span class="eyebrow">{String(document.layout ?? "Page")}</span>
+            <h1>{String(document.title)}</h1>
+            {document.summary && <p>{String(document.summary)}</p>}
+          </div>
+
+          {document.heroImage && (
+            <img class="article-cover" src={String(document.heroImage)} alt={String(document.title)} />
+          )}
+
+          {Array.isArray(document.blocks) && (
+            <section class="blocks-stack">
+              {document.blocks.map((block) => (
+                <article class="content-block">
+                  {block.type === "hero" && (
+                    <>
+                      <span class="eyebrow">{String(block.eyebrow ?? "")}</span>
+                      <h2>{String(block.heading ?? "")}</h2>
+                      <p>{String(block.body ?? "")}</p>
+                      {block.ctaHref && block.ctaLabel && (
+                        <a class="button" href={String(block.ctaHref)}>
+                          {String(block.ctaLabel)}
+                        </a>
+                      )}
+                    </>
+                  )}
+
+                  {block.type === "text" && (
+                    <>
+                      {block.heading && <h2>{String(block.heading)}</h2>}
+                      <RichTextContent content={block.content} />
+                    </>
+                  )}
+
+                  {block.type === "gallery" && Array.isArray(block.images) && (
+                    <div class="gallery-grid">
+                      {block.images.map((image: string) => (
+                        <img src={String(image)} alt="" />
+                      ))}
+                    </div>
+                  )}
+                </article>
+              ))}
+            </section>
+          )}
+        </article>
+      )
+    }
   </main>
 </PublicLayout>

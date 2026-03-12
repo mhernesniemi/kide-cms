@@ -41,7 +41,17 @@ pnpm build                    # generate + production build
 pnpm cms:generate             # regenerate .generated/ from collections.config.ts
 npx drizzle-kit generate      # diff schema → migration SQL
 npx drizzle-kit migrate       # apply pending migrations
+pnpm check                    # run TypeScript/Astro type checking
+pnpm format                   # format all files with prettier
+pnpm format:check             # check formatting without writing
 ```
+
+## Validation (IMPORTANT)
+
+After completing any code changes, ALWAYS run these two commands as a final validation step:
+
+1. `pnpm check` — Run `@astrojs/check` to catch TypeScript errors across all `.ts`, `.tsx`, and `.astro` files. Fix all errors before considering the task done.
+2. `pnpm format --write .` — Run Prettier to format all changed files. This must be the very last step.
 
 ## Tech Stack
 
@@ -502,10 +512,10 @@ interface FindOptions {
 ```astro
 ---
 // src/pages/blog/[slug].astro
-import { cms } from '../../cms/.generated/api';
+import { cms } from "../../cms/.generated/api";
 
 const post = await cms.posts.findOne({ slug: Astro.params.slug });
-if (!post) return Astro.redirect('/404');
+if (!post) return Astro.redirect("/404");
 ---
 
 <article>
@@ -589,8 +599,7 @@ export default defineAccess({
   posts: {
     read: ({ user }) => true, // public
     create: ({ user }) => user?.role === "admin" || user?.role === "editor",
-    update: ({ user, doc }) =>
-      user?.role === "admin" || doc.author === user?.id,
+    update: ({ user, doc }) => user?.role === "admin" || doc.author === user?.id,
     delete: ({ user }) => user?.role === "admin",
     publish: ({ user }) => user?.role === "admin",
   },
@@ -645,14 +654,15 @@ The catch-all route does this:
 ```astro
 ---
 // src/pages/admin/[...path].astro
-import { renderAdmin } from '../../cms/core/admin/render';
-import config from '../../cms/collections.config';
-import views from '../../cms/admin/views';
+import { renderAdmin } from "../../cms/core/admin/render";
+import config from "../../cms/collections.config";
+import views from "../../cms/admin/views";
 
 const { path } = Astro.params;
 const html = await renderAdmin({ path, config, views, request: Astro.request });
-if (!html) return Astro.redirect('/admin');
+if (!html) return Astro.redirect("/admin");
 ---
+
 <Fragment set:html={html} />
 ```
 
@@ -725,13 +735,7 @@ Override any field's admin component by registering it in the collection config:
 ```tsx
 // src/cms/admin/fields/ColorPicker.tsx
 export default function ColorPicker({ value, onChange, field }) {
-  return (
-    <input
-      type="color"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
-  );
+  return <input type="color" value={value} onChange={(e) => onChange(e.target.value)} />;
 }
 ```
 
@@ -801,14 +805,11 @@ A `<RichText />` Astro component walks the AST and renders to HTML, with support
 
 ```astro
 ---
-import RichText from '../cms/core/richtext/RichText.astro';
-import Callout from '../components/Callout.astro';
+import RichText from "../cms/core/richtext/RichText.astro";
+import Callout from "../components/Callout.astro";
 ---
 
-<RichText
-  content={post.body}
-  components={{ Callout }}
-/>
+<RichText content={post.body} components={{ Callout }} />
 ```
 
 ### 9.3 Editor
@@ -909,11 +910,11 @@ For content pages with translatable slugs, the developer structures routes to in
 // src/pages/[locale]/blog/[slug].astro
 const { locale, slug } = Astro.params;
 const post = await cms.posts.findOne({ slug, locale });
-if (!post) return Astro.redirect('/404');
+if (!post) return Astro.redirect("/404");
 
 Astro.cache.set({
   maxAge: 3600,
-  tags: ['posts', `post:${post._id}`, `locale:${locale}`],
+  tags: ["posts", `post:${post._id}`, `locale:${locale}`],
 });
 ---
 ```
@@ -1113,15 +1114,15 @@ Each content page tags its cache response with the specific document ID. This en
 ```astro
 ---
 // src/pages/blog/[slug].astro
-import { cms } from '../../cms/.generated/api';
+import { cms } from "../../cms/.generated/api";
 
 const post = await cms.posts.findOne({ slug: Astro.params.slug });
-if (!post) return Astro.redirect('/404');
+if (!post) return Astro.redirect("/404");
 
 Astro.cache.set({
-  maxAge: 3600,                          // fresh for 1 hour
-  swr: 300,                              // serve stale 5 min while revalidating
-  tags: ['posts', `post:${post._id}`],   // granular invalidation targets
+  maxAge: 3600, // fresh for 1 hour
+  swr: 300, // serve stale 5 min while revalidating
+  tags: ["posts", `post:${post._id}`], // granular invalidation targets
 });
 ---
 
@@ -1136,12 +1137,12 @@ Listing pages tag by collection:
 ```astro
 ---
 // src/pages/blog/index.astro
-const posts = await cms.posts.find({ status: 'published', limit: 20 });
+const posts = await cms.posts.find({ status: "published", limit: 20 });
 
 Astro.cache.set({
   maxAge: 1800,
   swr: 300,
-  tags: ['posts'],  // invalidated when any post changes
+  tags: ["posts"], // invalidated when any post changes
 });
 ---
 ```

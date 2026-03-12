@@ -39,10 +39,13 @@ export default function ImagePicker({ name, value: initialValue, placeholder }: 
     }
   }, []);
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleUpload(file);
-  }, [handleUpload]);
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) handleUpload(file);
+    },
+    [handleUpload],
+  );
 
   const openBrowser = useCallback(async () => {
     setShowBrowser(true);
@@ -72,11 +75,7 @@ export default function ImagePicker({ name, value: initialValue, placeholder }: 
       {value ? (
         <div className="group relative">
           {isImage ? (
-            <img
-              src={value}
-              alt=""
-              className="h-40 w-full rounded-lg border object-cover"
-            />
+            <img src={value} alt="" className="h-40 w-full rounded-lg border object-cover" />
           ) : (
             <div className="flex h-40 items-center justify-center rounded-lg border bg-muted/30">
               <span className="truncate px-4 text-sm text-muted-foreground">{value}</span>
@@ -94,21 +93,13 @@ export default function ImagePicker({ name, value: initialValue, placeholder }: 
         <div className="flex h-32 items-center justify-center rounded-lg border border-dashed bg-muted/20">
           <div className="text-center">
             <ImagePlus className="mx-auto size-8 text-muted-foreground/50" />
-            <p className="mt-1 text-xs text-muted-foreground">
-              {placeholder || "Upload or select an image"}
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{placeholder || "Upload or select an image"}</p>
           </div>
         </div>
       )}
 
       <div className="flex gap-2">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFileChange}
-        />
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
@@ -134,11 +125,7 @@ export default function ImagePicker({ name, value: initialValue, placeholder }: 
           <div className="max-h-[80vh] w-full max-w-3xl overflow-hidden rounded-xl border bg-background shadow-lg">
             <div className="flex items-center justify-between border-b px-4 py-3">
               <h3 className="font-semibold">Media Library</h3>
-              <button
-                type="button"
-                onClick={() => setShowBrowser(false)}
-                className="rounded-md p-1 hover:bg-accent"
-              >
+              <button type="button" onClick={() => setShowBrowser(false)} className="rounded-md p-1 hover:bg-accent">
                 <X className="size-4" />
               </button>
             </div>
@@ -163,11 +150,7 @@ export default function ImagePicker({ name, value: initialValue, placeholder }: 
                         onClick={() => selectAsset(asset)}
                         className="group relative aspect-square overflow-hidden rounded-lg border transition-all hover:ring-2 hover:ring-primary"
                       >
-                        <img
-                          src={asset.url}
-                          alt={asset.filename}
-                          className="size-full object-cover"
-                        />
+                        <img src={asset.url} alt={asset.filename} className="size-full object-cover" />
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
                           <p className="truncate text-xs text-white">{asset.filename}</p>
                         </div>

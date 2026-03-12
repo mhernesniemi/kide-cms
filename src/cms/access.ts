@@ -1,10 +1,7 @@
 import { defineAccess } from "./core/define";
 
 const isAdmin = ({ user }: { user?: { role?: string } | null }) => user?.role === "admin";
-const isEditor = ({ user }: { user?: { role?: string } | null }) =>
-  user?.role === "admin" || user?.role === "editor";
-const isAuthenticated = ({ user }: { user?: { role?: string } | null }) => !!user;
-
+const isEditor = ({ user }: { user?: { role?: string } | null }) => user?.role === "admin" || user?.role === "editor";
 export default defineAccess({
   users: {
     read: isAdmin,

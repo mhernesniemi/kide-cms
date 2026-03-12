@@ -20,7 +20,11 @@ const snakeCase = (value: string) =>
     .toLowerCase();
 
 const isJsonField = (field: FieldConfig) =>
-  field.type === "richText" || field.type === "array" || field.type === "json" || field.type === "blocks" || (field.type === "relation" && field.hasMany);
+  field.type === "richText" ||
+  field.type === "array" ||
+  field.type === "json" ||
+  field.type === "blocks" ||
+  (field.type === "relation" && field.hasMany);
 
 // ---------------------
 // schema.ts generation
@@ -56,9 +60,7 @@ const generateColumnDef = (fieldName: string, field: FieldConfig): string => {
 const generateMainTable = (collection: CollectionConfig): string => {
   const tableName = `cms_${snakeCase(collection.slug)}`;
   const varName = `cms${pascalCase(collection.slug)}`;
-  const columns: string[] = [
-    `  _id: text("_id").primaryKey(),`,
-  ];
+  const columns: string[] = [`  _id: text("_id").primaryKey(),`];
 
   for (const [fieldName, field] of Object.entries(collection.fields)) {
     columns.push(generateColumnDef(fieldName, field));
@@ -178,7 +180,13 @@ const generateSchemaFile = (): string => {
 // -----------------------
 
 const zodTypeForField = (field: FieldConfig): string => {
-  if (field.type === "text" || field.type === "slug" || field.type === "email" || field.type === "image" || field.type === "date") {
+  if (
+    field.type === "text" ||
+    field.type === "slug" ||
+    field.type === "email" ||
+    field.type === "image" ||
+    field.type === "date"
+  ) {
     let z = "z.string()";
     if (field.type === "email") z = `z.string().email()`;
     if (field.type === "text" && field.maxLength) z = `z.string().max(${field.maxLength})`;
@@ -216,11 +224,7 @@ const zodTypeForField = (field: FieldConfig): string => {
 };
 
 const generateValidatorsFile = (): string => {
-  const parts: string[] = [
-    `// auto-generated — do not edit`,
-    `import { z } from "zod";`,
-    ``,
-  ];
+  const parts: string[] = [`// auto-generated — do not edit`, `import { z } from "zod";`, ``];
 
   for (const collection of config.collections) {
     const name = pascalCase(collection.slug);
@@ -255,7 +259,14 @@ const generateValidatorsFile = (): string => {
 // ---------------------
 
 const typeForField = (field: FieldConfig): string => {
-  if (field.type === "text" || field.type === "slug" || field.type === "email" || field.type === "image" || field.type === "date") return "string";
+  if (
+    field.type === "text" ||
+    field.type === "slug" ||
+    field.type === "email" ||
+    field.type === "image" ||
+    field.type === "date"
+  )
+    return "string";
   if (field.type === "number") return "number";
   if (field.type === "boolean") return "boolean";
   if (field.type === "select") return field.options.map((o) => JSON.stringify(o)).join(" | ");
@@ -295,9 +306,7 @@ const generateTypesFile = (): string => {
       .join("\n");
 
     const translationEntries = translatableFields.length
-      ? translatableFields
-          .map((fn) => `  ${fn}?: ${typeForField(collection.fields[fn])};`)
-          .join("\n")
+      ? translatableFields.map((fn) => `  ${fn}?: ${typeForField(collection.fields[fn])};`).join("\n")
       : "  [key: string]: never;";
 
     parts.push(`export type ${inputName} = {\n${fieldEntries}\n};`);
@@ -329,15 +338,18 @@ const generateTypesFile = (): string => {
 // --------------------
 
 const generateApiFile = (): string => {
-  const imports = config.collections.map((c) => {
-    const name = pascalCase(c.slug);
-    return [`${name}Document`, `${name}Input`, `${name}TranslationInput`];
-  }).flat();
+  const imports = config.collections
+    .map((c) => {
+      const name = pascalCase(c.slug);
+      return [`${name}Document`, `${name}Input`, `${name}TranslationInput`];
+    })
+    .flat();
 
-  const apiTypes = config.collections.map((collection) => {
-    const baseName = pascalCase(collection.slug);
-    const ctx = `context?: { user?: { id: string; role?: string; email?: string } | null }`;
-    return `  ${collection.slug}: {
+  const apiTypes = config.collections
+    .map((collection) => {
+      const baseName = pascalCase(collection.slug);
+      const ctx = `context?: { user?: { id: string; role?: string; email?: string } | null }`;
+      return `  ${collection.slug}: {
     find(options?: import("../core/api").FindOptions, ${ctx}): Promise<${baseName}Document[]>;
     findOne(filter: Record<string, unknown> & { locale?: string; status?: "draft" | "published" | "any" }, ${ctx}): Promise<${baseName}Document | null>;
     findById(id: string, options?: { locale?: string; status?: "draft" | "published" | "any" }, ${ctx}): Promise<${baseName}Document | null>;
@@ -352,7 +364,8 @@ const generateApiFile = (): string => {
     getTranslations(id: string): Promise<Record<string, ${baseName}TranslationInput>>;
     upsertTranslation(id: string, locale: string, data: ${baseName}TranslationInput, ${ctx}): Promise<${baseName}Document>;
   };`;
-  }).join("\n");
+    })
+    .join("\n");
 
   return `// auto-generated — do not edit
 import access from "../access";
