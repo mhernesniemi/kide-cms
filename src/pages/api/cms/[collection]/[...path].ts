@@ -57,15 +57,16 @@ const extractDataFromForm = async (request: Request) => {
   };
 };
 
-const handleHtmlMutation = async (collectionSlug: string, documentId: string | undefined, request: Request) => {
+const handleHtmlMutation = async (collectionSlug: string, documentId: string | undefined, request: Request, locals: App.Locals) => {
   const { action, data, intent, redirectTo, locale, version } = await extractDataFromForm(request);
   const collectionApi = cmsRuntime[collectionSlug];
   const collection = getCollection(collectionSlug);
+  const ctx = getUserContext(locals);
 
   if (action === "create") {
-    const created = await collectionApi.create(data);
+    const created = await collectionApi.create(data, ctx);
     if (collection.drafts && intent === "publish") {
-      await collectionApi.publish(created._id);
+      await collectionApi.publish(created._id, ctx);
     }
     return redirect(`/admin/${collectionSlug}/${created._id}`);
   }
@@ -75,57 +76,63 @@ const handleHtmlMutation = async (collectionSlug: string, documentId: string | u
   }
 
   if (action === "update") {
-    await collectionApi.update(documentId, data);
+    await collectionApi.update(documentId, data, ctx);
     if (collection.drafts && intent === "publish") {
-      await collectionApi.publish(documentId);
+      await collectionApi.publish(documentId, ctx);
     }
     if (collection.drafts && intent === "unpublish") {
-      await collectionApi.unpublish(documentId);
+      await collectionApi.unpublish(documentId, ctx);
     }
     return redirect(redirectTo);
   }
 
   if (action === "delete") {
-    await collectionApi.delete(documentId);
+    await collectionApi.delete(documentId, ctx);
     return redirect(`/admin/${collectionSlug}`);
   }
 
   if (action === "publish") {
-    await collectionApi.publish(documentId);
+    await collectionApi.publish(documentId, ctx);
     return redirect(redirectTo);
   }
 
   if (action === "unpublish") {
-    await collectionApi.unpublish(documentId);
+    await collectionApi.unpublish(documentId, ctx);
     return redirect(redirectTo);
   }
 
   if (action === "restore" && version) {
-    await collectionApi.restore(documentId, version);
+    await collectionApi.restore(documentId, version, ctx);
     return redirect(redirectTo);
   }
 
   if (action === "save-translation" && locale) {
-    await collectionApi.upsertTranslation(documentId, locale, data);
+    await collectionApi.upsertTranslation(documentId, locale, data, ctx);
     return redirect(redirectTo);
   }
 
   return redirect(redirectTo);
 };
 
-export const GET: APIRoute = async ({ params, url }) => {
+const getUserContext = (locals: App.Locals) => {
+  const user = locals.user;
+  return user ? { user: { id: user.id, role: user.role, email: user.email } } : {};
+};
+
+export const GET: APIRoute = async ({ params, url, locals }) => {
   const collectionSlug = params.collection;
   if (!collectionSlug) {
     return Response.json({ error: "Collection is required." }, { status: 400 });
   }
 
+  const ctx = getUserContext(locals);
   const pathSegments = getSegments(params.path);
   const documentId = pathSegments[0];
   const locale = url.searchParams.get("locale") ?? undefined;
   const status = (url.searchParams.get("status") as "draft" | "published" | "any" | null) ?? undefined;
 
   if (documentId) {
-    const doc = await cmsRuntime[collectionSlug].findById(documentId, { locale, status });
+    const doc = await cmsRuntime[collectionSlug].findById(documentId, { locale, status }, ctx);
     if (!doc) {
       return Response.json({ error: "Not found." }, { status: 404 });
     }
@@ -140,46 +147,48 @@ export const GET: APIRoute = async ({ params, url }) => {
     offset: url.searchParams.get("offset") ? Number(url.searchParams.get("offset")) : undefined,
     locale,
     status,
-  });
+  }, ctx);
 
   return Response.json(docs);
 };
 
-export const POST: APIRoute = async ({ params, request }) => {
+export const POST: APIRoute = async ({ params, request, locals }) => {
   const collectionSlug = params.collection;
   if (!collectionSlug) {
     return Response.json({ error: "Collection is required." }, { status: 400 });
   }
 
+  const ctx = getUserContext(locals);
   const pathSegments = getSegments(params.path);
   const documentId = pathSegments[0];
   const pathAction = pathSegments[1];
 
   if (isFormRequest(request)) {
-    return handleHtmlMutation(collectionSlug, documentId, request);
+    return handleHtmlMutation(collectionSlug, documentId, request, locals);
   }
 
   const body = await request.json();
   const collectionApi = cmsRuntime[collectionSlug];
 
   if (pathAction === "publish" && documentId) {
-    return Response.json(await collectionApi.publish(documentId));
+    return Response.json(await collectionApi.publish(documentId, ctx));
   }
 
   if (pathAction === "unpublish" && documentId) {
-    return Response.json(await collectionApi.unpublish(documentId));
+    return Response.json(await collectionApi.unpublish(documentId, ctx));
   }
 
-  const created = await collectionApi.create(body);
+  const created = await collectionApi.create(body, ctx);
   return Response.json(created, { status: 201 });
 };
 
-export const PATCH: APIRoute = async ({ params, request }) => {
+export const PATCH: APIRoute = async ({ params, request, locals }) => {
   const collectionSlug = params.collection;
   if (!collectionSlug) {
     return Response.json({ error: "Collection is required." }, { status: 400 });
   }
 
+  const ctx = getUserContext(locals);
   const pathSegments = getSegments(params.path);
   const documentId = pathSegments[0];
   if (!documentId) {
@@ -187,22 +196,23 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   }
 
   const body = await request.json();
-  const updated = await cmsRuntime[collectionSlug].update(documentId, body);
+  const updated = await cmsRuntime[collectionSlug].update(documentId, body, ctx);
   return Response.json(updated);
 };
 
-export const DELETE: APIRoute = async ({ params }) => {
+export const DELETE: APIRoute = async ({ params, locals }) => {
   const collectionSlug = params.collection;
   if (!collectionSlug) {
     return new Response(null, { status: 400 });
   }
 
+  const ctx = getUserContext(locals);
   const pathSegments = getSegments(params.path);
   const documentId = pathSegments[0];
   if (!documentId) {
     return new Response(null, { status: 400 });
   }
 
-  await cmsRuntime[collectionSlug].delete(documentId);
+  await cmsRuntime[collectionSlug].delete(documentId, ctx);
   return new Response(null, { status: 204 });
 };

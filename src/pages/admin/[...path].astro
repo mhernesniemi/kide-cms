@@ -28,6 +28,8 @@ export const prerender = false;
 
 const cmsRuntime = cms as Record<string, any> & { meta: typeof cms.meta };
 const route = resolveAdminRoute(Astro.params.path);
+const user = Astro.locals.user;
+const runtimeContext = user ? { user: { id: user.id, role: user.role, email: user.email } } : {};
 const localeConfig = config.locales;
 const locales = localeConfig?.supported ?? [];
 const defaultLocale = localeConfig?.default ?? "en";
@@ -71,7 +73,7 @@ let versions: Array<{ version: number; createdAt: string }> = [];
 let summaries: Array<Record<string, unknown>> = [];
 
 if (route.kind === "dashboard") {
-  summaries = await Promise.all(
+  const collectionResults = await Promise.allSettled(
     config.collections.map(async (entry) => {
       const api = cmsRuntime[entry.slug];
       const items = await api.find({
@@ -79,11 +81,14 @@ if (route.kind === "dashboard") {
         limit: 3,
         sort: { field: "_updatedAt", direction: "desc" },
         locale: defaultLocale,
-      });
-      const count = await api.count({ status: "any" });
+      }, runtimeContext);
+      const count = await api.count({ status: "any" }, runtimeContext);
       return { collection: entry, count, items };
     }),
   );
+  summaries = collectionResults
+    .filter((r): r is PromiseFulfilledResult<any> => r.status === "fulfilled")
+    .map((r) => r.value);
 } else {
   collection = cms.meta.getCollection(route.collectionSlug);
   collectionApi = cmsRuntime[route.collectionSlug];
@@ -96,7 +101,7 @@ if (route.kind === "dashboard") {
         limit: 100,
         sort: { field: "_updatedAt", direction: "desc" },
         locale: defaultLocale,
-      });
+      }, runtimeContext);
 
       relationOptionsByField[fieldName] = relatedDocs.map((item: Record<string, unknown>) => ({
         value: String(item._id),
@@ -110,18 +115,18 @@ if (route.kind === "dashboard") {
       status: "any",
       locale: defaultLocale,
       sort: viewConfig.list?.defaultSort ?? { field: "_updatedAt", direction: "desc" },
-    });
+    }, runtimeContext);
   }
 
   if (route.kind === "edit") {
-    doc = await collectionApi.findById(route.documentId, { status: "any", locale: requestedLocale });
+    doc = await collectionApi.findById(route.documentId, { status: "any", locale: requestedLocale }, runtimeContext);
     if (!doc) {
       return Astro.redirect(`/admin/${route.collectionSlug}`);
     }
     baseDoc =
       requestedLocale === defaultLocale
         ? doc
-        : await collectionApi.findById(route.documentId, { status: "any", locale: defaultLocale });
+        : await collectionApi.findById(route.documentId, { status: "any", locale: defaultLocale }, runtimeContext);
     versions = await collectionApi.versions(route.documentId);
   }
 }
@@ -213,7 +218,7 @@ const collectionStats =
         <Card>
           <CardHeader className="gap-0">
             <CardDescription>Storage</CardDescription>
-            <CardTitle className="text-xl">JSON runtime</CardTitle>
+            <CardTitle className="text-xl">SQLite</CardTitle>
           </CardHeader>
         </Card>
       </div>

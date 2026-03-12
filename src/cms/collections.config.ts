@@ -1,16 +1,32 @@
 import { defineCollection, defineConfig, fields } from "./core/define";
 
 export default defineConfig({
-  database: { dialect: "json-file" },
-  storage: {
-    adapter: "json-file",
-    root: ".cms-data",
-  },
+  database: { dialect: "sqlite" },
   locales: {
     default: "en",
     supported: ["en", "fi", "sv"],
   },
   collections: [
+    defineCollection({
+      slug: "users",
+      labels: { singular: "User", plural: "Users" },
+      auth: true,
+      timestamps: true,
+      fields: {
+        email: fields.email({ required: true, unique: true }),
+        name: fields.text({ required: true }),
+        role: fields.select({ options: ["admin", "editor", "viewer"], defaultValue: "editor" }),
+        password: fields.text({ required: true }),
+      },
+      seed: [
+        {
+          email: "admin@example.com",
+          name: "Admin",
+          role: "admin",
+          password: "changeme",
+        },
+      ],
+    }),
     defineCollection({
       slug: "authors",
       labels: { singular: "Author", plural: "Authors" },

@@ -9,7 +9,27 @@ export default defineHooks({
       }
       return data;
     },
+    afterPublish(_doc, context) {
+      context.cache?.invalidate({ tags: ["posts", "home"] });
+    },
+    afterUpdate(_doc, context) {
+      context.cache?.invalidate({ tags: ["posts"] });
+    },
+    afterDelete(_doc, context) {
+      context.cache?.invalidate({ tags: ["posts", "home"] });
+    },
   },
-  pages: {},
+  pages: {
+    afterPublish(_doc, context) {
+      context.cache?.invalidate({ tags: ["pages", "home"] });
+    },
+    afterUpdate(_doc, context) {
+      context.cache?.invalidate({ tags: ["pages"] });
+    },
+    afterDelete(_doc, context) {
+      context.cache?.invalidate({ tags: ["pages", "home"] });
+    },
+  },
   authors: {},
+  users: {},
 });

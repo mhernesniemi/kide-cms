@@ -4,7 +4,8 @@ export type CollectionLabels = {
 };
 
 export type DatabaseConfig = {
-  dialect: "json-file" | "sqlite" | "postgres";
+  dialect: "sqlite" | "postgres";
+  url?: string;
 };
 
 export type LocaleConfig = {
@@ -29,6 +30,9 @@ type BaseFieldConfig<TType extends string, TValue = unknown> = {
   unique?: boolean;
   translatable?: boolean;
   admin?: AdminFieldComponent;
+  access?: {
+    update?: (context: { user?: { id: string; role?: string; email?: string } | null; doc?: Record<string, unknown> | null; operation: string; collection: string }) => boolean | Promise<boolean>;
+  };
 };
 
 export type TextFieldConfig = BaseFieldConfig<"text", string> & {
@@ -125,10 +129,6 @@ export type CollectionConfig = {
 
 export type CMSConfig = {
   database?: DatabaseConfig;
-  storage?: {
-    adapter?: "json-file";
-    root?: string;
-  };
   locales?: LocaleConfig;
   collections: CollectionConfig[];
 };
@@ -155,6 +155,9 @@ export type HookContext = {
   operation: string;
   collection: string;
   timestamp: string;
+  cache?: {
+    invalidate: (opts: { tags: string[] }) => void;
+  };
 };
 
 export type CollectionHooks = {

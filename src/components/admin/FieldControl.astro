@@ -2,6 +2,8 @@
 import type { FieldConfig } from "../../cms/core/define";
 import { serializeFieldValue } from "../../cms/core/values";
 import { humanize } from "../../cms/core/admin";
+import ImagePicker from "@/components/admin/ImagePicker";
+import RichTextEditor from "@/components/admin/RichTextEditor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,7 +44,28 @@ const controlClass = cn(
   {field.description && <p class="text-xs leading-5 text-muted-foreground">{field.description}</p>}
   {field.admin?.help && <p class="text-xs leading-5 text-muted-foreground">{field.admin.help}</p>}
 
-  {(field.type === "text" || field.type === "slug" || field.type === "email" || field.type === "image" || field.type === "date") && (
+  {field.type === "image" && !readOnly && (
+    <ImagePicker
+      client:load
+      name={name}
+      value={serializedValue}
+      placeholder={placeholder}
+    />
+  )}
+
+  {field.type === "image" && readOnly && (
+    <Input
+      className={controlClass}
+      type="text"
+      id={name}
+      name={name}
+      defaultValue={serializedValue}
+      placeholder={placeholder}
+      readOnly={readOnly}
+    />
+  )}
+
+  {(field.type === "text" || field.type === "slug" || field.type === "email" || field.type === "date") && (
     <Input
       className={controlClass}
       type={field.type === "email" ? "email" : field.type === "date" ? "date" : "text"}
@@ -122,7 +145,27 @@ const controlClass = cn(
     </select>
   )}
 
-  {(field.type === "array" || field.type === "richText" || field.type === "json" || field.type === "blocks") && (
+  {field.type === "richText" && !readOnly && (
+    <RichTextEditor
+      client:load
+      name={name}
+      initialValue={serializedValue}
+      rows={rows}
+    />
+  )}
+
+  {field.type === "richText" && readOnly && (
+    <Textarea
+      className={controlClass}
+      id={name}
+      name={name}
+      rows={rows}
+      readOnly={readOnly}
+      defaultValue={serializedValue}
+    />
+  )}
+
+  {(field.type === "array" || field.type === "json" || field.type === "blocks") && (
     <Textarea
       className={controlClass}
       id={name}

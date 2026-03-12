@@ -1,8 +1,27 @@
-// auto-generated -- do not edit
+// auto-generated — do not edit
 import type { RichTextDocument } from "../core/define";
 
-export type CMSCollectionSlug = "authors" | "posts" | "pages";
+export type CMSCollectionSlug = "users" | "authors" | "posts" | "pages";
 
+export type UsersInput = {
+  email: string;
+  name: string;
+  role?: "admin" | "editor" | "viewer";
+  password: string;
+};
+
+export type UsersTranslationInput = {
+  [key: string]: never;
+};
+
+export type UsersDocument = UsersInput & {
+  _id: string;
+  _status: "draft" | "published";
+  _createdAt: string;
+  _updatedAt: string;
+  _locale?: string | null;
+  _availableLocales?: string[];
+};
 
 export type AuthorsInput = {
   name: string;
@@ -24,7 +43,6 @@ export type AuthorsDocument = AuthorsInput & {
   _locale?: string | null;
   _availableLocales?: string[];
 };
-
 
 export type PostsInput = {
   title: string;
@@ -55,7 +73,6 @@ export type PostsDocument = PostsInput & {
   _availableLocales?: string[];
 };
 
-
 export type PagesInput = {
   title: string;
   slug?: string;
@@ -81,3 +98,8 @@ export type PagesDocument = PagesInput & {
   _availableLocales?: string[];
 };
 
+export type StoredVersion = {
+  version: number;
+  createdAt: string;
+  snapshot: Record<string, unknown>;
+};

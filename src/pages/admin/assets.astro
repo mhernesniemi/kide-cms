@@ -1,0 +1,136 @@
+---
+import { ImagePlus, Trash2 } from "lucide-react";
+
+import AdminCard from "@/components/admin/AdminCard.astro";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import config from "@/cms/collections.config";
+import { assets } from "@/cms/core/assets";
+import AdminLayout from "@/layouts/AdminLayout.astro";
+
+export const prerender = false;
+
+const allAssets = await assets.find({ limit: 100 });
+const totalCount = await assets.count();
+
+const formatSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+---
+
+<AdminLayout
+  title="Assets | AstroCMS"
+  collections={config.collections}
+  activeCollection={null}
+>
+  <section class="space-y-6">
+    <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <div class="space-y-2">
+        <div class="text-sm font-medium text-muted-foreground">media</div>
+        <div class="space-y-1">
+          <h1 class="text-3xl font-semibold tracking-tight">Assets</h1>
+          <p class="max-w-3xl text-sm leading-6 text-muted-foreground">
+            Uploaded files and images available for use across all collections.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-3">
+      <Card>
+        <CardHeader className="gap-0">
+          <CardDescription>Total assets</CardDescription>
+          <CardTitle className="text-2xl">{totalCount}</CardTitle>
+        </CardHeader>
+      </Card>
+      <Card>
+        <CardHeader className="gap-0">
+          <CardDescription>Storage</CardDescription>
+          <CardTitle className="text-2xl">Local disk</CardTitle>
+        </CardHeader>
+      </Card>
+      <Card>
+        <CardHeader className="gap-0">
+          <CardDescription>Upload path</CardDescription>
+          <CardTitle className="text-lg">public/uploads/</CardTitle>
+        </CardHeader>
+      </Card>
+    </div>
+
+    <!-- Upload form -->
+    <AdminCard title="Upload new asset" description="Select a file to add to the media library.">
+      <form
+        method="post"
+        action="/api/cms/assets/upload"
+        enctype="multipart/form-data"
+        class="flex items-end gap-3"
+      >
+        <input type="hidden" name="redirectTo" value="/admin/assets" />
+        <div class="flex-1">
+          <input
+            type="file"
+            name="file"
+            accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+            required
+            class="w-full text-sm file:mr-3 file:rounded-md file:border file:bg-background file:px-3 file:py-1.5 file:text-sm file:transition-colors hover:file:bg-accent"
+          />
+        </div>
+        <button type="submit" class={buttonVariants({ size: "sm" })}>
+          <ImagePlus className="size-4" />
+          Upload
+        </button>
+      </form>
+    </AdminCard>
+
+    {allAssets.length === 0 ? (
+      <Card>
+        <CardContent className="py-12">
+          <div class="text-center">
+            <ImagePlus className="mx-auto size-12 text-muted-foreground/30" />
+            <p class="mt-3 text-sm text-muted-foreground">No assets uploaded yet.</p>
+            <p class="mt-1 text-xs text-muted-foreground">
+              Use the upload form above or the image picker in document editors.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    ) : (
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {allAssets.map((asset) => (
+          <Card className="overflow-hidden">
+            {asset.mimeType.startsWith("image/") ? (
+              <div class="aspect-video w-full overflow-hidden border-b bg-muted/30">
+                <img
+                  src={asset.url}
+                  alt={asset.alt ?? asset.filename}
+                  class="size-full object-cover"
+                />
+              </div>
+            ) : (
+              <div class="flex aspect-video items-center justify-center border-b bg-muted/30">
+                <Badge variant="outline">{asset.mimeType}</Badge>
+              </div>
+            )}
+            <CardContent className="space-y-2 py-3">
+              <div class="truncate text-sm font-medium">{asset.filename}</div>
+              <div class="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{formatSize(asset.size)}</span>
+                <span>{new Date(asset._createdAt).toLocaleDateString()}</span>
+              </div>
+              <form method="post" action={`/api/cms/assets/${asset._id}`}>
+                <input type="hidden" name="_method" value="DELETE" />
+                <button type="submit" class={buttonVariants({ variant: "ghost", size: "sm", className: "w-full" })}>
+                  <Trash2 className="size-3" />
+                  Delete
+                </button>
+              </form>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )}
+  </section>
+</AdminLayout>

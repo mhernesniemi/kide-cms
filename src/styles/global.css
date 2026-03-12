@@ -397,6 +397,47 @@ body[data-admin] {
   outline: none;
 }
 
+/* Tiptap editor styles */
+[data-admin] .tiptap {
+  outline: none;
+}
+
+[data-admin] .tiptap p {
+  margin: 0.5em 0;
+  color: inherit;
+  font-size: inherit;
+  line-height: 1.6;
+}
+
+[data-admin] .tiptap h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1em 0 0.5em;
+}
+
+[data-admin] .tiptap h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0.75em 0 0.4em;
+}
+
+[data-admin] .tiptap ul,
+[data-admin] .tiptap ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+[data-admin] .tiptap li {
+  margin: 0.2em 0;
+}
+
+[data-admin] .tiptap blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1em;
+  margin: 0.5em 0;
+  color: var(--muted-foreground);
+}
+
 @media (max-width: 960px) {
   .hero-shell,
   .story-grid {

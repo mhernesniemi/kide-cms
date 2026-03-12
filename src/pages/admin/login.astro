@@ -1,0 +1,87 @@
+---
+import "../../styles/global.css";
+
+import { Boxes } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { buttonVariants } from "@/components/ui/button";
+
+export const prerender = false;
+
+const error = Astro.url.searchParams.get("error");
+const errorMessage =
+  error === "invalid" ? "Invalid email or password." :
+  error === "missing" ? "Email and password are required." :
+  null;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>Sign in | AstroCMS</title>
+  </head>
+  <body class="min-h-screen bg-background text-foreground antialiased">
+    <div class="flex min-h-screen items-center justify-center px-4">
+      <div class="w-full max-w-sm space-y-6">
+        <div class="flex flex-col items-center gap-3">
+          <div class="rounded-lg border bg-card p-3 shadow-sm">
+            <Boxes className="size-5" />
+          </div>
+          <div class="text-center">
+            <h1 class="text-lg font-semibold">AstroCMS</h1>
+            <p class="text-sm text-muted-foreground">Sign in to the admin panel</p>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Sign in</CardTitle>
+            <CardDescription>Enter your credentials to continue</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {errorMessage && (
+              <div class="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {errorMessage}
+              </div>
+            )}
+            <form method="post" action="/api/cms/auth/login" class="grid gap-4">
+              <div class="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="admin@example.com"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div class="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Enter password"
+                  required
+                />
+              </div>
+              <button class={buttonVariants({ className: "w-full" })} type="submit">
+                Sign in
+              </button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <p class="text-center text-xs text-muted-foreground">
+          Default: admin@example.com / changeme
+        </p>
+      </div>
+    </div>
+  </body>
+</html>
