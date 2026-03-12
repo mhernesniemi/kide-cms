@@ -21,7 +21,7 @@ export const AuthorsCreateSchema = z.object({
   description: z.string().optional(),
   slug: z.string().optional(),
   role: z.string(),
-  bio: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
+  bio: z.object({ type: z.literal("root"), children: z.array(z.any()) }).optional(),
   avatar: z.string().optional(),
 });
 
@@ -31,7 +31,7 @@ export const AuthorsUpdateSchema = z.object({
   description: z.string().optional(),
   slug: z.string().optional(),
   role: z.string().optional(),
-  bio: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
+  bio: z.object({ type: z.literal("root"), children: z.array(z.any()) }).optional(),
   avatar: z.string().optional(),
 });
 
@@ -40,7 +40,7 @@ export const PostsCreateSchema = z.object({
   description: z.string().optional(),
   slug: z.string().optional(),
   excerpt: z.string().max(300).optional(),
-  body: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
+  body: z.object({ type: z.literal("root"), children: z.array(z.any()) }).optional(),
   cover: z.string().optional(),
   category: z.enum(["Product", "Design", "Engineering", "Business"]).optional(),
   author: z.string().optional(),
@@ -54,7 +54,7 @@ export const PostsUpdateSchema = z.object({
   description: z.string().optional(),
   slug: z.string().optional(),
   excerpt: z.string().max(300).optional(),
-  body: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
+  body: z.object({ type: z.literal("root"), children: z.array(z.any()) }).optional(),
   cover: z.string().optional(),
   category: z.enum(["Product", "Design", "Engineering", "Business"]).optional(),
   author: z.string().optional(),
@@ -69,11 +69,26 @@ export const PagesCreateSchema = z.object({
   summary: z.string().optional(),
   layout: z.enum(["default", "landing", "docs"]).optional(),
   heroImage: z.string().optional(),
-  blocks: z.array(z.discriminatedUnion("type", [
-    z.object({ type: z.literal("hero"), eyebrow: z.string().optional(), heading: z.string(), body: z.string().optional(), ctaLabel: z.string().optional(), ctaHref: z.string().optional() }),
-    z.object({ type: z.literal("text"), heading: z.string().optional(), content: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional() }),
-    z.object({ type: z.literal("gallery"), images: z.array(z.string()).optional() }),
-  ])).optional(),
+  blocks: z
+    .array(
+      z.discriminatedUnion("type", [
+        z.object({
+          type: z.literal("hero"),
+          eyebrow: z.string().optional(),
+          heading: z.string(),
+          body: z.string().optional(),
+          ctaLabel: z.string().optional(),
+          ctaHref: z.string().optional(),
+        }),
+        z.object({
+          type: z.literal("text"),
+          heading: z.string().optional(),
+          content: z.object({ type: z.literal("root"), children: z.array(z.any()) }).optional(),
+        }),
+        z.object({ type: z.literal("gallery"), images: z.array(z.string()).optional() }),
+      ]),
+    )
+    .optional(),
 });
 
 export const PagesUpdateSchema = z.object({
@@ -82,11 +97,26 @@ export const PagesUpdateSchema = z.object({
   summary: z.string().optional(),
   layout: z.enum(["default", "landing", "docs"]).optional(),
   heroImage: z.string().optional(),
-  blocks: z.array(z.discriminatedUnion("type", [
-    z.object({ type: z.literal("hero"), eyebrow: z.string().optional(), heading: z.string(), body: z.string().optional(), ctaLabel: z.string().optional(), ctaHref: z.string().optional() }),
-    z.object({ type: z.literal("text"), heading: z.string().optional(), content: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional() }),
-    z.object({ type: z.literal("gallery"), images: z.array(z.string()).optional() }),
-  ])).optional(),
+  blocks: z
+    .array(
+      z.discriminatedUnion("type", [
+        z.object({
+          type: z.literal("hero"),
+          eyebrow: z.string().optional(),
+          heading: z.string(),
+          body: z.string().optional(),
+          ctaLabel: z.string().optional(),
+          ctaHref: z.string().optional(),
+        }),
+        z.object({
+          type: z.literal("text"),
+          heading: z.string().optional(),
+          content: z.object({ type: z.literal("root"), children: z.array(z.any()) }).optional(),
+        }),
+        z.object({ type: z.literal("gallery"), images: z.array(z.string()).optional() }),
+      ]),
+    )
+    .optional(),
 });
 
 export const validators = {

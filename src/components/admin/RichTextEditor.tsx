@@ -200,11 +200,11 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
   if (!editor) return null;
 
   return (
-    <div className="overflow-hidden rounded-md border focus-within:ring-[3px] focus-within:ring-ring/50 focus-within:border-ring">
+    <div className="focus-within:ring-ring/50 focus-within:border-ring overflow-hidden rounded-md border focus-within:ring-[3px]">
       <input type="hidden" name={name} value={cmsJson} />
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 px-2 py-1.5">
+      <div className="bg-muted/30 flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5">
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           active={editor.isActive("bold")}
@@ -220,7 +220,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
           <Italic className="size-4" />
         </ToolbarButton>
 
-        <div className="mx-1 h-5 w-px bg-border" />
+        <div className="bg-border mx-1 h-5 w-px" />
 
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
@@ -237,7 +237,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
           <Heading3 className="size-4" />
         </ToolbarButton>
 
-        <div className="mx-1 h-5 w-px bg-border" />
+        <div className="bg-border mx-1 h-5 w-px" />
 
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -261,7 +261,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
           <Quote className="size-4" />
         </ToolbarButton>
 
-        <div className="mx-1 h-5 w-px bg-border" />
+        <div className="bg-border mx-1 h-5 w-px" />
 
         <ToolbarButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Undo">
           <Undo className="size-4" />

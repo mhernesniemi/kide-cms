@@ -41,17 +41,17 @@ const navItems = collections.map((collection) => ({
     <link rel="icon" href="/favicon.ico" />
     <title>{title}</title>
   </head>
-  <body data-admin class="min-h-screen bg-background text-foreground antialiased">
+  <body data-admin class="bg-background text-foreground min-h-screen antialiased">
     <div class="min-h-screen lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
-      <aside class="hidden border-r bg-sidebar/40 backdrop-blur lg:flex lg:flex-col">
+      <aside class="bg-sidebar/40 hidden border-r backdrop-blur lg:flex lg:flex-col">
         <div class="px-5 py-5">
-          <a href="/admin" class="flex items-start gap-3 rounded-lg px-2 py-1 transition-colors hover:bg-accent/50">
-            <div class="rounded-lg border bg-background p-2 shadow-sm">
+          <a href="/admin" class="hover:bg-accent/50 flex items-start gap-3 rounded-lg px-2 py-1 transition-colors">
+            <div class="bg-background rounded-lg border p-2 shadow-sm">
               <Boxes className="size-4" />
             </div>
             <div class="min-w-0">
               <div class="text-sm font-semibold tracking-tight">AstroCMS</div>
-              <div class="text-xs text-muted-foreground">Content administration</div>
+              <div class="text-muted-foreground text-xs">Content administration</div>
             </div>
           </a>
         </div>
@@ -92,12 +92,12 @@ const navItems = collections.map((collection) => ({
           {
             user && (
               <div class="mb-3 flex items-center gap-3 rounded-lg px-3 py-2">
-                <div class="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                <div class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full text-xs font-medium">
                   {user.name.charAt(0).toUpperCase()}
                 </div>
                 <div class="min-w-0 flex-1">
                   <div class="truncate text-sm font-medium">{user.name}</div>
-                  <div class="truncate text-xs text-muted-foreground">{user.role}</div>
+                  <div class="text-muted-foreground truncate text-xs">{user.role}</div>
                 </div>
               </div>
             )
@@ -124,15 +124,15 @@ const navItems = collections.map((collection) => ({
       </aside>
 
       <div class="min-w-0">
-        <header class="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 lg:hidden">
+        <header class="bg-background/95 supports-[backdrop-filter]:bg-background/75 border-b backdrop-blur lg:hidden">
           <div class="flex items-center justify-between px-4 py-4">
             <a href="/admin" class="flex items-center gap-3">
-              <div class="rounded-lg border bg-card p-2 shadow-sm">
+              <div class="bg-card rounded-lg border p-2 shadow-sm">
                 <Boxes className="size-4" />
               </div>
               <div>
                 <div class="text-sm font-semibold">AstroCMS</div>
-                <div class="text-xs text-muted-foreground">CMS admin</div>
+                <div class="text-muted-foreground text-xs">CMS admin</div>
               </div>
             </a>
             <a href="/" class={buttonVariants({ variant: "outline", size: "sm" })}>View site</a>

@@ -23,16 +23,16 @@ const errorMessage =
     <link rel="icon" href="/favicon.ico" />
     <title>Sign in | AstroCMS</title>
   </head>
-  <body class="min-h-screen bg-background text-foreground antialiased">
+  <body class="bg-background text-foreground min-h-screen antialiased">
     <div class="flex min-h-screen items-center justify-center px-4">
       <div class="w-full max-w-sm space-y-6">
         <div class="flex flex-col items-center gap-3">
-          <div class="rounded-lg border bg-card p-3 shadow-sm">
+          <div class="bg-card rounded-lg border p-3 shadow-sm">
             <Boxes className="size-5" />
           </div>
           <div class="text-center">
             <h1 class="text-lg font-semibold">AstroCMS</h1>
-            <p class="text-sm text-muted-foreground">Sign in to the admin panel</p>
+            <p class="text-muted-foreground text-sm">Sign in to the admin panel</p>
           </div>
         </div>
 
@@ -44,7 +44,7 @@ const errorMessage =
           <CardContent>
             {
               errorMessage && (
-                <div class="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                <div class="border-destructive/50 bg-destructive/10 text-destructive mb-4 rounded-lg border px-3 py-2 text-sm">
                   {errorMessage}
                 </div>
               )
@@ -63,7 +63,7 @@ const errorMessage =
           </CardContent>
         </Card>
 
-        <p class="text-center text-xs text-muted-foreground">Default: admin@example.com / changeme</p>
+        <p class="text-muted-foreground text-center text-xs">Default: admin@example.com / changeme</p>
       </div>
     </div>
   </body>

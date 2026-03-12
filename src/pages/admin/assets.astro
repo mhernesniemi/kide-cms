@@ -25,10 +25,10 @@ const formatSize = (bytes: number) => {
   <section class="space-y-6">
     <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
       <div class="space-y-2">
-        <div class="text-sm font-medium text-muted-foreground">media</div>
+        <div class="text-muted-foreground text-sm font-medium">media</div>
         <div class="space-y-1">
           <h1 class="text-3xl font-semibold tracking-tight">Assets</h1>
-          <p class="max-w-3xl text-sm leading-6 text-muted-foreground">
+          <p class="text-muted-foreground max-w-3xl text-sm leading-6">
             Uploaded files and images available for use across all collections.
           </p>
         </div>
@@ -66,7 +66,7 @@ const formatSize = (bytes: number) => {
             name="file"
             accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
             required
-            class="w-full text-sm file:mr-3 file:rounded-md file:border file:bg-background file:px-3 file:py-1.5 file:text-sm file:transition-colors hover:file:bg-accent"
+            class="file:bg-background hover:file:bg-accent w-full text-sm file:mr-3 file:rounded-md file:border file:px-3 file:py-1.5 file:text-sm file:transition-colors"
           />
         </div>
         <button type="submit" class={buttonVariants({ size: "sm" })}>
@@ -82,8 +82,8 @@ const formatSize = (bytes: number) => {
           <CardContent className="py-12">
             <div class="text-center">
               <ImagePlus className="mx-auto size-12 text-muted-foreground/30" />
-              <p class="mt-3 text-sm text-muted-foreground">No assets uploaded yet.</p>
-              <p class="mt-1 text-xs text-muted-foreground">
+              <p class="text-muted-foreground mt-3 text-sm">No assets uploaded yet.</p>
+              <p class="text-muted-foreground mt-1 text-xs">
                 Use the upload form above or the image picker in document editors.
               </p>
             </div>
@@ -94,17 +94,17 @@ const formatSize = (bytes: number) => {
           {allAssets.map((asset) => (
             <Card className="overflow-hidden">
               {asset.mimeType.startsWith("image/") ? (
-                <div class="aspect-video w-full overflow-hidden border-b bg-muted/30">
+                <div class="bg-muted/30 aspect-video w-full overflow-hidden border-b">
                   <img src={asset.url} alt={asset.alt ?? asset.filename} class="size-full object-cover" />
                 </div>
               ) : (
-                <div class="flex aspect-video items-center justify-center border-b bg-muted/30">
+                <div class="bg-muted/30 flex aspect-video items-center justify-center border-b">
                   <Badge variant="outline">{asset.mimeType}</Badge>
                 </div>
               )}
               <CardContent className="space-y-2 py-3">
                 <div class="truncate text-sm font-medium">{asset.filename}</div>
-                <div class="flex items-center justify-between text-xs text-muted-foreground">
+                <div class="text-muted-foreground flex items-center justify-between text-xs">
                   <span>{formatSize(asset.size)}</span>
                   <span>{new Date(asset._createdAt).toLocaleDateString()}</span>
                 </div>

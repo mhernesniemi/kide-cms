@@ -81,7 +81,7 @@ function DataTableColumnHeader({ column, title }: { column: Column<DataTableRow,
       onClick={() => column.toggleSorting(sorted === "asc")}
     >
       <span>{title}</span>
-      <SortIcon className="size-4 text-muted-foreground" />
+      <SortIcon className="text-muted-foreground size-4" />
     </Button>
   );
 }
@@ -200,7 +200,7 @@ export default function DocumentsDataTable({
               {isPrimary ? (
                 <a
                   href={row.original.editHref}
-                  className="font-medium text-foreground underline-offset-4 hover:underline"
+                  className="text-foreground font-medium underline-offset-4 hover:underline"
                 >
                   {value}
                 </a>
@@ -321,7 +321,7 @@ export default function DocumentsDataTable({
       <div className="flex flex-col gap-3 border-b px-4 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <div className="relative w-full sm:w-80">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <Input
               placeholder={searchPlaceholder}
               value={(searchColumn?.getFilterValue() as string) ?? ""}
@@ -329,7 +329,7 @@ export default function DocumentsDataTable({
               className="pl-9"
             />
           </div>
-          <div className="hidden text-sm text-muted-foreground md:block">
+          <div className="text-muted-foreground hidden text-sm md:block">
             {table.getFilteredRowModel().rows.length} {title.toLowerCase()}
           </div>
         </div>
@@ -423,7 +423,7 @@ export default function DocumentsDataTable({
       </div>
 
       {actionError && (
-        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-md border px-4 py-3 text-sm">
           {actionError}
         </div>
       )}
@@ -457,7 +457,7 @@ export default function DocumentsDataTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={tableColumns.length - 1} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={tableColumns.length - 1} className="text-muted-foreground h-24 text-center">
                   No documents found.
                 </TableCell>
               </TableRow>
@@ -467,7 +467,7 @@ export default function DocumentsDataTable({
       </div>
 
       <div className="flex items-center justify-between px-1">
-        <div className="text-sm text-muted-foreground">
+        <div className="text-muted-foreground text-sm">
           {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected
         </div>
         <div className="flex items-center gap-2">
@@ -480,7 +480,7 @@ export default function DocumentsDataTable({
             <ChevronLeft className="size-4" />
             Previous
           </Button>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
           </div>
           <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>

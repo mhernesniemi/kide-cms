@@ -39,8 +39,8 @@ const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg
 
 <div class="grid gap-2">
   <Label htmlFor={name}>{label}{field.required ? " *" : ""}</Label>
-  {field.description && <p class="text-xs leading-5 text-muted-foreground">{field.description}</p>}
-  {field.admin?.help && <p class="text-xs leading-5 text-muted-foreground">{field.admin.help}</p>}
+  {field.description && <p class="text-muted-foreground text-xs leading-5">{field.description}</p>}
+  {field.admin?.help && <p class="text-muted-foreground text-xs leading-5">{field.admin.help}</p>}
 
   {
     field.type === "image" && !readOnly && (
@@ -94,10 +94,10 @@ const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg
 
   {
     field.type === "boolean" && (
-      <span class="inline-flex items-center gap-3 rounded-md border border-input bg-background px-3 py-2 text-sm">
+      <span class="border-input bg-background inline-flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
         <input type="hidden" name={name} value="false" />
         <input
-          class="size-4 rounded border-input text-primary focus:ring-primary"
+          class="border-input text-primary focus:ring-primary size-4 rounded"
           id={name}
           type="checkbox"
           name={name}
@@ -114,8 +114,8 @@ const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg
     field.type === "select" && (
       <select
         class={cn(
-          "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
-          readOnly && "cursor-not-allowed bg-muted text-muted-foreground",
+          "border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+          readOnly && "bg-muted text-muted-foreground cursor-not-allowed",
         )}
         id={name}
         name={name}
@@ -135,8 +135,8 @@ const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg
     field.type === "relation" && (
       <select
         class={cn(
-          "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
-          readOnly && "cursor-not-allowed bg-muted text-muted-foreground",
+          "border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+          readOnly && "bg-muted text-muted-foreground cursor-not-allowed",
         )}
         id={name}
         name={name}

@@ -210,10 +210,10 @@ const collectionStats =
     route.kind === "dashboard" && (
       <section class="space-y-6">
         <div class="flex flex-col gap-3">
-          <p class="text-sm font-medium text-muted-foreground">CMS admin</p>
+          <p class="text-muted-foreground text-sm font-medium">CMS admin</p>
           <div class="space-y-2">
             <h1 class="text-3xl font-semibold tracking-tight">Content operations</h1>
-            <p class="max-w-3xl text-sm leading-6 text-muted-foreground">
+            <p class="text-muted-foreground max-w-3xl text-sm leading-6">
               Runtime-generated views, typed local API access, and a neutral editing surface built with actual shadcn/ui
               components.
             </p>
@@ -255,7 +255,7 @@ const collectionStats =
                 <CardHeader>
                   <div class="flex items-start justify-between gap-4">
                     <div class="space-y-2">
-                      <div class="flex size-9 items-center justify-center rounded-lg border bg-muted/40">
+                      <div class="bg-muted/40 flex size-9 items-center justify-center rounded-lg border">
                         <Icon className="size-4" />
                       </div>
                       <div>
@@ -271,19 +271,19 @@ const collectionStats =
                     summary.items.map((item) => (
                       <a
                         href={`/admin/${summary.collection.slug}/${item._id}`}
-                        class="flex items-center justify-between gap-3 rounded-lg border px-3 py-3 transition-colors hover:bg-muted/50"
+                        class="hover:bg-muted/50 flex items-center justify-between gap-3 rounded-lg border px-3 py-3 transition-colors"
                       >
                         <div class="min-w-0">
                           <div class="truncate font-medium">
                             {String(item.title ?? item.name ?? item.slug ?? item._id)}
                           </div>
-                          <div class="mt-1 text-xs text-muted-foreground">{String(item._updatedAt ?? "")}</div>
+                          <div class="text-muted-foreground mt-1 text-xs">{String(item._updatedAt ?? "")}</div>
                         </div>
                         <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
                       </a>
                     ))
                   ) : (
-                    <div class="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+                    <div class="text-muted-foreground rounded-lg border border-dashed px-4 py-8 text-center text-sm">
                       No entries yet.
                     </div>
                   )}
@@ -315,14 +315,14 @@ const collectionStats =
       <section class="space-y-6">
         <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div class="space-y-2">
-            <div class="text-sm font-medium text-muted-foreground">{collection.slug}</div>
+            <div class="text-muted-foreground text-sm font-medium">{collection.slug}</div>
             <div class="space-y-1">
               <h1 class="text-3xl font-semibold tracking-tight">
                 {route.kind === "list" && collection.labels.plural}
                 {route.kind === "new" && `New ${collection.labels.singular}`}
                 {route.kind === "edit" && String(doc?.title ?? doc?.name ?? doc?.slug ?? collection.labels.singular)}
               </h1>
-              <p class="max-w-3xl text-sm leading-6 text-muted-foreground">
+              <p class="text-muted-foreground max-w-3xl text-sm leading-6">
                 {route.kind === "list" && "Filter, inspect, and edit schema-driven content from a proper data table."}
                 {route.kind === "new" && "Create a new document using the collection schema."}
                 {route.kind === "edit" &&
@@ -431,7 +431,7 @@ const collectionStats =
 
                     <Card>
                       <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
-                        <p class="text-sm text-muted-foreground">
+                        <p class="text-muted-foreground text-sm">
                           Saves go through the generated local API and preserve document versions automatically.
                         </p>
                         <div class="flex flex-wrap gap-2">
@@ -573,7 +573,7 @@ const collectionStats =
                         <Separator />
                         <div class="flex items-start justify-between gap-3">
                           <span class="text-muted-foreground">ID</span>
-                          <code class="max-w-[16rem] break-all rounded bg-muted px-2 py-1 text-xs">
+                          <code class="bg-muted max-w-[16rem] rounded px-2 py-1 text-xs break-all">
                             {String(doc?._id ?? route.documentId)}
                           </code>
                         </div>
@@ -595,7 +595,7 @@ const collectionStats =
                         <a
                           href={cms.meta.getRouteForDocument(collection.slug, doc)}
                           target="_blank"
-                          class="flex items-center justify-between gap-3 rounded-lg border px-3 py-3 text-sm transition-colors hover:bg-muted/50"
+                          class="hover:bg-muted/50 flex items-center justify-between gap-3 rounded-lg border px-3 py-3 text-sm transition-colors"
                         >
                           <span class="truncate">{cms.meta.getRouteForDocument(collection.slug, doc)}</span>
                           <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
@@ -616,7 +616,7 @@ const collectionStats =
                                     <div class="flex items-center gap-2 font-medium">
                                       <Clock3 className="size-4 text-muted-foreground" />v{version.version}
                                     </div>
-                                    <div class="mt-1 text-xs text-muted-foreground">{version.createdAt}</div>
+                                    <div class="text-muted-foreground mt-1 text-xs">{version.createdAt}</div>
                                   </div>
                                   <form method="post" action={getFormAction(collection.slug, route.documentId)}>
                                     <input type="hidden" name="_action" value="restore" />

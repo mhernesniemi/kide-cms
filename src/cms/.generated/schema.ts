@@ -24,16 +24,22 @@ export const cmsAuthors = sqliteTable("cms_authors", {
   _updatedAt: text("_updated_at").notNull(),
 });
 
-export const cmsAuthorsTranslations = sqliteTable("cms_authors_translations", {
-  _id: text("_id").primaryKey(),
-  _entityId: text("_entity_id").notNull().references(() => cmsAuthors._id, { onDelete: "cascade" }),
-  _languageCode: text("_language_code").notNull(),
-  test: text("test"),
-  description: text("description"),
-  bio: text("bio"),
-}, (table) => ({
-  uniqueLocale: unique().on(table._entityId, table._languageCode),
-}));
+export const cmsAuthorsTranslations = sqliteTable(
+  "cms_authors_translations",
+  {
+    _id: text("_id").primaryKey(),
+    _entityId: text("_entity_id")
+      .notNull()
+      .references(() => cmsAuthors._id, { onDelete: "cascade" }),
+    _languageCode: text("_language_code").notNull(),
+    test: text("test"),
+    description: text("description"),
+    bio: text("bio"),
+  },
+  (table) => ({
+    uniqueLocale: unique().on(table._entityId, table._languageCode),
+  }),
+);
 
 export const cmsPosts = sqliteTable("cms_posts", {
   _id: text("_id").primaryKey(),
@@ -53,22 +59,30 @@ export const cmsPosts = sqliteTable("cms_posts", {
   _updatedAt: text("_updated_at").notNull(),
 });
 
-export const cmsPostsTranslations = sqliteTable("cms_posts_translations", {
-  _id: text("_id").primaryKey(),
-  _entityId: text("_entity_id").notNull().references(() => cmsPosts._id, { onDelete: "cascade" }),
-  _languageCode: text("_language_code").notNull(),
-  title: text("title").notNull(),
-  description: text("description"),
-  slug: text("slug").unique(),
-  excerpt: text("excerpt"),
-  body: text("body"),
-}, (table) => ({
-  uniqueLocale: unique().on(table._entityId, table._languageCode),
-}));
+export const cmsPostsTranslations = sqliteTable(
+  "cms_posts_translations",
+  {
+    _id: text("_id").primaryKey(),
+    _entityId: text("_entity_id")
+      .notNull()
+      .references(() => cmsPosts._id, { onDelete: "cascade" }),
+    _languageCode: text("_language_code").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    slug: text("slug").unique(),
+    excerpt: text("excerpt"),
+    body: text("body"),
+  },
+  (table) => ({
+    uniqueLocale: unique().on(table._entityId, table._languageCode),
+  }),
+);
 
 export const cmsPostsVersions = sqliteTable("cms_posts_versions", {
   _id: text("_id").primaryKey(),
-  _docId: text("_doc_id").notNull().references(() => cmsPosts._id, { onDelete: "cascade" }),
+  _docId: text("_doc_id")
+    .notNull()
+    .references(() => cmsPosts._id, { onDelete: "cascade" }),
   _version: integer("_version").notNull(),
   _snapshot: text("_snapshot").notNull(),
   _createdAt: text("_created_at").notNull(),
@@ -87,21 +101,29 @@ export const cmsPages = sqliteTable("cms_pages", {
   _updatedAt: text("_updated_at").notNull(),
 });
 
-export const cmsPagesTranslations = sqliteTable("cms_pages_translations", {
-  _id: text("_id").primaryKey(),
-  _entityId: text("_entity_id").notNull().references(() => cmsPages._id, { onDelete: "cascade" }),
-  _languageCode: text("_language_code").notNull(),
-  title: text("title").notNull(),
-  slug: text("slug").unique(),
-  summary: text("summary"),
-  blocks: text("blocks"),
-}, (table) => ({
-  uniqueLocale: unique().on(table._entityId, table._languageCode),
-}));
+export const cmsPagesTranslations = sqliteTable(
+  "cms_pages_translations",
+  {
+    _id: text("_id").primaryKey(),
+    _entityId: text("_entity_id")
+      .notNull()
+      .references(() => cmsPages._id, { onDelete: "cascade" }),
+    _languageCode: text("_language_code").notNull(),
+    title: text("title").notNull(),
+    slug: text("slug").unique(),
+    summary: text("summary"),
+    blocks: text("blocks"),
+  },
+  (table) => ({
+    uniqueLocale: unique().on(table._entityId, table._languageCode),
+  }),
+);
 
 export const cmsPagesVersions = sqliteTable("cms_pages_versions", {
   _id: text("_id").primaryKey(),
-  _docId: text("_doc_id").notNull().references(() => cmsPages._id, { onDelete: "cascade" }),
+  _docId: text("_doc_id")
+    .notNull()
+    .references(() => cmsPages._id, { onDelete: "cascade" }),
   _version: integer("_version").notNull(),
   _snapshot: text("_snapshot").notNull(),
   _createdAt: text("_created_at").notNull(),

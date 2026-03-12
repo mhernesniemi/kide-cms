@@ -77,23 +77,23 @@ export default function ImagePicker({ name, value: initialValue, placeholder }: 
           {isImage ? (
             <img src={value} alt="" className="h-40 w-full rounded-lg border object-cover" />
           ) : (
-            <div className="flex h-40 items-center justify-center rounded-lg border bg-muted/30">
-              <span className="truncate px-4 text-sm text-muted-foreground">{value}</span>
+            <div className="bg-muted/30 flex h-40 items-center justify-center rounded-lg border">
+              <span className="text-muted-foreground truncate px-4 text-sm">{value}</span>
             </div>
           )}
           <button
             type="button"
             onClick={() => setValue("")}
-            className="absolute right-2 top-2 rounded-md bg-background/80 p-1.5 opacity-0 shadow-sm backdrop-blur transition-opacity group-hover:opacity-100"
+            className="bg-background/80 absolute top-2 right-2 rounded-md p-1.5 opacity-0 shadow-sm backdrop-blur transition-opacity group-hover:opacity-100"
           >
             <X className="size-4" />
           </button>
         </div>
       ) : (
-        <div className="flex h-32 items-center justify-center rounded-lg border border-dashed bg-muted/20">
+        <div className="bg-muted/20 flex h-32 items-center justify-center rounded-lg border border-dashed">
           <div className="text-center">
-            <ImagePlus className="mx-auto size-8 text-muted-foreground/50" />
-            <p className="mt-1 text-xs text-muted-foreground">{placeholder || "Upload or select an image"}</p>
+            <ImagePlus className="text-muted-foreground/50 mx-auto size-8" />
+            <p className="text-muted-foreground mt-1 text-xs">{placeholder || "Upload or select an image"}</p>
           </div>
         </div>
       )}
@@ -104,7 +104,7 @@ export default function ImagePicker({ name, value: initialValue, placeholder }: 
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm transition-colors hover:bg-accent disabled:opacity-50"
+          className="bg-background hover:bg-accent inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
         >
           {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
           Upload
@@ -112,7 +112,7 @@ export default function ImagePicker({ name, value: initialValue, placeholder }: 
         <button
           type="button"
           onClick={openBrowser}
-          className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm transition-colors hover:bg-accent"
+          className="bg-background hover:bg-accent inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors"
         >
           <ImagePlus className="size-4" />
           Browse
@@ -122,10 +122,10 @@ export default function ImagePicker({ name, value: initialValue, placeholder }: 
       {/* Asset Browser Modal */}
       {showBrowser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[80vh] w-full max-w-3xl overflow-hidden rounded-xl border bg-background shadow-lg">
+          <div className="bg-background max-h-[80vh] w-full max-w-3xl overflow-hidden rounded-xl border shadow-lg">
             <div className="flex items-center justify-between border-b px-4 py-3">
               <h3 className="font-semibold">Media Library</h3>
-              <button type="button" onClick={() => setShowBrowser(false)} className="rounded-md p-1 hover:bg-accent">
+              <button type="button" onClick={() => setShowBrowser(false)} className="hover:bg-accent rounded-md p-1">
                 <X className="size-4" />
               </button>
             </div>
@@ -133,10 +133,10 @@ export default function ImagePicker({ name, value: initialValue, placeholder }: 
             <div className="max-h-[60vh] overflow-y-auto p-4">
               {loadingAssets ? (
                 <div className="flex h-40 items-center justify-center">
-                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                  <Loader2 className="text-muted-foreground size-6 animate-spin" />
                 </div>
               ) : assets.length === 0 ? (
-                <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+                <div className="text-muted-foreground flex h-40 items-center justify-center text-sm">
                   No assets uploaded yet.
                 </div>
               ) : (
@@ -148,7 +148,7 @@ export default function ImagePicker({ name, value: initialValue, placeholder }: 
                         key={asset._id}
                         type="button"
                         onClick={() => selectAsset(asset)}
-                        className="group relative aspect-square overflow-hidden rounded-lg border transition-all hover:ring-2 hover:ring-primary"
+                        className="group hover:ring-primary relative aspect-square overflow-hidden rounded-lg border transition-all hover:ring-2"
                       >
                         <img src={asset.url} alt={asset.filename} className="size-full object-cover" />
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">

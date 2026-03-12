@@ -28,7 +28,8 @@
       "Bash(sqlite3 data/cms.db \".schema cms_authors\" 2>&1)",
       "Bash(npx tsc:*)",
       "Bash(npx astro:*)",
-      "Bash(ls /Users/mattihernesniemi/astro-cms/.prettierrc* /Users/mattihernesniemi/astro-cms/prettier.config.* 2>/dev/null; cat /Users/mattihernesniemi/astro-cms/package.json | grep -i prettier)"
+      "Bash(ls /Users/mattihernesniemi/astro-cms/.prettierrc* /Users/mattihernesniemi/astro-cms/prettier.config.* 2>/dev/null; cat /Users/mattihernesniemi/astro-cms/package.json | grep -i prettier)",
+      "Bash(pnpm format:*)"
     ]
   }
 }

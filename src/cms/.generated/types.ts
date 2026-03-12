@@ -85,14 +85,22 @@ export type PagesInput = {
   summary?: string;
   layout?: "default" | "landing" | "docs";
   heroImage?: string;
-  blocks?: Array<{ type: "hero"; eyebrow?: string; heading: string; body?: string; ctaLabel?: string; ctaHref?: string; } | { type: "text"; heading?: string; content?: RichTextDocument; } | { type: "gallery"; images?: string[]; }>;
+  blocks?: Array<
+    | { type: "hero"; eyebrow?: string; heading: string; body?: string; ctaLabel?: string; ctaHref?: string }
+    | { type: "text"; heading?: string; content?: RichTextDocument }
+    | { type: "gallery"; images?: string[] }
+  >;
 };
 
 export type PagesTranslationInput = {
   title?: string;
   slug?: string;
   summary?: string;
-  blocks?: Array<{ type: "hero"; eyebrow?: string; heading: string; body?: string; ctaLabel?: string; ctaHref?: string; } | { type: "text"; heading?: string; content?: RichTextDocument; } | { type: "gallery"; images?: string[]; }>;
+  blocks?: Array<
+    | { type: "hero"; eyebrow?: string; heading: string; body?: string; ctaLabel?: string; ctaHref?: string }
+    | { type: "text"; heading?: string; content?: RichTextDocument }
+    | { type: "gallery"; images?: string[] }
+  >;
 };
 
 export type PagesDocument = PagesInput & {
