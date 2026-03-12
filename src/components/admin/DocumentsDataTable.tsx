@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import {
+  type Column,
   type ColumnDef,
   type ColumnFiltersState,
   type SortingState,
@@ -12,7 +13,17 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown, ChevronLeft, ChevronRight, MoreHorizontal, Search, SquarePen } from "lucide-react"
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
+  Search,
+  SquarePen,
+} from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -51,6 +62,8 @@ type DataTableRow = {
 }
 
 type DocumentsDataTableProps = {
+  collectionSlug: string
+  draftsEnabled?: boolean
   title: string
   searchPlaceholder?: string
   columns: DataTableColumn[]
@@ -60,18 +73,110 @@ type DocumentsDataTableProps = {
 const statusVariant = (status?: string) =>
   status === "published" ? "default" : status ? "secondary" : "outline"
 
+function DataTableColumnHeader({
+  column,
+  title,
+}: {
+  column: Column<DataTableRow, unknown>
+  title: string
+}) {
+  if (!column.getCanSort()) {
+    return <span>{title}</span>
+  }
+
+  const sorted = column.getIsSorted()
+  const SortIcon =
+    sorted === "asc" ? ArrowUp : sorted === "desc" ? ArrowDown : ArrowUpDown
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-ml-2 h-8 px-2 text-sm font-medium"
+      onClick={() => column.toggleSorting(sorted === "asc")}
+    >
+      <span>{title}</span>
+      <SortIcon className="size-4 text-muted-foreground" />
+    </Button>
+  )
+}
+
 export default function DocumentsDataTable({
+  collectionSlug,
+  draftsEnabled = false,
   title,
   searchPlaceholder = "Filter documents...",
   columns,
   data,
 }: DocumentsDataTableProps) {
+  const [actionError, setActionError] = React.useState<string | null>(null)
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({})
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  )
+  const [columnVisibility, setColumnVisibility] = React.useState<
+    Record<string, boolean>
+  >({
+    search: false,
+  })
   const [rowSelection, setRowSelection] = React.useState({})
+  const [isPending, startTransition] = React.useTransition()
 
-  const primarySearchColumn = columns.find((column) => !column.key.startsWith("_"))?.key ?? columns[0]?.key ?? "searchText"
+  const primaryColumnKey =
+    columns.find((column) => !column.key.startsWith("_"))?.key ?? columns[0]?.key
+
+  const runAction = React.useCallback(
+    async (
+      action: "publish" | "unpublish" | "delete",
+      rows: DataTableRow[]
+    ) => {
+      if (!rows.length) {
+        return
+      }
+
+      setActionError(null)
+
+      if (
+        action === "delete" &&
+        !window.confirm(
+          rows.length === 1
+            ? "Delete this document?"
+            : `Delete ${rows.length} documents?`
+        )
+      ) {
+        return
+      }
+
+      try {
+        await Promise.all(
+          rows.map(async (row) => {
+            const endpoint =
+              action === "delete"
+                ? `/api/cms/${collectionSlug}/${row.id}`
+                : `/api/cms/${collectionSlug}/${row.id}/${action}`
+
+            const response = await fetch(endpoint, {
+              method: action === "delete" ? "DELETE" : "POST",
+              headers: {
+                Accept: "application/json",
+              },
+            })
+
+            if (!response.ok) {
+              throw new Error(`Failed to ${action} document.`)
+            }
+          })
+        )
+
+        window.location.reload()
+      } catch (error) {
+        setActionError(
+          error instanceof Error ? error.message : "Document action failed."
+        )
+      }
+    },
+    [collectionSlug]
+  )
 
   const tableColumns = React.useMemo<ColumnDef<DataTableRow>[]>(
     () => [
@@ -79,7 +184,10 @@ export default function DocumentsDataTable({
         id: "select",
         header: ({ table }) => (
           <Checkbox
-            checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
             onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
             aria-label="Select all"
           />
@@ -94,28 +202,63 @@ export default function DocumentsDataTable({
         enableSorting: false,
         enableHiding: false,
       },
+      {
+        id: "search",
+        accessorFn: (row) =>
+          [row.searchText, ...Object.values(row.values), row.locales.join(" ")]
+            .join(" ")
+            .toLowerCase(),
+        header: () => null,
+        cell: () => null,
+        enableSorting: false,
+        enableHiding: false,
+      },
       ...columns.map<ColumnDef<DataTableRow>>((column) => ({
         accessorFn: (row) => row.values[column.key] ?? "",
         id: column.key,
-        header: column.label,
+        header: ({ column: headerColumn }) => (
+          <DataTableColumnHeader column={headerColumn} title={column.label} />
+        ),
         cell: ({ row }) => {
           const value = row.original.values[column.key] ?? "—"
           if (column.key === "_status") {
-            return <Badge variant={statusVariant(row.original.status) as "default" | "secondary" | "outline"}>{row.original.status ?? value}</Badge>
+            return (
+              <Badge
+                variant={
+                  statusVariant(row.original.status) as
+                    | "default"
+                    | "secondary"
+                    | "outline"
+                }
+              >
+                {row.original.status ?? value}
+              </Badge>
+            )
           }
 
-          const isPrimary = column.key === primarySearchColumn
+          const isPrimary = column.key === primaryColumnKey
           return (
-            <div className={isPrimary ? "font-medium text-foreground" : "text-muted-foreground"}>
-              {value}
-            </div>
+            <>
+              {isPrimary ? (
+                <a
+                  href={row.original.editHref}
+                  className="font-medium text-foreground underline-offset-4 hover:underline"
+                >
+                  {value}
+                </a>
+              ) : (
+                <div className="text-muted-foreground">{value}</div>
+              )}
+            </>
           )
         },
       })),
       {
         accessorFn: (row) => row.locales.join(", "),
         id: "locales",
-        header: "Locales",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Locales" />
+        ),
         cell: ({ row }) => (
           <div className="flex flex-wrap gap-1.5">
             {row.original.locales.map((locale) => (
@@ -128,24 +271,68 @@ export default function DocumentsDataTable({
       },
       {
         id: "actions",
+        enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => (
           <div className="flex justify-end">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" className="rounded-md">
-                  <MoreHorizontal />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="rounded-md"
+                    aria-label="Open actions menu"
+                  >
+                    <MoreHorizontal />
+                    <span className="sr-only">Open menu</span>
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <a href={row.original.editHref} className="flex items-center gap-2">
-                    <SquarePen className="size-4" />
-                    Edit document
-                  </a>
+                <DropdownMenuItem
+                  onClick={() => window.location.assign(row.original.editHref)}
+                >
+                  <SquarePen className="size-4" />
+                  Edit document
+                </DropdownMenuItem>
+                {draftsEnabled && (
+                  <>
+                    <DropdownMenuItem
+                      disabled={isPending || row.original.status === "published"}
+                      onClick={() =>
+                        startTransition(() => {
+                          void runAction("publish", [row.original])
+                        })
+                      }
+                    >
+                      Publish
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={isPending || row.original.status !== "published"}
+                      onClick={() =>
+                        startTransition(() => {
+                          void runAction("unpublish", [row.original])
+                        })
+                      }
+                    >
+                      Unpublish
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  disabled={isPending}
+                  onClick={() =>
+                    startTransition(() => {
+                      void runAction("delete", [row.original])
+                    })
+                  }
+                >
+                  Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -153,12 +340,14 @@ export default function DocumentsDataTable({
         ),
       },
     ],
-    [columns, primarySearchColumn],
+    [columns, draftsEnabled, isPending, primaryColumnKey]
   )
 
   const table = useReactTable({
     data,
     columns: tableColumns,
+    getRowId: (row) => row.id,
+    enableRowSelection: true,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
@@ -175,74 +364,167 @@ export default function DocumentsDataTable({
     },
   })
 
+  const searchColumn = table.getColumn("search")
+  const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original)
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 border-b px-4 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full sm:w-80">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
-              value={(table.getColumn(primarySearchColumn)?.getFilterValue() as string) ?? ""}
-              onChange={(event) => table.getColumn(primarySearchColumn)?.setFilterValue(event.target.value)}
+              value={(searchColumn?.getFilterValue() as string) ?? ""}
+              onChange={(event) => searchColumn?.setFilterValue(event.target.value)}
               className="pl-9"
             />
           </div>
-          <div className="hidden text-sm text-muted-foreground md:block">{data.length} {title.toLowerCase()}</div>
+          <div className="hidden text-sm text-muted-foreground md:block">
+            {table.getFilteredRowModel().rows.length} {title.toLowerCase()}
+          </div>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              Columns
-              <ChevronDown className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                  className="capitalize"
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedRows.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="secondary" size="sm" disabled={isPending}>
+                    {isPending
+                      ? "Working..."
+                      : `${selectedRows.length} selected`}
+                    <ChevronDown className="size-4" />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel>Selected actions</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {selectedRows.length === 1 && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      window.location.assign(selectedRows[0].editHref)
+                    }
+                  >
+                    <SquarePen className="size-4" />
+                    Edit document
+                  </DropdownMenuItem>
+                )}
+                {draftsEnabled && (
+                  <>
+                    <DropdownMenuItem
+                      disabled={isPending}
+                      onClick={() =>
+                        startTransition(() => {
+                          void runAction("publish", selectedRows)
+                        })
+                      }
+                    >
+                      Publish selected
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={isPending}
+                      onClick={() =>
+                        startTransition(() => {
+                          void runAction("unpublish", selectedRows)
+                        })
+                      }
+                    >
+                      Unpublish selected
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  disabled={isPending}
+                  onClick={() =>
+                    startTransition(() => {
+                      void runAction("delete", selectedRows)
+                    })
+                  }
                 >
-                  {column.id}
-                </DropdownMenuCheckboxItem>
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                  Delete selected
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="outline" size="sm">
+                  Columns
+                  <ChevronDown className="size-4" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                    className="capitalize"
+                  >
+                    {column.id}
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
+
+      {actionError && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          {actionError}
+        </div>
+      )}
 
       <div className="rounded-lg border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
+                {headerGroup.headers
+                  .filter((header) => header.column.id !== "search")
+                  .map((header) => (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  ))}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+                  {row
+                    .getVisibleCells()
+                    .filter((cell) => cell.column.id !== "search")
+                    .map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={tableColumns.length} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={tableColumns.length - 1}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   No documents found.
                 </TableCell>
               </TableRow>
@@ -253,7 +535,8 @@ export default function DocumentsDataTable({
 
       <div className="flex items-center justify-between px-1">
         <div className="text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected
+          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredRowModel().rows.length} row(s) selected
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -265,6 +548,9 @@ export default function DocumentsDataTable({
             <ChevronLeft className="size-4" />
             Previous
           </Button>
+          <div className="text-sm text-muted-foreground">
+            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+          </div>
           <Button
             variant="outline"
             size="sm"
