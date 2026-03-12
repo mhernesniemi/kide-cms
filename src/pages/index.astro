@@ -1,0 +1,94 @@
+---
+import PublicLayout from "../layouts/PublicLayout.astro";
+import RichTextContent from "../components/RichTextContent.astro";
+import { cms } from "../cms/.generated/api";
+
+export const prerender = false;
+
+const locale = Astro.url.searchParams.get("locale") ?? "en";
+const homePage = await cms.pages.findOne({ slug: locale === "en" ? "home" : locale === "fi" ? "etusivu" : "home", locale, status: "published" });
+const latestPosts = await cms.posts.find({
+  locale,
+  status: "published",
+  limit: 3,
+  sort: { field: "sortOrder", direction: "desc" },
+});
+---
+
+<PublicLayout title="AstroCMS" description={String(homePage?.summary ?? "A code-first CMS built inside Astro.")}>
+  <main class="public-home">
+    <section class="hero-shell">
+      <div class="hero-shell__copy">
+        <span class="eyebrow">Code-first CMS inside Astro</span>
+        <h1>{String(homePage?.title ?? "AstroCMS")}</h1>
+        <p>{String(homePage?.summary ?? "A real content app with a local API, runtime admin, and public delivery.")}</p>
+        <div class="hero-shell__actions">
+          <a class="button" href="/admin">Open admin</a>
+          <a class="button button--ghost" href="/blog">Browse posts</a>
+        </div>
+        <div class="locale-row">
+          <a class:list={["locale-chip", locale === "en" && "locale-chip--active"]} href="/?locale=en">EN</a>
+          <a class:list={["locale-chip", locale === "fi" && "locale-chip--active"]} href="/?locale=fi">FI</a>
+          <a class:list={["locale-chip", locale === "sv" && "locale-chip--active"]} href="/?locale=sv">SV</a>
+        </div>
+      </div>
+      <div class="hero-shell__visual">
+        {homePage?.heroImage ? <img src={String(homePage.heroImage)} alt={String(homePage.title ?? "AstroCMS")} /> : <div class="visual-placeholder" />}
+      </div>
+    </section>
+
+    {Array.isArray(homePage?.blocks) && (
+      <section class="blocks-stack">
+        {homePage.blocks.map((block) => (
+          <article class="content-block">
+            {block.type === "hero" && (
+              <>
+                <span class="eyebrow">{String(block.eyebrow ?? "")}</span>
+                <h2>{String(block.heading ?? "")}</h2>
+                <p>{String(block.body ?? "")}</p>
+                {block.ctaHref && block.ctaLabel && <a class="button button--secondary" href={String(block.ctaHref)}>{String(block.ctaLabel)}</a>}
+              </>
+            )}
+
+            {block.type === "text" && (
+              <>
+                {block.heading && <h2>{String(block.heading)}</h2>}
+                <RichTextContent content={block.content} />
+              </>
+            )}
+
+            {block.type === "gallery" && Array.isArray(block.images) && (
+              <div class="gallery-grid">
+                {block.images.map((image) => (
+                  <img src={String(image)} alt="" />
+                ))}
+              </div>
+            )}
+          </article>
+        ))}
+      </section>
+    )}
+
+    <section class="collection-strip">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">Latest posts</span>
+          <h2>Publishing from the same repo as your site</h2>
+        </div>
+        <a class="button button--ghost" href="/blog">View all posts</a>
+      </div>
+      <div class="story-grid">
+        {latestPosts.map((post) => (
+          <a class="story-card" href={`/blog/${post.slug}`}>
+            {post.cover && <img src={String(post.cover)} alt={String(post.title)} />}
+            <div class="story-card__body">
+              <span class="badge">{String(post.category ?? "Editorial")}</span>
+              <h3>{String(post.title)}</h3>
+              <p>{String(post.excerpt ?? "")}</p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  </main>
+</PublicLayout>

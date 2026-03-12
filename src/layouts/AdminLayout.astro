@@ -1,0 +1,111 @@
+---
+import "../styles/global.css";
+import { Boxes, FileText, LayoutGrid, Newspaper, PencilRuler } from "lucide-react";
+import { buttonVariants } from "../components/admin/ui/button";
+import { cn } from "../lib/utils";
+
+const {
+  title = "Admin",
+  collections = [],
+  activeCollection = null,
+  theme = {},
+} = Astro.props as {
+  title?: string;
+  collections?: Array<{ slug: string; labels: { plural: string } }>;
+  activeCollection?: string | null;
+  theme?: Record<string, string>;
+};
+const iconMap = {
+  posts: Newspaper,
+  pages: FileText,
+  authors: PencilRuler,
+};
+
+const navItems = collections.map((collection) => ({
+  ...collection,
+  Icon: iconMap[collection.slug as keyof typeof iconMap] ?? LayoutGrid,
+}));
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>{title}</title>
+  </head>
+  <body data-admin class="min-h-screen bg-[var(--admin-background)] font-sans text-[var(--admin-foreground)] antialiased">
+    <div class="min-h-screen lg:pl-64">
+      <aside class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-zinc-800 lg:bg-zinc-950 lg:text-white">
+        <div class="border-b border-zinc-800 px-6 py-6">
+          <a href="/admin" class="block">
+            <div class="text-xs font-medium uppercase tracking-[0.2em] text-blue-400">AstroCMS</div>
+            <div class="mt-1 font-mono text-2xl font-bold text-blue-400">Control</div>
+            <p class="mt-2 text-sm text-zinc-400">Schema-driven content operations</p>
+          </a>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto py-5">
+          {navItems.map((item) => (
+            <a
+              href={`/admin/${item.slug}`}
+              class={cn(
+                "flex items-center gap-3 px-6 py-3 text-sm transition-colors",
+                activeCollection === item.slug
+                  ? "border-l-4 border-blue-500 bg-zinc-900 text-white"
+                  : "text-zinc-300 hover:bg-zinc-900/70 hover:text-white",
+              )}
+            >
+              <item.Icon className="size-4 opacity-80" />
+              <span>{item.labels.plural}</span>
+            </a>
+          ))}
+        </nav>
+
+        <div class="mt-auto border-t border-zinc-800 p-4">
+          <div class="grid gap-2">
+            <a href="/" class="text-sm text-zinc-300 transition-colors hover:text-white">Open site</a>
+            <a href="/blog" class="text-sm text-zinc-300 transition-colors hover:text-white">Public posts</a>
+          </div>
+        </div>
+      </aside>
+
+      <header class="border-b border-[var(--admin-border)] bg-white/80 backdrop-blur lg:hidden">
+        <div class="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-4">
+          <a href="/admin" class="flex items-center gap-3">
+            <div class="rounded-lg bg-blue-600 p-2 text-white">
+              <Boxes className="size-4" />
+            </div>
+            <div>
+              <div class="text-sm font-semibold">AstroCMS</div>
+              <div class="text-xs text-[var(--admin-foreground-tertiary)]">Runtime admin</div>
+            </div>
+          </a>
+          <a href="/" class={buttonVariants({ variant: "outline", size: "sm" })}>View site</a>
+        </div>
+        <div class="flex gap-2 overflow-x-auto px-4 pb-4">
+          {navItems.map((item) => (
+            <a
+              href={`/admin/${item.slug}`}
+              class={cn(
+                "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm whitespace-nowrap transition-colors",
+                activeCollection === item.slug
+                  ? "border-blue-500 bg-blue-50 text-blue-700"
+                  : "border-[var(--admin-border)] bg-white text-[var(--admin-foreground-secondary)]",
+              )}
+            >
+              <item.Icon className="size-4" />
+              {item.labels.plural}
+            </a>
+          ))}
+        </div>
+      </header>
+
+      <main class="mx-auto w-full max-w-7xl px-4 py-6 lg:px-8 lg:py-8">
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>

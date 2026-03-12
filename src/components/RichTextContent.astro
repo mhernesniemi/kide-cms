@@ -1,0 +1,8 @@
+---
+import { renderRichText } from "../cms/core/richtext";
+
+const { content, className } = Astro.props;
+const html = renderRichText(content);
+---
+
+<div class:list={["rich-text", className]} set:html={html} />

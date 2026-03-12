@@ -1,0 +1,25 @@
+---
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+
+const {
+  title,
+  description,
+  compact = false,
+  class: className = "",
+} = Astro.props as {
+  title: string;
+  description?: string;
+  compact?: boolean;
+  class?: string;
+};
+---
+
+<Card className={className}>
+  <CardHeader className={compact ? "px-4 py-3" : undefined}>
+    <CardTitle className={compact ? "text-base" : undefined}>{title}</CardTitle>
+    {description && <CardDescription>{description}</CardDescription>}
+  </CardHeader>
+  <CardContent className={compact ? "p-4" : undefined}>
+    <slot />
+  </CardContent>
+</Card>

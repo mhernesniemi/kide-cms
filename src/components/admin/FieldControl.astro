@@ -1,0 +1,137 @@
+---
+import type { FieldConfig } from "../../cms/core/define";
+import { serializeFieldValue } from "../../cms/core/values";
+import { humanize } from "../../cms/core/admin";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
+import { cn } from "../../lib/utils";
+
+type RelationOption = {
+  value: string;
+  label: string;
+};
+
+const {
+  name,
+  field,
+  value,
+  relationOptions = [],
+  readOnly = false,
+} = Astro.props as {
+  name: string;
+  field: FieldConfig;
+  value?: unknown;
+  relationOptions?: RelationOption[];
+  readOnly?: boolean;
+};
+
+const label = field.label ?? humanize(name);
+const placeholder = field.admin?.placeholder ?? "";
+const serializedValue = serializeFieldValue(field, value);
+const rows = field.admin?.rows ?? (field.type === "richText" ? 10 : field.type === "json" || field.type === "blocks" ? 12 : 5);
+const inputMode = field.type === "number" ? "decimal" : undefined;
+const controlClass = cn(
+  "w-full",
+  readOnly && "cursor-not-allowed bg-[var(--admin-muted)] text-[var(--admin-foreground-tertiary)]",
+);
+---
+
+<div class="grid gap-2">
+  <Label for={name}>{label}{field.required ? " *" : ""}</Label>
+  {field.description && <p class="text-sm text-[var(--admin-foreground-tertiary)]">{field.description}</p>}
+  {field.admin?.help && <p class="text-sm text-[var(--admin-foreground-tertiary)]">{field.admin.help}</p>}
+
+  {(field.type === "text" || field.type === "slug" || field.type === "email" || field.type === "image" || field.type === "date") && (
+    <Input
+      className={controlClass}
+      type={field.type === "email" ? "email" : field.type === "date" ? "date" : "text"}
+      id={name}
+      name={name}
+      defaultValue={serializedValue}
+      placeholder={placeholder}
+      readOnly={readOnly}
+      required={field.required}
+    />
+  )}
+
+  {field.type === "number" && (
+    <Input
+      className={controlClass}
+      type="number"
+      id={name}
+      name={name}
+      defaultValue={serializedValue}
+      inputMode={inputMode}
+      readOnly={readOnly}
+      required={field.required}
+    />
+  )}
+
+  {field.type === "boolean" && (
+    <span class="inline-flex items-center gap-3 rounded-lg border border-[var(--admin-input-border)] bg-[var(--admin-surface)] px-3 py-2 text-sm">
+      <input type="hidden" name={name} value="false" />
+      <input
+        class="size-4 rounded border-[var(--admin-input-border)] text-blue-600 focus:ring-blue-500"
+        id={name}
+        type="checkbox"
+        name={name}
+        value="true"
+        defaultChecked={Boolean(value)}
+        disabled={readOnly}
+      />
+      <span class="text-[var(--admin-foreground-secondary)]">{Boolean(value) ? "Enabled" : "Disabled"}</span>
+    </span>
+  )}
+
+  {field.type === "select" && (
+    <select
+      class={cn(
+        "flex h-10 w-full rounded-lg border border-[var(--admin-input-border)] bg-[var(--admin-surface)] px-3 py-2 text-sm text-[var(--admin-foreground)] shadow-sm transition-colors hover:border-[color-mix(in_oklab,var(--admin-input-border)_70%,var(--admin-foreground)_30%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-surface)] disabled:cursor-not-allowed disabled:bg-[var(--admin-muted)] disabled:text-[var(--admin-foreground-tertiary)]",
+        readOnly && "cursor-not-allowed bg-[var(--admin-muted)] text-[var(--admin-foreground-tertiary)]",
+      )}
+      id={name}
+      name={name}
+      disabled={readOnly}
+    >
+      <option value="">Select an option</option>
+      {field.options.map((option) => (
+        <option value={option} selected={String(value ?? "") === option}>
+          {option}
+        </option>
+      ))}
+    </select>
+  )}
+
+  {field.type === "relation" && (
+    <select
+      class={cn(
+        "flex h-10 w-full rounded-lg border border-[var(--admin-input-border)] bg-[var(--admin-surface)] px-3 py-2 text-sm text-[var(--admin-foreground)] shadow-sm transition-colors hover:border-[color-mix(in_oklab,var(--admin-input-border)_70%,var(--admin-foreground)_30%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-surface)] disabled:cursor-not-allowed disabled:bg-[var(--admin-muted)] disabled:text-[var(--admin-foreground-tertiary)]",
+        readOnly && "cursor-not-allowed bg-[var(--admin-muted)] text-[var(--admin-foreground-tertiary)]",
+      )}
+      id={name}
+      name={name}
+      disabled={readOnly}
+    >
+      <option value="">Select a document</option>
+      {relationOptions.map((option) => (
+        <option value={option.value} selected={String(value ?? "") === option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  )}
+
+  {(field.type === "array" || field.type === "richText" || field.type === "json" || field.type === "blocks") && (
+    <Textarea
+      className={controlClass}
+      id={name}
+      name={name}
+      rows={rows}
+      placeholder={placeholder}
+      readOnly={readOnly}
+      required={field.required}
+      defaultValue={serializedValue}
+    />
+  )}
+</div>
