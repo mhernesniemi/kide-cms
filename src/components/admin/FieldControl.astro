@@ -5,6 +5,7 @@ import { humanize } from "../../cms/core/admin";
 import ImagePicker from "@/components/admin/ImagePicker";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import SelectField from "@/components/admin/SelectField";
+import SlugField from "@/components/admin/SlugField";
 import { Input } from "@/components/admin/ui/input";
 import { Label } from "@/components/admin/ui/label";
 import { Textarea } from "@/components/admin/ui/textarea";
@@ -64,7 +65,7 @@ const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg
   }
 
   {
-    (field.type === "text" || field.type === "slug" || field.type === "email" || field.type === "date") && (
+    (field.type === "text" || field.type === "email" || field.type === "date") && (
       <Input
         className={controlClass}
         type={field.type === "email" ? "email" : field.type === "date" ? "date" : "text"}
@@ -74,6 +75,21 @@ const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg
         placeholder={placeholder}
         readOnly={readOnly}
         required={field.required}
+      />
+    )
+  }
+
+  {
+    field.type === "slug" && (
+      <SlugField
+        client:load
+        name={name}
+        value={serializedValue}
+        from={field.from}
+        readOnly={readOnly}
+        required={field.required}
+        placeholder={placeholder || "auto-generated-slug"}
+        className={controlClass}
       />
     )
   }

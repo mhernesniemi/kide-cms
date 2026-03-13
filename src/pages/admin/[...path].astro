@@ -38,7 +38,7 @@ const getFieldSetTitle = (fields: string[], index: number) => {
   if (fields.includes("body") || fields.includes("blocks")) return "Content";
   if (
     fields.some((field) =>
-      ["category", "author", "tags", "cover", "metadata", "sortOrder", "layout", "heroImage"].includes(field),
+      ["slug", "category", "author", "tags", "cover", "metadata", "sortOrder", "layout", "heroImage"].includes(field),
     )
   ) {
     return "Settings";
@@ -50,7 +50,7 @@ const getFieldSetDescription = (fields: string[]) => {
     return "Long-form content and structured presentation fields.";
   if (
     fields.some((field) =>
-      ["category", "author", "tags", "cover", "metadata", "sortOrder", "layout", "heroImage"].includes(field),
+      ["slug", "category", "author", "tags", "cover", "metadata", "sortOrder", "layout", "heroImage"].includes(field),
     )
   ) {
     return "Metadata, taxonomy, and publication settings.";
@@ -225,117 +225,75 @@ const tableRows =
             </div>
           )}
 
-          <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]">
-            <div class="space-y-6">
-              {!translationMode && (
-                <form
-                  method="post"
-                  action={getFormAction(collection.slug, route.kind === "edit" ? route.documentId : undefined)}
-                  class="space-y-6"
-                >
-                  <input type="hidden" name="_action" value={route.kind === "new" ? "create" : "update"} />
-                  <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
+          {!translationMode && (
+            <form
+              method="post"
+              action={getFormAction(collection.slug, route.kind === "edit" ? route.documentId : undefined)}
+              class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
+            >
+              <input type="hidden" name="_action" value={route.kind === "new" ? "create" : "update"} />
+              <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
 
-                  {mainFieldSets.map((set, index) => (
-                    <AdminCard
-                      title={getFieldSetTitle(set.fields, index)}
-                      description={getFieldSetDescription(set.fields)}
-                    >
-                      <div class="grid gap-5">
-                        {set.fields.map((fieldName) => (
-                          <FieldControl
-                            name={fieldName}
-                            field={collection.fields[fieldName]}
-                            value={getCurrentValue(fieldName)}
-                            relationOptions={relationOptionsByField[fieldName] ?? []}
-                          />
-                        ))}
-                      </div>
-                    </AdminCard>
-                  ))}
+              <div class="space-y-6">
+                {mainFieldSets.map((set, index) => (
+                  <AdminCard
+                    title={getFieldSetTitle(set.fields, index)}
+                    description={getFieldSetDescription(set.fields)}
+                  >
+                    <div class="grid gap-5">
+                      {set.fields.map((fieldName) => (
+                        <FieldControl
+                          name={fieldName}
+                          field={collection.fields[fieldName]}
+                          value={getCurrentValue(fieldName)}
+                          relationOptions={relationOptionsByField[fieldName] ?? []}
+                        />
+                      ))}
+                    </div>
+                  </AdminCard>
+                ))}
 
-                  <Card>
-                    <CardContent className="flex flex-wrap items-center justify-end gap-2 py-4">
-                      <button class={buttonVariants({ variant: "outline" })} type="submit" name="_intent" value="save">
-                        Save
+                <Card>
+                  <CardContent className="flex flex-wrap items-center justify-end gap-2 py-4">
+                    <button class={buttonVariants({ variant: "outline" })} type="submit" name="_intent" value="save">
+                      Save
+                    </button>
+                    {collection.drafts && (
+                      <button
+                        class={buttonVariants({ variant: "default" })}
+                        type="submit"
+                        name="_intent"
+                        value="publish"
+                      >
+                        Publish
                       </button>
-                      {collection.drafts && (
-                        <button
-                          class={buttonVariants({ variant: "default" })}
-                          type="submit"
-                          name="_intent"
-                          value="publish"
-                        >
-                          Publish
-                        </button>
-                      )}
-                      {route.kind === "edit" && collection.drafts && doc?._status === "published" && (
-                        <button
-                          class={buttonVariants({ variant: "secondary" })}
-                          type="submit"
-                          name="_action"
-                          value="unpublish"
-                        >
-                          Move to draft
-                        </button>
-                      )}
-                      {route.kind === "edit" && (
-                        <button
-                          class={buttonVariants({ variant: "destructive" })}
-                          type="submit"
-                          name="_action"
-                          value="delete"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </CardContent>
-                  </Card>
-                </form>
-              )}
+                    )}
+                    {route.kind === "edit" && collection.drafts && doc?._status === "published" && (
+                      <button
+                        class={buttonVariants({ variant: "secondary" })}
+                        type="submit"
+                        name="_action"
+                        value="unpublish"
+                      >
+                        Move to draft
+                      </button>
+                    )}
+                    {route.kind === "edit" && (
+                      <button
+                        class={buttonVariants({ variant: "destructive" })}
+                        type="submit"
+                        name="_action"
+                        value="delete"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
 
-              {translationMode && (
-                <>
-                  <Card>
-                    <CardContent className="flex items-center gap-2 py-3 text-sm">
-                      <Languages className="size-4" />
-                      Editing {selectedLocale} translation — only translatable fields are editable.
-                    </CardContent>
-                  </Card>
-
-                  <form method="post" action={getFormAction(collection.slug, route.documentId)} class="space-y-6">
-                    <input type="hidden" name="_action" value="save-translation" />
-                    <input type="hidden" name="locale" value={selectedLocale} />
-                    <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
-
-                    <AdminCard title="Localized content" description="Translated fields for the selected locale.">
-                      <div class="grid gap-5">
-                        {translatableFields.map((fieldName) => (
-                          <FieldControl
-                            name={fieldName}
-                            field={collection.fields[fieldName]}
-                            value={getCurrentValue(fieldName)}
-                            relationOptions={relationOptionsByField[fieldName] ?? []}
-                          />
-                        ))}
-                      </div>
-                    </AdminCard>
-
-                    <Card>
-                      <CardContent className="flex justify-end py-4">
-                        <button class={buttonVariants({ variant: "default" })} type="submit">
-                          Save translation
-                        </button>
-                      </CardContent>
-                    </Card>
-                  </form>
-                </>
-              )}
-            </div>
-
-            <div class="space-y-6">
-              {!translationMode &&
-                effectiveSidebarFieldSets.map((set, index) => (
+              <div class="space-y-6">
+                {effectiveSidebarFieldSets.map((set, index) => (
                   <AdminCard
                     title={getFieldSetTitle(set.fields, index + mainFieldSets.length)}
                     description={getFieldSetDescription(set.fields)}
@@ -353,7 +311,127 @@ const tableRows =
                   </AdminCard>
                 ))}
 
-              {translationMode && (
+                {route.kind === "edit" && (
+                  <>
+                    <AdminCard title="Document info">
+                      <div class="grid gap-4 text-sm">
+                        <div class="flex items-center justify-between gap-3">
+                          <span class="text-muted-foreground">Status</span>
+                          <Badge variant={getStatusVariant(String(doc?._status ?? "draft"))}>
+                            {String(doc?._status ?? "draft")}
+                          </Badge>
+                        </div>
+                        <Separator />
+                        <div class="flex items-start justify-between gap-3">
+                          <span class="text-muted-foreground">ID</span>
+                          <code class="bg-muted max-w-[16rem] rounded px-2 py-1 text-xs break-all">
+                            {String(doc?._id ?? route.documentId)}
+                          </code>
+                        </div>
+                        <Separator />
+                        <div class="flex items-center justify-between gap-3">
+                          <span class="text-muted-foreground">Created</span>
+                          <span>{String(doc?._createdAt ?? "—")}</span>
+                        </div>
+                        <Separator />
+                        <div class="flex items-center justify-between gap-3">
+                          <span class="text-muted-foreground">Updated</span>
+                          <span>{String(doc?._updatedAt ?? "—")}</span>
+                        </div>
+                      </div>
+                    </AdminCard>
+
+                    {doc?.slug && (
+                      <AdminCard title="Public route">
+                        <a
+                          href={cms.meta.getRouteForDocument(collection.slug, doc)}
+                          target="_blank"
+                          class="hover:bg-muted/50 flex items-center justify-between gap-3 rounded-lg border px-3 py-3 text-sm transition-colors"
+                        >
+                          <span class="truncate">{cms.meta.getRouteForDocument(collection.slug, doc)}</span>
+                          <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
+                        </a>
+                      </AdminCard>
+                    )}
+
+                    {versions.length > 0 && (
+                      <AdminCard title="Version history">
+                        <div class="grid gap-3">
+                          {versions
+                            .slice()
+                            .reverse()
+                            .map((version) => (
+                              <div class="rounded-lg border px-3 py-3">
+                                <div class="flex items-start justify-between gap-3">
+                                  <div>
+                                    <div class="flex items-center gap-2 font-medium">
+                                      <Clock3 className="size-4 text-muted-foreground" />v{version.version}
+                                    </div>
+                                    <div class="text-muted-foreground mt-1 text-xs">{version.createdAt}</div>
+                                  </div>
+                                  <form method="post" action={getFormAction(collection.slug, route.documentId)}>
+                                    <input type="hidden" name="_action" value="restore" />
+                                    <input type="hidden" name="version" value={String(version.version)} />
+                                    <input
+                                      type="hidden"
+                                      name="redirectTo"
+                                      value={Astro.url.pathname + Astro.url.search}
+                                    />
+                                    <button class={buttonVariants({ variant: "outline", size: "sm" })} type="submit">
+                                      Restore
+                                    </button>
+                                  </form>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </AdminCard>
+                    )}
+                  </>
+                )}
+              </div>
+            </form>
+          )}
+
+          {translationMode && (
+            <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]">
+              <div class="space-y-6">
+                <Card>
+                  <CardContent className="flex items-center gap-2 py-3 text-sm">
+                    <Languages className="size-4" />
+                    Editing {selectedLocale} translation — only translatable fields are editable.
+                  </CardContent>
+                </Card>
+
+                <form method="post" action={getFormAction(collection.slug, route.documentId)} class="space-y-6">
+                  <input type="hidden" name="_action" value="save-translation" />
+                  <input type="hidden" name="locale" value={selectedLocale} />
+                  <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
+
+                  <AdminCard title="Localized content" description="Translated fields for the selected locale.">
+                    <div class="grid gap-5">
+                      {translatableFields.map((fieldName) => (
+                        <FieldControl
+                          name={fieldName}
+                          field={collection.fields[fieldName]}
+                          value={getCurrentValue(fieldName)}
+                          relationOptions={relationOptionsByField[fieldName] ?? []}
+                        />
+                      ))}
+                    </div>
+                  </AdminCard>
+
+                  <Card>
+                    <CardContent className="flex justify-end py-4">
+                      <button class={buttonVariants({ variant: "default" })} type="submit">
+                        Save translation
+                      </button>
+                    </CardContent>
+                  </Card>
+                </form>
+              </div>
+
+              <div class="space-y-6">
                 <AdminCard
                   title="Shared fields"
                   description="Read-only fields inherited from the default locale document."
@@ -370,88 +448,9 @@ const tableRows =
                     ))}
                   </div>
                 </AdminCard>
-              )}
-
-              {route.kind === "edit" && (
-                <>
-                  <AdminCard title="Document info">
-                    <div class="grid gap-4 text-sm">
-                      <div class="flex items-center justify-between gap-3">
-                        <span class="text-muted-foreground">Status</span>
-                        <Badge variant={getStatusVariant(String(doc?._status ?? "draft"))}>
-                          {String(doc?._status ?? "draft")}
-                        </Badge>
-                      </div>
-                      <Separator />
-                      <div class="flex items-start justify-between gap-3">
-                        <span class="text-muted-foreground">ID</span>
-                        <code class="bg-muted max-w-[16rem] rounded px-2 py-1 text-xs break-all">
-                          {String(doc?._id ?? route.documentId)}
-                        </code>
-                      </div>
-                      <Separator />
-                      <div class="flex items-center justify-between gap-3">
-                        <span class="text-muted-foreground">Created</span>
-                        <span>{String(doc?._createdAt ?? "—")}</span>
-                      </div>
-                      <Separator />
-                      <div class="flex items-center justify-between gap-3">
-                        <span class="text-muted-foreground">Updated</span>
-                        <span>{String(doc?._updatedAt ?? "—")}</span>
-                      </div>
-                    </div>
-                  </AdminCard>
-
-                  {doc?.slug && (
-                    <AdminCard title="Public route">
-                      <a
-                        href={cms.meta.getRouteForDocument(collection.slug, doc)}
-                        target="_blank"
-                        class="hover:bg-muted/50 flex items-center justify-between gap-3 rounded-lg border px-3 py-3 text-sm transition-colors"
-                      >
-                        <span class="truncate">{cms.meta.getRouteForDocument(collection.slug, doc)}</span>
-                        <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
-                      </a>
-                    </AdminCard>
-                  )}
-
-                  {versions.length > 0 && (
-                    <AdminCard title="Version history">
-                      <div class="grid gap-3">
-                        {versions
-                          .slice()
-                          .reverse()
-                          .map((version) => (
-                            <div class="rounded-lg border px-3 py-3">
-                              <div class="flex items-start justify-between gap-3">
-                                <div>
-                                  <div class="flex items-center gap-2 font-medium">
-                                    <Clock3 className="size-4 text-muted-foreground" />v{version.version}
-                                  </div>
-                                  <div class="text-muted-foreground mt-1 text-xs">{version.createdAt}</div>
-                                </div>
-                                <form method="post" action={getFormAction(collection.slug, route.documentId)}>
-                                  <input type="hidden" name="_action" value="restore" />
-                                  <input type="hidden" name="version" value={String(version.version)} />
-                                  <input
-                                    type="hidden"
-                                    name="redirectTo"
-                                    value={Astro.url.pathname + Astro.url.search}
-                                  />
-                                  <button class={buttonVariants({ variant: "outline", size: "sm" })} type="submit">
-                                    Restore
-                                  </button>
-                                </form>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    </AdminCard>
-                  )}
-                </>
-              )}
+              </div>
             </div>
-          </div>
+          )}
         </>
       )
     }

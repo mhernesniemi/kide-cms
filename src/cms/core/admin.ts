@@ -89,7 +89,18 @@ export const getFieldSets = (
   viewConfig?: { layout?: Array<{ fields: string[]; width?: string }> },
 ) => {
   if (!viewConfig?.layout?.length) {
-    return [{ fields: Object.keys(collection.fields), width: "full" }];
+    const allFields = Object.keys(collection.fields);
+    const slugFields = allFields.filter((f) => collection.fields[f].type === "slug");
+    const mainFields = allFields.filter((f) => collection.fields[f].type !== "slug");
+
+    if (slugFields.length > 0) {
+      return [
+        { fields: mainFields, width: "full" },
+        { fields: slugFields, width: "1/3" },
+      ];
+    }
+
+    return [{ fields: allFields, width: "full" }];
   }
 
   const allFields = Object.keys(collection.fields);
