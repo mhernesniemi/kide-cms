@@ -45,18 +45,6 @@ const getFieldSetTitle = (fields: string[], index: number) => {
   }
   return index === 0 ? "Details" : "Configuration";
 };
-const getFieldSetDescription = (fields: string[]) => {
-  if (fields.includes("body") || fields.includes("blocks"))
-    return "Long-form content and structured presentation fields.";
-  if (
-    fields.some((field) =>
-      ["slug", "category", "author", "tags", "cover", "metadata", "sortOrder", "layout", "heroImage"].includes(field),
-    )
-  ) {
-    return "Metadata, taxonomy, and publication settings.";
-  }
-  return "Core document fields from the collection schema.";
-};
 
 let collectionApi: any = null;
 let viewConfig: Record<string, any> = {};
@@ -238,7 +226,6 @@ const tableRows =
                 {mainFieldSets.map((set, index) => (
                   <AdminCard
                     title={getFieldSetTitle(set.fields, index)}
-                    description={getFieldSetDescription(set.fields)}
                   >
                     <div class="grid gap-5">
                       {set.fields.map((fieldName) => (
@@ -296,7 +283,6 @@ const tableRows =
                 {effectiveSidebarFieldSets.map((set, index) => (
                   <AdminCard
                     title={getFieldSetTitle(set.fields, index + mainFieldSets.length)}
-                    description={getFieldSetDescription(set.fields)}
                   >
                     <div class="grid gap-5">
                       {set.fields.map((fieldName) => (
@@ -408,7 +394,7 @@ const tableRows =
                   <input type="hidden" name="locale" value={selectedLocale} />
                   <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
 
-                  <AdminCard title="Localized content" description="Translated fields for the selected locale.">
+                  <AdminCard title="Localized content">
                     <div class="grid gap-5">
                       {translatableFields.map((fieldName) => (
                         <FieldControl
@@ -434,7 +420,6 @@ const tableRows =
               <div class="space-y-6">
                 <AdminCard
                   title="Shared fields"
-                  description="Read-only fields inherited from the default locale document."
                 >
                   <div class="grid gap-5">
                     {sharedFields.map((fieldName) => (
