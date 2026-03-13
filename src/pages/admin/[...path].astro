@@ -172,8 +172,9 @@ const tableRows =
         </h1>
         {
           route.kind === "edit" && doc && (
-            <div class="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
+            <div class="text-muted-foreground mt-1 flex items-center text-xs">
               <StatusBadge status={String(doc._status ?? "draft")} />
+              <Dot className="size-6 text-muted-foreground/70" />
               <span>Created {formatDate(doc._createdAt)}</span>
               <Dot className="size-6 text-muted-foreground/70" />
               <span>Updated {formatDate(doc._updatedAt)}</span>
@@ -333,7 +334,9 @@ const tableRows =
                                     <div class="flex items-center gap-2 font-medium">
                                       <Clock3 className="size-4 text-muted-foreground" />v{version.version}
                                     </div>
-                                    <div class="text-muted-foreground mt-1 text-xs">{formatDate(version.createdAt)}</div>
+                                    <div class="text-muted-foreground mt-1 text-xs">
+                                      {formatDate(version.createdAt)}
+                                    </div>
                                   </div>
                                   <form method="post" action={getFormAction(collection.slug, route.documentId)}>
                                     <input type="hidden" name="_action" value="restore" />
