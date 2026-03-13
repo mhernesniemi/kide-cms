@@ -326,7 +326,7 @@ export default function DocumentsDataTable({
               placeholder={searchPlaceholder}
               value={(searchColumn?.getFilterValue() as string) ?? ""}
               onChange={(event) => searchColumn?.setFilterValue(event.target.value)}
-              className="pl-9"
+              className="pl-9 text-sm"
             />
           </div>
           <div className="text-muted-foreground hidden text-sm md:block">
@@ -436,7 +436,10 @@ export default function DocumentsDataTable({
                 {headerGroup.headers
                   .filter((header) => header.column.id !== "search")
                   .map((header) => (
-                    <TableHead key={header.id}>
+                    <TableHead
+                      key={header.id}
+                      className={header.column.id === "select" ? "w-10" : undefined}
+                    >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
@@ -451,7 +454,12 @@ export default function DocumentsDataTable({
                     .getVisibleCells()
                     .filter((cell) => cell.column.id !== "search")
                     .map((cell) => (
-                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                      <TableCell
+                        key={cell.id}
+                        className={cell.column.id === "select" ? "w-10" : undefined}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
                     ))}
                 </TableRow>
               ))
