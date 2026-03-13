@@ -1,21 +1,29 @@
 ---
-import { ArrowUpRight, Clock3, Globe2, Languages, Plus } from "lucide-react";
+import { ArrowUpRight, Clock3, Globe2, Dot, Languages, Plus } from "lucide-react";
 
 import AdminCard from "@/components/admin/AdminCard.astro";
 import DocumentActions from "@/components/admin/DocumentActions";
 import DocumentsDataTable from "@/components/admin/DocumentsDataTable";
 import FieldControl from "@/components/admin/FieldControl.astro";
-import { Badge } from "@/components/admin/ui/badge";
+import { Badge, StatusBadge } from "@/components/admin/ui/badge";
 import { buttonVariants } from "@/components/admin/ui/button";
 import { Card, CardContent } from "@/components/admin/ui/card";
-import { Separator } from "@/components/admin/ui/separator";
 import config from "@/cms/collections.config";
 import views from "@/cms/admin/views";
 import { cms } from "@/cms/.generated/api";
-import { formatFieldValue, getFieldSets, getListColumns, humanize, resolveAdminRoute } from "@/cms/core/admin";
+import {
+  formatDate,
+  formatFieldValue,
+  getFieldSets,
+  getListColumns,
+  humanize,
+  initDateFormat,
+  resolveAdminRoute,
+} from "@/cms/core/admin";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 export const prerender = false;
 
+initDateFormat(config);
 const cmsRuntime = cms as Record<string, any> & { meta: typeof cms.meta };
 const route = resolveAdminRoute(Astro.params.path);
 const user = Astro.locals.user;
@@ -34,7 +42,6 @@ const getCollectionView = (slug: string) => (views as Record<string, any>)[slug]
 const getFormAction = (collectionSlug: string, documentId?: string) =>
   documentId ? `/api/cms/${collectionSlug}/${documentId}` : `/api/cms/${collectionSlug}`;
 
-const getStatusVariant = (status?: string) => (status === "published" ? "default" : "secondary");
 const getFieldSetTitle = (fields: string[], index: number) => {
   if (fields.includes("body") || fields.includes("blocks")) return "Content";
   if (
@@ -139,9 +146,11 @@ const tableRows =
         values: Object.fromEntries(
           listColumns.map((column) => [
             column,
-            column.startsWith("_")
-              ? String(entry[column] ?? "—")
-              : formatFieldValue(collection.fields[column], entry[column]),
+            column === "_updatedAt" || column === "_createdAt"
+              ? formatDate(entry[column])
+              : column.startsWith("_")
+                ? String(entry[column] ?? "—")
+                : formatFieldValue(collection.fields[column], entry[column]),
           ]),
         ),
       }))
@@ -155,11 +164,23 @@ const tableRows =
 >
   <section class="space-y-6">
     <div class="flex items-start justify-between gap-4">
-      <h1 class="text-2xl font-semibold tracking-tight">
-        {route.kind === "list" && collection.labels.plural}
-        {route.kind === "new" && `New ${collection.labels.singular}`}
-        {route.kind === "edit" && String(doc?.title ?? doc?.name ?? doc?.slug ?? collection.labels.singular)}
-      </h1>
+      <div>
+        <h1 class="text-2xl font-semibold tracking-tight">
+          {route.kind === "list" && collection.labels.plural}
+          {route.kind === "new" && `New ${collection.labels.singular}`}
+          {route.kind === "edit" && String(doc?.title ?? doc?.name ?? doc?.slug ?? collection.labels.singular)}
+        </h1>
+        {
+          route.kind === "edit" && doc && (
+            <div class="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
+              <StatusBadge status={String(doc._status ?? "draft")} />
+              <span>Created {formatDate(doc._createdAt)}</span>
+              <Dot className="size-6 text-muted-foreground/70" />
+              <span>Updated {formatDate(doc._updatedAt)}</span>
+            </div>
+          )
+        }
+      </div>
 
       <div class="flex flex-wrap items-center gap-2">
         {
@@ -286,34 +307,6 @@ const tableRows =
 
                 {route.kind === "edit" && (
                   <>
-                    <AdminCard title="Document info">
-                      <div class="grid gap-4 text-sm">
-                        <div class="flex items-center justify-between gap-3">
-                          <span class="text-muted-foreground">Status</span>
-                          <Badge variant={getStatusVariant(String(doc?._status ?? "draft"))}>
-                            {String(doc?._status ?? "draft")}
-                          </Badge>
-                        </div>
-                        <Separator />
-                        <div class="flex items-start justify-between gap-3">
-                          <span class="text-muted-foreground">ID</span>
-                          <code class="bg-muted max-w-[16rem] rounded px-2 py-1 text-xs break-all">
-                            {String(doc?._id ?? route.documentId)}
-                          </code>
-                        </div>
-                        <Separator />
-                        <div class="flex items-center justify-between gap-3">
-                          <span class="text-muted-foreground">Created</span>
-                          <span>{String(doc?._createdAt ?? "—")}</span>
-                        </div>
-                        <Separator />
-                        <div class="flex items-center justify-between gap-3">
-                          <span class="text-muted-foreground">Updated</span>
-                          <span>{String(doc?._updatedAt ?? "—")}</span>
-                        </div>
-                      </div>
-                    </AdminCard>
-
                     {doc?.slug && (
                       <AdminCard title="Public route">
                         <a
@@ -340,7 +333,7 @@ const tableRows =
                                     <div class="flex items-center gap-2 font-medium">
                                       <Clock3 className="size-4 text-muted-foreground" />v{version.version}
                                     </div>
-                                    <div class="text-muted-foreground mt-1 text-xs">{version.createdAt}</div>
+                                    <div class="text-muted-foreground mt-1 text-xs">{formatDate(version.createdAt)}</div>
                                   </div>
                                   <form method="post" action={getFormAction(collection.slug, route.documentId)}>
                                     <input type="hidden" name="_action" value="restore" />

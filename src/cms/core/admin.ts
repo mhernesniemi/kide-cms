@@ -1,5 +1,20 @@
-import type { CollectionConfig, FieldConfig } from "./define";
+import type { CMSConfig, CollectionConfig, FieldConfig } from "./define";
 import { richTextToPlainText } from "./values";
+
+const DEFAULT_DATE_FORMAT = "en-US";
+
+let _dateLocale: string = DEFAULT_DATE_FORMAT;
+
+export const initDateFormat = (config: CMSConfig) => {
+  _dateLocale = config.admin?.dateFormat ?? DEFAULT_DATE_FORMAT;
+};
+
+export const formatDate = (value: unknown): string => {
+  if (!value) return "—";
+  const date = new Date(String(value));
+  if (isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString(_dateLocale);
+};
 
 export type AdminRoute =
   | { kind: "dashboard" }

@@ -25,7 +25,7 @@ import {
   SquarePen,
 } from "lucide-react";
 
-import { Badge } from "@/components/admin/ui/badge";
+import { Badge, StatusBadge } from "@/components/admin/ui/badge";
 import { Button } from "@/components/admin/ui/button";
 import { Checkbox } from "@/components/admin/ui/checkbox";
 import {
@@ -63,7 +63,6 @@ type DocumentsDataTableProps = {
   data: DataTableRow[];
 };
 
-const statusVariant = (status?: string) => (status === "published" ? "default" : status ? "secondary" : "outline");
 
 function DataTableColumnHeader({ column, title }: { column: Column<DataTableRow, unknown>; title: string }) {
   if (!column.getCanSort()) {
@@ -187,11 +186,7 @@ export default function DocumentsDataTable({
         cell: ({ row }) => {
           const value = row.original.values[column.key] ?? "—";
           if (column.key === "_status") {
-            return (
-              <Badge variant={statusVariant(row.original.status) as "default" | "secondary" | "outline"}>
-                {row.original.status ?? value}
-              </Badge>
-            );
+            return <StatusBadge status={row.original.status ?? value} />;
           }
 
           const isPrimary = column.key === primaryColumnKey;

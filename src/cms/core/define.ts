@@ -132,9 +132,14 @@ export type CollectionConfig = {
   seed?: SeedDocument[];
 };
 
+export type AdminConfig = {
+  dateFormat?: string;
+};
+
 export type CMSConfig = {
   database?: DatabaseConfig;
   locales?: LocaleConfig;
+  admin?: AdminConfig;
   collections: CollectionConfig[];
 };
 

@@ -13,7 +13,7 @@ const badgeVariants = cva(
         secondary: "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
         destructive:
           "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
-        outline: "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
+        outline: "border-foreground/20 text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
         ghost: "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
       },
@@ -23,6 +23,29 @@ const badgeVariants = cva(
     },
   },
 );
+
+type StatusColor = "green" | "yellow" | "gray";
+
+const statusDotColor: Record<StatusColor, string> = {
+  green: "bg-emerald-500",
+  yellow: "bg-amber-500",
+  gray: "bg-muted-foreground/50",
+};
+
+function StatusBadge({ status, className }: { status: string; className?: string }) {
+  const color: StatusColor = status === "published" ? "green" : status === "draft" ? "yellow" : "gray";
+  return (
+    <span
+      className={cn(
+        "text-foreground inline-flex items-center gap-1.5 rounded-4xl border border-transparent py-0.5 text-xs font-medium capitalize",
+        className,
+      )}
+    >
+      <span className={cn("size-1.5 rounded-full", statusDotColor[color])} />
+      {status}
+    </span>
+  );
+}
 
 function Badge({
   className,
@@ -46,4 +69,4 @@ function Badge({
   });
 }
 
-export { Badge, badgeVariants };
+export { Badge, StatusBadge, badgeVariants };
