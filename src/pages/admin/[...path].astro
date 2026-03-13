@@ -1,5 +1,5 @@
 ---
-import { ArrowUpRight, Clock3, Globe2, Dot, Languages, Plus } from "lucide-react";
+import { ArrowUpRight, Globe2, Dot, Languages, Plus } from "lucide-react";
 
 import AdminCard from "@/components/admin/AdminCard.astro";
 import DocumentActions from "@/components/admin/DocumentActions";
@@ -269,6 +269,9 @@ const tableRows =
                   formId="document-form"
                   showUnpublish={collection.drafts && doc?._status === "published"}
                   showDelete={true}
+                  versions={versions}
+                  restoreEndpoint={getFormAction(collection.slug, route.documentId)}
+                  redirectTo={Astro.url.pathname + Astro.url.search}
                 />
               )}
             </div>
@@ -317,45 +320,6 @@ const tableRows =
                   </AdminCard>
                 ))}
 
-                {route.kind === "edit" && (
-                  <>
-                    {versions.length > 0 && (
-                      <AdminCard title="Version history">
-                        <div class="grid gap-3">
-                          {versions
-                            .slice()
-                            .reverse()
-                            .map((version) => (
-                              <div class="rounded-lg border px-3 py-3">
-                                <div class="flex items-start justify-between gap-3">
-                                  <div>
-                                    <div class="flex items-center gap-2 font-medium">
-                                      <Clock3 className="size-4 text-muted-foreground" />v{version.version}
-                                    </div>
-                                    <div class="text-muted-foreground mt-1 text-xs">
-                                      {formatDate(version.createdAt)}
-                                    </div>
-                                  </div>
-                                  <form method="post" action={getFormAction(collection.slug, route.documentId)}>
-                                    <input type="hidden" name="_action" value="restore" />
-                                    <input type="hidden" name="version" value={String(version.version)} />
-                                    <input
-                                      type="hidden"
-                                      name="redirectTo"
-                                      value={Astro.url.pathname + Astro.url.search}
-                                    />
-                                    <button class={buttonVariants({ variant: "outline", size: "sm" })} type="submit">
-                                      Restore
-                                    </button>
-                                  </form>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      </AdminCard>
-                    )}
-                  </>
-                )}
               </div>
             </form>
           )}
