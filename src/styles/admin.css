@@ -50,52 +50,6 @@
   --color-accent-subtle: oklch(0.932 0.032 255);
 }
 
-/* ── Dark: deep blue-gray, elevated surfaces ─────────────────────── */
-.dark {
-  --background: oklch(0.175 0.014 265);
-  --foreground: oklch(0.96 0.004 265);
-  --card: oklch(0.215 0.014 265);
-  --card-foreground: oklch(0.96 0.004 265);
-  --popover: oklch(0.215 0.014 265);
-  --popover-foreground: oklch(0.96 0.004 265);
-  --primary: oklch(0.96 0.004 265);
-  --primary-foreground: oklch(0.175 0.014 265);
-  --secondary: oklch(0.255 0.014 265);
-  --secondary-foreground: oklch(0.78 0.006 265);
-  --muted: oklch(0.255 0.014 265);
-  --muted-foreground: oklch(0.6 0.006 265);
-  --accent: oklch(0.255 0.014 265);
-  --accent-foreground: oklch(0.96 0.004 265);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(0.3 0.012 265);
-  --input: oklch(0.36 0.012 265);
-  --ring: oklch(0.6 0.006 265);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.175 0.014 265);
-  --sidebar-foreground: oklch(0.96 0.004 265);
-  --sidebar-primary: oklch(0.623 0.214 259.815);
-  --sidebar-primary-foreground: oklch(0.96 0.004 265);
-  --sidebar-accent: oklch(0.255 0.014 265);
-  --sidebar-accent-foreground: oklch(0.78 0.006 265);
-  --sidebar-border: oklch(0.3 0.012 265);
-  --sidebar-ring: oklch(0.6 0.006 265);
-
-  /* Extended palette */
-  --color-surface: oklch(0.215 0.014 265);
-  --color-muted-strong: oklch(0.31 0.014 265);
-  --color-foreground-secondary: oklch(0.78 0.006 265);
-  --color-foreground-tertiary: oklch(0.72 0.006 265);
-  --color-placeholder: oklch(0.48 0.006 265);
-  --color-input-border: oklch(0.36 0.012 265);
-  --color-hover: oklch(0.245 0.014 265);
-  --color-destructive-subtle: oklch(0.24 0.05 25);
-  --color-accent-subtle: oklch(0.24 0.03 265);
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
     --background: oklch(0.175 0.014 265);
@@ -195,19 +149,19 @@
   outline: none;
 }
 
-/* ── Dark mode: native input controls (date pickers, etc.) ───────── */
-.dark input::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-}
+/* ── Dark mode: native input controls, select arrow, focus ring ──── */
+@media (prefers-color-scheme: dark) {
+  input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
 
-/* ── Dark mode: select arrow ──────────────────────────────────────── */
-.dark select {
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-}
+  select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  }
 
-/* ── Dark mode: focus ring offset ────────────────────────────────── */
-.dark *:focus-visible {
-  --tw-ring-offset-color: var(--color-surface);
+  *:focus-visible {
+    --tw-ring-offset-color: var(--color-surface);
+  }
 }
 
 /* ── Strip focus styles from command input ────────────────────────── */
@@ -270,6 +224,8 @@
 }
 
 /* ── Dark mode: Tiptap placeholder ───────────────────────────────── */
-.dark .tiptap p.is-editor-empty:first-child::before {
-  color: var(--color-placeholder) !important;
+@media (prefers-color-scheme: dark) {
+  .tiptap p.is-editor-empty:first-child::before {
+    color: var(--color-placeholder) !important;
+  }
 }
