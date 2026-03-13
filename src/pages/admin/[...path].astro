@@ -46,7 +46,7 @@ const getFieldSetTitle = (fields: string[], index: number) => {
   if (fields.includes("body") || fields.includes("blocks")) return "Content";
   if (
     fields.some((field) =>
-      ["slug", "category", "author", "tags", "cover", "metadata", "sortOrder", "layout", "heroImage"].includes(field),
+      ["slug", "category", "author", "tags", "cover", "metadata", "layout", "heroImage"].includes(field),
     )
   ) {
     return "Settings";

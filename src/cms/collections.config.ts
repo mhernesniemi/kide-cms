@@ -51,9 +51,6 @@ export default defineConfig({
           indexed: true,
           translatable: true,
         }),
-        description: fields.text({
-          translatable: true,
-        }),
         slug: fields.slug({ from: "title", unique: true, translatable: true }),
         excerpt: fields.text({
           maxLength: 300,
@@ -74,7 +71,6 @@ export default defineConfig({
           defaultValue: {},
           admin: { rows: 6, help: "JSON object for SEO extras." },
         }),
-        sortOrder: fields.number({ defaultValue: 0 }),
       },
     }),
     defineCollection({

@@ -19,7 +19,7 @@ export default {
     edit: {
       layout: [
         { fields: ["title", "excerpt", "body"], width: "2/3" },
-        { fields: ["slug", "category", "author", "tags", "cover", "metadata", "sortOrder"], width: "1/3" },
+        { fields: ["slug", "category", "author", "tags", "cover", "metadata"], width: "1/3" },
       ],
     },
   },
