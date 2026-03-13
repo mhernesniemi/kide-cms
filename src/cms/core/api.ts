@@ -25,6 +25,9 @@ type RuntimeContext = {
     role?: string;
     email?: string;
   } | null;
+  cache?: {
+    invalidate: (opts: { tags: string[] }) => void | Promise<void>;
+  };
 };
 
 type CMSOperation = "read" | "create" | "update" | "delete" | "publish";
@@ -201,6 +204,7 @@ const getHookContext = (collection: CollectionConfig, operation: string, context
   operation,
   collection: collection.slug,
   timestamp: now(),
+  cache: context.cache,
 });
 
 const getTableRefs = async (collectionSlug: string) => {

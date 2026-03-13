@@ -64,11 +64,12 @@ const handleHtmlMutation = async (
   documentId: string | undefined,
   request: Request,
   locals: App.Locals,
+  cache?: { invalidate: (opts: { tags: string[] }) => void | Promise<void> },
 ) => {
   const { action, data, intent, redirectTo, locale, version } = await extractDataFromForm(request);
   const collectionApi = cmsRuntime[collectionSlug];
   const collection = getCollection(collectionSlug);
-  const ctx = getUserContext(locals);
+  const ctx = getRuntimeContext(locals, cache);
 
   if (action === "create") {
     const created = await collectionApi.create(data, ctx);
@@ -121,9 +122,12 @@ const handleHtmlMutation = async (
   return redirect(redirectTo);
 };
 
-const getUserContext = (locals: App.Locals) => {
+const getRuntimeContext = (locals: App.Locals, cache?: { invalidate: (opts: { tags: string[] }) => void | Promise<void> }) => {
   const user = locals.user;
-  return user ? { user: { id: user.id, role: user.role, email: user.email } } : {};
+  return {
+    ...(user ? { user: { id: user.id, role: user.role, email: user.email } } : {}),
+    ...(cache ? { cache } : {}),
+  };
 };
 
 export const GET: APIRoute = async ({ params, url, locals }) => {
@@ -132,7 +136,7 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
     return Response.json({ error: "Collection is required." }, { status: 400 });
   }
 
-  const ctx = getUserContext(locals);
+  const ctx = getRuntimeContext(locals);
   const pathSegments = getSegments(params.path);
   const documentId = pathSegments[0];
   const locale = url.searchParams.get("locale") ?? undefined;
@@ -162,19 +166,19 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
   return Response.json(docs);
 };
 
-export const POST: APIRoute = async ({ params, request, locals }) => {
+export const POST: APIRoute = async ({ params, request, locals, cache }) => {
   const collectionSlug = params.collection;
   if (!collectionSlug) {
     return Response.json({ error: "Collection is required." }, { status: 400 });
   }
 
-  const ctx = getUserContext(locals);
+  const ctx = getRuntimeContext(locals, cache);
   const pathSegments = getSegments(params.path);
   const documentId = pathSegments[0];
   const pathAction = pathSegments[1];
 
   if (isFormRequest(request)) {
-    return handleHtmlMutation(collectionSlug, documentId, request, locals);
+    return handleHtmlMutation(collectionSlug, documentId, request, locals, cache);
   }
 
   const collectionApi = cmsRuntime[collectionSlug];
@@ -192,13 +196,13 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
   return Response.json(created, { status: 201 });
 };
 
-export const PATCH: APIRoute = async ({ params, request, locals }) => {
+export const PATCH: APIRoute = async ({ params, request, locals, cache }) => {
   const collectionSlug = params.collection;
   if (!collectionSlug) {
     return Response.json({ error: "Collection is required." }, { status: 400 });
   }
 
-  const ctx = getUserContext(locals);
+  const ctx = getRuntimeContext(locals, cache);
   const pathSegments = getSegments(params.path);
   const documentId = pathSegments[0];
   if (!documentId) {
@@ -210,13 +214,13 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
   return Response.json(updated);
 };
 
-export const DELETE: APIRoute = async ({ params, locals }) => {
+export const DELETE: APIRoute = async ({ params, locals, cache }) => {
   const collectionSlug = params.collection;
   if (!collectionSlug) {
     return new Response(null, { status: 400 });
   }
 
-  const ctx = getUserContext(locals);
+  const ctx = getRuntimeContext(locals, cache);
   const pathSegments = getSegments(params.path);
   const documentId = pathSegments[0];
   if (!documentId) {

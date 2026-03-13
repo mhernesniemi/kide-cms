@@ -11,25 +11,25 @@ export default defineHooks({
       }
       return data;
     },
-    afterPublish(_doc, context) {
-      context.cache?.invalidate({ tags: ["posts", "home"] });
+    afterPublish(doc, context) {
+      context.cache?.invalidate({ tags: ["posts", "home", `post:${doc._id}`] });
     },
-    afterUpdate(_doc, context) {
-      context.cache?.invalidate({ tags: ["posts"] });
+    afterUpdate(doc, context) {
+      context.cache?.invalidate({ tags: ["posts", `post:${doc._id}`] });
     },
-    afterDelete(_doc, context) {
-      context.cache?.invalidate({ tags: ["posts", "home"] });
+    afterDelete(doc, context) {
+      context.cache?.invalidate({ tags: ["posts", "home", `post:${doc._id}`] });
     },
   },
   pages: {
-    afterPublish(_doc, context) {
-      context.cache?.invalidate({ tags: ["pages", "home"] });
+    afterPublish(doc, context) {
+      context.cache?.invalidate({ tags: ["pages", "home", `page:${doc._id}`] });
     },
-    afterUpdate(_doc, context) {
-      context.cache?.invalidate({ tags: ["pages"] });
+    afterUpdate(doc, context) {
+      context.cache?.invalidate({ tags: ["pages", `page:${doc._id}`] });
     },
-    afterDelete(_doc, context) {
-      context.cache?.invalidate({ tags: ["pages", "home"] });
+    afterDelete(doc, context) {
+      context.cache?.invalidate({ tags: ["pages", "home", `page:${doc._id}`] });
     },
   },
   authors: {},

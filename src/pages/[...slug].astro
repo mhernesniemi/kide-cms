@@ -21,6 +21,8 @@ if (segments[0] === "blog" && segments[1]) {
 if (!document) {
   return Astro.redirect("/");
 }
+
+Astro.cache.set({ tags: ["posts", `post:${document._id}`] });
 ---
 
 <PublicLayout title={String(document.title)}>
