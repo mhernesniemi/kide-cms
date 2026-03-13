@@ -195,7 +195,7 @@ export default function DocumentsDataTable({
               {isPrimary ? (
                 <a
                   href={row.original.editHref}
-                  className="text-foreground font-medium underline-offset-4 hover:underline"
+                  className="text-foreground font-medium underline-offset-2 hover:underline"
                 >
                   {value}
                 </a>
