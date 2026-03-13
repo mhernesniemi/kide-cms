@@ -2,6 +2,7 @@
 import { ArrowUpRight, Clock3, Globe2, Languages, Plus } from "lucide-react";
 
 import AdminCard from "@/components/admin/AdminCard.astro";
+import DocumentActions from "@/components/admin/DocumentActions";
 import DocumentsDataTable from "@/components/admin/DocumentsDataTable";
 import FieldControl from "@/components/admin/FieldControl.astro";
 import { Badge } from "@/components/admin/ui/badge";
@@ -160,7 +161,7 @@ const tableRows =
         {route.kind === "edit" && String(doc?.title ?? doc?.name ?? doc?.slug ?? collection.labels.singular)}
       </h1>
 
-      <div class="flex flex-wrap gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         {
           route.kind !== "list" && (
             <a href={`/admin/${collection.slug}`} class={buttonVariants({ variant: "outline", size: "sm" })}>
@@ -196,25 +197,57 @@ const tableRows =
     {
       (route.kind === "new" || route.kind === "edit") && (
         <>
-          {locales.length > 1 && route.kind === "edit" && translatableFields.length > 0 && (
-            <div class="flex flex-wrap gap-2">
-              {locales.map((locale) => (
-                <a
-                  href={`/admin/${collection.slug}/${route.documentId}?locale=${locale}`}
-                  class={buttonVariants({
-                    variant: selectedLocale === locale ? "secondary" : "outline",
-                    size: "sm",
-                  })}
-                >
-                  <Globe2 className="size-4" />
-                  {locale}
-                </a>
-              ))}
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              {locales.length > 1 && route.kind === "edit" && translatableFields.length > 0 &&
+                locales.map((locale) => (
+                  <a
+                    href={`/admin/${collection.slug}/${route.documentId}?locale=${locale}`}
+                    class={buttonVariants({
+                      variant: selectedLocale === locale ? "secondary" : "outline",
+                      size: "sm",
+                    })}
+                  >
+                    <Globe2 className="size-4" />
+                    {locale}
+                  </a>
+                ))}
             </div>
-          )}
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                class={buttonVariants({ variant: "outline", size: "sm" })}
+                type="submit"
+                form="document-form"
+                name="_intent"
+                value="save"
+              >
+                {collection.drafts ? "Save draft" : "Save"}
+              </button>
+              {collection.drafts && (
+                <button
+                  class={buttonVariants({ size: "sm" })}
+                  type="submit"
+                  form="document-form"
+                  name="_intent"
+                  value="publish"
+                >
+                  Publish
+                </button>
+              )}
+              {route.kind === "edit" && (
+                <DocumentActions
+                  client:load
+                  formId="document-form"
+                  showUnpublish={collection.drafts && doc?._status === "published"}
+                  showDelete={true}
+                />
+              )}
+            </div>
+          </div>
 
           {!translationMode && (
             <form
+              id="document-form"
               method="post"
               action={getFormAction(collection.slug, route.kind === "edit" ? route.documentId : undefined)}
               class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
@@ -224,9 +257,7 @@ const tableRows =
 
               <div class="space-y-6">
                 {mainFieldSets.map((set, index) => (
-                  <AdminCard
-                    title={getFieldSetTitle(set.fields, index)}
-                  >
+                  <AdminCard title={getFieldSetTitle(set.fields, index)}>
                     <div class="grid gap-5">
                       {set.fields.map((fieldName) => (
                         <FieldControl
@@ -239,51 +270,11 @@ const tableRows =
                     </div>
                   </AdminCard>
                 ))}
-
-                <Card>
-                  <CardContent className="flex flex-wrap items-center justify-end gap-2 py-4">
-                    <button class={buttonVariants({ variant: "outline" })} type="submit" name="_intent" value="save">
-                      Save
-                    </button>
-                    {collection.drafts && (
-                      <button
-                        class={buttonVariants({ variant: "default" })}
-                        type="submit"
-                        name="_intent"
-                        value="publish"
-                      >
-                        Publish
-                      </button>
-                    )}
-                    {route.kind === "edit" && collection.drafts && doc?._status === "published" && (
-                      <button
-                        class={buttonVariants({ variant: "secondary" })}
-                        type="submit"
-                        name="_action"
-                        value="unpublish"
-                      >
-                        Move to draft
-                      </button>
-                    )}
-                    {route.kind === "edit" && (
-                      <button
-                        class={buttonVariants({ variant: "destructive" })}
-                        type="submit"
-                        name="_action"
-                        value="delete"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </CardContent>
-                </Card>
               </div>
 
               <div class="space-y-6">
                 {effectiveSidebarFieldSets.map((set, index) => (
-                  <AdminCard
-                    title={getFieldSetTitle(set.fields, index + mainFieldSets.length)}
-                  >
+                  <AdminCard title={getFieldSetTitle(set.fields, index + mainFieldSets.length)}>
                     <div class="grid gap-5">
                       {set.fields.map((fieldName) => (
                         <FieldControl
@@ -418,9 +409,7 @@ const tableRows =
               </div>
 
               <div class="space-y-6">
-                <AdminCard
-                  title="Shared fields"
-                >
+                <AdminCard title="Shared fields">
                   <div class="grid gap-5">
                     {sharedFields.map((fieldName) => (
                       <FieldControl
