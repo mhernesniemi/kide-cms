@@ -177,7 +177,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     return handleHtmlMutation(collectionSlug, documentId, request, locals);
   }
 
-  const body = await request.json();
   const collectionApi = cmsRuntime[collectionSlug];
 
   if (pathAction === "publish" && documentId) {
@@ -188,6 +187,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     return Response.json(await collectionApi.unpublish(documentId, ctx));
   }
 
+  const body = await request.json();
   const created = await collectionApi.create(body, ctx);
   return Response.json(created, { status: 201 });
 };
