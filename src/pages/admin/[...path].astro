@@ -199,7 +199,9 @@ const tableRows =
         <>
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex flex-wrap items-center gap-2">
-              {locales.length > 1 && route.kind === "edit" && translatableFields.length > 0 &&
+              {locales.length > 1 &&
+                route.kind === "edit" &&
+                translatableFields.length > 0 &&
                 locales.map((locale) => (
                   <a
                     href={`/admin/${collection.slug}/${route.documentId}?locale=${locale}`}
@@ -215,7 +217,7 @@ const tableRows =
             </div>
             <div class="flex flex-wrap items-center gap-2">
               <button
-                class={buttonVariants({ variant: "outline", size: "sm" })}
+                class={buttonVariants({ variant: "outline" })}
                 type="submit"
                 form="document-form"
                 name="_intent"
@@ -224,13 +226,7 @@ const tableRows =
                 {collection.drafts ? "Save draft" : "Save"}
               </button>
               {collection.drafts && (
-                <button
-                  class={buttonVariants({ size: "sm" })}
-                  type="submit"
-                  form="document-form"
-                  name="_intent"
-                  value="publish"
-                >
+                <button class={buttonVariants()} type="submit" form="document-form" name="_intent" value="publish">
                   Publish
                 </button>
               )}
