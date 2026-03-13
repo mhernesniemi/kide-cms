@@ -185,9 +185,14 @@ const tableRows =
 
       <div class="flex flex-wrap items-center gap-2">
         {
-          route.kind !== "list" && (
-            <a href={`/admin/${collection.slug}`} class={buttonVariants({ variant: "outline", size: "sm" })}>
-              Back to list
+          route.kind === "edit" && doc?.slug && (
+            <a
+              href={cms.meta.getRouteForDocument(collection.slug, doc)}
+              target="_blank"
+              class="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm transition-colors"
+            >
+              Preview
+              <ArrowUpRight className="size-3.5" />
             </a>
           )
         }
@@ -308,19 +313,6 @@ const tableRows =
 
                 {route.kind === "edit" && (
                   <>
-                    {doc?.slug && (
-                      <AdminCard title="Public route">
-                        <a
-                          href={cms.meta.getRouteForDocument(collection.slug, doc)}
-                          target="_blank"
-                          class="hover:bg-muted/50 flex items-center justify-between gap-3 rounded-lg border px-3 py-3 text-sm transition-colors"
-                        >
-                          <span class="truncate">{cms.meta.getRouteForDocument(collection.slug, doc)}</span>
-                          <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
-                        </a>
-                      </AdminCard>
-                    )}
-
                     {versions.length > 0 && (
                       <AdminCard title="Version history">
                         <div class="grid gap-3">
