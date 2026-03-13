@@ -85,7 +85,10 @@ export default function DocumentActions({
                     onClick={() => restoreVersion(vNum)}
                     className="flex items-center justify-between gap-3"
                   >
-                    <span>v{vNum}{isCurrent ? " (current)" : ""}</span>
+                    <span>
+                      v{vNum}
+                      {isCurrent ? " (current)" : ""}
+                    </span>
                     {isCurrent && <CheckIcon className="text-muted-foreground size-3.5" />}
                   </DropdownMenuItem>
                 );

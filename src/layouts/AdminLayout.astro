@@ -1,9 +1,10 @@
 ---
 import "../styles/admin.css";
 
-import { Boxes, FileText, Image, LayoutGrid, LogOut, Newspaper, PencilRuler, Users } from "lucide-react";
+import { FileText, Image, LayoutGrid, Newspaper, PencilRuler, Users } from "lucide-react";
 
-import { buttonVariants } from "@/components/admin/ui/button";
+import MobileSidebar from "@/components/admin/MobileSidebar";
+import SidebarUserMenu from "@/components/admin/SidebarUserMenu";
 import { Separator } from "@/components/admin/ui/separator";
 import { cn } from "@/lib/utils";
 
@@ -40,25 +41,32 @@ const navItems = collections.map((collection) => ({
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" />
     <title>{title}</title>
+    <script is:inline>
+      (function () {
+        var t = localStorage.getItem("admin-theme") || "system";
+        var dark = t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+        if (dark) document.documentElement.classList.add("dark");
+      })();
+    </script>
   </head>
   <body class="bg-background text-foreground min-h-screen antialiased">
     <div class="min-h-screen lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
-      <aside class="bg-sidebar/40 hidden border-r backdrop-blur lg:flex lg:flex-col">
-        <div class="px-5 py-5">
-          <a href="/admin" class="hover:bg-accent/50 flex items-start gap-3 rounded-lg px-2 py-1 transition-colors">
-            <div class="bg-background rounded-lg border p-2 shadow-sm">
-              <Boxes className="size-4" />
-            </div>
-            <div class="min-w-0">
-              <div class="text-sm font-semibold tracking-tight">AstroCMS</div>
-              <div class="text-muted-foreground text-xs">Content administration</div>
-            </div>
-          </a>
+      {/* ── Desktop sidebar ──────────────────────────────────────────── */}
+      <aside class="bg-sidebar/40 mt-1 hidden border-r backdrop-blur lg:flex lg:flex-col">
+        <div class="px-3 pt-3 pb-2">
+          {
+            user && (
+              <SidebarUserMenu
+                client:load
+                userName={user.name}
+                userEmail={user.email}
+                logoutAction="/api/cms/auth/logout"
+              />
+            )
+          }
         </div>
 
-        <Separator />
-
-        <nav class="flex-1 space-y-1 px-3 py-4">
+        <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-3">
           {
             navItems.map((item) => (
               <a
@@ -86,75 +94,57 @@ const navItems = collections.map((collection) => ({
             <span>Assets</span>
           </a>
         </nav>
-
-        <div class="mt-auto px-3 pb-4">
-          <Separator className="mb-4" />
-          {
-            user && (
-              <div class="mb-3 flex items-center gap-3 rounded-lg px-3 py-2">
-                <div class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full text-xs font-medium">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="truncate text-sm font-medium">{user.name}</div>
-                  <div class="text-muted-foreground truncate text-xs">{user.role}</div>
-                </div>
-              </div>
-            )
-          }
-          <div class="space-y-2">
-            <a href="/" class={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full justify-start")}>
-              View site
-            </a>
-            {
-              user && (
-                <form method="post" action="/api/cms/auth/logout">
-                  <button
-                    type="submit"
-                    class={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
-                  >
-                    <LogOut className="size-4" />
-                    Sign out
-                  </button>
-                </form>
-              )
-            }
-          </div>
-        </div>
       </aside>
 
       <div class="min-w-0">
-        <header class="bg-background/95 supports-backdrop-filter:bg-background/75 border-b backdrop-blur lg:hidden">
-          <div class="flex items-center justify-between px-4 py-4">
-            <a href="/admin" class="flex items-center gap-3">
-              <div class="bg-card rounded-lg border p-2 shadow-sm">
-                <Boxes className="size-4" />
-              </div>
-              <div>
-                <div class="text-sm font-semibold">AstroCMS</div>
-                <div class="text-muted-foreground text-xs">CMS admin</div>
-              </div>
-            </a>
-            <a href="/" class={buttonVariants({ variant: "outline", size: "sm" })}>View site</a>
-          </div>
-          <div class="flex gap-2 overflow-x-auto px-4 pb-4">
-            {
-              navItems.map((item) => (
-                <a
-                  href={`/admin/${item.slug}`}
-                  class={cn(
-                    "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm whitespace-nowrap transition-colors",
-                    activeCollection === item.slug
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-card text-muted-foreground",
-                  )}
-                >
-                  <item.Icon className="size-4" />
-                  {item.labels.plural}
-                </a>
-              ))
-            }
-          </div>
+        {/* ── Mobile header ────────────────────────────────────────── */}
+        <header
+          class="bg-background/95 supports-backdrop-filter:bg-background/75 flex items-center gap-3 border-b px-4 py-3 backdrop-blur lg:hidden"
+        >
+          <MobileSidebar client:load>
+            <div class="px-3 pt-3 pb-1">
+              {
+                user && (
+                  <SidebarUserMenu
+                    client:load
+                    userName={user.name}
+                    userEmail={user.email}
+                    logoutAction="/api/cms/auth/logout"
+                  />
+                )
+              }
+              <Separator className="mt-3" />
+            </div>
+
+            <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-3">
+              {
+                navItems.map((item) => (
+                  <a
+                    href={`/admin/${item.slug}`}
+                    class={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                      activeCollection === item.slug
+                        ? "bg-accent text-accent-foreground"
+                        : "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
+                    )}
+                  >
+                    <item.Icon className="size-4 shrink-0 stroke-1" />
+                    <span>{item.labels.plural}</span>
+                  </a>
+                ))
+              }
+              <a
+                href="/admin/assets"
+                class={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                  "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
+                )}
+              >
+                <Image className="size-4 shrink-0 stroke-1" />
+                <span>Assets</span>
+              </a>
+            </nav>
+          </MobileSidebar>
         </header>
 
         <main class="mx-auto w-full max-w-[1900px] px-4 py-6 lg:px-8 lg:py-8">

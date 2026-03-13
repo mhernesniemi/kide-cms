@@ -122,7 +122,10 @@ const handleHtmlMutation = async (
   return redirect(redirectTo);
 };
 
-const getRuntimeContext = (locals: App.Locals, cache?: { invalidate: (opts: { tags: string[] }) => void | Promise<void> }) => {
+const getRuntimeContext = (
+  locals: App.Locals,
+  cache?: { invalidate: (opts: { tags: string[] }) => void | Promise<void> },
+) => {
   const user = locals.user;
   return {
     ...(user ? { user: { id: user.id, role: user.role, email: user.email } } : {}),
