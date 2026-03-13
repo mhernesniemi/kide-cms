@@ -193,19 +193,15 @@ const tableRows =
 
     {
       route.kind === "list" && (
-        <Card>
-          <CardContent className="pt-4">
-            <DocumentsDataTable
-              client:load
-              collectionSlug={collection.slug}
-              draftsEnabled={collection.drafts}
-              title={collection.labels.plural}
-              columns={listColumns.map((column) => ({ key: column, label: humanize(column) }))}
-              data={tableRows}
-              searchPlaceholder={`Filter ${collection.labels.plural.toLowerCase()}...`}
-            />
-          </CardContent>
-        </Card>
+        <DocumentsDataTable
+          client:load
+          collectionSlug={collection.slug}
+          draftsEnabled={collection.drafts}
+          title={collection.labels.plural}
+          columns={listColumns.map((column) => ({ key: column, label: humanize(column) }))}
+          data={tableRows}
+          searchPlaceholder={`Filter ${collection.labels.plural.toLowerCase()}...`}
+        />
       )
     }
 
