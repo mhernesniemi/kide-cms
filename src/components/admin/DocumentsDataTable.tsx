@@ -62,7 +62,6 @@ type DocumentsDataTableProps = {
   data: DataTableRow[];
 };
 
-
 function DataTableColumnHeader({ column, title }: { column: Column<DataTableRow, unknown>; title: string }) {
   if (!column.getCanSort()) {
     return <span>{title}</span>;
@@ -185,9 +184,13 @@ export default function DocumentsDataTable({
         cell: ({ row }) => {
           const value = row.original.values[column.key] ?? "—";
           if (column.key === "_status") {
-            return <StatusBadge status={row.original.status ?? value} />;
+            return (
+              <StatusBadge
+                status={row.original.status ?? value}
+                className="text-muted-foreground text-sm font-normal"
+              />
+            );
           }
-
           const isPrimary = column.key === primaryColumnKey;
           return (
             <>

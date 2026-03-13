@@ -64,13 +64,13 @@ const navItems = collections.map((collection) => ({
               <a
                 href={`/admin/${item.slug}`}
                 class={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
                   activeCollection === item.slug
                     ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                    : "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
                 )}
               >
-                <item.Icon className="size-4 shrink-0" />
+                <item.Icon className="size-4 shrink-0 stroke-1" />
                 <span>{item.labels.plural}</span>
               </a>
             ))
@@ -78,11 +78,11 @@ const navItems = collections.map((collection) => ({
           <a
             href="/admin/assets"
             class={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-              "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+              "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
             )}
           >
-            <Image className="size-4 shrink-0" />
+            <Image className="size-4 shrink-0 stroke-1" />
             <span>Assets</span>
           </a>
         </nav>
@@ -124,7 +124,7 @@ const navItems = collections.map((collection) => ({
       </aside>
 
       <div class="min-w-0">
-        <header class="bg-background/95 supports-[backdrop-filter]:bg-background/75 border-b backdrop-blur lg:hidden">
+        <header class="bg-background/95 supports-backdrop-filter:bg-background/75 border-b backdrop-blur lg:hidden">
           <div class="flex items-center justify-between px-4 py-4">
             <a href="/admin" class="flex items-center gap-3">
               <div class="bg-card rounded-lg border p-2 shadow-sm">
