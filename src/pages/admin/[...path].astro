@@ -253,7 +253,13 @@ const tableRows =
                 {collection.drafts ? "Save draft" : "Save"}
               </button>
               {collection.drafts && (
-                <button class={buttonVariants()} type="submit" form="document-form" name="_intent" value="publish">
+                <button
+                  class={buttonVariants({ variant: "publish" })}
+                  type="submit"
+                  form="document-form"
+                  name="_intent"
+                  value="publish"
+                >
                   Publish
                 </button>
               )}
