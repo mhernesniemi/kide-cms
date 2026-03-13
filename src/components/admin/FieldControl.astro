@@ -4,6 +4,7 @@ import { serializeFieldValue } from "../../cms/core/values";
 import { humanize } from "../../cms/core/admin";
 import ImagePicker from "@/components/admin/ImagePicker";
 import RichTextEditor from "@/components/admin/RichTextEditor";
+import SelectField from "@/components/admin/SelectField";
 import { Input } from "@/components/admin/ui/input";
 import { Label } from "@/components/admin/ui/label";
 import { Textarea } from "@/components/admin/ui/textarea";
@@ -112,43 +113,27 @@ const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg
 
   {
     field.type === "select" && (
-      <select
-        class={cn(
-          "border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
-          readOnly && "bg-muted text-muted-foreground cursor-not-allowed",
-        )}
-        id={name}
+      <SelectField
+        client:load
         name={name}
+        value={String(value ?? "")}
+        placeholder="Select an option"
         disabled={readOnly}
-      >
-        <option value="">Select an option</option>
-        {field.options.map((option) => (
-          <option value={option} selected={String(value ?? "") === option}>
-            {option}
-          </option>
-        ))}
-      </select>
+        items={field.options.map((option) => ({ value: option, label: option }))}
+      />
     )
   }
 
   {
     field.type === "relation" && (
-      <select
-        class={cn(
-          "border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
-          readOnly && "bg-muted text-muted-foreground cursor-not-allowed",
-        )}
-        id={name}
+      <SelectField
+        client:load
         name={name}
+        value={String(value ?? "")}
+        placeholder="Select a document"
         disabled={readOnly}
-      >
-        <option value="">Select a document</option>
-        {relationOptions.map((option) => (
-          <option value={option.value} selected={String(value ?? "") === option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        items={relationOptions}
+      />
     )
   }
 
