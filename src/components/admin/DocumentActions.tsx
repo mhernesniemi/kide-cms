@@ -29,13 +29,11 @@ export default function DocumentActions({ formId, showUnpublish, showDelete }: P
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button variant="ghost" size="icon-sm" aria-label="More actions">
-            <EllipsisVertical className="size-4" />
-          </Button>
-        }
-      />
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label="More actions">
+          <EllipsisVertical className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
         {showUnpublish && <DropdownMenuItem onClick={() => submitAction("unpublish")}>Move to draft</DropdownMenuItem>}
         {showUnpublish && showDelete && <DropdownMenuSeparator />}

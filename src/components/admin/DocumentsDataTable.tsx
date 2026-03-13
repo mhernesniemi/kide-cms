@@ -22,7 +22,6 @@ import {
   ChevronRight,
   MoreHorizontal,
   Search,
-  SquarePen,
 } from "lucide-react";
 
 import { Badge, StatusBadge } from "@/components/admin/ui/badge";
@@ -227,19 +226,16 @@ export default function DocumentsDataTable({
         cell: ({ row }) => (
           <div className="flex justify-end">
             <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button variant="ghost" size="icon-sm" className="rounded-md" aria-label="Open actions menu">
-                    <MoreHorizontal />
-                    <span className="sr-only">Open menu</span>
-                  </Button>
-                }
-              />
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon-sm" className="rounded-md" aria-label="Open actions menu">
+                  <MoreHorizontal />
+                  <span className="sr-only">Open menu</span>
+                </Button>
+              </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => window.location.assign(row.original.editHref)}>
-                  <SquarePen className="size-4" />
                   Edit document
                 </DropdownMenuItem>
                 {draftsEnabled && (
@@ -332,20 +328,17 @@ export default function DocumentsDataTable({
         <div className="flex flex-wrap items-center gap-2">
           {selectedRows.length > 0 && (
             <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button variant="secondary" size="sm" disabled={isPending}>
-                    {isPending ? "Working..." : `${selectedRows.length} selected`}
-                    <ChevronDown className="size-4" />
-                  </Button>
-                }
-              />
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="sm" disabled={isPending}>
+                  {isPending ? "Working..." : `${selectedRows.length} selected`}
+                  <ChevronDown className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
                 <DropdownMenuLabel>Selected actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {selectedRows.length === 1 && (
                   <DropdownMenuItem onClick={() => window.location.assign(selectedRows[0].editHref)}>
-                    <SquarePen className="size-4" />
                     Edit document
                   </DropdownMenuItem>
                 )}
@@ -390,14 +383,12 @@ export default function DocumentsDataTable({
           )}
 
           <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="outline" size="sm">
-                  Columns
-                  <ChevronDown className="size-4" />
-                </Button>
-              }
-            />
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                Columns
+                <ChevronDown className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {table
                 .getAllColumns()
