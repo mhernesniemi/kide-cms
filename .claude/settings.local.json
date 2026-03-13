@@ -29,7 +29,10 @@
       "Bash(npx tsc:*)",
       "Bash(npx astro:*)",
       "Bash(ls /Users/mattihernesniemi/astro-cms/.prettierrc* /Users/mattihernesniemi/astro-cms/prettier.config.* 2>/dev/null; cat /Users/mattihernesniemi/astro-cms/package.json | grep -i prettier)",
-      "Bash(pnpm format:*)"
+      "Bash(pnpm format:*)",
+      "Bash(grep -r \"components/ui\" /Users/mattihernesniemi/astro-cms/src/pages/index.astro /Users/mattihernesniemi/astro-cms/src/pages/\\\\[...slug\\\\].astro /Users/mattihernesniemi/astro-cms/src/layouts/PublicLayout.astro 2>/dev/null)",
+      "Bash(grep -rl '@/components/ui/' src/ | xargs sed -i '' 's|@/components/ui/|@/components/admin/ui/|g')",
+      "Bash(pnpm check:*)"
     ]
   }
 }

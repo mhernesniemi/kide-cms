@@ -1,10 +1,10 @@
 ---
-import "../styles/global.css";
+import "../styles/admin.css";
 
 import { Boxes, FileText, Image, LayoutGrid, LogOut, Newspaper, PencilRuler, Users } from "lucide-react";
 
-import { buttonVariants } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { buttonVariants } from "@/components/admin/ui/button";
+import { Separator } from "@/components/admin/ui/separator";
 import { cn } from "@/lib/utils";
 
 const {
@@ -41,7 +41,7 @@ const navItems = collections.map((collection) => ({
     <link rel="icon" href="/favicon.ico" />
     <title>{title}</title>
   </head>
-  <body data-admin class="bg-background text-foreground min-h-screen antialiased">
+  <body class="bg-background text-foreground min-h-screen antialiased">
     <div class="min-h-screen lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
       <aside class="bg-sidebar/40 hidden border-r backdrop-blur lg:flex lg:flex-col">
         <div class="px-5 py-5">

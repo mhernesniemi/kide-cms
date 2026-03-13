@@ -1,5 +1,5 @@
 ---
-import "../styles/global.css";
+import "../styles/public.css";
 
 const { title = "AstroCMS", description = "A code-first CMS built inside Astro." } = Astro.props;
 ---
@@ -14,7 +14,7 @@ const { title = "AstroCMS", description = "A code-first CMS built inside Astro."
     <link rel="icon" href="/favicon.ico" />
     <title>{title}</title>
   </head>
-  <body class="site-shell">
+  <body>
     <slot />
   </body>
 </html>
