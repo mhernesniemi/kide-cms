@@ -5,6 +5,7 @@ import AdminCard from "@/components/admin/AdminCard.astro";
 import DocumentActions from "@/components/admin/DocumentActions";
 import DocumentsDataTable from "@/components/admin/DocumentsDataTable";
 import LiveHeading from "@/components/admin/LiveHeading";
+import UnsavedGuard from "@/components/admin/UnsavedGuard";
 import FieldControl from "@/components/admin/FieldControl.astro";
 import { Badge, StatusBadge } from "@/components/admin/ui/badge";
 import { buttonVariants } from "@/components/admin/ui/button";
@@ -232,6 +233,7 @@ const tableRows =
     {
       (route.kind === "new" || route.kind === "edit") && (
         <>
+          <UnsavedGuard client:load formId="document-form" isNew={route.kind === "new"} />
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex flex-wrap items-center gap-2">
               {locales.length > 1 &&
