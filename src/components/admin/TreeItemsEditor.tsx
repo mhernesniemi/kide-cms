@@ -70,6 +70,7 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
   const [editName, setEditName] = React.useState("");
   const [editSlug, setEditSlug] = React.useState("");
   const [editAutoSlug, setEditAutoSlug] = React.useState(true);
+  const newItemIds = React.useRef(new Set<string>());
 
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(() => {
     const ids = new Set<string>();
@@ -83,7 +84,29 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
     return ids;
   });
 
-  const serialized = JSON.stringify(items);
+  // Compute serialized value that includes any pending inline edit
+  const serialized = React.useMemo(() => {
+    if (!editingId) return JSON.stringify(items);
+    const merged = cloneItems(items);
+    const apply = (list: TreeItem[]) => {
+      for (const item of list) {
+        if (item.id === editingId) {
+          if (variant === "menu") {
+            item.label = editLabel;
+            item.href = editHref;
+            item.target = editTarget || undefined;
+          } else {
+            item.name = editName;
+            item.slug = editSlug || slugify(editName);
+          }
+          return;
+        }
+        apply(item.children);
+      }
+    };
+    apply(merged);
+    return JSON.stringify(merged);
+  }, [items, editingId, variant, editLabel, editHref, editTarget, editName, editSlug]);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -95,6 +118,7 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
   };
 
   const startEditNewItem = (id: string) => {
+    newItemIds.current.add(id);
     setEditingId(id);
     setEditLabel("");
     setEditHref("");
@@ -158,8 +182,17 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
     }
   };
 
+  const cancelEdit = () => {
+    if (editingId && newItemIds.current.has(editingId)) {
+      removeItem(editingId);
+      newItemIds.current.delete(editingId);
+    }
+    setEditingId(null);
+  };
+
   const saveEdit = () => {
     if (!editingId) return;
+    newItemIds.current.delete(editingId);
     setItems((prev) => {
       const next = cloneItems(prev);
       const update = (items: TreeItem[]) => {
@@ -255,7 +288,7 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
 
   const editKeyHandler = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") saveEdit();
-    if (e.key === "Escape") setEditingId(null);
+    if (e.key === "Escape") cancelEdit();
   };
 
   const renderEditFields = () => {
@@ -350,7 +383,7 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
                 variant="ghost"
                 size="icon-sm"
                 className="size-7"
-                onClick={() => setEditingId(null)}
+                onClick={cancelEdit}
                 title="Cancel"
               >
                 <X className="size-3.5" />
