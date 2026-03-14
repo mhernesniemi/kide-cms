@@ -24,17 +24,17 @@ const badgeVariants = cva(
   },
 );
 
-type StatusColor = "green" | "yellow" | "gray";
+type StatusColor = "green" | "yellow" | "blue";
 
 const statusDotColor: Record<StatusColor, string> = {
   green: "bg-emerald-500",
   yellow: "bg-amber-500",
-  gray: "bg-muted-foreground/50",
+  blue: "bg-blue-500",
 };
 
 function StatusBadge({ status, className }: { status: string; className?: string }) {
   const color: StatusColor =
-    status === "published" ? "green" : status === "changed" ? "yellow" : status === "draft" ? "gray" : "gray";
+    status === "published" ? "green" : status === "changed" ? "yellow" : status === "draft" ? "blue" : "blue";
   return (
     <span
       className={cn(
