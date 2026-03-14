@@ -12,6 +12,8 @@ const posts = (await cms.posts.find({
 })) as AnyRecord[];
 
 Astro.cache.set({ tags: ["posts", "home"] });
+
+const rendered = new Date().toISOString();
 ---
 
 <PublicLayout title="AstroCMS">
@@ -38,5 +40,7 @@ Astro.cache.set({ tags: ["posts", "home"] });
     </ul>
 
     {posts.length === 0 && <p style="color: #999;">No published posts yet.</p>}
+
+    <p style="color: #ccc; font-size: 0.75rem; margin-top: 2rem;">Rendered: {rendered}</p>
   </main>
 </PublicLayout>
