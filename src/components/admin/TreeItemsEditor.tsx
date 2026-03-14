@@ -71,6 +71,7 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
   const [editSlug, setEditSlug] = React.useState("");
   const [editAutoSlug, setEditAutoSlug] = React.useState(true);
   const newItemIds = React.useRef(new Set<string>());
+  const hiddenRef = React.useRef<HTMLInputElement>(null);
 
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(() => {
     const ids = new Set<string>();
@@ -107,6 +108,11 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
     apply(merged);
     return JSON.stringify(merged);
   }, [items, editingId, variant, editLabel, editHref, editTarget, editName, editSlug]);
+
+  // Notify form of changes so UnsavedGuard can detect them
+  React.useEffect(() => {
+    hiddenRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
+  }, [serialized]);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -457,7 +463,7 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
 
   return (
     <div className="space-y-2">
-      <input type="hidden" name={name} value={serialized} />
+      <input ref={hiddenRef} type="hidden" name={name} value={serialized} />
       <div className="rounded-lg border">
         {items.length > 0 ? (
           items.map((item) => renderItem(item, 0))
