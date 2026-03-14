@@ -4,6 +4,7 @@ import { ArrowUpRight, Globe2, Dot, Languages, Plus } from "lucide-react";
 import AdminCard from "@/components/admin/AdminCard.astro";
 import DocumentActions from "@/components/admin/DocumentActions";
 import DocumentsDataTable from "@/components/admin/DocumentsDataTable";
+import LiveHeading from "@/components/admin/LiveHeading";
 import FieldControl from "@/components/admin/FieldControl.astro";
 import { Badge, StatusBadge } from "@/components/admin/ui/badge";
 import { buttonVariants } from "@/components/admin/ui/button";
@@ -167,8 +168,12 @@ const tableRows =
       <div>
         <h1 class="text-2xl font-semibold tracking-tight">
           {route.kind === "list" && collection.labels.plural}
-          {route.kind === "new" && `New ${collection.labels.singular}`}
-          {route.kind === "edit" && String(doc?.title ?? doc?.name ?? doc?.slug ?? collection.labels.singular)}
+          {route.kind === "new" && (
+            <LiveHeading client:load initial={`New ${collection.labels.singular}`} />
+          )}
+          {route.kind === "edit" && (
+            <LiveHeading client:load initial={String(doc?.title ?? doc?.name ?? doc?.slug ?? collection.labels.singular)} />
+          )}
         </h1>
         {
           route.kind === "edit" && doc && (
