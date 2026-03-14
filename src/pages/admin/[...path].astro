@@ -7,7 +7,7 @@ import DocumentsDataTable from "@/components/admin/DocumentsDataTable";
 import LiveHeading from "@/components/admin/LiveHeading";
 import UnsavedGuard from "@/components/admin/UnsavedGuard";
 import FieldControl from "@/components/admin/FieldControl.astro";
-import { Badge, StatusBadge } from "@/components/admin/ui/badge";
+import { StatusBadge } from "@/components/admin/ui/badge";
 import { buttonVariants } from "@/components/admin/ui/button";
 import { Card, CardContent } from "@/components/admin/ui/card";
 import config from "@/cms/collections.config";
@@ -134,12 +134,21 @@ const listColumns = collection ? getListColumns(collection, viewConfig.list) : [
 const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
 const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
 
+// Derive visual status: "draft" | "published" | "changed"
+const getVisualStatus = (d: Record<string, unknown>): string => {
+  const status = String(d._status ?? "draft");
+  if (status === "published" && d._publishedAt && d._updatedAt) {
+    return String(d._updatedAt) > String(d._publishedAt) ? "changed" : "published";
+  }
+  return status;
+};
+
 const tableRows =
   collection && route.kind === "list"
     ? docs.map((entry) => ({
         id: String(entry._id),
         editHref: `/admin/${collection.slug}/${entry._id}`,
-        status: String(entry._status ?? "draft"),
+        status: getVisualStatus(entry),
         locales: [
           defaultLocale,
           ...(Array.isArray(entry._availableLocales) ? entry._availableLocales.map((locale) => String(locale)) : []),
@@ -182,7 +191,7 @@ const tableRows =
         {
           route.kind === "edit" && doc && (
             <div class="text-muted-foreground mt-1 flex items-center text-xs">
-              <StatusBadge status={String(doc._status ?? "draft")} />
+              <StatusBadge status={getVisualStatus(doc)} />
               <Dot className="size-6 text-muted-foreground/70" />
               <span>Created {formatDate(doc._createdAt)}</span>
               <Dot className="size-6 text-muted-foreground/70" />
@@ -233,7 +242,12 @@ const tableRows =
     {
       (route.kind === "new" || route.kind === "edit") && (
         <>
-          <UnsavedGuard client:load formId="document-form" isNew={route.kind === "new"} />
+          <UnsavedGuard
+            client:load
+            formId="document-form"
+            isNew={route.kind === "new"}
+            isDraft={collection.drafts && (doc?._status === "draft" || (doc && getVisualStatus(doc) === "changed"))}
+          />
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex flex-wrap items-center gap-2">
               {locales.length > 1 &&

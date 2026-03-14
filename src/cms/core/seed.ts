@@ -89,7 +89,9 @@ export const seedDatabase = async (config: CMSConfig) => {
       };
 
       if (collection.drafts) {
-        docValues._status = _status === "published" ? "published" : "draft";
+        const status = _status === "published" ? "published" : "draft";
+        docValues._status = status;
+        if (status === "published") docValues._publishedAt = now;
       }
       if (collection.timestamps !== false) {
         docValues._createdAt = now;

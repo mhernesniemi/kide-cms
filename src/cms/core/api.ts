@@ -431,7 +431,9 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         };
 
         if (collection.drafts) {
-          docValues._status = data._status === "published" ? "published" : getDefaultStatus(collection);
+          const status = data._status === "published" ? "published" : getDefaultStatus(collection);
+          docValues._status = status;
+          if (status === "published") docValues._publishedAt = createdAt;
         }
         if (collection.timestamps !== false) {
           docValues._createdAt = createdAt;
@@ -573,8 +575,9 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
           await hooks[collection.slug].beforePublish!(existing, hookContext);
         }
 
-        const updateValues: Record<string, unknown> = { _status: "published" };
-        if (collection.timestamps !== false) updateValues._updatedAt = now();
+        const timestamp = now();
+        const updateValues: Record<string, unknown> = { _status: "published", _publishedAt: timestamp };
+        if (collection.timestamps !== false) updateValues._updatedAt = timestamp;
         await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
 
         const result = await this.findById(id, { status: "any" });
@@ -588,7 +591,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         const db = await getDb();
         const tables = await getTableRefs(slug);
 
-        const updateValues: Record<string, unknown> = { _status: "draft" };
+        const updateValues: Record<string, unknown> = { _status: "draft", _publishedAt: null };
         if (collection.timestamps !== false) updateValues._updatedAt = now();
         await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
 

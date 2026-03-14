@@ -68,6 +68,7 @@ const generateMainTable = (collection: CollectionConfig): string => {
 
   if (collection.drafts) {
     columns.push(`  _status: text("_status").notNull().default("draft"),`);
+    columns.push(`  _publishedAt: text("_published_at"),`);
   }
 
   if (collection.timestamps !== false) {
@@ -316,6 +317,7 @@ const generateTypesFile = (): string => {
     parts.push(`export type ${docName} = ${inputName} & {
   _id: string;
   _status: "draft" | "published";
+  _publishedAt?: string | null;
   _createdAt: string;
   _updatedAt: string;
   _locale?: string | null;

@@ -266,7 +266,7 @@ export default function DocumentsDataTable({
                       Publish
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      disabled={isPending || row.original.status !== "published"}
+                      disabled={isPending || row.original.status === "draft"}
                       onClick={() =>
                         startTransition(() => {
                           void runAction("unpublish", [row.original]);

@@ -104,10 +104,10 @@ const handleHtmlMutation = async (
       await collectionApi.update(documentId, data, ctx);
       if (collection.drafts && intent === "publish") {
         await collectionApi.publish(documentId, ctx);
-      }
-      if (collection.drafts && intent === "unpublish") {
+      } else if (collection.drafts && intent === "unpublish") {
         await collectionApi.unpublish(documentId, ctx);
       }
+      // intent === "save" — just saves, page stays published if it was
       // Different message for draft save vs publish
       const msg =
         intent === "publish" ? `${name} published` : intent === "unpublish" ? `${name} unpublished` : `${name} saved`;

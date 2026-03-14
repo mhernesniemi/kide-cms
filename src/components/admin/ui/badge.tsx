@@ -33,7 +33,8 @@ const statusDotColor: Record<StatusColor, string> = {
 };
 
 function StatusBadge({ status, className }: { status: string; className?: string }) {
-  const color: StatusColor = status === "published" ? "green" : status === "draft" ? "yellow" : "gray";
+  const color: StatusColor =
+    status === "published" ? "green" : status === "changed" ? "yellow" : status === "draft" ? "gray" : "gray";
   return (
     <span
       className={cn(

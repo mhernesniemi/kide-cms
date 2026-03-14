@@ -74,7 +74,7 @@ export default function DocumentActions({
         {sortedVersions.length > 0 && (
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>Restore version</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent side="left" className="max-h-64 overflow-y-auto">
+            <DropdownMenuSubContent className="max-h-64 overflow-y-auto">
               {sortedVersions.map((v) => {
                 const vNum = Number(v.version);
                 const isCurrent = vNum === latestVersion;

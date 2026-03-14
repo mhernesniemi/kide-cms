@@ -18,7 +18,16 @@ import { Button } from "@/components/admin/ui/button";
  * Shows a confirmation dialog when the user tries to navigate away.
  * Also prevents accidental tab/window close via beforeunload.
  */
-export default function UnsavedGuard({ formId, isNew = false }: { formId: string; isNew?: boolean }) {
+export default function UnsavedGuard({
+  formId,
+  isNew = false,
+  isDraft = false,
+}: {
+  formId: string;
+  isNew?: boolean;
+  /** Document is a draft — publish button stays enabled even when form is clean */
+  isDraft?: boolean;
+}) {
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const dirtyRef = useRef(false);
   const submittingRef = useRef(false);
@@ -29,29 +38,27 @@ export default function UnsavedGuard({ formId, isNew = false }: { formId: string
     const form = document.getElementById(formId) as HTMLFormElement | null;
     if (!form) return;
 
-    // Submit buttons that should be disabled when there are no changes
-    const submitButtons = form.ownerDocument.querySelectorAll<HTMLButtonElement>(
-      `button[type="submit"][form="${formId}"]`,
-    );
+    const doc = form.ownerDocument;
+    const saveBtn = doc.querySelector<HTMLButtonElement>(`button[type="submit"][form="${formId}"][value="save"]`);
+    const publishBtn = doc.querySelector<HTMLButtonElement>(`button[type="submit"][form="${formId}"][value="publish"]`);
 
     const initialData = new FormData(form);
     const initialSnapshot = serializeFormData(initialData);
 
-    const setButtonsDisabled = (disabled: boolean) => {
-      submitButtons.forEach((btn) => (btn.disabled = disabled));
+    const updateButtons = (dirty: boolean) => {
+      if (isNew) return;
+      if (saveBtn) saveBtn.disabled = !dirty;
+      // Publish enabled when form has changes OR document is an unpublished draft
+      if (publishBtn) publishBtn.disabled = !dirty && !isDraft;
     };
 
-    // New documents: buttons always enabled. Existing: disabled until changed.
-    if (!isNew) {
-      setButtonsDisabled(true);
-    }
+    // Set initial button state
+    updateButtons(false);
 
     const checkDirty = () => {
       const currentSnapshot = serializeFormData(new FormData(form));
       dirtyRef.current = currentSnapshot !== initialSnapshot;
-      if (!isNew) {
-        setButtonsDisabled(!dirtyRef.current);
-      }
+      updateButtons(dirtyRef.current);
     };
 
     // Mark as clean when form is submitted
@@ -69,7 +76,25 @@ export default function UnsavedGuard({ formId, isNew = false }: { formId: string
       form.removeEventListener("change", checkDirty);
       form.removeEventListener("submit", handleSubmit);
     };
-  }, [formId, isNew]);
+  }, [formId, isNew, isDraft]);
+
+  // Cmd+S / Ctrl+S to save
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        const saveBtn = document.querySelector<HTMLButtonElement>(
+          `button[type="submit"][form="${formId}"][value="save"]`,
+        );
+        if (saveBtn && !saveBtn.disabled) {
+          saveBtn.click();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeydown);
+    return () => document.removeEventListener("keydown", handleKeydown);
+  }, [formId]);
 
   // Intercept link clicks within the admin layout
   useEffect(() => {
