@@ -157,11 +157,13 @@ const tableRows =
         values: Object.fromEntries(
           listColumns.map((column) => [
             column,
-            column === "_updatedAt" || column === "_createdAt"
-              ? formatDate(entry[column])
-              : column.startsWith("_")
-                ? String(entry[column] ?? "—")
-                : formatFieldValue(collection.fields[column], entry[column]),
+            column === "_status"
+              ? getVisualStatus(entry)
+              : column === "_updatedAt" || column === "_createdAt"
+                ? formatDate(entry[column])
+                : column.startsWith("_")
+                  ? String(entry[column] ?? "—")
+                  : formatFieldValue(collection.fields[column], entry[column]),
           ]),
         ),
       }))
