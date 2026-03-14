@@ -168,12 +168,15 @@ const tableRows =
       <div>
         <h1 class="text-2xl font-semibold tracking-tight">
           {route.kind === "list" && collection.labels.plural}
-          {route.kind === "new" && (
-            <LiveHeading client:load initial={`New ${collection.labels.singular}`} />
-          )}
-          {route.kind === "edit" && (
-            <LiveHeading client:load initial={String(doc?.title ?? doc?.name ?? doc?.slug ?? collection.labels.singular)} />
-          )}
+          {route.kind === "new" && <LiveHeading client:load initial={`New ${collection.labels.singular}`} />}
+          {
+            route.kind === "edit" && (
+              <LiveHeading
+                client:load
+                initial={String(doc?.title ?? doc?.name ?? doc?.slug ?? collection.labels.singular)}
+              />
+            )
+          }
         </h1>
         {
           route.kind === "edit" && doc && (
@@ -309,7 +312,7 @@ const tableRows =
                 ))}
               </div>
 
-              <div class="space-y-6 text-sm [&_input]:text-sm [&_textarea]:text-sm [&_select]:text-sm [&_button]:text-sm">
+              <div class="space-y-6 text-sm [&_button]:text-sm [&_input]:text-sm [&_select]:text-sm [&_textarea]:text-sm">
                 {effectiveSidebarFieldSets.map((set, index) => (
                   <AdminCard title={getFieldSetTitle(set.fields, index + mainFieldSets.length)}>
                     <div class="grid gap-5">

@@ -14,13 +14,24 @@ const isFormRequest = (request: Request) => {
   return contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data");
 };
 
-const redirect = (location: string) =>
-  new Response(null, {
-    status: 303,
-    headers: {
-      Location: location,
-    },
-  });
+// Append _toast and _msg params so the layout can render a server-side toast
+const redirect = (location: string, toast?: { status: "success" | "error"; msg: string }) => {
+  let target = location;
+  if (toast) {
+    const sep = target.includes("?") ? "&" : "?";
+    target += `${sep}_toast=${toast.status}&_msg=${encodeURIComponent(toast.msg)}`;
+  }
+  return new Response(null, { status: 303, headers: { Location: target } });
+};
+
+const stripToastParams = (url: string) => {
+  const [path, query] = url.split("?");
+  if (!query) return url;
+  const params = new URLSearchParams(query);
+  params.delete("_toast");
+  params.delete("_msg");
+  return params.size ? `${path}?${params}` : path;
+};
 
 const parseJsonQuery = (value: string | null) => {
   if (!value) {
@@ -50,7 +61,9 @@ const extractDataFromForm = async (request: Request) => {
   return {
     action: String(formData.get("_action") ?? "create"),
     intent: String(formData.get("_intent") ?? "save"),
-    redirectTo: String(formData.get("redirectTo") ?? "/admin"),
+    // Strip stale toast params from redirectTo (they persist in the hidden input
+    // because the server renders the form before the client-side URL cleanup runs)
+    redirectTo: stripToastParams(String(formData.get("redirectTo") ?? "/admin")),
     locale: formData.get("locale") ? String(formData.get("locale")) : undefined,
     version: formData.get("version") ? Number(formData.get("version")) : undefined,
     data: Object.fromEntries(
@@ -71,55 +84,67 @@ const handleHtmlMutation = async (
   const collection = getCollection(collectionSlug);
   const ctx = getRuntimeContext(locals, cache);
 
-  if (action === "create") {
-    const created = await collectionApi.create(data, ctx);
-    if (collection.drafts && intent === "publish") {
-      await collectionApi.publish(created._id, ctx);
+  const name = collection.labels.singular;
+
+  try {
+    if (action === "create") {
+      const created = await collectionApi.create(data, ctx);
+      if (collection.drafts && intent === "publish") {
+        await collectionApi.publish(created._id, ctx);
+      }
+      const msg = intent === "publish" ? `${name} created and published` : `${name} created`;
+      return redirect(`/admin/${collectionSlug}/${created._id}`, { status: "success", msg });
     }
-    return redirect(`/admin/${collectionSlug}/${created._id}`);
-  }
 
-  if (!documentId) {
-    throw new Error("A document id is required for this action.");
-  }
+    if (!documentId) {
+      throw new Error("A document id is required for this action.");
+    }
 
-  if (action === "update") {
-    await collectionApi.update(documentId, data, ctx);
-    if (collection.drafts && intent === "publish") {
+    if (action === "update") {
+      await collectionApi.update(documentId, data, ctx);
+      if (collection.drafts && intent === "publish") {
+        await collectionApi.publish(documentId, ctx);
+      }
+      if (collection.drafts && intent === "unpublish") {
+        await collectionApi.unpublish(documentId, ctx);
+      }
+      // Different message for draft save vs publish
+      const msg =
+        intent === "publish" ? `${name} published` : intent === "unpublish" ? `${name} unpublished` : `${name} saved`;
+      return redirect(redirectTo, { status: "success", msg });
+    }
+
+    if (action === "delete") {
+      await collectionApi.delete(documentId, ctx);
+      return redirect(`/admin/${collectionSlug}`, { status: "success", msg: `${name} deleted` });
+    }
+
+    if (action === "publish") {
       await collectionApi.publish(documentId, ctx);
+      return redirect(redirectTo, { status: "success", msg: `${name} published` });
     }
-    if (collection.drafts && intent === "unpublish") {
+
+    if (action === "unpublish") {
       await collectionApi.unpublish(documentId, ctx);
+      return redirect(redirectTo, { status: "success", msg: `${name} unpublished` });
     }
+
+    if (action === "restore" && version) {
+      await collectionApi.restore(documentId, version, ctx);
+      return redirect(redirectTo, { status: "success", msg: `Version ${version} restored` });
+    }
+
+    if (action === "save-translation" && locale) {
+      await collectionApi.upsertTranslation(documentId, locale, data, ctx);
+      return redirect(redirectTo, { status: "success", msg: `${locale} translation saved` });
+    }
+
     return redirect(redirectTo);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : `Failed to ${action}`;
+    const fallback = documentId ? redirectTo : `/admin/${collectionSlug}`;
+    return redirect(fallback, { status: "error", msg });
   }
-
-  if (action === "delete") {
-    await collectionApi.delete(documentId, ctx);
-    return redirect(`/admin/${collectionSlug}`);
-  }
-
-  if (action === "publish") {
-    await collectionApi.publish(documentId, ctx);
-    return redirect(redirectTo);
-  }
-
-  if (action === "unpublish") {
-    await collectionApi.unpublish(documentId, ctx);
-    return redirect(redirectTo);
-  }
-
-  if (action === "restore" && version) {
-    await collectionApi.restore(documentId, version, ctx);
-    return redirect(redirectTo);
-  }
-
-  if (action === "save-translation" && locale) {
-    await collectionApi.upsertTranslation(documentId, locale, data, ctx);
-    return redirect(redirectTo);
-  }
-
-  return redirect(redirectTo);
 };
 
 const getRuntimeContext = (

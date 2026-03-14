@@ -5,6 +5,7 @@ import { FileText, Image, LayoutGrid, Newspaper, PencilRuler, Users } from "luci
 
 import MobileSidebar from "@/components/admin/MobileSidebar";
 import SidebarUserMenu from "@/components/admin/SidebarUserMenu";
+import Toast from "@/components/admin/Toast.astro";
 import { Separator } from "@/components/admin/ui/separator";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,11 @@ const {
 };
 
 const user = Astro.locals.user;
+
+// Server-side toast: read _toast/_msg params set by API redirect
+const toastStatus = Astro.url.searchParams.get("_toast") as "success" | "error" | null;
+const toastMessage =
+  Astro.url.searchParams.get("_msg") ?? (toastStatus === "success" ? "Saved successfully" : "Something went wrong");
 
 const iconMap: Record<string, any> = {
   posts: Newspaper,
@@ -152,5 +158,25 @@ const navItems = collections.map((collection) => ({
         </main>
       </div>
     </div>
+
+    {toastStatus && <Toast status={toastStatus} message={toastMessage} />}
+
+    {/* Clean toast params from URL and remove toast element after animation */}
+    <script is:inline>
+      (function () {
+        var p = new URLSearchParams(location.search);
+        var status = p.get("_toast");
+        if (!status) return;
+        p.delete("_toast");
+        p.delete("_msg");
+        history.replaceState({}, "", location.pathname + (p.size ? "?" + p : ""));
+        // Error toasts stay longer (5s) than success toasts (3s)
+        var delay = status === "error" ? 5200 : 3200;
+        setTimeout(function () {
+          var el = document.getElementById("admin-toast");
+          if (el) el.remove();
+        }, delay);
+      })();
+    </script>
   </body>
 </html>
