@@ -45,11 +45,8 @@ function cloneItems(items: TreeItem[]): TreeItem[] {
   return JSON.parse(JSON.stringify(items));
 }
 
-function createBlankItem(variant: "menu" | "taxonomy"): TreeItem {
-  if (variant === "menu") {
-    return { id: generateId(), label: "New item", href: "/", children: [] };
-  }
-  return { id: generateId(), name: "New term", slug: "new-term", children: [] };
+function createBlankItem(): TreeItem {
+  return { id: generateId(), children: [] };
 }
 
 function getItemLabel(item: TreeItem, variant: "menu" | "taxonomy"): string {
@@ -97,12 +94,24 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
     });
   };
 
+  const startEditNewItem = (id: string) => {
+    setEditingId(id);
+    setEditLabel("");
+    setEditHref("");
+    setEditTarget("");
+    setEditName("");
+    setEditSlug("");
+    setEditAutoSlug(true);
+  };
+
   const addRootItem = () => {
-    setItems((prev) => [...prev, createBlankItem(variant)]);
+    const newItem = createBlankItem();
+    setItems((prev) => [...prev, newItem]);
+    startEditNewItem(newItem.id);
   };
 
   const addChildItem = (parentId: string) => {
-    const newItem = createBlankItem(variant);
+    const newItem = createBlankItem();
     setItems((prev) => {
       const next = cloneItems(prev);
       const addToParent = (items: TreeItem[]): boolean => {
@@ -119,6 +128,7 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
       setExpandedIds((prev) => new Set([...prev, parentId]));
       return next;
     });
+    startEditNewItem(newItem.id);
   };
 
   const removeItem = (id: string) => {
