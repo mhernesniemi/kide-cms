@@ -15,7 +15,7 @@ export default defineAccess({
     update: isEditor,
     delete: isAdmin,
   },
-  categories: {
+  taxonomies: {
     read: () => true,
     create: isEditor,
     update: isEditor,

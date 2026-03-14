@@ -3,7 +3,7 @@ import type { FieldConfig } from "../../cms/core/define";
 import { serializeFieldValue } from "../../cms/core/values";
 import { humanize } from "../../cms/core/admin";
 import ImagePicker from "@/components/admin/ImagePicker";
-import MenuItemsEditor from "@/components/admin/MenuItemsEditor";
+import TreeItemsEditor from "@/components/admin/TreeItemsEditor";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import SelectField from "@/components/admin/SelectField";
 import SlugField from "@/components/admin/SlugField";
@@ -175,27 +175,37 @@ const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg
 
   {
     field.type === "json" && field.admin?.component === "menu-items" && !readOnly && (
-      <MenuItemsEditor client:load name={name} value={serializedValue} />
+      <TreeItemsEditor client:load name={name} value={serializedValue} variant="menu" />
     )
   }
 
   {
-    field.type === "json" && field.admin?.component === "menu-items" && readOnly && (
-      <Textarea
-        className={controlClass}
-        id={name}
-        name={name}
-        rows={rows}
-        readOnly={readOnly}
-        defaultValue={serializedValue}
-      />
+    field.type === "json" && field.admin?.component === "taxonomy-terms" && !readOnly && (
+      <TreeItemsEditor client:load name={name} value={serializedValue} variant="taxonomy" />
     )
+  }
+
+  {
+    field.type === "json" &&
+      (field.admin?.component === "menu-items" || field.admin?.component === "taxonomy-terms") &&
+      readOnly && (
+        <Textarea
+          className={controlClass}
+          id={name}
+          name={name}
+          rows={rows}
+          readOnly={readOnly}
+          defaultValue={serializedValue}
+        />
+      )
   }
 
   {
     (field.type === "array" ||
       field.type === "blocks" ||
-      (field.type === "json" && field.admin?.component !== "menu-items")) && (
+      (field.type === "json" &&
+        field.admin?.component !== "menu-items" &&
+        field.admin?.component !== "taxonomy-terms")) && (
       <Textarea
         className={controlClass}
         id={name}

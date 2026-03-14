@@ -5,10 +5,10 @@ export default {
     panel: "#fffdf8",
     ink: "#10211b",
   },
-  categories: {
+  taxonomies: {
     list: {
-      view: "tree",
       columns: ["name", "slug", "_updatedAt"],
+      defaultSort: { field: "_updatedAt", direction: "desc" },
     },
   },
   menus: {

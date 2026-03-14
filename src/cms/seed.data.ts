@@ -89,32 +89,34 @@ const seeds: Record<string, SeedDocument[]> = {
       ],
     },
   ],
-  categories: [
+  taxonomies: [
     {
-      _id: "cat_electronics",
-      name: "Electronics",
-      slug: "electronics",
-      position: 0,
+      name: "Categories",
+      slug: "categories",
+      description: "Content categories",
+      terms: JSON.stringify([
+        {
+          id: "t1",
+          name: "Technology",
+          slug: "technology",
+          children: [
+            { id: "t2", name: "Software", slug: "software", children: [] },
+            { id: "t3", name: "Hardware", slug: "hardware", children: [] },
+          ],
+        },
+        { id: "t4", name: "Design", slug: "design", children: [] },
+        { id: "t5", name: "Business", slug: "business", children: [] },
+      ]),
     },
     {
-      _id: "cat_phones",
-      name: "Phones",
-      slug: "phones",
-      parent: "cat_electronics",
-      position: 0,
-    },
-    {
-      _id: "cat_laptops",
-      name: "Laptops",
-      slug: "laptops",
-      parent: "cat_electronics",
-      position: 1,
-    },
-    {
-      _id: "cat_clothing",
-      name: "Clothing",
-      slug: "clothing",
-      position: 1,
+      name: "Tags",
+      slug: "tags",
+      description: "Free-form content tags",
+      terms: JSON.stringify([
+        { id: "t6", name: "Astro", slug: "astro", children: [] },
+        { id: "t7", name: "CMS", slug: "cms", children: [] },
+        { id: "t8", name: "Open Source", slug: "open-source", children: [] },
+      ]),
     },
   ],
   menus: [

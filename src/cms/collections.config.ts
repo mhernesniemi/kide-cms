@@ -74,15 +74,18 @@ export default defineConfig({
       },
     }),
     defineCollection({
-      slug: "categories",
-      labels: { singular: "Category", plural: "Categories" },
+      slug: "taxonomies",
+      labels: { singular: "Taxonomy", plural: "Taxonomies" },
       timestamps: true,
       fields: {
-        name: fields.text({ required: true, translatable: true }),
-        slug: fields.slug({ from: "name", unique: true, translatable: true }),
-        description: fields.text({ translatable: true }),
-        parent: fields.relation({ collection: "categories" }),
-        position: fields.number({ defaultValue: 0 }),
+        name: fields.text({ required: true }),
+        slug: fields.slug({ from: "name", unique: true }),
+        description: fields.text(),
+        terms: fields.json({
+          defaultValue: {} as any,
+          translatable: true,
+          admin: { component: "taxonomy-terms" },
+        }),
       },
     }),
     defineCollection({

@@ -1,29 +1,38 @@
 "use client";
 
 import * as React from "react";
-import { ChevronRight, Indent, Outdent, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronRight, Indent, Outdent, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/admin/ui/button";
 import { Input } from "@/components/admin/ui/input";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/admin/ui/collapsible";
 
-type MenuItem = {
+type TreeItem = {
   id: string;
-  label: string;
-  href: string;
-  target?: string;
-  children: MenuItem[];
+  children: TreeItem[];
+  [key: string]: unknown;
 };
 
 type Props = {
   name: string;
   value?: string;
+  variant: "menu" | "taxonomy";
 };
 
 function generateId() {
-  return "mi_" + Math.random().toString(36).slice(2, 9);
+  return "ti_" + Math.random().toString(36).slice(2, 9);
 }
 
-function parseItems(value?: string): MenuItem[] {
+function slugify(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function parseItems(value?: string): TreeItem[] {
   if (!value) return [];
   try {
     const parsed = JSON.parse(value);
@@ -32,19 +41,42 @@ function parseItems(value?: string): MenuItem[] {
   return [];
 }
 
-function cloneItems(items: MenuItem[]): MenuItem[] {
+function cloneItems(items: TreeItem[]): TreeItem[] {
   return JSON.parse(JSON.stringify(items));
 }
 
-export default function MenuItemsEditor({ name, value }: Props) {
-  const [items, setItems] = React.useState<MenuItem[]>(() => parseItems(value));
+function createBlankItem(variant: "menu" | "taxonomy"): TreeItem {
+  if (variant === "menu") {
+    return { id: generateId(), label: "New item", href: "/", children: [] };
+  }
+  return { id: generateId(), name: "New term", slug: "new-term", children: [] };
+}
+
+function getItemLabel(item: TreeItem, variant: "menu" | "taxonomy"): string {
+  return String(variant === "menu" ? item.label : item.name) || "—";
+}
+
+function getItemSublabel(item: TreeItem, variant: "menu" | "taxonomy"): string {
+  return String(variant === "menu" ? item.href : item.slug) || "";
+}
+
+export default function TreeItemsEditor({ name, value, variant }: Props) {
+  const [items, setItems] = React.useState<TreeItem[]>(() => parseItems(value));
   const [editingId, setEditingId] = React.useState<string | null>(null);
+
+  // Menu edit fields
   const [editLabel, setEditLabel] = React.useState("");
   const [editHref, setEditHref] = React.useState("");
   const [editTarget, setEditTarget] = React.useState("");
+
+  // Taxonomy edit fields
+  const [editName, setEditName] = React.useState("");
+  const [editSlug, setEditSlug] = React.useState("");
+  const [editAutoSlug, setEditAutoSlug] = React.useState(true);
+
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(() => {
     const ids = new Set<string>();
-    const collectIds = (items: MenuItem[]) => {
+    const collectIds = (items: TreeItem[]) => {
       for (const item of items) {
         if (item.children.length > 0) ids.add(item.id);
         collectIds(item.children);
@@ -66,15 +98,14 @@ export default function MenuItemsEditor({ name, value }: Props) {
   };
 
   const addRootItem = () => {
-    const newItem: MenuItem = { id: generateId(), label: "New item", href: "/", children: [] };
-    setItems((prev) => [...prev, newItem]);
+    setItems((prev) => [...prev, createBlankItem(variant)]);
   };
 
   const addChildItem = (parentId: string) => {
-    const newItem: MenuItem = { id: generateId(), label: "New item", href: "/", children: [] };
+    const newItem = createBlankItem(variant);
     setItems((prev) => {
       const next = cloneItems(prev);
-      const addToParent = (items: MenuItem[]): boolean => {
+      const addToParent = (items: TreeItem[]): boolean => {
         for (const item of items) {
           if (item.id === parentId) {
             item.children.push(newItem);
@@ -85,7 +116,6 @@ export default function MenuItemsEditor({ name, value }: Props) {
         return false;
       };
       addToParent(next);
-      // Auto-expand parent
       setExpandedIds((prev) => new Set([...prev, parentId]));
       return next;
     });
@@ -94,7 +124,7 @@ export default function MenuItemsEditor({ name, value }: Props) {
   const removeItem = (id: string) => {
     setItems((prev) => {
       const next = cloneItems(prev);
-      const remove = (items: MenuItem[]): MenuItem[] =>
+      const remove = (items: TreeItem[]): TreeItem[] =>
         items.filter((item) => {
           if (item.id === id) return false;
           item.children = remove(item.children);
@@ -105,23 +135,37 @@ export default function MenuItemsEditor({ name, value }: Props) {
     if (editingId === id) setEditingId(null);
   };
 
-  const startEdit = (item: MenuItem) => {
+  const startEdit = (item: TreeItem) => {
     setEditingId(item.id);
-    setEditLabel(item.label);
-    setEditHref(item.href);
-    setEditTarget(item.target ?? "");
+    if (variant === "menu") {
+      setEditLabel(String(item.label ?? ""));
+      setEditHref(String(item.href ?? ""));
+      setEditTarget(String(item.target ?? ""));
+    } else {
+      setEditName(String(item.name ?? ""));
+      setEditSlug(String(item.slug ?? ""));
+      setEditAutoSlug(false);
+    }
   };
 
   const saveEdit = () => {
     if (!editingId) return;
     setItems((prev) => {
       const next = cloneItems(prev);
-      const update = (items: MenuItem[]) => {
+      const update = (items: TreeItem[]) => {
         for (const item of items) {
           if (item.id === editingId) {
-            item.label = editLabel;
-            item.href = editHref;
-            item.target = editTarget || undefined;
+            if (variant === "menu") {
+              item.label = editLabel;
+              item.href = editHref;
+              item.target = editTarget || undefined;
+            } else {
+              item.name = editName;
+              item.slug = editSlug || slugify(editName);
+              if (item.description !== undefined || false) {
+                // preserve existing description
+              }
+            }
             return;
           }
           update(item.children);
@@ -136,7 +180,7 @@ export default function MenuItemsEditor({ name, value }: Props) {
   const indentItem = (id: string) => {
     setItems((prev) => {
       const next = cloneItems(prev);
-      const doIndent = (items: MenuItem[]): boolean => {
+      const doIndent = (items: TreeItem[]): boolean => {
         for (let i = 0; i < items.length; i++) {
           if (items[i].id === id && i > 0) {
             const [item] = items.splice(i, 1);
@@ -156,11 +200,10 @@ export default function MenuItemsEditor({ name, value }: Props) {
   const outdentItem = (id: string) => {
     setItems((prev) => {
       const next = cloneItems(prev);
-      const doOutdent = (items: MenuItem[], parentItems: MenuItem[] | null): boolean => {
+      const doOutdent = (items: TreeItem[], parentItems: TreeItem[] | null): boolean => {
         for (let i = 0; i < items.length; i++) {
           if (items[i].id === id && parentItems) {
             const [item] = items.splice(i, 1);
-            // Find parent in parentItems and insert after it
             const parentIdx = parentItems.findIndex((p) => p.children === items);
             if (parentIdx >= 0) {
               parentItems.splice(parentIdx + 1, 0, item);
@@ -176,7 +219,7 @@ export default function MenuItemsEditor({ name, value }: Props) {
     });
   };
 
-  const findItemDepth = (items: MenuItem[], id: string, depth = 0): number => {
+  const findItemDepth = (items: TreeItem[], id: string, depth = 0): number => {
     for (const item of items) {
       if (item.id === id) return depth;
       const found = findItemDepth(item.children, id, depth + 1);
@@ -185,8 +228,8 @@ export default function MenuItemsEditor({ name, value }: Props) {
     return -1;
   };
 
-  const canIndent = (items: MenuItem[], id: string): boolean => {
-    const check = (items: MenuItem[]): boolean => {
+  const canIndent = (items: TreeItem[], id: string): boolean => {
+    const check = (items: TreeItem[]): boolean => {
       for (let i = 0; i < items.length; i++) {
         if (items[i].id === id) return i > 0;
         if (check(items[i].children)) return true;
@@ -200,7 +243,69 @@ export default function MenuItemsEditor({ name, value }: Props) {
     return findItemDepth(items, id) > 0;
   };
 
-  const renderItem = (item: MenuItem, depth: number) => {
+  const editKeyHandler = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") saveEdit();
+    if (e.key === "Escape") setEditingId(null);
+  };
+
+  const renderEditFields = () => {
+    if (variant === "menu") {
+      return (
+        <>
+          <Input
+            value={editLabel}
+            onChange={(e) => setEditLabel(e.target.value)}
+            placeholder="Label"
+            className="h-7 flex-1 text-sm"
+            autoFocus
+            onKeyDown={editKeyHandler}
+          />
+          <Input
+            value={editHref}
+            onChange={(e) => setEditHref(e.target.value)}
+            placeholder="/path"
+            className="h-7 w-32 text-sm"
+            onKeyDown={editKeyHandler}
+          />
+          <select
+            value={editTarget}
+            onChange={(e) => setEditTarget(e.target.value)}
+            className="border-input bg-background h-7 rounded-md border px-2 text-sm"
+          >
+            <option value="">Same tab</option>
+            <option value="_blank">New tab</option>
+          </select>
+        </>
+      );
+    }
+    return (
+      <>
+        <Input
+          value={editName}
+          onChange={(e) => {
+            setEditName(e.target.value);
+            if (editAutoSlug) setEditSlug(slugify(e.target.value));
+          }}
+          placeholder="Name"
+          className="h-7 flex-1 text-sm"
+          autoFocus
+          onKeyDown={editKeyHandler}
+        />
+        <Input
+          value={editSlug}
+          onChange={(e) => {
+            setEditSlug(e.target.value);
+            setEditAutoSlug(false);
+          }}
+          placeholder="slug"
+          className="h-7 w-36 text-sm"
+          onKeyDown={editKeyHandler}
+        />
+      </>
+    );
+  };
+
+  const renderItem = (item: TreeItem, depth: number) => {
     const hasChildren = item.children.length > 0;
     const isExpanded = expandedIds.has(item.id);
     const isEditing = editingId === item.id;
@@ -227,48 +332,28 @@ export default function MenuItemsEditor({ name, value }: Props) {
 
           {isEditing ? (
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <Input
-                value={editLabel}
-                onChange={(e) => setEditLabel(e.target.value)}
-                placeholder="Label"
-                className="h-7 flex-1 text-sm"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") saveEdit();
-                  if (e.key === "Escape") setEditingId(null);
-                }}
-              />
-              <Input
-                value={editHref}
-                onChange={(e) => setEditHref(e.target.value)}
-                placeholder="/path"
-                className="h-7 w-32 text-sm"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") saveEdit();
-                  if (e.key === "Escape") setEditingId(null);
-                }}
-              />
-              <select
-                value={editTarget}
-                onChange={(e) => setEditTarget(e.target.value)}
-                className="border-input bg-background h-7 rounded-md border px-2 text-sm"
-              >
-                <option value="">Same tab</option>
-                <option value="_blank">New tab</option>
-              </select>
-              <Button variant="ghost" size="icon-sm" className="size-7" onClick={saveEdit}>
-                <Plus className="size-3.5 rotate-45" />
+              {renderEditFields()}
+              <Button variant="ghost" size="icon-sm" className="size-7" onClick={saveEdit} title="Save">
+                <Check className="size-3.5" />
               </Button>
-              <Button variant="ghost" size="icon-sm" className="size-7" onClick={() => setEditingId(null)}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="size-7"
+                onClick={() => setEditingId(null)}
+                title="Cancel"
+              >
                 <X className="size-3.5" />
               </Button>
             </div>
           ) : (
             <>
               <div className="flex min-w-0 flex-1 items-center gap-3">
-                <span className="truncate font-medium">{item.label}</span>
-                <span className="text-muted-foreground truncate text-xs">{item.href}</span>
-                {item.target === "_blank" && <span className="text-muted-foreground text-xs">(new tab)</span>}
+                <span className="truncate font-medium">{getItemLabel(item, variant)}</span>
+                <span className="text-muted-foreground truncate text-xs">{getItemSublabel(item, variant)}</span>
+                {variant === "menu" && item.target === "_blank" && (
+                  <span className="text-muted-foreground text-xs">(new tab)</span>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-0.5">
                 <Button
@@ -324,6 +409,9 @@ export default function MenuItemsEditor({ name, value }: Props) {
     );
   };
 
+  const emptyLabel = variant === "menu" ? "No menu items." : "No terms.";
+  const addLabel = variant === "menu" ? "Add menu item" : "Add term";
+
   return (
     <div className="space-y-2">
       <input type="hidden" name={name} value={serialized} />
@@ -331,12 +419,12 @@ export default function MenuItemsEditor({ name, value }: Props) {
         {items.length > 0 ? (
           items.map((item) => renderItem(item, 0))
         ) : (
-          <div className="text-muted-foreground py-8 text-center text-sm">No menu items. Add one below.</div>
+          <div className="text-muted-foreground py-8 text-center text-sm">{emptyLabel} Add one below.</div>
         )}
       </div>
       <Button type="button" variant="outline" size="sm" onClick={addRootItem}>
         <Plus className="size-4" />
-        Add menu item
+        {addLabel}
       </Button>
     </div>
   );
