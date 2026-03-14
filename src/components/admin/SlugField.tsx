@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Input } from "@/components/admin/ui/input";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -57,7 +58,7 @@ export default function SlugField({
 
   return (
     <div ref={wrapperRef}>
-      <input
+      <Input
         type="text"
         id={name}
         name={name}
@@ -69,10 +70,7 @@ export default function SlugField({
         placeholder={placeholder}
         readOnly={readOnly}
         required={required}
-        className={cn(
-          "border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 bg-muted/30 h-9 w-full min-w-0 rounded-lg border px-3 py-1.5 text-base transition-colors outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
-          className,
-        )}
+        className={cn("shadow-none", className)}
       />
     </div>
   );
