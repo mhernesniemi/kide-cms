@@ -196,8 +196,8 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
     onTransaction: forceTick,
     editorProps: {
       attributes: {
-        class: "prose prose-sm max-w-none focus:outline-none",
-        style: `min-height: ${rows * 1.5}rem; padding: 0.75rem`,
+        class: "prose prose-sm max-w-none text-base focus:outline-none",
+        style: `min-height: ${rows * 1.5}rem; padding: 0.625rem 0.75rem`,
       },
     },
   });
@@ -205,11 +205,11 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
   const minHeight = `${rows * 1.5}rem`;
 
   return (
-    <div className="focus-within:ring-ring/50 focus-within:border-ring overflow-hidden rounded-md border focus-within:ring-[3px]">
+    <div className="border-input focus-within:border-ring focus-within:ring-ring/50 overflow-hidden rounded-lg border transition-colors focus-within:ring-3">
       <input type="hidden" name={name} value={cmsJson} />
 
       {/* Toolbar */}
-      <div className="bg-muted/30 flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5">
+      <div className="bg-muted/40 dark:bg-input/30 flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5">
         <ToolbarButton
           onClick={() => editor?.chain().focus().toggleBold().run()}
           active={editor?.isActive("bold")}
@@ -295,7 +295,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
       {editor ? (
         <EditorContent editor={editor} />
       ) : (
-        <div className="prose prose-sm max-w-none" style={{ minHeight, padding: "0.75rem" }} />
+        <div className="prose prose-sm max-w-none" style={{ minHeight, padding: "0.625rem 0.75rem" }} />
       )}
     </div>
   );
