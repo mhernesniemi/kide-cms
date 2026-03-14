@@ -138,9 +138,21 @@ export default function DocumentsDataTable({
           }),
         );
 
-        window.location.reload();
+        // Reload with toast params so the server-side Toast component renders
+        const count = rows.length;
+        const label = count === 1 ? "document" : "documents";
+        const pastTense = action === "publish" ? "published" : action === "unpublish" ? "unpublished" : "deleted";
+        const msg = `${count} ${label} ${pastTense}`;
+        const url = new URL(window.location.href);
+        url.searchParams.set("_toast", "success");
+        url.searchParams.set("_msg", msg);
+        window.location.assign(url.pathname + url.search);
       } catch (error) {
-        setActionError(error instanceof Error ? error.message : "Document action failed.");
+        const msg = error instanceof Error ? error.message : "Action failed";
+        const url = new URL(window.location.href);
+        url.searchParams.set("_toast", "error");
+        url.searchParams.set("_msg", msg);
+        window.location.assign(url.pathname + url.search);
       }
     },
     [collectionSlug],
