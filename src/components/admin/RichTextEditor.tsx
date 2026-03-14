@@ -1,6 +1,6 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Undo, Redo } from "lucide-react";
 
 // -----------------------------------------------
@@ -164,13 +164,16 @@ type Props = {
 export default function RichTextEditor({ name, initialValue, rows = 10 }: Props) {
   const [cmsJson, setCmsJson] = useState<string>(() => {
     if (!initialValue) return JSON.stringify({ type: "root", children: [] });
-    // initialValue might be serialized JSON string or already a string
     try {
       const parsed = JSON.parse(initialValue);
       if (parsed?.type === "root") return initialValue;
     } catch {}
     return JSON.stringify({ type: "root", children: [] });
   });
+
+  // Counter to force re-renders on selection/transaction changes
+  const [, setTick] = useState(0);
+  const forceTick = useCallback(() => setTick((t) => t + 1), []);
 
   const parsedInitial = (() => {
     try {
@@ -189,6 +192,8 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
       const cmsDoc = tiptapToCms(tiptapJson);
       setCmsJson(JSON.stringify(cmsDoc));
     },
+    onSelectionUpdate: forceTick,
+    onTransaction: forceTick,
     editorProps: {
       attributes: {
         class: "prose prose-sm max-w-none focus:outline-none",
@@ -197,7 +202,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
     },
   });
 
-  if (!editor) return null;
+  const minHeight = `${rows * 1.5}rem`;
 
   return (
     <div className="focus-within:ring-ring/50 focus-within:border-ring overflow-hidden rounded-md border focus-within:ring-[3px]">
@@ -206,15 +211,17 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
       {/* Toolbar */}
       <div className="bg-muted/30 flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5">
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          active={editor.isActive("bold")}
+          onClick={() => editor?.chain().focus().toggleBold().run()}
+          active={editor?.isActive("bold")}
+          disabled={!editor}
           title="Bold"
         >
           <Bold className="size-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          active={editor.isActive("italic")}
+          onClick={() => editor?.chain().focus().toggleItalic().run()}
+          active={editor?.isActive("italic")}
+          disabled={!editor}
           title="Italic"
         >
           <Italic className="size-4" />
@@ -223,15 +230,17 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
         <div className="bg-border mx-1 h-5 w-px" />
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          active={editor.isActive("heading", { level: 2 })}
+          onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+          active={editor?.isActive("heading", { level: 2 })}
+          disabled={!editor}
           title="Heading 2"
         >
           <Heading2 className="size-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          active={editor.isActive("heading", { level: 3 })}
+          onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+          active={editor?.isActive("heading", { level: 3 })}
+          disabled={!editor}
           title="Heading 3"
         >
           <Heading3 className="size-4" />
@@ -240,22 +249,25 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
         <div className="bg-border mx-1 h-5 w-px" />
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          active={editor.isActive("bulletList")}
+          onClick={() => editor?.chain().focus().toggleBulletList().run()}
+          active={editor?.isActive("bulletList")}
+          disabled={!editor}
           title="Bullet list"
         >
           <List className="size-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          active={editor.isActive("orderedList")}
+          onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+          active={editor?.isActive("orderedList")}
+          disabled={!editor}
           title="Ordered list"
         >
           <ListOrdered className="size-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          active={editor.isActive("blockquote")}
+          onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+          active={editor?.isActive("blockquote")}
+          disabled={!editor}
           title="Blockquote"
         >
           <Quote className="size-4" />
@@ -263,16 +275,28 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
 
         <div className="bg-border mx-1 h-5 w-px" />
 
-        <ToolbarButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Undo">
+        <ToolbarButton
+          onClick={() => editor?.chain().focus().undo().run()}
+          disabled={!editor?.can().undo()}
+          title="Undo"
+        >
           <Undo className="size-4" />
         </ToolbarButton>
-        <ToolbarButton onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title="Redo">
+        <ToolbarButton
+          onClick={() => editor?.chain().focus().redo().run()}
+          disabled={!editor?.can().redo()}
+          title="Redo"
+        >
           <Redo className="size-4" />
         </ToolbarButton>
       </div>
 
-      {/* Editor area */}
-      <EditorContent editor={editor} />
+      {/* Editor area — placeholder shown until Tiptap mounts */}
+      {editor ? (
+        <EditorContent editor={editor} />
+      ) : (
+        <div className="prose prose-sm max-w-none" style={{ minHeight, padding: "0.75rem" }} />
+      )}
     </div>
   );
 }
