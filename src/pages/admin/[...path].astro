@@ -304,7 +304,7 @@ const tableRows =
                 ))}
               </div>
 
-              <div class="space-y-6">
+              <div class="space-y-6 text-sm [&_input]:text-sm [&_textarea]:text-sm [&_select]:text-sm [&_button]:text-sm">
                 {effectiveSidebarFieldSets.map((set, index) => (
                   <AdminCard title={getFieldSetTitle(set.fields, index + mainFieldSets.length)}>
                     <div class="grid gap-5">

@@ -457,29 +457,28 @@ export default function DocumentsDataTable({
         </Table>
       </div>
 
-      <div className="flex items-center justify-between px-1">
-        <div className="text-muted-foreground text-sm">
-          {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <ChevronLeft className="size-4" />
-            Previous
-          </Button>
-          <div className="text-muted-foreground text-sm">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+      {table.getPageCount() > 1 && (
+        <div className="flex items-center justify-end px-1">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <ChevronLeft className="size-4" />
+              Previous
+            </Button>
+            <div className="text-muted-foreground text-sm">
+              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+            </div>
+            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+              Next
+              <ChevronRight className="size-4" />
+            </Button>
           </div>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-            Next
-            <ChevronRight className="size-4" />
-          </Button>
         </div>
-      </div>
+      )}
     </div>
   );
 }
