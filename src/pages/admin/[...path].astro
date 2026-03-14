@@ -273,6 +273,7 @@ const tableRows =
                 form="document-form"
                 name="_intent"
                 value="save"
+                disabled={route.kind === "edit"}
               >
                 {collection.drafts ? "Save draft" : "Save"}
               </button>
@@ -283,6 +284,9 @@ const tableRows =
                   form="document-form"
                   name="_intent"
                   value="publish"
+                  disabled={
+                    route.kind === "edit" && !(doc?._status === "draft" || (doc && getVisualStatus(doc) === "changed"))
+                  }
                 >
                   Publish
                 </button>
