@@ -1,7 +1,7 @@
 ---
 import "../styles/admin.css";
 
-import { FileText, Image, LayoutGrid, Newspaper, PencilRuler, Users } from "lucide-react";
+import { FileText, FolderTree, Image, LayoutGrid, Menu, Newspaper, PencilRuler, Users } from "lucide-react";
 
 import MobileSidebar from "@/components/admin/MobileSidebar";
 import SidebarUserMenu from "@/components/admin/SidebarUserMenu";
@@ -31,6 +31,8 @@ const iconMap: Record<string, any> = {
   pages: FileText,
   authors: PencilRuler,
   users: Users,
+  categories: FolderTree,
+  menus: Menu,
 };
 
 const navItems = collections.map((collection) => ({

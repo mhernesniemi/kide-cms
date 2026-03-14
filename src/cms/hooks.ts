@@ -32,6 +32,8 @@ export default defineHooks({
       context.cache?.invalidate({ tags: ["pages", "home", `page:${doc._id}`] });
     },
   },
+  categories: {},
+  menus: {},
   authors: {},
   users: {},
 });

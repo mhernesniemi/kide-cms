@@ -5,6 +5,18 @@ export default {
     panel: "#fffdf8",
     ink: "#10211b",
   },
+  categories: {
+    list: {
+      view: "tree",
+      columns: ["name", "slug", "_updatedAt"],
+    },
+  },
+  menus: {
+    list: {
+      columns: ["name", "slug", "_updatedAt"],
+      defaultSort: { field: "_updatedAt", direction: "desc" },
+    },
+  },
   authors: {
     list: {
       columns: ["name", "role", "_updatedAt"],

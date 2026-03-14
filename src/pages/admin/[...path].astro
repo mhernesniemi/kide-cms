@@ -2,6 +2,7 @@
 import { ArrowUpRight, Globe2, Dot, Languages, Plus } from "lucide-react";
 
 import AdminCard from "@/components/admin/AdminCard.astro";
+import CategoryTree from "@/components/admin/CategoryTree";
 import DocumentActions from "@/components/admin/DocumentActions";
 import DocumentsDataTable from "@/components/admin/DocumentsDataTable";
 import LiveHeading from "@/components/admin/LiveHeading";
@@ -67,6 +68,7 @@ let versions: Array<{ version: number; createdAt: string }> = [];
 const collection = cms.meta.getCollection(route.collectionSlug) as any;
 collectionApi = cmsRuntime[route.collectionSlug];
 viewConfig = getCollectionView(route.collectionSlug);
+const isTreeView = viewConfig.list?.view === "tree";
 
 for (const [fieldName, field] of Object.entries(collection.fields) as [
   string,
@@ -99,6 +101,11 @@ if (route.kind === "list") {
     },
     runtimeContext,
   );
+}
+
+// Tree-view collections handle CRUD via dialogs on the list page
+if (isTreeView && (route.kind === "edit" || route.kind === "new")) {
+  return Astro.redirect(`/admin/${route.collectionSlug}`);
 }
 
 if (route.kind === "edit") {
@@ -168,6 +175,21 @@ const tableRows =
         ),
       }))
     : [];
+
+const treeData =
+  isTreeView && route.kind === "list"
+    ? docs.map((entry) => ({
+        id: String(entry._id),
+        name: String(entry.name ?? entry.title ?? entry._id),
+        slug: String(entry.slug ?? ""),
+        parent: entry.parent ? String(entry.parent) : null,
+        position: Number(entry.position ?? 0),
+        locales: [
+          defaultLocale,
+          ...(Array.isArray(entry._availableLocales) ? entry._availableLocales.map((locale) => String(locale)) : []),
+        ],
+      }))
+    : [];
 ---
 
 <AdminLayout
@@ -217,7 +239,7 @@ const tableRows =
           )
         }
         {
-          route.kind === "list" && (
+          route.kind === "list" && !isTreeView && (
             <a href={`/admin/${collection.slug}/new`} class={buttonVariants({ size: "sm" })}>
               <Plus className="size-4" />
               New {collection.labels.singular}
@@ -228,7 +250,19 @@ const tableRows =
     </div>
 
     {
-      route.kind === "list" && (
+      route.kind === "list" && isTreeView && (
+        <CategoryTree
+          client:load
+          collectionSlug={collection.slug}
+          categories={treeData}
+          locales={locales}
+          defaultLocale={defaultLocale}
+        />
+      )
+    }
+
+    {
+      route.kind === "list" && !isTreeView && (
         <DocumentsDataTable
           client:load
           collectionSlug={collection.slug}

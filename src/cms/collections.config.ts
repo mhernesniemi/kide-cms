@@ -74,6 +74,32 @@ export default defineConfig({
       },
     }),
     defineCollection({
+      slug: "categories",
+      labels: { singular: "Category", plural: "Categories" },
+      timestamps: true,
+      fields: {
+        name: fields.text({ required: true, translatable: true }),
+        slug: fields.slug({ from: "name", unique: true, translatable: true }),
+        description: fields.text({ translatable: true }),
+        parent: fields.relation({ collection: "categories" }),
+        position: fields.number({ defaultValue: 0 }),
+      },
+    }),
+    defineCollection({
+      slug: "menus",
+      labels: { singular: "Menu", plural: "Menus" },
+      timestamps: true,
+      fields: {
+        name: fields.text({ required: true }),
+        slug: fields.slug({ from: "name", unique: true }),
+        items: fields.json({
+          defaultValue: {} as any,
+          translatable: true,
+          admin: { component: "menu-items" },
+        }),
+      },
+    }),
+    defineCollection({
       slug: "pages",
       labels: { singular: "Page", plural: "Pages" },
       timestamps: true,

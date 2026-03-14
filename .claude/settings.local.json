@@ -34,7 +34,10 @@
       "Bash(grep -rl '@/components/ui/' src/ | xargs sed -i '' 's|@/components/ui/|@/components/admin/ui/|g')",
       "Bash(pnpm check:*)",
       "WebFetch(domain:ui.shadcn.com)",
-      "Bash(pnpm cms:generate 2>&1)"
+      "Bash(pnpm cms:generate 2>&1)",
+      "Bash(pkill -f \"drizzle-kit generate\" 2>/dev/null; echo \"done\")",
+      "Bash(sqlite3 /Users/mattihernesniemi/astro-cms/local.db \".tables\" 2>&1)",
+      "Bash(pnpm cms:generate 2>&1 && npx drizzle-kit push 2>&1)"
     ]
   }
 }

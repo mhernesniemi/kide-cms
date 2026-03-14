@@ -15,6 +15,18 @@ export default defineAccess({
     update: isEditor,
     delete: isAdmin,
   },
+  categories: {
+    read: () => true,
+    create: isEditor,
+    update: isEditor,
+    delete: isAdmin,
+  },
+  menus: {
+    read: () => true,
+    create: isEditor,
+    update: isEditor,
+    delete: isAdmin,
+  },
   posts: {
     read: () => true,
     create: isEditor,

@@ -89,6 +89,50 @@ const seeds: Record<string, SeedDocument[]> = {
       ],
     },
   ],
+  categories: [
+    {
+      _id: "cat_electronics",
+      name: "Electronics",
+      slug: "electronics",
+      position: 0,
+    },
+    {
+      _id: "cat_phones",
+      name: "Phones",
+      slug: "phones",
+      parent: "cat_electronics",
+      position: 0,
+    },
+    {
+      _id: "cat_laptops",
+      name: "Laptops",
+      slug: "laptops",
+      parent: "cat_electronics",
+      position: 1,
+    },
+    {
+      _id: "cat_clothing",
+      name: "Clothing",
+      slug: "clothing",
+      position: 1,
+    },
+  ],
+  menus: [
+    {
+      name: "Main Navigation",
+      slug: "main",
+      items: JSON.stringify([
+        { id: "m1", label: "Home", href: "/", children: [] },
+        { id: "m2", label: "Blog", href: "/blog", children: [] },
+        {
+          id: "m3",
+          label: "About",
+          href: "/about",
+          children: [{ id: "m4", label: "Team", href: "/about/team", children: [] }],
+        },
+      ]),
+    },
+  ],
   pages: [
     {
       title: "AstroCMS",
