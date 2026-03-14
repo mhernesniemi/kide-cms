@@ -143,7 +143,7 @@ const ToolbarButton = ({
     onClick={onClick}
     disabled={disabled}
     title={title}
-    className={`inline-flex size-8 items-center justify-center rounded-md transition-colors ${
+    className={`focus-visible:ring-ring/50 focus-visible:border-ring inline-flex size-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2 ${
       active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
     } disabled:opacity-50`}
   >
