@@ -127,7 +127,7 @@ function InternalLinkPicker({
   }, [editHref, filteredLinkOptions]);
 
   return (
-    <div className="min-w-0 flex-1">
+    <div className="min-w-0 flex-[3]">
       <Input
         ref={triggerRef}
         value={editHref ? selectedLabel : internalSearch}
@@ -144,7 +144,7 @@ function InternalLinkPicker({
           <div
             ref={dropdownRef}
             className="bg-popover text-popover-foreground fixed z-9999 max-h-60 overflow-y-auto rounded-md border shadow-md"
-            style={{ top: pos.top, left: pos.left, width: Math.max(pos.width, 220) }}
+            style={{ top: pos.top, left: pos.left, width: Math.max(pos.width) }}
           >
             {filteredLinkOptions.length === 0 ? (
               <div className="text-muted-foreground p-3 text-center text-xs">No documents found</div>
@@ -158,7 +158,7 @@ function InternalLinkPicker({
                     <button
                       key={item.id}
                       type="button"
-                      className="hover:bg-accent flex w-full items-center px-3 py-1.5 text-left text-xs"
+                      className="hover:bg-accent flex w-full items-center px-3 py-1.5 text-left text-sm"
                       onClick={() => onSelect(item)}
                     >
                       <span className="truncate">{item.label}</span>
@@ -446,7 +446,7 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
             value={editLabel}
             onChange={(e) => setEditLabel(e.target.value)}
             placeholder="Label"
-            className="h-7 min-w-0 flex-[2] text-sm"
+            className="h-7 min-w-0 flex-[3] text-sm"
             autoFocus
             onKeyDown={editKeyHandler}
           />
@@ -468,7 +468,7 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
               }
             }}
           >
-            <SelectTrigger className="!h-7 min-w-0 flex-1 text-sm">
+            <SelectTrigger className="!h-7 min-w-0 flex-[2] text-sm">
               <SelectValue placeholder="Link type" />
             </SelectTrigger>
             <SelectContent>
@@ -484,7 +484,7 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
               value={editHref}
               onChange={(e) => setEditHref(e.target.value)}
               placeholder="/path or https://..."
-              className="h-7 min-w-0 flex-1 text-sm"
+              className="h-7 min-w-0 flex-[3] text-sm"
               onKeyDown={editKeyHandler}
             />
           ) : (
