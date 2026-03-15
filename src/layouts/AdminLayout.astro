@@ -1,7 +1,7 @@
 ---
 import "../styles/admin.css";
 
-import { FileText, FolderTree, Image, Layers, LayoutGrid, Menu, Newspaper, PencilRuler, Users } from "lucide-react";
+import { FileText, FolderTree, Image, Layers, LayoutGrid, Menu, PencilRuler, Users } from "lucide-react";
 
 import MobileSidebar from "@/components/admin/MobileSidebar";
 import SidebarUserMenu from "@/components/admin/SidebarUserMenu";
@@ -26,25 +26,62 @@ const toastStatus = Astro.url.searchParams.get("_toast") as "success" | "error" 
 const toastMessage =
   Astro.url.searchParams.get("_msg") ?? (toastStatus === "success" ? "Saved successfully" : "Something went wrong");
 
-const iconMap: Record<string, any> = {
-  posts: Newspaper,
-  pages: FileText,
-  authors: PencilRuler,
-  users: Users,
+// Build sidebar nav in explicit order:
+// 1. Content collections (alphabetical, shared icon)
+// 2. Singles
+// 3. Taxonomies, Menus, Authors, Users (pinned utility collections)
+// 4. Assets
+
+const pinnedOrder = ["taxonomies", "menus", "authors", "users"];
+const pinnedSlugs = new Set(pinnedOrder);
+const pinnedIcons: Record<string, any> = {
   taxonomies: FolderTree,
   menus: Menu,
+  authors: PencilRuler,
+  users: Users,
 };
 
-const regularCollections = collections.filter((c) => !c.singleton);
 const hasSingletons = collections.some((c) => c.singleton);
 const singletonSlugs = new Set(collections.filter((c) => c.singleton).map((c) => c.slug));
 const isActiveSingles =
   activeCollection === "singles" || (activeCollection !== null && singletonSlugs.has(activeCollection));
 
-const navItems = regularCollections.map((collection) => ({
-  ...collection,
-  Icon: iconMap[collection.slug as keyof typeof iconMap] ?? LayoutGrid,
-}));
+type NavItem = { href: string; label: string; Icon: any; active: boolean };
+const navItems: NavItem[] = [];
+
+// 1. Content collections — non-singleton, non-pinned, alphabetical
+const contentCollections = collections
+  .filter((c) => !c.singleton && !pinnedSlugs.has(c.slug))
+  .sort((a, b) => a.labels.plural.localeCompare(b.labels.plural));
+for (const c of contentCollections) {
+  navItems.push({
+    href: `/admin/${c.slug}`,
+    label: c.labels.plural,
+    Icon: FileText,
+    active: activeCollection === c.slug,
+  });
+}
+
+// 2. Singles
+if (hasSingletons) {
+  navItems.push({ href: "/admin/singles", label: "Singles", Icon: Layers, active: isActiveSingles });
+}
+
+// 3–6. Pinned utility collections
+for (const slug of pinnedOrder) {
+  const c = collections.find((col) => col.slug === slug);
+  if (c) {
+    navItems.push({
+      href: `/admin/${c.slug}`,
+      label: c.labels.plural,
+      Icon: pinnedIcons[slug] ?? LayoutGrid,
+      active: activeCollection === c.slug,
+    });
+  }
+}
+
+// 7. Assets
+navItems.push({ href: "/admin/assets", label: "Assets", Icon: Image, active: false });
 ---
 
 <!doctype html>
@@ -84,45 +121,19 @@ const navItems = regularCollections.map((collection) => ({
           {
             navItems.map((item) => (
               <a
-                href={`/admin/${item.slug}`}
+                href={item.href}
                 class={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                  activeCollection === item.slug
+                  item.active
                     ? "bg-accent text-accent-foreground"
                     : "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
                 )}
               >
                 <item.Icon className="size-4 shrink-0 stroke-1" />
-                <span>{item.labels.plural}</span>
+                <span>{item.label}</span>
               </a>
             ))
           }
-          {
-            hasSingletons && (
-              <a
-                href="/admin/singles"
-                class={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                  isActiveSingles
-                    ? "bg-accent text-accent-foreground"
-                    : "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
-                )}
-              >
-                <Layers className="size-4 shrink-0 stroke-1" />
-                <span>Singles</span>
-              </a>
-            )
-          }
-          <a
-            href="/admin/assets"
-            class={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-              "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
-            )}
-          >
-            <Image className="size-4 shrink-0 stroke-1" />
-            <span>Assets</span>
-          </a>
         </nav>
       </aside>
 
@@ -150,45 +161,19 @@ const navItems = regularCollections.map((collection) => ({
               {
                 navItems.map((item) => (
                   <a
-                    href={`/admin/${item.slug}`}
+                    href={item.href}
                     class={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                      activeCollection === item.slug
+                      item.active
                         ? "bg-accent text-accent-foreground"
                         : "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
                     )}
                   >
                     <item.Icon className="size-4 shrink-0 stroke-1" />
-                    <span>{item.labels.plural}</span>
+                    <span>{item.label}</span>
                   </a>
                 ))
               }
-              {
-                hasSingletons && (
-                  <a
-                    href="/admin/singles"
-                    class={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                      isActiveSingles
-                        ? "bg-accent text-accent-foreground"
-                        : "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
-                    )}
-                  >
-                    <Layers className="size-4 shrink-0 stroke-1" />
-                    <span>Singles</span>
-                  </a>
-                )
-              }
-              <a
-                href="/admin/assets"
-                class={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                  "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
-                )}
-              >
-                <Image className="size-4 shrink-0 stroke-1" />
-                <span>Assets</span>
-              </a>
             </nav>
           </MobileSidebar>
         </header>

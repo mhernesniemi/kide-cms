@@ -4,6 +4,14 @@ import * as React from "react";
 import { Check, ChevronRight, Indent, Outdent, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/admin/ui/button";
 import { Input } from "@/components/admin/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/admin/ui/select";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/admin/ui/collapsible";
 
 type TreeItem = {
@@ -452,12 +460,109 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
     );
   };
 
+  // Bulk-add for taxonomy variant
+  const [bulkInput, setBulkInput] = React.useState("");
+  const [bulkParent, setBulkParent] = React.useState("");
+
+  const flattenForSelect = React.useCallback(
+    (list: TreeItem[], depth = 0): Array<{ id: string; label: string }> =>
+      list.flatMap((item) => [
+        {
+          id: item.id,
+          label: `${"—".repeat(depth)}${depth > 0 ? " " : ""}${String(item.name || item.label || item.id)}`,
+        },
+        ...flattenForSelect(item.children, depth + 1),
+      ]),
+    [],
+  );
+
+  const parentOptions = React.useMemo(
+    () => [{ id: "", label: "Root" }, ...flattenForSelect(items)],
+    [items, flattenForSelect],
+  );
+
+  const handleBulkAdd = () => {
+    const names = bulkInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (names.length === 0) return;
+
+    const newItems = names.map((n) => ({
+      id: generateId(),
+      name: n,
+      slug: slugify(n),
+      children: [] as TreeItem[],
+    }));
+
+    setItems((prev) => {
+      const next = cloneItems(prev);
+      if (!bulkParent) {
+        next.push(...newItems);
+      } else {
+        const addToParent = (list: TreeItem[]): boolean => {
+          for (const item of list) {
+            if (item.id === bulkParent) {
+              item.children.push(...newItems);
+              return true;
+            }
+            if (addToParent(item.children)) return true;
+          }
+          return false;
+        };
+        if (!addToParent(next)) next.push(...newItems);
+        setExpandedIds((prev) => new Set([...prev, bulkParent]));
+      }
+      return next;
+    });
+    setBulkInput("");
+  };
+
   const emptyLabel = variant === "menu" ? "No menu items." : "No terms.";
   const addLabel = variant === "menu" ? "Add menu item" : "Add term";
 
   return (
     <div className="space-y-2">
       <input ref={hiddenRef} type="hidden" name={name} value={serialized} />
+
+      {variant === "taxonomy" && (
+        <div className="flex items-center gap-2">
+          <Input
+            value={bulkInput}
+            onChange={(e) => setBulkInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleBulkAdd();
+              }
+            }}
+            placeholder="e.g., Electronics, Clothing, Books"
+            className="min-w-0 flex-1 text-sm"
+          />
+          <Select
+            items={parentOptions.map((opt) => ({ value: opt.id, label: opt.label }))}
+            value={bulkParent}
+            onValueChange={(v) => setBulkParent(v ?? "")}
+          >
+            <SelectTrigger className="w-32 shrink-0 text-sm">
+              <SelectValue placeholder="Root" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {parentOptions.map((opt) => (
+                  <SelectItem key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Button type="button" variant="outline" size="lg" onClick={handleBulkAdd}>
+            Add
+          </Button>
+        </div>
+      )}
+
       <div className="rounded-lg border">
         {items.length > 0 ? (
           items.map((item) => renderItem(item, 0))

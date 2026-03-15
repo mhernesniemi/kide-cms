@@ -93,7 +93,6 @@ const seeds: Record<string, SeedDocument[]> = {
     {
       name: "Categories",
       slug: "categories",
-      description: "Content categories",
       terms: JSON.stringify([
         {
           id: "t1",
@@ -111,7 +110,6 @@ const seeds: Record<string, SeedDocument[]> = {
     {
       name: "Tags",
       slug: "tags",
-      description: "Free-form content tags",
       terms: JSON.stringify([
         { id: "t6", name: "Astro", slug: "astro", children: [] },
         { id: "t7", name: "CMS", slug: "cms", children: [] },

@@ -80,7 +80,6 @@ export default defineConfig({
       fields: {
         name: fields.text({ required: true }),
         slug: fields.slug({ from: "name", unique: true }),
-        description: fields.text(),
         terms: fields.json({
           defaultValue: {} as any,
           translatable: true,
