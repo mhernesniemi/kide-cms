@@ -13,7 +13,13 @@ export const formatDate = (value: unknown): string => {
   if (!value) return "—";
   const date = new Date(String(value));
   if (isNaN(date.getTime())) return String(value);
-  return date.toLocaleDateString(_dateLocale);
+  return date.toLocaleString(_dateLocale, {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 };
 
 export type AdminRoute =
