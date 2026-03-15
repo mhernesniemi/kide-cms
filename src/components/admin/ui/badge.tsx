@@ -33,13 +33,21 @@ const statusDotColor: Record<StatusColor, string> = {
   purple: "bg-violet-500",
 };
 
-function StatusBadge({ status, className }: { status: string; className?: string }) {
+const statusBadgeBg: Record<StatusColor, string> = {
+  green: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  yellow: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  blue: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  purple: "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
+};
+
+function StatusBadge({ status, styled, className }: { status: string; styled?: boolean; className?: string }) {
   const color: StatusColor =
     status === "published" ? "green" : status === "changed" ? "yellow" : status === "scheduled" ? "purple" : "blue";
   return (
     <span
       className={cn(
-        "text-foreground inline-flex items-center gap-1.5 rounded-4xl border border-transparent py-0.5 text-xs font-medium capitalize",
+        "inline-flex items-center gap-1.5 rounded-4xl py-0.5 text-xs font-medium capitalize",
+        styled ? cn("border px-2.5 py-0.5", statusBadgeBg[color]) : "text-foreground border border-transparent",
         className,
       )}
     >
