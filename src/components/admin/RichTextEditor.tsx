@@ -159,9 +159,10 @@ type Props = {
   name: string;
   initialValue?: string;
   rows?: number;
+  onChange?: (value: string) => void;
 };
 
-export default function RichTextEditor({ name, initialValue, rows = 10 }: Props) {
+export default function RichTextEditor({ name, initialValue, rows = 10, onChange }: Props) {
   const [cmsJson, setCmsJson] = useState<string>(() => {
     if (!initialValue) return JSON.stringify({ type: "root", children: [] });
     try {
@@ -190,7 +191,9 @@ export default function RichTextEditor({ name, initialValue, rows = 10 }: Props)
     onUpdate: ({ editor }) => {
       const tiptapJson = editor.getJSON();
       const cmsDoc = tiptapToCms(tiptapJson);
-      setCmsJson(JSON.stringify(cmsDoc));
+      const json = JSON.stringify(cmsDoc);
+      setCmsJson(json);
+      onChange?.(json);
     },
     onSelectionUpdate: forceTick,
     onTransaction: forceTick,

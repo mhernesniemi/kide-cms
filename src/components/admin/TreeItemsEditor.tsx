@@ -258,8 +258,7 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
 
   const saveOrDiscardEdit = () => {
     if (!editingId) return;
-    const isEmpty =
-      variant === "menu" ? !editLabel.trim() && !editHref.trim() : !editName.trim();
+    const isEmpty = variant === "menu" ? !editLabel.trim() && !editHref.trim() : !editName.trim();
     if (isEmpty) {
       removeItem(editingId);
       newItemIds.current.delete(editingId);

@@ -16,6 +16,7 @@ type Props = {
   placeholder?: string;
   disabled?: boolean;
   items: SelectOption[];
+  onChange?: (value: string) => void;
 };
 
 export default function SelectField({
@@ -24,13 +25,22 @@ export default function SelectField({
   placeholder = "Select an option",
   disabled,
   items,
+  onChange: onChangeProp,
 }: Props) {
   const [value, setValue] = useState(initialValue ?? "");
 
   return (
     <>
       <input type="hidden" name={name} value={value} />
-      <Select items={items} value={value} onValueChange={(v) => setValue(v ?? "")} disabled={disabled}>
+      <Select
+        items={items}
+        value={value}
+        onValueChange={(v) => {
+          setValue(v ?? "");
+          onChangeProp?.(v ?? "");
+        }}
+        disabled={disabled}
+      >
         <SelectTrigger className="w-full">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>

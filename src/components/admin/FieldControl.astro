@@ -6,6 +6,7 @@ import ImagePicker from "@/components/admin/ImagePicker";
 import TreeItemsEditor from "@/components/admin/TreeItemsEditor";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import SelectField from "@/components/admin/SelectField";
+import BlockEditor from "@/components/admin/BlockEditor";
 import SlugField from "@/components/admin/SlugField";
 import { Input } from "@/components/admin/ui/input";
 import { Label } from "@/components/admin/ui/label";
@@ -46,6 +47,31 @@ const rows =
   field.admin?.rows ?? (field.type === "richText" ? 10 : field.type === "json" || field.type === "blocks" ? 12 : 5);
 const inputMode = field.type === "number" ? "decimal" : undefined;
 const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg-muted text-muted-foreground");
+
+// Build serializable block types metadata for BlockEditor
+const blockTypesMeta =
+  field.type === "blocks" && field.types
+    ? Object.fromEntries(
+        Object.entries(field.types).map(([typeName, typeFields]) => [
+          typeName,
+          Object.fromEntries(
+            Object.entries(typeFields).map(([fieldName, subField]) => [
+              fieldName,
+              {
+                type: subField.type,
+                label: subField.label,
+                required: subField.required,
+                options: "options" in subField ? subField.options : undefined,
+                from: "from" in subField ? subField.from : undefined,
+                admin: subField.admin,
+                defaultValue: subField.defaultValue,
+                of: "of" in subField && subField.of ? { type: subField.of.type } : undefined,
+              },
+            ]),
+          ),
+        ]),
+      )
+    : {};
 ---
 
 <div class="grid gap-2">
@@ -209,8 +235,26 @@ const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg
   }
 
   {
+    field.type === "blocks" && !readOnly && (
+      <BlockEditor client:load name={name} value={serializedValue} types={blockTypesMeta} />
+    )
+  }
+
+  {
+    field.type === "blocks" && readOnly && (
+      <Textarea
+        className={controlClass}
+        id={name}
+        name={name}
+        rows={rows}
+        readOnly={readOnly}
+        defaultValue={serializedValue}
+      />
+    )
+  }
+
+  {
     (field.type === "array" ||
-      field.type === "blocks" ||
       (field.type === "json" &&
         field.admin?.component !== "menu-items" &&
         field.admin?.component !== "taxonomy-terms")) && (

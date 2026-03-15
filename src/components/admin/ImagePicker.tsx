@@ -13,9 +13,10 @@ type Props = {
   name: string;
   value?: string;
   placeholder?: string;
+  onChange?: (value: string) => void;
 };
 
-export default function ImagePicker({ name, value: initialValue, placeholder }: Props) {
+export default function ImagePicker({ name, value: initialValue, placeholder, onChange: onChangeProp }: Props) {
   const [value, setValue] = useState(initialValue ?? "");
   const [uploading, setUploading] = useState(false);
   const [showBrowser, setShowBrowser] = useState(false);
@@ -32,6 +33,7 @@ export default function ImagePicker({ name, value: initialValue, placeholder }: 
       if (!res.ok) throw new Error("Upload failed");
       const asset: AssetRecord = await res.json();
       setValue(asset.url);
+      onChangeProp?.(asset.url);
     } catch (e) {
       console.error("Upload failed:", e);
     } finally {
@@ -61,10 +63,14 @@ export default function ImagePicker({ name, value: initialValue, placeholder }: 
     }
   }, []);
 
-  const selectAsset = useCallback((asset: AssetRecord) => {
-    setValue(asset.url);
-    setShowBrowser(false);
-  }, []);
+  const selectAsset = useCallback(
+    (asset: AssetRecord) => {
+      setValue(asset.url);
+      onChangeProp?.(asset.url);
+      setShowBrowser(false);
+    },
+    [onChangeProp],
+  );
 
   const isImage = value && (value.match(/\.(jpg|jpeg|png|gif|webp|avif|svg)$/i) || value.startsWith("http"));
 
@@ -83,7 +89,10 @@ export default function ImagePicker({ name, value: initialValue, placeholder }: 
           )}
           <button
             type="button"
-            onClick={() => setValue("")}
+            onClick={() => {
+              setValue("");
+              onChangeProp?.("");
+            }}
             className="bg-background/80 absolute top-2 right-2 rounded-md p-1.5 opacity-0 shadow-sm backdrop-blur transition-opacity group-hover:opacity-100"
           >
             <X className="size-4" />
