@@ -110,7 +110,11 @@ const handleHtmlMutation = async (
       // intent === "save" — just saves, page stays published if it was
       // Different message for draft save vs publish
       const msg =
-        intent === "publish" ? `${name} published` : intent === "unpublish" ? `${name} unpublished` : `${name} saved`;
+        intent === "publish"
+          ? `${name} published`
+          : intent === "unpublish"
+            ? `${name} unpublished`
+            : `${name} saved as draft`;
       return redirect(redirectTo, { status: "success", msg });
     }
 
