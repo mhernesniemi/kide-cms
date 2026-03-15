@@ -24,6 +24,15 @@ import {
   Search,
 } from "lucide-react";
 
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/admin/ui/alert-dialog";
 import { Badge, StatusBadge } from "@/components/admin/ui/badge";
 import { Button } from "@/components/admin/ui/button";
 import { Checkbox } from "@/components/admin/ui/checkbox";
@@ -99,6 +108,7 @@ export default function DocumentsDataTable({
   });
   const [rowSelection, setRowSelection] = React.useState({});
   const [isPending, startTransition] = React.useTransition();
+  const [deleteConfirm, setDeleteConfirm] = React.useState<DataTableRow[] | null>(null);
 
   const primaryColumnKey = columns.find((column) => !column.key.startsWith("_"))?.key ?? columns[0]?.key;
 
@@ -109,13 +119,6 @@ export default function DocumentsDataTable({
       }
 
       setActionError(null);
-
-      if (
-        action === "delete" &&
-        !window.confirm(rows.length === 1 ? "Delete this document?" : `Delete ${rows.length} documents?`)
-      ) {
-        return;
-      }
 
       try {
         await Promise.all(
@@ -281,11 +284,7 @@ export default function DocumentsDataTable({
                 <DropdownMenuItem
                   variant="destructive"
                   disabled={isPending}
-                  onClick={() =>
-                    startTransition(() => {
-                      void runAction("delete", [row.original]);
-                    })
-                  }
+                  onClick={() => setDeleteConfirm([row.original])}
                 >
                   Delete
                 </DropdownMenuItem>
@@ -385,11 +384,7 @@ export default function DocumentsDataTable({
                 <DropdownMenuItem
                   variant="destructive"
                   disabled={isPending}
-                  onClick={() =>
-                    startTransition(() => {
-                      void runAction("delete", selectedRows);
-                    })
-                  }
+                  onClick={() => setDeleteConfirm(selectedRows)}
                 >
                   Delete selected
                 </DropdownMenuItem>
@@ -491,6 +486,38 @@ export default function DocumentsDataTable({
           </div>
         </div>
       )}
+      <AlertDialog open={deleteConfirm !== null} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteConfirm && deleteConfirm.length === 1 ? "Delete document" : "Delete documents"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteConfirm && deleteConfirm.length === 1
+                ? "This action cannot be undone. This will permanently delete this document."
+                : `This action cannot be undone. This will permanently delete ${deleteConfirm?.length ?? 0} documents.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose>
+              <Button variant="outline">Cancel</Button>
+            </AlertDialogClose>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deleteConfirm) {
+                  startTransition(() => {
+                    void runAction("delete", deleteConfirm);
+                  });
+                }
+                setDeleteConfirm(null);
+              }}
+            >
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

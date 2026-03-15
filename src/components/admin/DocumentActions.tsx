@@ -2,6 +2,15 @@
 
 import { useState } from "react";
 import { CalendarClock, CheckIcon, EllipsisVertical } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/admin/ui/alert-dialog";
 import { Button } from "@/components/admin/ui/button";
 import {
   Dialog,
@@ -54,6 +63,7 @@ export default function DocumentActions({
   redirectTo,
 }: Props) {
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [publishAt, setPublishAt] = useState(currentPublishAt ? toLocalDatetime(currentPublishAt) : "");
   const [unpublishAt, setUnpublishAt] = useState(currentUnpublishAt ? toLocalDatetime(currentUnpublishAt) : "");
 
@@ -175,14 +185,7 @@ export default function DocumentActions({
             <DropdownMenuSeparator />
           )}
           {showDelete && (
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => {
-                if (confirm("Are you sure you want to delete this document?")) {
-                  submitAction("delete");
-                }
-              }}
-            >
+            <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
               Delete
             </DropdownMenuItem>
           )}
@@ -232,6 +235,25 @@ export default function DocumentActions({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete document</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this document.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose>
+              <Button variant="outline">Cancel</Button>
+            </AlertDialogClose>
+            <Button variant="destructive" onClick={() => submitAction("delete")}>
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
