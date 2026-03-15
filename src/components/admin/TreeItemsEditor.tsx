@@ -483,7 +483,7 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
             <Input
               value={editHref}
               onChange={(e) => setEditHref(e.target.value)}
-              placeholder="/path or https://..."
+              placeholder="https://..."
               className="h-7 min-w-0 flex-[3] text-sm"
               onKeyDown={editKeyHandler}
             />
