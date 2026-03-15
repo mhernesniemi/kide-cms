@@ -256,13 +256,28 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
     setEditAutoSlug(true);
   };
 
+  const saveOrDiscardEdit = () => {
+    if (!editingId) return;
+    const isEmpty =
+      variant === "menu" ? !editLabel.trim() && !editHref.trim() : !editName.trim();
+    if (isEmpty) {
+      removeItem(editingId);
+      newItemIds.current.delete(editingId);
+      setEditingId(null);
+    } else {
+      saveEdit();
+    }
+  };
+
   const addRootItem = () => {
+    saveOrDiscardEdit();
     const newItem = createBlankItem();
     setItems((prev) => [...prev, newItem]);
     startEditNewItem(newItem.id);
   };
 
   const addChildItem = (parentId: string) => {
+    saveOrDiscardEdit();
     const newItem = createBlankItem();
     setItems((prev) => {
       const next = cloneItems(prev);
