@@ -34,6 +34,7 @@ export default defineHooks({
   },
   taxonomies: {},
   menus: {},
+  "front-page": {},
   authors: {},
   users: {},
 });

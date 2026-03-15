@@ -1,7 +1,7 @@
 ---
 import "../styles/admin.css";
 
-import { FileText, FolderTree, Image, LayoutGrid, Menu, Newspaper, PencilRuler, Users } from "lucide-react";
+import { FileText, FolderTree, Image, Layers, LayoutGrid, Menu, Newspaper, PencilRuler, Users } from "lucide-react";
 
 import MobileSidebar from "@/components/admin/MobileSidebar";
 import SidebarUserMenu from "@/components/admin/SidebarUserMenu";
@@ -15,7 +15,7 @@ const {
   activeCollection = null,
 } = Astro.props as {
   title?: string;
-  collections?: Array<{ slug: string; labels: { plural: string } }>;
+  collections?: Array<{ slug: string; labels: { plural: string }; singleton?: boolean }>;
   activeCollection?: string | null;
 };
 
@@ -35,7 +35,13 @@ const iconMap: Record<string, any> = {
   menus: Menu,
 };
 
-const navItems = collections.map((collection) => ({
+const regularCollections = collections.filter((c) => !c.singleton);
+const hasSingletons = collections.some((c) => c.singleton);
+const singletonSlugs = new Set(collections.filter((c) => c.singleton).map((c) => c.slug));
+const isActiveSingles =
+  activeCollection === "singles" || (activeCollection !== null && singletonSlugs.has(activeCollection));
+
+const navItems = regularCollections.map((collection) => ({
   ...collection,
   Icon: iconMap[collection.slug as keyof typeof iconMap] ?? LayoutGrid,
 }));
@@ -91,6 +97,22 @@ const navItems = collections.map((collection) => ({
               </a>
             ))
           }
+          {
+            hasSingletons && (
+              <a
+                href="/admin/singles"
+                class={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                  isActiveSingles
+                    ? "bg-accent text-accent-foreground"
+                    : "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
+                )}
+              >
+                <Layers className="size-4 shrink-0 stroke-1" />
+                <span>Singles</span>
+              </a>
+            )
+          }
           <a
             href="/admin/assets"
             class={cn(
@@ -140,6 +162,22 @@ const navItems = collections.map((collection) => ({
                     <span>{item.labels.plural}</span>
                   </a>
                 ))
+              }
+              {
+                hasSingletons && (
+                  <a
+                    href="/admin/singles"
+                    class={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                      isActiveSingles
+                        ? "bg-accent text-accent-foreground"
+                        : "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
+                    )}
+                  >
+                    <Layers className="size-4 shrink-0 stroke-1" />
+                    <span>Singles</span>
+                  </a>
+                )
               }
               <a
                 href="/admin/assets"

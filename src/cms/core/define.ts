@@ -128,6 +128,7 @@ export type CollectionConfig = {
   drafts?: boolean;
   versions?: { max: number };
   auth?: boolean;
+  singleton?: boolean;
   fields: CollectionFieldMap;
   seed?: SeedDocument[];
 };

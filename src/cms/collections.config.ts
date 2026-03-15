@@ -103,6 +103,21 @@ export default defineConfig({
       },
     }),
     defineCollection({
+      slug: "front-page",
+      labels: { singular: "Front Page", plural: "Front Page" },
+      singleton: true,
+      timestamps: true,
+      drafts: true,
+      fields: {
+        heroHeading: fields.text({ required: true, translatable: true }),
+        heroBody: fields.text({ translatable: true, admin: { rows: 3 } }),
+        heroCtaLabel: fields.text({ translatable: true }),
+        heroCtaHref: fields.text(),
+        heroImage: fields.image(),
+        featuredPosts: fields.relation({ collection: "posts", hasMany: true }),
+      },
+    }),
+    defineCollection({
       slug: "pages",
       labels: { singular: "Page", plural: "Pages" },
       timestamps: true,

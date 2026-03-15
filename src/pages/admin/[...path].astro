@@ -35,9 +35,27 @@ const locales = localeConfig?.supported ?? [];
 const defaultLocale = localeConfig?.default ?? "en";
 const requestedLocale = Astro.url.searchParams.get("locale") ?? defaultLocale;
 
-// Redirect /admin to first collection
+// Redirect /admin to first non-singleton collection
 if (route.kind === "dashboard") {
-  return Astro.redirect(config.collections[0] ? `/admin/${config.collections[0].slug}` : "/");
+  const firstRegular = config.collections.find((c) => !c.singleton);
+  return Astro.redirect(firstRegular ? `/admin/${firstRegular.slug}` : "/admin/singles");
+}
+
+// Singles listing page
+const singletonCollections = config.collections.filter((c) => c.singleton);
+let singletonsData: Array<{ slug: string; label: string; updatedAt: string; editHref: string }> = [];
+if (route.kind === "singles") {
+  for (const sc of singletonCollections) {
+    const api = cmsRuntime[sc.slug];
+    const singleDocs = await api.find({ status: "any", limit: 1 }, runtimeContext);
+    const singleDoc = singleDocs[0] ?? null;
+    singletonsData.push({
+      slug: sc.slug,
+      label: sc.labels.singular,
+      updatedAt: singleDoc ? formatDate(singleDoc._updatedAt) : "—",
+      editHref: `/admin/${sc.slug}`,
+    });
+  }
 }
 
 const getCollectionView = (slug: string) => (views as Record<string, any>)[slug] ?? {};
@@ -64,28 +82,44 @@ let baseDoc: Record<string, unknown> | null = null;
 let relationOptionsByField: Record<string, Array<{ value: string; label: string }>> = {};
 let versions: Array<{ version: number; createdAt: string }> = [];
 
-const collection = cms.meta.getCollection(route.collectionSlug) as any;
-collectionApi = cmsRuntime[route.collectionSlug];
-viewConfig = getCollectionView(route.collectionSlug);
-for (const [fieldName, field] of Object.entries(collection.fields) as [
-  string,
-  import("@/cms/core/define").FieldConfig,
-][]) {
-  if (field.type === "relation") {
-    const relatedDocs = await cmsRuntime[field.collection].find(
-      {
-        status: "any",
-        limit: 100,
-        sort: { field: "_updatedAt", direction: "desc" },
-        locale: defaultLocale,
-      },
-      runtimeContext,
-    );
+const collectionSlug = "collectionSlug" in route ? route.collectionSlug : null;
+const collection = collectionSlug ? (cms.meta.getCollection(collectionSlug) as any) : null;
+const isSingleton = collection?.singleton === true;
 
-    relationOptionsByField[fieldName] = relatedDocs.map((item: Record<string, unknown>) => ({
-      value: String(item._id),
-      label: String(item.title ?? item.name ?? item.slug ?? item._id),
-    }));
+if (collection && collectionSlug) {
+  collectionApi = cmsRuntime[collectionSlug];
+  viewConfig = getCollectionView(collectionSlug);
+
+  // Singleton collections: auto-create the single document if missing, then redirect to edit
+  if (isSingleton && (route.kind === "list" || route.kind === "new")) {
+    const singleDocs = await collectionApi.find({ status: "any", limit: 1 }, runtimeContext);
+    if (singleDocs.length > 0) {
+      return Astro.redirect(`/admin/${collectionSlug}/${singleDocs[0]._id}`);
+    }
+    const newDoc = await collectionApi.create({}, runtimeContext);
+    return Astro.redirect(`/admin/${collectionSlug}/${newDoc._id}`);
+  }
+
+  for (const [fieldName, field] of Object.entries(collection.fields) as [
+    string,
+    import("@/cms/core/define").FieldConfig,
+  ][]) {
+    if (field.type === "relation") {
+      const relatedDocs = await cmsRuntime[field.collection].find(
+        {
+          status: "any",
+          limit: 100,
+          sort: { field: "_updatedAt", direction: "desc" },
+          locale: defaultLocale,
+        },
+        runtimeContext,
+      );
+
+      relationOptionsByField[fieldName] = relatedDocs.map((item: Record<string, unknown>) => ({
+        value: String(item._id),
+        label: String(item.title ?? item.name ?? item.slug ?? item._id),
+      }));
+    }
   }
 }
 
@@ -170,245 +204,266 @@ const tableRows =
 ---
 
 <AdminLayout
-  title={`${collection?.labels?.plural ?? "Admin"} | AstroCMS`}
+  title={route.kind === "singles" ? "Singles | AstroCMS" : `${collection?.labels?.plural ?? "Admin"} | AstroCMS`}
   collections={config.collections}
-  activeCollection={route.collectionSlug}
+  activeCollection={collectionSlug ?? "singles"}
 >
-  <section class="space-y-6">
-    <div class="flex items-start justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-semibold tracking-tight">
-          {route.kind === "list" && collection.labels.plural}
-          {route.kind === "new" && <LiveHeading client:load initial={`New ${collection.labels.singular}`} />}
-          {
-            route.kind === "edit" && (
-              <LiveHeading
-                client:load
-                initial={String(doc?.title ?? doc?.name ?? doc?.slug ?? collection.labels.singular)}
-              />
-            )
-          }
-        </h1>
-        {
-          route.kind === "edit" && doc && collection.drafts && (
-            <div class="text-muted-foreground mt-1 flex items-center text-xs">
-              <StatusBadge status={getVisualStatus(doc)} />
-              <Dot className="size-6 text-muted-foreground/70" />
-              <span>Created {formatDate(doc._createdAt)}</span>
-              <Dot className="size-6 text-muted-foreground/70" />
-              <span>Updated {formatDate(doc._updatedAt)}</span>
-            </div>
-          )
-        }
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2">
-        {
-          route.kind === "edit" && doc?.slug && (
-            <a
-              href={cms.meta.getRouteForDocument(collection.slug, doc)}
-              target="_blank"
-              class="text-foreground/70 hover:text-foreground flex items-center gap-1 text-sm transition-colors"
-            >
-              Preview
-              <ArrowUpRight className="size-3.5" />
-            </a>
-          )
-        }
-        {
-          route.kind === "list" && (
-            <a href={`/admin/${collection.slug}/new`} class={buttonVariants({ size: "sm" })}>
-              <Plus className="size-4" />
-              New {collection.labels.singular}
-            </a>
-          )
-        }
-      </div>
-    </div>
-
-    {
-      route.kind === "list" && (
+  {
+    route.kind === "singles" && (
+      <section class="space-y-6">
+        <div class="flex items-start justify-between gap-4">
+          <h1 class="text-2xl font-semibold tracking-tight">Singles</h1>
+        </div>
         <DocumentsDataTable
           client:load
-          collectionSlug={collection.slug}
-          draftsEnabled={collection.drafts}
-          title={collection.labels.plural}
-          columns={listColumns.map((column) => ({ key: column, label: humanize(column) }))}
-          data={tableRows}
-          searchPlaceholder={`Filter ${collection.labels.plural.toLowerCase()}...`}
+          collectionSlug="singles"
+          draftsEnabled={false}
+          title="Singles"
+          columns={[
+            { key: "name", label: "Name" },
+            { key: "updatedAt", label: "Last updated" },
+          ]}
+          data={singletonsData.map((s) => ({
+            id: s.slug,
+            editHref: s.editHref,
+            locales: [],
+            searchText: s.label,
+            values: { name: s.label, updatedAt: s.updatedAt },
+          }))}
+          searchPlaceholder="Filter singles..."
         />
-      )
-    }
+      </section>
+    )
+  }
 
-    {
-      (route.kind === "new" || route.kind === "edit") && (
-        <>
-          <UnsavedGuard
-            client:load
-            formId="document-form"
-            isNew={route.kind === "new"}
-            isDraft={collection.drafts && (doc?._status === "draft" || (doc && getVisualStatus(doc) === "changed"))}
-          />
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex flex-wrap items-center gap-2">
-              {locales.length > 1 &&
-                route.kind === "edit" &&
-                translatableFields.length > 0 &&
-                locales.map((locale) => (
-                  <a
-                    href={`/admin/${collection.slug}/${route.documentId}?locale=${locale}`}
-                    class={buttonVariants({
-                      variant: selectedLocale === locale ? "secondary" : "outline",
-                      size: "sm",
-                    })}
-                  >
-                    <Globe2 className="size-4" />
-                    {locale}
-                  </a>
-                ))}
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-              <button
-                class={buttonVariants({ variant: "outline" })}
-                type="submit"
-                form="document-form"
-                name="_intent"
-                value="save"
-                disabled={route.kind === "edit"}
+  {
+    route.kind !== "singles" && (
+      <section class="space-y-6">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">
+              {route.kind === "list" && collection.labels.plural}
+              {route.kind === "new" && <LiveHeading client:load initial={`New ${collection.labels.singular}`} />}
+              {route.kind === "edit" && (
+                <LiveHeading
+                  client:load
+                  initial={String(doc?.title ?? doc?.name ?? doc?.slug ?? collection.labels.singular)}
+                />
+              )}
+            </h1>
+            {route.kind === "edit" && doc && collection.drafts && (
+              <div class="text-muted-foreground mt-1 flex items-center text-xs">
+                <StatusBadge status={getVisualStatus(doc)} />
+                <Dot className="size-6 text-muted-foreground/70" />
+                <span>Created {formatDate(doc._createdAt)}</span>
+                <Dot className="size-6 text-muted-foreground/70" />
+                <span>Updated {formatDate(doc._updatedAt)}</span>
+              </div>
+            )}
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            {route.kind === "edit" && doc?.slug && (
+              <a
+                href={cms.meta.getRouteForDocument(collection.slug, doc)}
+                target="_blank"
+                class="text-foreground/70 hover:text-foreground flex items-center gap-1 text-sm transition-colors"
               >
-                {collection.drafts ? "Save draft" : "Save"}
-              </button>
-              {collection.drafts && (
+                Preview
+                <ArrowUpRight className="size-3.5" />
+              </a>
+            )}
+            {route.kind === "list" && (
+              <a href={`/admin/${collection.slug}/new`} class={buttonVariants({ size: "sm" })}>
+                <Plus className="size-4" />
+                New {collection.labels.singular}
+              </a>
+            )}
+          </div>
+        </div>
+
+        {route.kind === "list" && (
+          <DocumentsDataTable
+            client:load
+            collectionSlug={collection.slug}
+            draftsEnabled={collection.drafts}
+            title={collection.labels.plural}
+            columns={listColumns.map((column) => ({ key: column, label: humanize(column) }))}
+            data={tableRows}
+            searchPlaceholder={`Filter ${collection.labels.plural.toLowerCase()}...`}
+          />
+        )}
+
+        {(route.kind === "new" || route.kind === "edit") && (
+          <>
+            <UnsavedGuard
+              client:load
+              formId="document-form"
+              isNew={route.kind === "new"}
+              isDraft={collection.drafts && (doc?._status === "draft" || (doc && getVisualStatus(doc) === "changed"))}
+            />
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex flex-wrap items-center gap-2">
+                {locales.length > 1 &&
+                  route.kind === "edit" &&
+                  translatableFields.length > 0 &&
+                  locales.map((locale) => (
+                    <a
+                      href={`/admin/${collection.slug}/${route.documentId}?locale=${locale}`}
+                      class={buttonVariants({
+                        variant: selectedLocale === locale ? "secondary" : "outline",
+                        size: "sm",
+                      })}
+                    >
+                      <Globe2 className="size-4" />
+                      {locale}
+                    </a>
+                  ))}
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
                 <button
-                  class={buttonVariants({ variant: "publish" })}
+                  class={buttonVariants({ variant: "outline" })}
                   type="submit"
                   form="document-form"
                   name="_intent"
-                  value="publish"
-                  disabled={
-                    route.kind === "edit" && !(doc?._status === "draft" || (doc && getVisualStatus(doc) === "changed"))
-                  }
+                  value="save"
+                  disabled={route.kind === "edit" && collection?.drafts}
                 >
-                  Publish
+                  {collection?.drafts ? "Save draft" : "Save"}
                 </button>
-              )}
-              {route.kind === "edit" && (
-                <DocumentActions
-                  client:load
-                  formId="document-form"
-                  showUnpublish={collection.drafts && doc?._status === "published"}
-                  showDelete={true}
-                  versions={versions}
-                  restoreEndpoint={getFormAction(collection.slug, route.documentId)}
-                  redirectTo={Astro.url.pathname + Astro.url.search}
-                />
-              )}
+                {collection.drafts && (
+                  <button
+                    class={buttonVariants({ variant: "publish" })}
+                    type="submit"
+                    form="document-form"
+                    name="_intent"
+                    value="publish"
+                    disabled={
+                      route.kind === "edit" &&
+                      !(doc?._status === "draft" || (doc && getVisualStatus(doc) === "changed"))
+                    }
+                  >
+                    Publish
+                  </button>
+                )}
+                {route.kind === "edit" && (
+                  <DocumentActions
+                    client:load
+                    formId="document-form"
+                    showUnpublish={collection.drafts && doc?._status === "published"}
+                    showDelete={!isSingleton}
+                    versions={versions}
+                    restoreEndpoint={getFormAction(collection.slug, route.documentId)}
+                    redirectTo={Astro.url.pathname + Astro.url.search}
+                  />
+                )}
+              </div>
             </div>
-          </div>
 
-          {!translationMode && (
-            <form
-              id="document-form"
-              method="post"
-              action={getFormAction(collection.slug, route.kind === "edit" ? route.documentId : undefined)}
-              class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
-            >
-              <input type="hidden" name="_action" value={route.kind === "new" ? "create" : "update"} />
-              <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
+            {!translationMode && (
+              <form
+                id="document-form"
+                method="post"
+                action={getFormAction(collection.slug, route.kind === "edit" ? route.documentId : undefined)}
+                class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
+              >
+                <input type="hidden" name="_action" value={route.kind === "new" ? "create" : "update"} />
+                <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
 
-              <div class="space-y-6">
-                {mainFieldSets.map((set, index) => (
-                  <AdminCard title={getFieldSetTitle(set.fields, index)}>
-                    <div class="grid gap-5">
-                      {set.fields.map((fieldName) => (
-                        <FieldControl
-                          name={fieldName}
-                          field={collection.fields[fieldName]}
-                          value={getCurrentValue(fieldName)}
-                          relationOptions={relationOptionsByField[fieldName] ?? []}
-                        />
-                      ))}
-                    </div>
-                  </AdminCard>
-                ))}
-              </div>
+                <div class="space-y-6">
+                  {mainFieldSets.map((set, index) => (
+                    <AdminCard title={getFieldSetTitle(set.fields, index)}>
+                      <div class="grid gap-5">
+                        {set.fields.map((fieldName) => (
+                          <FieldControl
+                            name={fieldName}
+                            field={collection.fields[fieldName]}
+                            value={getCurrentValue(fieldName)}
+                            relationOptions={relationOptionsByField[fieldName] ?? []}
+                          />
+                        ))}
+                      </div>
+                    </AdminCard>
+                  ))}
+                </div>
 
-              <div class="space-y-6 text-sm [&_button]:text-sm [&_input]:text-sm [&_select]:text-sm [&_textarea]:text-sm">
-                {effectiveSidebarFieldSets.map((set, index) => (
-                  <AdminCard title={getFieldSetTitle(set.fields, index + mainFieldSets.length)}>
-                    <div class="grid gap-5">
-                      {set.fields.map((fieldName) => (
-                        <FieldControl
-                          name={fieldName}
-                          field={collection.fields[fieldName]}
-                          value={getCurrentValue(fieldName)}
-                          relationOptions={relationOptionsByField[fieldName] ?? []}
-                        />
-                      ))}
-                    </div>
-                  </AdminCard>
-                ))}
-              </div>
-            </form>
-          )}
+                <div class="space-y-6 text-sm [&_button]:text-sm [&_input]:text-sm [&_select]:text-sm [&_textarea]:text-sm">
+                  {effectiveSidebarFieldSets.map((set, index) => (
+                    <AdminCard title={getFieldSetTitle(set.fields, index + mainFieldSets.length)}>
+                      <div class="grid gap-5">
+                        {set.fields.map((fieldName) => (
+                          <FieldControl
+                            name={fieldName}
+                            field={collection.fields[fieldName]}
+                            value={getCurrentValue(fieldName)}
+                            relationOptions={relationOptionsByField[fieldName] ?? []}
+                          />
+                        ))}
+                      </div>
+                    </AdminCard>
+                  ))}
+                </div>
+              </form>
+            )}
 
-          {translationMode && (
-            <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]">
-              <div class="space-y-6">
-                <Card>
-                  <CardContent className="flex items-center gap-2 py-3 text-sm">
-                    <Languages className="size-4" />
-                    Editing {selectedLocale} translation — only translatable fields are editable.
-                  </CardContent>
-                </Card>
-
-                <form method="post" action={getFormAction(collection.slug, route.documentId)} class="space-y-6">
-                  <input type="hidden" name="_action" value="save-translation" />
-                  <input type="hidden" name="locale" value={selectedLocale} />
-                  <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
-
-                  <AdminCard title="Localized content">
-                    <div class="grid gap-5">
-                      {translatableFields.map((fieldName) => (
-                        <FieldControl
-                          name={fieldName}
-                          field={collection.fields[fieldName]}
-                          value={getCurrentValue(fieldName)}
-                          relationOptions={relationOptionsByField[fieldName] ?? []}
-                        />
-                      ))}
-                    </div>
-                  </AdminCard>
-
+            {translationMode && (
+              <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]">
+                <div class="space-y-6">
                   <Card>
-                    <CardContent className="flex justify-end py-4">
-                      <button class={buttonVariants({ variant: "default" })} type="submit">
-                        Save translation
-                      </button>
+                    <CardContent className="flex items-center gap-2 py-3 text-sm">
+                      <Languages className="size-4" />
+                      Editing {selectedLocale} translation — only translatable fields are editable.
                     </CardContent>
                   </Card>
-                </form>
-              </div>
 
-              <div class="space-y-6">
-                <AdminCard title="Shared fields">
-                  <div class="grid gap-5">
-                    {sharedFields.map((fieldName) => (
-                      <FieldControl
-                        name={fieldName}
-                        field={collection.fields[fieldName]}
-                        value={getSharedValue(fieldName)}
-                        relationOptions={relationOptionsByField[fieldName] ?? []}
-                        readOnly={true}
-                      />
-                    ))}
-                  </div>
-                </AdminCard>
+                  <form method="post" action={getFormAction(collection.slug, route.documentId)} class="space-y-6">
+                    <input type="hidden" name="_action" value="save-translation" />
+                    <input type="hidden" name="locale" value={selectedLocale} />
+                    <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
+
+                    <AdminCard title="Localized content">
+                      <div class="grid gap-5">
+                        {translatableFields.map((fieldName) => (
+                          <FieldControl
+                            name={fieldName}
+                            field={collection.fields[fieldName]}
+                            value={getCurrentValue(fieldName)}
+                            relationOptions={relationOptionsByField[fieldName] ?? []}
+                          />
+                        ))}
+                      </div>
+                    </AdminCard>
+
+                    <Card>
+                      <CardContent className="flex justify-end py-4">
+                        <button class={buttonVariants({ variant: "default" })} type="submit">
+                          Save translation
+                        </button>
+                      </CardContent>
+                    </Card>
+                  </form>
+                </div>
+
+                <div class="space-y-6">
+                  <AdminCard title="Shared fields">
+                    <div class="grid gap-5">
+                      {sharedFields.map((fieldName) => (
+                        <FieldControl
+                          name={fieldName}
+                          field={collection.fields[fieldName]}
+                          value={getSharedValue(fieldName)}
+                          relationOptions={relationOptionsByField[fieldName] ?? []}
+                          readOnly={true}
+                        />
+                      ))}
+                    </div>
+                  </AdminCard>
+                </div>
               </div>
-            </div>
-          )}
-        </>
-      )
-    }
-  </section>
+            )}
+          </>
+        )}
+      </section>
+    )
+  }
 </AdminLayout>

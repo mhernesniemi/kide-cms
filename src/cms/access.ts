@@ -27,6 +27,13 @@ export default defineAccess({
     update: isEditor,
     delete: isAdmin,
   },
+  "front-page": {
+    read: () => true,
+    create: isEditor,
+    update: isEditor,
+    delete: isAdmin,
+    publish: isEditor,
+  },
   posts: {
     read: () => true,
     create: isEditor,

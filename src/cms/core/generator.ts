@@ -161,7 +161,8 @@ const generateSchemaFile = (): string => {
   const tableExports: string[] = [];
   for (const collection of config.collections) {
     const varName = `cms${pascalCase(collection.slug)}`;
-    tableExports.push(`  ${collection.slug}: { main: ${varName}`);
+    const safeKey = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(collection.slug) ? collection.slug : `"${collection.slug}"`;
+    tableExports.push(`  ${safeKey}: { main: ${varName}`);
     const translatableFields = getTranslatableFieldNames(collection);
     if (translatableFields.length > 0 && config.locales) {
       tableExports[tableExports.length - 1] += `, translations: ${varName}Translations`;
@@ -351,7 +352,8 @@ const generateApiFile = (): string => {
     .map((collection) => {
       const baseName = pascalCase(collection.slug);
       const ctx = `context?: { user?: { id: string; role?: string; email?: string } | null }`;
-      return `  ${collection.slug}: {
+      const apiKey = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(collection.slug) ? collection.slug : `"${collection.slug}"`;
+      return `  ${apiKey}: {
     find(options?: import("../core/api").FindOptions, ${ctx}): Promise<${baseName}Document[]>;
     findOne(filter: Record<string, unknown> & { locale?: string; status?: "draft" | "published" | "any" }, ${ctx}): Promise<${baseName}Document | null>;
     findById(id: string, options?: { locale?: string; status?: "draft" | "published" | "any" }, ${ctx}): Promise<${baseName}Document | null>;

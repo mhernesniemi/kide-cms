@@ -119,6 +119,15 @@ const seeds: Record<string, SeedDocument[]> = {
       ]),
     },
   ],
+  "front-page": [
+    {
+      heroHeading: "Welcome to AstroCMS",
+      heroBody: "A code-first, single-schema CMS built inside Astro.",
+      heroCtaLabel: "Get started",
+      heroCtaHref: "/admin",
+      featuredPosts: [],
+    },
+  ],
   menus: [
     {
       name: "Main Navigation",

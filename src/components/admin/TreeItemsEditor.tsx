@@ -385,13 +385,7 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
               <Button variant="ghost" size="icon-sm" className="size-7" onClick={saveEdit} title="Save">
                 <Check className="size-3.5" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="size-7"
-                onClick={cancelEdit}
-                title="Cancel"
-              >
+              <Button variant="ghost" size="icon-sm" className="size-7" onClick={cancelEdit} title="Cancel">
                 <X className="size-3.5" />
               </Button>
             </div>
