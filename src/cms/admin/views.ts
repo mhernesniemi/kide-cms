@@ -17,6 +17,12 @@ export default {
       defaultSort: { field: "_updatedAt", direction: "desc" },
     },
   },
+  users: {
+    list: {
+      columns: ["name", "email", "role", "_updatedAt"],
+      defaultSort: { field: "_updatedAt", direction: "desc" },
+    },
+  },
   authors: {
     list: {
       columns: ["name", "role", "_updatedAt"],
