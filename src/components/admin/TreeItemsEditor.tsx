@@ -567,7 +567,7 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
         {items.length > 0 ? (
           items.map((item) => renderItem(item, 0))
         ) : (
-          <div className="text-muted-foreground py-8 text-center text-sm">{emptyLabel} Add one below.</div>
+          <div className="text-muted-foreground py-8 text-center text-sm">{emptyLabel}</div>
         )}
       </div>
       <Button type="button" variant="outline" size="sm" onClick={addRootItem}>
