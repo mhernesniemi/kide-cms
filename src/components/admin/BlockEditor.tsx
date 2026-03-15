@@ -1,12 +1,22 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { ChevronRight, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { GripVertical, ChevronRight, Plus, Trash2 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/admin/ui/button";
 import { Input } from "@/components/admin/ui/input";
 import { Label } from "@/components/admin/ui/label";
 import { Textarea } from "@/components/admin/ui/textarea";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/admin/ui/collapsible";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import ImagePicker from "@/components/admin/ImagePicker";
 import SelectField from "@/components/admin/SelectField";
@@ -79,12 +89,119 @@ function serializeBlocks(blocks: Block[]): string {
   return JSON.stringify(blocks.map(({ _key, ...rest }) => rest));
 }
 
+// -----------------------------------------------
+// Sortable block card
+// -----------------------------------------------
+
+function SortableBlock({
+  block,
+  fieldsMeta,
+  isExpanded,
+  onToggle,
+  onRemove,
+  onUpdateField,
+}: {
+  block: Block;
+  fieldsMeta: Record<string, SubFieldMeta>;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onRemove: () => void;
+  onUpdateField: (fieldName: string, value: unknown) => void;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id: block._key,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const preview = getPreviewText(block, fieldsMeta);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-lg border ${isDragging ? "z-10 opacity-90 shadow-lg" : ""}`}
+    >
+      {/* Header — entire row is clickable to expand/collapse */}
+      <div
+        className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors select-none"
+        onClick={onToggle}
+      >
+        {/* Drag handle */}
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          className="text-muted-foreground/50 hover:text-muted-foreground -ml-1 cursor-grab touch-none rounded p-1 transition-colors active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="size-4" />
+        </button>
+
+        <ChevronRight
+          className={`text-muted-foreground size-4 shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+        />
+
+        <span className="bg-secondary text-secondary-foreground rounded px-2 py-0.5 text-xs font-medium">
+          {humanize(block.type)}
+        </span>
+
+        {!isExpanded && preview && <span className="text-muted-foreground min-w-0 truncate text-sm">{preview}</span>}
+
+        <div className="ml-auto flex shrink-0 items-center">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-destructive size-7"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Content */}
+      {isExpanded && (
+        <div className="space-y-4 border-t px-4 py-4">
+          {Object.entries(fieldsMeta).map(([fieldName, meta]) => (
+            <SubField
+              key={fieldName}
+              blockKey={block._key}
+              fieldName={fieldName}
+              meta={meta}
+              value={block[fieldName]}
+              onChange={(v) => onUpdateField(fieldName, v)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// -----------------------------------------------
+// Main editor
+// -----------------------------------------------
+
 export default function BlockEditor({ name, value, types }: Props) {
   const [blocks, setBlocks] = useState<Block[]>(() => parseBlocks(value, types));
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
   const hiddenRef = useRef<HTMLInputElement>(null);
 
   const typeNames = Object.keys(types);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
 
   const dispatchChange = useCallback(() => {
     if (hiddenRef.current) {
@@ -96,12 +213,25 @@ export default function BlockEditor({ name, value, types }: Props) {
     (updater: (prev: Block[]) => Block[]) => {
       setBlocks((prev) => {
         const next = updater(prev);
-        // Schedule change event after render
         setTimeout(dispatchChange, 0);
         return next;
       });
     },
     [dispatchChange],
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      updateBlocks((prev) => {
+        const oldIndex = prev.findIndex((b) => b._key === active.id);
+        const newIndex = prev.findIndex((b) => b._key === over.id);
+        if (oldIndex === -1 || newIndex === -1) return prev;
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    },
+    [updateBlocks],
   );
 
   const addBlock = useCallback(
@@ -128,20 +258,6 @@ export default function BlockEditor({ name, value, types }: Props) {
   const removeBlock = useCallback(
     (key: string) => {
       updateBlocks((prev) => prev.filter((b) => b._key !== key));
-    },
-    [updateBlocks],
-  );
-
-  const moveBlock = useCallback(
-    (key: string, direction: -1 | 1) => {
-      updateBlocks((prev) => {
-        const idx = prev.findIndex((b) => b._key === key);
-        const targetIdx = idx + direction;
-        if (idx < 0 || targetIdx < 0 || targetIdx >= prev.length) return prev;
-        const next = [...prev];
-        [next[idx], next[targetIdx]] = [next[targetIdx], next[idx]];
-        return next;
-      });
     },
     [updateBlocks],
   );
@@ -174,83 +290,26 @@ export default function BlockEditor({ name, value, types }: Props) {
         </div>
       )}
 
-      {blocks.map((block, index) => {
-        const fieldsMeta = types[block.type] ?? {};
-        const isExpanded = expandedKeys.has(block._key);
-        const preview = getPreviewText(block, fieldsMeta);
-
-        return (
-          <Collapsible key={block._key} open={isExpanded}>
-            <div className="rounded-lg border">
-              {/* Header */}
-              <div className="flex items-center gap-2 px-3 py-2">
-                <CollapsibleTrigger
-                  className="hover:bg-accent -ml-1 rounded p-1 transition-colors"
-                  onClick={() => toggleExpanded(block._key)}
-                >
-                  <ChevronRight
-                    className={`text-muted-foreground size-4 transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                  />
-                </CollapsibleTrigger>
-
-                <span className="bg-secondary text-secondary-foreground rounded px-2 py-0.5 text-xs font-medium">
-                  {humanize(block.type)}
-                </span>
-
-                {!isExpanded && preview && <span className="text-muted-foreground truncate text-sm">{preview}</span>}
-
-                <div className="ml-auto flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    disabled={index === 0}
-                    onClick={() => moveBlock(block._key, -1)}
-                  >
-                    <ArrowUp className="size-3.5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    disabled={index === blocks.length - 1}
-                    onClick={() => moveBlock(block._key, 1)}
-                  >
-                    <ArrowDown className="size-3.5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive size-7"
-                    onClick={() => removeBlock(block._key)}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Content */}
-              <CollapsibleContent>
-                <div className="space-y-4 border-t px-4 py-4">
-                  {Object.entries(fieldsMeta).map(([fieldName, meta]) => (
-                    <SubField
-                      key={fieldName}
-                      blockKey={block._key}
-                      fieldName={fieldName}
-                      meta={meta}
-                      value={block[fieldName]}
-                      onChange={(v) => updateField(block._key, fieldName, v)}
-                    />
-                  ))}
-                </div>
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
-        );
-      })}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={blocks.map((b) => b._key)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-3">
+            {blocks.map((block) => {
+              const fieldsMeta = types[block.type] ?? {};
+              return (
+                <SortableBlock
+                  key={block._key}
+                  block={block}
+                  fieldsMeta={fieldsMeta}
+                  isExpanded={expandedKeys.has(block._key)}
+                  onToggle={() => toggleExpanded(block._key)}
+                  onRemove={() => removeBlock(block._key)}
+                  onUpdateField={(fn, v) => updateField(block._key, fn, v)}
+                />
+              );
+            })}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {/* Add block buttons */}
       <div className="flex flex-wrap gap-2">
