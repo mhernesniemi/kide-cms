@@ -35,10 +35,73 @@ const locales = localeConfig?.supported ?? [];
 const defaultLocale = localeConfig?.default ?? "en";
 const requestedLocale = Astro.url.searchParams.get("locale") ?? defaultLocale;
 
-// Redirect /admin to first non-singleton collection
+// Redirect /admin to recent
 if (route.kind === "dashboard") {
-  const firstRegular = config.collections.find((c) => !c.singleton);
-  return Astro.redirect(firstRegular ? `/admin/${firstRegular.slug}` : "/admin/singles");
+  return Astro.redirect("/admin/recent");
+}
+
+// Derive visual status: "draft" | "published" | "scheduled" | "changed"
+const getVisualStatus = (d: Record<string, unknown>): string => {
+  const status = String(d._status ?? "draft");
+  if (status === "scheduled") return "scheduled";
+  if (status === "published" && d._publishedAt && d._updatedAt) {
+    return String(d._updatedAt) > String(d._publishedAt) ? "changed" : "published";
+  }
+  return status;
+};
+
+// Recent entries page — all content collections (non-utility) sorted by updatedAt
+const pinnedSlugs = new Set(["taxonomies", "menus", "authors", "users"]);
+const contentCollections = config.collections.filter((c) => !c.auth && !pinnedSlugs.has(c.slug));
+let recentRows: Array<{
+  id: string;
+  editHref: string;
+  status: string;
+  locales: string[];
+  searchText: string;
+  values: Record<string, string>;
+}> = [];
+if (route.kind === "recent") {
+  const allEntries: Array<{
+    doc: Record<string, unknown>;
+    collection: (typeof contentCollections)[0];
+  }> = [];
+
+  for (const cc of contentCollections) {
+    const api = cmsRuntime[cc.slug];
+    const docs = await api.find(
+      { status: "any", locale: defaultLocale, sort: { field: "_updatedAt", direction: "desc" }, limit: 50 },
+      runtimeContext,
+    );
+    for (const doc of docs) {
+      allEntries.push({ doc, collection: cc });
+    }
+  }
+
+  allEntries.sort((a, b) => String(b.doc._updatedAt ?? "").localeCompare(String(a.doc._updatedAt ?? "")));
+  const topEntries = allEntries.slice(0, 50);
+
+  recentRows = topEntries.map(({ doc, collection: cc }) => {
+    const displayTitle = cc.singleton
+      ? cc.labels.singular
+      : String(doc.title ?? doc.name ?? doc.slug ?? cc.labels.singular);
+    return {
+      id: String(doc._id),
+      editHref: `/admin/${cc.slug}/${doc._id}`,
+      status: getVisualStatus(doc),
+      locales: [
+        defaultLocale,
+        ...(Array.isArray(doc._availableLocales) ? doc._availableLocales.map((l) => String(l)) : []),
+      ],
+      searchText: displayTitle,
+      values: {
+        title: displayTitle,
+        collection: cc.labels.singular,
+        _status: getVisualStatus(doc),
+        _updatedAt: formatDate(doc._updatedAt),
+      },
+    };
+  });
 }
 
 // Singles listing page
@@ -195,16 +258,6 @@ const listColumns = collection ? getListColumns(collection, viewConfig.list) : [
 const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
 const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
 
-// Derive visual status: "draft" | "published" | "changed"
-const getVisualStatus = (d: Record<string, unknown>): string => {
-  const status = String(d._status ?? "draft");
-  if (status === "scheduled") return "scheduled";
-  if (status === "published" && d._publishedAt && d._updatedAt) {
-    return String(d._updatedAt) > String(d._publishedAt) ? "changed" : "published";
-  }
-  return status;
-};
-
 const tableRows =
   collection && route.kind === "list"
     ? docs.map((entry) => ({
@@ -233,10 +286,38 @@ const tableRows =
 ---
 
 <AdminLayout
-  title={route.kind === "singles" ? "Singles | AstroCMS" : `${collection?.labels?.plural ?? "Admin"} | AstroCMS`}
+  title={route.kind === "recent"
+    ? "Recent | AstroCMS"
+    : route.kind === "singles"
+      ? "Singles | AstroCMS"
+      : `${collection?.labels?.plural ?? "Admin"} | AstroCMS`}
   collections={config.collections}
-  activeCollection={collectionSlug ?? "singles"}
+  activeCollection={route.kind === "recent" ? "recent" : (collectionSlug ?? "singles")}
 >
+  {
+    route.kind === "recent" && (
+      <section class="space-y-6">
+        <div class="flex items-start justify-between gap-4">
+          <h1 class="text-2xl font-semibold tracking-tight">Recent</h1>
+        </div>
+        <DocumentsDataTable
+          client:load
+          collectionSlug="recent"
+          draftsEnabled={true}
+          title="Recent"
+          columns={[
+            { key: "title", label: "Title" },
+            { key: "collection", label: "Collection" },
+            { key: "_status", label: "Status" },
+            { key: "_updatedAt", label: "Updated" },
+          ]}
+          data={recentRows}
+          searchPlaceholder="Filter recent entries..."
+        />
+      </section>
+    )
+  }
+
   {
     route.kind === "singles" && (
       <section class="space-y-6">

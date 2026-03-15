@@ -1,7 +1,7 @@
 ---
 import "../styles/admin.css";
 
-import { FileText, FolderTree, Image, Layers, LayoutGrid, Menu, PencilRuler, Users } from "lucide-react";
+import { Clock, FileText, FolderTree, Image, Layers, LayoutGrid, Menu, PencilRuler, Users } from "lucide-react";
 
 import MobileSidebar from "@/components/admin/MobileSidebar";
 import SidebarUserMenu from "@/components/admin/SidebarUserMenu";
@@ -48,6 +48,14 @@ const isActiveSingles =
 
 type NavItem = { href: string; label: string; Icon: any; active: boolean };
 const navItems: NavItem[] = [];
+
+// 0. Recent — cross-collection recent entries
+navItems.push({
+  href: "/admin/recent",
+  label: "Recent",
+  Icon: Clock,
+  active: activeCollection === "recent",
+});
 
 // 1. Content collections — non-singleton, non-pinned, alphabetical
 const contentCollections = collections
