@@ -608,7 +608,9 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
             <>
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <span className="truncate font-medium">{getItemLabel(item, variant)}</span>
-                <span className="text-muted-foreground truncate text-xs">{getItemSublabel(item, variant)}</span>
+                {variant === "menu" && (
+                  <span className="text-muted-foreground truncate text-xs">{getItemSublabel(item, variant)}</span>
+                )}
                 {variant === "menu" && item.target === "_blank" && (
                   <span className="text-muted-foreground text-xs">(new tab)</span>
                 )}
