@@ -17,18 +17,26 @@ type RelationOption = {
   label: string;
 };
 
+type LinkOptionGroup = {
+  collection: string;
+  label: string;
+  items: Array<{ id: string; label: string; href: string }>;
+};
+
 const {
   name,
   field,
   value,
   relationOptions = [],
   readOnly = false,
+  menuLinkOptions = [],
 } = Astro.props as {
   name: string;
   field: FieldConfig;
   value?: unknown;
   relationOptions?: RelationOption[];
   readOnly?: boolean;
+  menuLinkOptions?: LinkOptionGroup[];
 };
 
 const label = field.label ?? humanize(name);
@@ -175,7 +183,7 @@ const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg
 
   {
     field.type === "json" && field.admin?.component === "menu-items" && !readOnly && (
-      <TreeItemsEditor client:load name={name} value={serializedValue} variant="menu" />
+      <TreeItemsEditor client:load name={name} value={serializedValue} variant="menu" linkOptions={menuLinkOptions} />
     )
   }
 

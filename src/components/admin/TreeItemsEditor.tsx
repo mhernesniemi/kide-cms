@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import * as ReactDOM from "react-dom";
 import { Check, ChevronRight, Indent, Outdent, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/admin/ui/button";
 import { Input } from "@/components/admin/ui/input";
@@ -20,10 +21,17 @@ type TreeItem = {
   [key: string]: unknown;
 };
 
+type LinkOptionGroup = {
+  collection: string;
+  label: string;
+  items: Array<{ id: string; label: string; href: string }>;
+};
+
 type Props = {
   name: string;
   value?: string;
   variant: "menu" | "taxonomy";
+  linkOptions?: LinkOptionGroup[];
 };
 
 function generateId() {
@@ -65,7 +73,108 @@ function getItemSublabel(item: TreeItem, variant: "menu" | "taxonomy"): string {
   return String(variant === "menu" ? item.href : item.slug) || "";
 }
 
-export default function TreeItemsEditor({ name, value, variant }: Props) {
+function InternalLinkPicker({
+  editHref,
+  internalSearch,
+  internalOpen,
+  filteredLinkOptions,
+  onSearchChange,
+  onFocus,
+  onClose,
+  onSelect,
+}: {
+  editHref: string;
+  internalSearch: string;
+  internalOpen: boolean;
+  filteredLinkOptions: LinkOptionGroup[];
+  onSearchChange: (v: string) => void;
+  onFocus: () => void;
+  onClose: () => void;
+  onSelect: (item: { id: string; label: string; href: string }) => void;
+}) {
+  const triggerRef = React.useRef<HTMLInputElement>(null);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const [pos, setPos] = React.useState({ top: 0, left: 0, width: 0 });
+
+  // Compute position from trigger input
+  React.useEffect(() => {
+    if (!internalOpen || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }, [internalOpen, internalSearch]);
+
+  // Close on outside click
+  React.useEffect(() => {
+    if (!internalOpen) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [internalOpen, onClose]);
+
+  // Find the selected item label to display
+  const selectedLabel = React.useMemo(() => {
+    if (!editHref) return "";
+    for (const group of filteredLinkOptions) {
+      const found = group.items.find((item) => item.href === editHref);
+      if (found) return found.label;
+    }
+    return editHref;
+  }, [editHref, filteredLinkOptions]);
+
+  return (
+    <div className="min-w-0 flex-1">
+      <Input
+        ref={triggerRef}
+        value={editHref ? selectedLabel : internalSearch}
+        onChange={(e) => onSearchChange(e.target.value)}
+        onFocus={onFocus}
+        placeholder="Search documents..."
+        className="h-7 text-sm"
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onClose();
+        }}
+      />
+      {internalOpen &&
+        ReactDOM.createPortal(
+          <div
+            ref={dropdownRef}
+            className="bg-popover text-popover-foreground fixed z-9999 max-h-60 overflow-y-auto rounded-md border shadow-md"
+            style={{ top: pos.top, left: pos.left, width: Math.max(pos.width, 220) }}
+          >
+            {filteredLinkOptions.length === 0 ? (
+              <div className="text-muted-foreground p-3 text-center text-xs">No documents found</div>
+            ) : (
+              filteredLinkOptions.map((group) => (
+                <div key={group.collection}>
+                  <div className="text-muted-foreground bg-muted/50 sticky top-0 px-3 py-1.5 text-xs font-medium">
+                    {group.label}
+                  </div>
+                  {group.items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="hover:bg-accent flex w-full items-center px-3 py-1.5 text-left text-xs"
+                      onClick={() => onSelect(item)}
+                    >
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              ))
+            )}
+          </div>,
+          document.body,
+        )}
+    </div>
+  );
+}
+
+export default function TreeItemsEditor({ name, value, variant, linkOptions = [] }: Props) {
   const [items, setItems] = React.useState<TreeItem[]>(() => parseItems(value));
   const [editingId, setEditingId] = React.useState<string | null>(null);
 
@@ -73,6 +182,9 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
   const [editLabel, setEditLabel] = React.useState("");
   const [editHref, setEditHref] = React.useState("");
   const [editTarget, setEditTarget] = React.useState("");
+  const [editLinkType, setEditLinkType] = React.useState<"external" | "internal">("internal");
+  const [internalSearch, setInternalSearch] = React.useState("");
+  const [internalOpen, setInternalOpen] = React.useState(false);
 
   // Taxonomy edit fields
   const [editName, setEditName] = React.useState("");
@@ -137,6 +249,8 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
     setEditLabel("");
     setEditHref("");
     setEditTarget("");
+    setEditLinkType("internal");
+    setInternalSearch("");
     setEditName("");
     setEditSlug("");
     setEditAutoSlug(true);
@@ -189,6 +303,10 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
       setEditLabel(String(item.label ?? ""));
       setEditHref(String(item.href ?? ""));
       setEditTarget(String(item.target ?? ""));
+      // Detect link type from existing href
+      const isInternal = linkOptions.some((group) => group.items.some((li) => li.href === String(item.href ?? "")));
+      setEditLinkType(isInternal ? "internal" : "external");
+      setInternalSearch("");
     } else {
       setEditName(String(item.name ?? ""));
       setEditSlug(String(item.slug ?? ""));
@@ -305,34 +423,92 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
     if (e.key === "Escape") cancelEdit();
   };
 
+  // Filtered internal link options for combobox
+  const filteredLinkOptions = React.useMemo(() => {
+    const q = internalSearch.toLowerCase();
+    if (!q) return linkOptions;
+    return linkOptions
+      .map((group) => ({
+        ...group,
+        items: group.items.filter(
+          (item) => item.label.toLowerCase().includes(q) || item.href.toLowerCase().includes(q),
+        ),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [linkOptions, internalSearch]);
+
   const renderEditFields = () => {
     if (variant === "menu") {
       return (
-        <>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {/* Label — 50% */}
           <Input
             value={editLabel}
             onChange={(e) => setEditLabel(e.target.value)}
             placeholder="Label"
-            className="h-7 flex-1 text-sm"
+            className="h-7 min-w-0 flex-[2] text-sm"
             autoFocus
             onKeyDown={editKeyHandler}
           />
-          <Input
-            value={editHref}
-            onChange={(e) => setEditHref(e.target.value)}
-            placeholder="/path"
-            className="h-7 w-32 text-sm"
-            onKeyDown={editKeyHandler}
-          />
-          <select
-            value={editTarget}
-            onChange={(e) => setEditTarget(e.target.value)}
-            className="border-input bg-background h-7 rounded-md border px-2 text-sm"
+          {/* Link type — 25% */}
+          <Select
+            items={[
+              { value: "external", label: "External link" },
+              { value: "internal", label: "Internal link" },
+            ]}
+            value={editLinkType}
+            onValueChange={(v) => {
+              const newType = (v as "external" | "internal") ?? "external";
+              setEditLinkType(newType);
+              if (newType === "external") {
+                setInternalOpen(false);
+              } else {
+                setEditHref("");
+                setInternalOpen(true);
+              }
+            }}
           >
-            <option value="">Same tab</option>
-            <option value="_blank">New tab</option>
-          </select>
-        </>
+            <SelectTrigger className="!h-7 min-w-0 flex-1 text-sm">
+              <SelectValue placeholder="Link type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="external">External link</SelectItem>
+                <SelectItem value="internal">Internal link</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          {/* URL / Internal picker — 25% */}
+          {editLinkType === "external" ? (
+            <Input
+              value={editHref}
+              onChange={(e) => setEditHref(e.target.value)}
+              placeholder="/path or https://..."
+              className="h-7 min-w-0 flex-1 text-sm"
+              onKeyDown={editKeyHandler}
+            />
+          ) : (
+            <InternalLinkPicker
+              editHref={editHref}
+              internalSearch={internalSearch}
+              internalOpen={internalOpen}
+              filteredLinkOptions={filteredLinkOptions}
+              onSearchChange={(v) => {
+                setInternalSearch(v);
+                setEditHref("");
+                setInternalOpen(true);
+              }}
+              onFocus={() => setInternalOpen(true)}
+              onClose={() => setInternalOpen(false)}
+              onSelect={(item) => {
+                setEditHref(item.href);
+                if (!editLabel) setEditLabel(item.label);
+                setInternalSearch("");
+                setInternalOpen(false);
+              }}
+            />
+          )}
+        </div>
       );
     }
     return (
@@ -388,15 +564,31 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
           )}
 
           {isEditing ? (
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              {renderEditFields()}
-              <Button variant="ghost" size="icon-sm" className="size-7" onClick={saveEdit} title="Save">
-                <Check className="size-3.5" />
-              </Button>
-              <Button variant="ghost" size="icon-sm" className="size-7" onClick={cancelEdit} title="Cancel">
-                <X className="size-3.5" />
-              </Button>
-            </div>
+            <>
+              {variant === "menu" ? (
+                <>
+                  {renderEditFields()}
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <Button variant="ghost" size="icon-sm" className="size-7" onClick={saveEdit} title="Save">
+                      <Check className="size-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon-sm" className="size-7" onClick={cancelEdit} title="Cancel">
+                      <X className="size-3.5" />
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  {renderEditFields()}
+                  <Button variant="ghost" size="icon-sm" className="size-7" onClick={saveEdit} title="Save">
+                    <Check className="size-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon-sm" className="size-7" onClick={cancelEdit} title="Cancel">
+                    <X className="size-3.5" />
+                  </Button>
+                </div>
+              )}
+            </>
           ) : (
             <>
               <div className="flex min-w-0 flex-1 items-center gap-3">

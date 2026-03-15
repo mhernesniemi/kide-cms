@@ -81,6 +81,11 @@ let doc: Record<string, unknown> | null = null;
 let baseDoc: Record<string, unknown> | null = null;
 let relationOptionsByField: Record<string, Array<{ value: string; label: string }>> = {};
 let versions: Array<{ version: number; createdAt: string }> = [];
+let menuLinkOptions: Array<{
+  collection: string;
+  label: string;
+  items: Array<{ id: string; label: string; href: string }>;
+}> = [];
 
 const collectionSlug = "collectionSlug" in route ? route.collectionSlug : null;
 const collection = collectionSlug ? (cms.meta.getCollection(collectionSlug) as any) : null;
@@ -119,6 +124,29 @@ if (collection && collectionSlug) {
         value: String(item._id),
         label: String(item.title ?? item.name ?? item.slug ?? item._id),
       }));
+    }
+  }
+
+  // Build link options for menu editors: fetch linkable documents from content collections
+  if (collectionSlug === "menus" && (route.kind === "edit" || route.kind === "new")) {
+    const linkableCollections = config.collections.filter(
+      (c) => !c.singleton && !["users", "menus", "taxonomies", "authors"].includes(c.slug) && c.fields.slug,
+    );
+    for (const lc of linkableCollections) {
+      const lcApi = cmsRuntime[lc.slug];
+      const lcDocs = await lcApi.find(
+        { status: "any", limit: 200, sort: { field: "_updatedAt", direction: "desc" }, locale: defaultLocale },
+        runtimeContext,
+      );
+      menuLinkOptions.push({
+        collection: lc.slug,
+        label: lc.labels.plural,
+        items: lcDocs.map((d: Record<string, unknown>) => ({
+          id: String(d._id),
+          label: String(d.title ?? d.name ?? d.slug ?? d._id),
+          href: cms.meta.getRouteForDocument(lc.slug, d),
+        })),
+      });
     }
   }
 }
@@ -380,6 +408,7 @@ const tableRows =
                             field={collection.fields[fieldName]}
                             value={getCurrentValue(fieldName)}
                             relationOptions={relationOptionsByField[fieldName] ?? []}
+                            menuLinkOptions={menuLinkOptions}
                           />
                         ))}
                       </div>
@@ -397,6 +426,7 @@ const tableRows =
                             field={collection.fields[fieldName]}
                             value={getCurrentValue(fieldName)}
                             relationOptions={relationOptionsByField[fieldName] ?? []}
+                            menuLinkOptions={menuLinkOptions}
                           />
                         ))}
                       </div>
@@ -429,6 +459,7 @@ const tableRows =
                             field={collection.fields[fieldName]}
                             value={getCurrentValue(fieldName)}
                             relationOptions={relationOptionsByField[fieldName] ?? []}
+                            menuLinkOptions={menuLinkOptions}
                           />
                         ))}
                       </div>
