@@ -170,8 +170,12 @@ const handleHtmlMutation = async (
 
     return redirect(redirectTo);
   } catch (error) {
-    const msg = error instanceof Error ? error.message : `Failed to ${action}`;
-    const fallback = documentId ? redirectTo : `/admin/${collectionSlug}`;
+    let msg = error instanceof Error ? error.message : `Failed to ${action}`;
+    if (msg.includes("UNIQUE constraint failed")) {
+      const field = msg.split(".").pop() ?? "field";
+      msg = `A document with this ${field} already exists`;
+    }
+    const fallback = documentId ? redirectTo : redirectTo || `/admin/${collectionSlug}/new`;
     return redirect(fallback, { status: "error", msg });
   }
 };
