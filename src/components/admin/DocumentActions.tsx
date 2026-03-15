@@ -144,12 +144,7 @@ export default function DocumentActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
-          {showSchedule && (
-            <DropdownMenuItem onClick={() => setScheduleOpen(true)}>
-              <CalendarClock className="mr-2 size-4" />
-              Schedule publish
-            </DropdownMenuItem>
-          )}
+          {showSchedule && <DropdownMenuItem onClick={() => setScheduleOpen(true)}>Schedule publish</DropdownMenuItem>}
           {showCancelSchedule && (
             <DropdownMenuItem onClick={() => submitAction("unpublish")}>Cancel schedule</DropdownMenuItem>
           )}

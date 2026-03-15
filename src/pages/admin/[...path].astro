@@ -1,5 +1,5 @@
 ---
-import { ArrowUpRight, Globe2, Dot, Languages, Plus } from "lucide-react";
+import { ArrowUpRight, Dot, Languages, Plus } from "lucide-react";
 
 import AdminCard from "@/components/admin/AdminCard.astro";
 import DocumentActions from "@/components/admin/DocumentActions";
@@ -409,6 +409,7 @@ const tableRows =
             client:load
             collectionSlug={collection.slug}
             draftsEnabled={collection.drafts}
+            newHref={`/admin/${collection.slug}/new`}
             title={collection.labels.plural}
             columns={listColumns.map((column) => ({ key: column, label: humanize(column) }))}
             data={tableRows}
@@ -429,18 +430,22 @@ const tableRows =
                 {locales.length > 1 &&
                   route.kind === "edit" &&
                   translatableFields.length > 0 &&
-                  locales.map((locale) => (
-                    <a
-                      href={`/admin/${collection.slug}/${route.documentId}?locale=${locale}`}
-                      class={buttonVariants({
-                        variant: selectedLocale === locale ? "secondary" : "outline",
-                        size: "sm",
-                      })}
-                    >
-                      <Globe2 className="size-4" />
-                      {locale}
-                    </a>
-                  ))}
+                  locales.map((locale) => {
+                    const isActive = selectedLocale === locale;
+                    return (
+                      <a
+                        href={`/admin/${collection.slug}/${route.documentId}?locale=${locale}`}
+                        class:list={[
+                          buttonVariants({ variant: "outline", size: "sm" }),
+                          isActive
+                            ? "border-primary/50 bg-background ring-ring/30 font-medium ring-2"
+                            : "text-muted-foreground border-border/60",
+                        ]}
+                      >
+                        {locale}
+                      </a>
+                    );
+                  })}
               </div>
               <div class="flex flex-wrap items-center gap-2">
                 <button
@@ -605,6 +610,11 @@ const tableRows =
   (function () {
     var form = document.getElementById("document-form");
     if (!form) return;
+    // Autofocus first text input on new document pages
+    if (location.pathname.endsWith("/new")) {
+      var first = form.querySelector('input[type="text"], textarea');
+      if (first) first.focus();
+    }
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       var f = e.target;

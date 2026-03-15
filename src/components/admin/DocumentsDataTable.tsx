@@ -38,7 +38,6 @@ import { Button } from "@/components/admin/ui/button";
 import { Checkbox } from "@/components/admin/ui/checkbox";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -65,6 +64,7 @@ type DataTableRow = {
 type DocumentsDataTableProps = {
   collectionSlug: string;
   draftsEnabled?: boolean;
+  newHref?: string;
   title: string;
   searchPlaceholder?: string;
   columns: DataTableColumn[];
@@ -95,6 +95,7 @@ function DataTableColumnHeader({ column, title }: { column: Column<DataTableRow,
 export default function DocumentsDataTable({
   collectionSlug,
   draftsEnabled = false,
+  newHref,
   title,
   searchPlaceholder = "Filter documents...",
   columns,
@@ -109,6 +110,21 @@ export default function DocumentsDataTable({
   const [rowSelection, setRowSelection] = React.useState({});
   const [isPending, startTransition] = React.useTransition();
   const [deleteConfirm, setDeleteConfirm] = React.useState<DataTableRow[] | null>(null);
+
+  // "C" hotkey to create new document
+  React.useEffect(() => {
+    if (!newHref) return;
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === "c" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        if ((e.target as HTMLElement).isContentEditable) return;
+        window.location.assign(newHref);
+      }
+    };
+    document.addEventListener("keydown", handleKeydown);
+    return () => document.removeEventListener("keydown", handleKeydown);
+  }, [newHref]);
 
   const primaryColumnKey = columns.find((column) => !column.key.startsWith("_"))?.key ?? columns[0]?.key;
 
@@ -343,7 +359,7 @@ export default function DocumentsDataTable({
           {selectedRows.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="secondary" size="sm" disabled={isPending}>
+                <Button variant="outline" size="sm" disabled={isPending}>
                   {isPending ? "Working..." : `${selectedRows.length} selected`}
                   <ChevronDown className="size-4" />
                 </Button>
@@ -391,30 +407,6 @@ export default function DocumentsDataTable({
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                Columns
-                <ChevronDown className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                    className="capitalize"
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
