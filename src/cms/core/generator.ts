@@ -69,6 +69,8 @@ const generateMainTable = (collection: CollectionConfig): string => {
   if (collection.drafts) {
     columns.push(`  _status: text("_status").notNull().default("draft"),`);
     columns.push(`  _publishedAt: text("_published_at"),`);
+    columns.push(`  _publishAt: text("_publish_at"),`);
+    columns.push(`  _unpublishAt: text("_unpublish_at"),`);
   }
 
   if (collection.timestamps !== false) {
@@ -317,8 +319,10 @@ const generateTypesFile = (): string => {
     parts.push("");
     parts.push(`export type ${docName} = ${inputName} & {
   _id: string;
-  _status: "draft" | "published";
+  _status: "draft" | "published" | "scheduled";
   _publishedAt?: string | null;
+  _publishAt?: string | null;
+  _unpublishAt?: string | null;
   _createdAt: string;
   _updatedAt: string;
   _locale?: string | null;
@@ -355,8 +359,8 @@ const generateApiFile = (): string => {
       const apiKey = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(collection.slug) ? collection.slug : `"${collection.slug}"`;
       return `  ${apiKey}: {
     find(options?: import("../core/api").FindOptions, ${ctx}): Promise<${baseName}Document[]>;
-    findOne(filter: Record<string, unknown> & { locale?: string; status?: "draft" | "published" | "any" }, ${ctx}): Promise<${baseName}Document | null>;
-    findById(id: string, options?: { locale?: string; status?: "draft" | "published" | "any" }, ${ctx}): Promise<${baseName}Document | null>;
+    findOne(filter: Record<string, unknown> & { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, ${ctx}): Promise<${baseName}Document | null>;
+    findById(id: string, options?: { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, ${ctx}): Promise<${baseName}Document | null>;
     create(data: ${baseName}Input, ${ctx}): Promise<${baseName}Document>;
     update(id: string, data: Partial<${baseName}Input>, ${ctx}): Promise<${baseName}Document>;
     delete(id: string, ${ctx}): Promise<void>;
@@ -365,6 +369,7 @@ const generateApiFile = (): string => {
     restore(id: string, versionNumber: number, ${ctx}): Promise<${baseName}Document>;
     publish(id: string, ${ctx}): Promise<${baseName}Document>;
     unpublish(id: string, ${ctx}): Promise<${baseName}Document>;
+    schedule(id: string, publishAt: string, unpublishAt?: string | null, ${ctx}): Promise<${baseName}Document>;
     getTranslations(id: string): Promise<Record<string, ${baseName}TranslationInput>>;
     upsertTranslation(id: string, locale: string, data: ${baseName}TranslationInput, ${ctx}): Promise<${baseName}Document>;
   };`;

@@ -41,6 +41,20 @@ export default function cmsIntegration(): AstroIntegration {
           const configPath = path.join(process.cwd(), "src/cms/collections.config.ts");
           let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
+          // Run scheduled publishing every 60s in dev
+          const CRON_INTERVAL = 60_000;
+          setInterval(async () => {
+            try {
+              const { cms } = await import("./.generated/api");
+              const result = await (cms as any).scheduled.processPublishing();
+              if (result.published > 0 || result.unpublished > 0) {
+                console.log(`  [cms] Scheduled: ${result.published} published, ${result.unpublished} unpublished`);
+              }
+            } catch {
+              // Silently ignore — DB may not be ready yet
+            }
+          }, CRON_INTERVAL);
+
           watch(configPath, () => {
             if (debounceTimer) clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {

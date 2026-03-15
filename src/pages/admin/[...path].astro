@@ -198,6 +198,7 @@ const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : un
 // Derive visual status: "draft" | "published" | "changed"
 const getVisualStatus = (d: Record<string, unknown>): string => {
   const status = String(d._status ?? "draft");
+  if (status === "scheduled") return "scheduled";
   if (status === "published" && d._publishedAt && d._updatedAt) {
     return String(d._updatedAt) > String(d._publishedAt) ? "changed" : "published";
   }
@@ -282,6 +283,18 @@ const tableRows =
             {route.kind === "edit" && doc && collection.drafts && (
               <div class="text-muted-foreground mt-1 flex items-center text-xs">
                 <StatusBadge status={getVisualStatus(doc)} />
+                {doc._status === "scheduled" && doc._publishAt && (
+                  <>
+                    <Dot className="size-6 text-muted-foreground/70" />
+                    <span>Publishes {formatDate(doc._publishAt)}</span>
+                    {doc._unpublishAt && (
+                      <>
+                        <Dot className="size-6 text-muted-foreground/70" />
+                        <span>Unpublishes {formatDate(doc._unpublishAt)}</span>
+                      </>
+                    )}
+                  </>
+                )}
                 <Dot className="size-6 text-muted-foreground/70" />
                 <span>Created {formatDate(doc._createdAt)}</span>
                 <Dot className="size-6 text-muted-foreground/70" />
@@ -368,7 +381,11 @@ const tableRows =
                     value="publish"
                     disabled={
                       route.kind === "edit" &&
-                      !(doc?._status === "draft" || (doc && getVisualStatus(doc) === "changed"))
+                      !(
+                        doc?._status === "draft" ||
+                        doc?._status === "scheduled" ||
+                        (doc && getVisualStatus(doc) === "changed")
+                      )
                     }
                   >
                     Publish
@@ -380,6 +397,10 @@ const tableRows =
                     formId="document-form"
                     showUnpublish={collection.drafts && doc?._status === "published"}
                     showDelete={!isSingleton}
+                    showSchedule={!!collection.drafts}
+                    showCancelSchedule={collection.drafts && doc?._status === "scheduled"}
+                    currentPublishAt={doc?._publishAt ? String(doc._publishAt) : undefined}
+                    currentUnpublishAt={doc?._unpublishAt ? String(doc._unpublishAt) : undefined}
                     versions={versions}
                     restoreEndpoint={getFormAction(collection.slug, route.documentId)}
                     redirectTo={Astro.url.pathname + Astro.url.search}

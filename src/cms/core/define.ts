@@ -157,7 +157,9 @@ export type AccessContext = {
 
 export type AccessRule = (context: AccessContext) => boolean | Promise<boolean>;
 
-export type CollectionAccess = Partial<Record<"read" | "create" | "update" | "delete" | "publish", AccessRule>>;
+export type CollectionAccess = Partial<
+  Record<"read" | "create" | "update" | "delete" | "publish" | "schedule", AccessRule>
+>;
 
 export type AccessConfig = Record<string, CollectionAccess>;
 
@@ -190,6 +192,16 @@ export type CollectionHooks = {
     context: HookContext,
   ) => Record<string, unknown> | Promise<Record<string, unknown>>;
   afterPublish?: (doc: Record<string, unknown>, context: HookContext) => void | Promise<void>;
+  beforeUnpublish?: (
+    doc: Record<string, unknown>,
+    context: HookContext,
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>;
+  afterUnpublish?: (doc: Record<string, unknown>, context: HookContext) => void | Promise<void>;
+  beforeSchedule?: (
+    doc: Record<string, unknown>,
+    context: HookContext,
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>;
+  afterSchedule?: (doc: Record<string, unknown>, context: HookContext) => void | Promise<void>;
 };
 
 export type HooksConfig = Record<string, CollectionHooks>;

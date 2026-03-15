@@ -1,4 +1,4 @@
-import { eq, sql, and, desc, asc } from "drizzle-orm";
+import { eq, sql, and, desc, asc, lte } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import type { AccessConfig, CMSConfig, CollectionConfig, FieldConfig, HooksConfig, RichTextDocument } from "./define";
@@ -15,7 +15,7 @@ export type FindOptions = {
   };
   limit?: number;
   offset?: number;
-  status?: "draft" | "published" | "any";
+  status?: "draft" | "published" | "scheduled" | "any";
   locale?: string;
 };
 
@@ -30,7 +30,7 @@ type RuntimeContext = {
   };
 };
 
-type CMSOperation = "read" | "create" | "update" | "delete" | "publish";
+type CMSOperation = "read" | "create" | "update" | "delete" | "publish" | "schedule";
 
 const now = () => new Date().toISOString();
 
@@ -576,7 +576,12 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         }
 
         const timestamp = now();
-        const updateValues: Record<string, unknown> = { _status: "published", _publishedAt: timestamp };
+        const updateValues: Record<string, unknown> = {
+          _status: "published",
+          _publishedAt: timestamp,
+          _publishAt: null,
+          _unpublishAt: null,
+        };
         if (collection.timestamps !== false) updateValues._updatedAt = timestamp;
         await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
 
@@ -591,11 +596,64 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         const db = await getDb();
         const tables = await getTableRefs(slug);
 
-        const updateValues: Record<string, unknown> = { _status: "draft", _publishedAt: null };
+        const existingRows = await db.select().from(tables.main).where(eq(tables.main._id, id)).limit(1);
+        if (existingRows.length === 0) throw new Error(`${collection.labels.singular} not found.`);
+
+        const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
+
+        const hookContext = getHookContext(collection, "unpublish", context);
+        if (hooks?.[collection.slug]?.beforeUnpublish) {
+          await hooks[collection.slug].beforeUnpublish!(existing, hookContext);
+        }
+
+        const updateValues: Record<string, unknown> = {
+          _status: "draft",
+          _publishedAt: null,
+          _publishAt: null,
+          _unpublishAt: null,
+        };
         if (collection.timestamps !== false) updateValues._updatedAt = now();
         await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
 
-        return (await this.findById(id, { status: "any" }, context))!;
+        const result = (await this.findById(id, { status: "any" }, context))!;
+        await hooks?.[collection.slug]?.afterUnpublish?.(result, hookContext);
+        return result;
+      },
+
+      async schedule(id: string, publishAt: string, unpublishAt?: string | null, context: RuntimeContext = {}) {
+        if (!collection.drafts) throw new Error(`${collection.labels.singular} does not support draft status.`);
+
+        const db = await getDb();
+        const tables = await getTableRefs(slug);
+
+        const existingRows = await db.select().from(tables.main).where(eq(tables.main._id, id)).limit(1);
+        if (existingRows.length === 0) throw new Error(`${collection.labels.singular} not found.`);
+
+        const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
+
+        // Check access: use "schedule" rule, fall back to "publish"
+        const scheduleAllowed = await canAccess(access, collection, "schedule", context, existing);
+        const publishAllowed = access?.[collection.slug]?.schedule
+          ? scheduleAllowed
+          : await canAccess(access, collection, "publish", context, existing);
+        if (!scheduleAllowed && !publishAllowed) throw new Error(`Access denied for ${collection.slug}.`);
+
+        const hookContext = getHookContext(collection, "schedule", context);
+        if (hooks?.[collection.slug]?.beforeSchedule) {
+          await hooks[collection.slug].beforeSchedule!(existing, hookContext);
+        }
+
+        const updateValues: Record<string, unknown> = {
+          _status: "scheduled",
+          _publishAt: publishAt,
+          _unpublishAt: unpublishAt ?? null,
+        };
+        if (collection.timestamps !== false) updateValues._updatedAt = now();
+        await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
+
+        const result = (await this.findById(id, { status: "any" }))!;
+        await hooks?.[collection.slug]?.afterSchedule?.(result, hookContext);
+        return result;
       },
 
       async count(filter: Omit<FindOptions, "limit" | "offset" | "sort"> = {}, context: RuntimeContext = {}) {
@@ -740,11 +798,60 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
           ? `/${collection.pathPrefix}/${slugValue}`
           : `/${slugValue === "home" ? "" : slugValue}`;
       },
+      getConfig: () => config,
       getLocales: () => config.locales,
       isTranslatableField: (slug: string, fieldName: string) => {
         const collection = ensureCollection(config, slug);
         const field = collection.fields[fieldName];
         return !!field?.translatable && !isStructuralField(field);
+      },
+    },
+    scheduled: {
+      async processPublishing(cache?: { invalidate: (opts: { tags: string[] }) => void | Promise<void> }) {
+        const db = await getDb();
+        const timestamp = now();
+        let published = 0;
+        let unpublished = 0;
+
+        for (const collection of config.collections) {
+          if (!collection.drafts) continue;
+
+          const tables = await getTableRefs(collection.slug);
+          const collectionApiInstance = createCollectionApi(collection.slug);
+          const ctx: RuntimeContext = { cache };
+
+          // Publish scheduled docs whose _publishAt <= now
+          const toPublish = await db
+            .select()
+            .from(tables.main)
+            .where(and(eq(tables.main._status, "scheduled"), lte(tables.main._publishAt, timestamp)));
+
+          for (const row of toPublish) {
+            const doc = row as Record<string, unknown>;
+            await collectionApiInstance.publish(String(doc._id), ctx);
+            published++;
+          }
+
+          // Unpublish published docs whose _unpublishAt <= now
+          const toUnpublish = await db
+            .select()
+            .from(tables.main)
+            .where(
+              and(
+                eq(tables.main._status, "published"),
+                sql`${tables.main._unpublishAt} IS NOT NULL`,
+                lte(tables.main._unpublishAt, timestamp),
+              ),
+            );
+
+          for (const row of toUnpublish) {
+            const doc = row as Record<string, unknown>;
+            await collectionApiInstance.unpublish(String(doc._id), ctx);
+            unpublished++;
+          }
+        }
+
+        return { published, unpublished };
       },
     },
   };

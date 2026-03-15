@@ -1,0 +1,10 @@
+name = "cms-cron-publish"
+main = "cron-publish.js"
+compatibility_date = "2024-01-01"
+
+[triggers]
+crons = ["* * * * *"]  # every minute
+
+[vars]
+# SITE_URL = "https://your-site.com"
+# CRON_SECRET — set via `wrangler secret put CRON_SECRET`

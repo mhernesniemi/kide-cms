@@ -67,7 +67,13 @@ const extractDataFromForm = async (request: Request) => {
     locale: formData.get("locale") ? String(formData.get("locale")) : undefined,
     version: formData.get("version") ? Number(formData.get("version")) : undefined,
     data: Object.fromEntries(
-      entries.filter(([key]) => !key.startsWith("_") && key !== "redirectTo" && key !== "locale" && key !== "version"),
+      entries.filter(
+        ([key]) =>
+          (!key.startsWith("_") || key === "_publishAt" || key === "_unpublishAt") &&
+          key !== "redirectTo" &&
+          key !== "locale" &&
+          key !== "version",
+      ),
     ),
   };
 };
@@ -91,8 +97,20 @@ const handleHtmlMutation = async (
       const created = await collectionApi.create(data, ctx);
       if (collection.drafts && intent === "publish") {
         await collectionApi.publish(created._id, ctx);
+      } else if (collection.drafts && intent === "schedule" && data._publishAt) {
+        await collectionApi.schedule(
+          created._id,
+          String(data._publishAt),
+          data._unpublishAt ? String(data._unpublishAt) : null,
+          ctx,
+        );
       }
-      const msg = intent === "publish" ? `${name} created and published` : `${name} created`;
+      const msg =
+        intent === "publish"
+          ? `${name} created and published`
+          : intent === "schedule"
+            ? `${name} scheduled`
+            : `${name} created`;
       return redirect(`/admin/${collectionSlug}/${created._id}`, { status: "success", msg });
     }
 
@@ -106,15 +124,22 @@ const handleHtmlMutation = async (
         await collectionApi.publish(documentId, ctx);
       } else if (collection.drafts && intent === "unpublish") {
         await collectionApi.unpublish(documentId, ctx);
+      } else if (collection.drafts && intent === "schedule" && data._publishAt) {
+        await collectionApi.schedule(
+          documentId,
+          String(data._publishAt),
+          data._unpublishAt ? String(data._unpublishAt) : null,
+          ctx,
+        );
       }
-      // intent === "save" — just saves, page stays published if it was
-      // Different message for draft save vs publish
       const msg =
         intent === "publish"
           ? `${name} published`
           : intent === "unpublish"
             ? `${name} unpublished`
-            : `${name} saved as draft`;
+            : intent === "schedule"
+              ? `${name} scheduled`
+              : `${name} saved as draft`;
       return redirect(redirectTo, { status: "success", msg });
     }
 
@@ -221,6 +246,11 @@ export const POST: APIRoute = async ({ params, request, locals, cache }) => {
 
   if (pathAction === "unpublish" && documentId) {
     return Response.json(await collectionApi.unpublish(documentId, ctx));
+  }
+
+  if (pathAction === "schedule" && documentId) {
+    const body = await request.json();
+    return Response.json(await collectionApi.schedule(documentId, body.publishAt, body.unpublishAt ?? null, ctx));
   }
 
   const body = await request.json();
