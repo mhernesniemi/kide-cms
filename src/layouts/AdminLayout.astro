@@ -57,14 +57,14 @@ for (const c of contentCollections) {
   navItems.push({
     href: `/admin/${c.slug}`,
     label: c.labels.plural,
-    Icon: FileText,
+    Icon: Layers,
     active: activeCollection === c.slug,
   });
 }
 
 // 2. Singles
 if (hasSingletons) {
-  navItems.push({ href: "/admin/singles", label: "Singles", Icon: Layers, active: isActiveSingles });
+  navItems.push({ href: "/admin/singles", label: "Singles", Icon: FileText, active: isActiveSingles });
 }
 
 // 3–6. Pinned utility collections
