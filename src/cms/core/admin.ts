@@ -115,13 +115,14 @@ export const getFieldSets = (
 ) => {
   if (!viewConfig?.layout?.length) {
     const allFields = Object.keys(collection.fields);
-    const slugFields = allFields.filter((f) => collection.fields[f].type === "slug");
-    const mainFields = allFields.filter((f) => collection.fields[f].type !== "slug");
+    const sidebarTypes = new Set(["slug", "relation"]);
+    const sidebarFields = allFields.filter((f) => sidebarTypes.has(collection.fields[f].type));
+    const mainFields = allFields.filter((f) => !sidebarTypes.has(collection.fields[f].type));
 
-    if (slugFields.length > 0) {
+    if (sidebarFields.length > 0) {
       return [
         { fields: mainFields, width: "full" },
-        { fields: slugFields, width: "1/3" },
+        { fields: sidebarFields, width: "1/3" },
       ];
     }
 

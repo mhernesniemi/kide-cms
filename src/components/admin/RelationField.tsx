@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Search, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronsUpDown, Plus, X } from "lucide-react";
 
 import { Button } from "@/components/admin/ui/button";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/admin/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/admin/ui/popover";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/admin/ui/sheet";
+import { cn } from "@/lib/utils";
 
 type Option = { value: string; label: string };
 
@@ -38,7 +41,7 @@ export default function RelationField({
     }
     return initialValue ? [initialValue] : [];
   });
-  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -46,18 +49,19 @@ export default function RelationField({
 
   const getLabel = useCallback((id: string) => options.find((o) => o.value === id)?.label ?? id, [options]);
 
-  const filteredOptions = options.filter((o) => {
-    if (selected.includes(o.value) && hasMany) return false;
-    return o.label.toLowerCase().includes(search.toLowerCase());
-  });
+  const displayLabel = useMemo(() => {
+    if (selected.length === 0) return "";
+    if (hasMany) return `${selected.length} selected`;
+    return getLabel(selected[0]);
+  }, [selected, hasMany, getLabel]);
 
   const selectItem = (id: string) => {
     if (hasMany) {
-      setSelected((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      setSelected((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]));
     } else {
-      setSelected([id]);
+      setSelected((prev) => (prev[0] === id ? [] : [id]));
+      setOpen(false);
     }
-    setSearch("");
   };
 
   const remove = (id: string) => {
@@ -82,7 +86,11 @@ export default function RelationField({
                 ? prev.map((o) => (o.value === docId ? { ...o, label } : o))
                 : [{ value: docId, label }, ...prev];
             });
-            selectItem(docId);
+            if (hasMany) {
+              setSelected((prev) => (prev.includes(docId) ? prev : [...prev, docId]));
+            } else {
+              setSelected([docId]);
+            }
           }
           setSheetOpen(false);
         });
@@ -90,14 +98,14 @@ export default function RelationField({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [sheetOpen, collectionSlug]);
+  }, [sheetOpen, collectionSlug, hasMany]);
 
   return (
     <div className="space-y-2">
       <input type="hidden" name={name} value={hiddenValue} />
 
-      {/* Selected items */}
-      {selected.length > 0 && (
+      {/* Selected items (hasMany chips) */}
+      {hasMany && selected.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {selected.map((id) => (
             <span
@@ -117,37 +125,31 @@ export default function RelationField({
         </div>
       )}
 
-      {/* Search + select */}
-      {(hasMany || selected.length === 0) && (
-        <div className="relative">
-          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={`Search ${collectionLabel.toLowerCase()}...`}
-            className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border py-1 pr-3 pl-8 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
-          />
-          {search && (
-            <div className="border-border bg-popover absolute top-full z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-md border shadow-md">
-              {filteredOptions.length > 0 ? (
-                filteredOptions.map((o) => (
-                  <button
-                    key={o.value}
-                    type="button"
-                    onClick={() => selectItem(o.value)}
-                    className="hover:bg-accent w-full px-3 py-1.5 text-left text-sm"
-                  >
-                    {o.label}
-                  </button>
-                ))
-              ) : (
-                <div className="text-muted-foreground px-3 py-2 text-sm">No results</div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      {/* Combobox */}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between font-normal">
+            <span className={cn("truncate", !displayLabel && "text-muted-foreground")}>
+              {displayLabel || `Search ${collectionLabel.toLowerCase()}...`}
+            </span>
+            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+          <Command>
+            <CommandInput placeholder={`Search ${collectionLabel.toLowerCase()}...`} />
+            <CommandList>
+              <CommandEmpty>No results found.</CommandEmpty>
+              {options.map((o) => (
+                <CommandItem key={o.value} value={o.label} onSelect={() => selectItem(o.value)}>
+                  <Check className={cn("size-4", selected.includes(o.value) ? "opacity-100" : "opacity-0")} />
+                  {o.label}
+                </CommandItem>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
 
       {/* Create new button */}
       <Button

@@ -1,10 +1,18 @@
 "use client";
 
 import * as React from "react";
-import * as ReactDOM from "react-dom";
-import { Check, ChevronRight, Indent, Outdent, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronRight, ChevronsUpDown, Indent, Outdent, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/admin/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/admin/ui/command";
 import { Input } from "@/components/admin/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/admin/ui/popover";
 import {
   Select,
   SelectContent,
@@ -14,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/admin/ui/select";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/admin/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 type TreeItem = {
   id: string;
@@ -75,101 +84,66 @@ function getItemSublabel(item: TreeItem, variant: "menu" | "taxonomy"): string {
 
 function InternalLinkPicker({
   editHref,
-  internalSearch,
-  internalOpen,
-  filteredLinkOptions,
-  onSearchChange,
-  onFocus,
-  onClose,
+  linkOptions,
   onSelect,
 }: {
   editHref: string;
-  internalSearch: string;
-  internalOpen: boolean;
-  filteredLinkOptions: LinkOptionGroup[];
-  onSearchChange: (v: string) => void;
-  onFocus: () => void;
-  onClose: () => void;
+  linkOptions: LinkOptionGroup[];
   onSelect: (item: { id: string; label: string; href: string }) => void;
 }) {
-  const triggerRef = React.useRef<HTMLInputElement>(null);
-  const dropdownRef = React.useRef<HTMLDivElement>(null);
-  const [pos, setPos] = React.useState({ top: 0, left: 0, width: 0 });
+  const [open, setOpen] = React.useState(false);
 
-  // Compute position from trigger input
-  React.useEffect(() => {
-    if (!internalOpen || !triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
-  }, [internalOpen, internalSearch]);
-
-  // Close on outside click
-  React.useEffect(() => {
-    if (!internalOpen) return;
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (triggerRef.current?.contains(target)) return;
-      if (dropdownRef.current?.contains(target)) return;
-      onClose();
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [internalOpen, onClose]);
-
-  // Find the selected item label to display
   const selectedLabel = React.useMemo(() => {
     if (!editHref) return "";
-    for (const group of filteredLinkOptions) {
+    for (const group of linkOptions) {
       const found = group.items.find((item) => item.href === editHref);
       if (found) return found.label;
     }
     return editHref;
-  }, [editHref, filteredLinkOptions]);
+  }, [editHref, linkOptions]);
 
   return (
     <div className="min-w-0 flex-[3]">
-      <Input
-        ref={triggerRef}
-        value={editHref ? selectedLabel : internalSearch}
-        onChange={(e) => onSearchChange(e.target.value)}
-        onFocus={onFocus}
-        placeholder="Search documents..."
-        className="h-7 text-sm"
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onClose();
-        }}
-      />
-      {internalOpen &&
-        ReactDOM.createPortal(
-          <div
-            ref={dropdownRef}
-            className="bg-popover text-popover-foreground fixed z-9999 max-h-60 overflow-y-auto rounded-md border shadow-md"
-            style={{ top: pos.top, left: pos.left, width: Math.max(pos.width) }}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="h-7 w-full justify-between font-normal"
           >
-            {filteredLinkOptions.length === 0 ? (
-              <div className="text-muted-foreground p-3 text-center text-xs">No documents found</div>
-            ) : (
-              filteredLinkOptions.map((group) => (
-                <div key={group.collection}>
-                  <div className="text-muted-foreground bg-muted/50 sticky top-0 px-3 py-1.5 text-xs font-medium">
-                    {group.label}
-                  </div>
+            <span className={cn("truncate", !selectedLabel && "text-muted-foreground")}>
+              {selectedLabel || "Search documents..."}
+            </span>
+            <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search documents..." />
+            <CommandList>
+              <CommandEmpty>No documents found.</CommandEmpty>
+              {linkOptions.map((group) => (
+                <CommandGroup key={group.collection} heading={group.label}>
                   {group.items.map((item) => (
-                    <button
+                    <CommandItem
                       key={item.id}
-                      type="button"
-                      className="hover:bg-accent flex w-full items-center px-3 py-1.5 text-left text-sm"
-                      onClick={() => onSelect(item)}
+                      value={`${item.label} ${item.href}`}
+                      onSelect={() => {
+                        onSelect(item);
+                        setOpen(false);
+                      }}
                     >
-                      <span className="truncate">{item.label}</span>
-                    </button>
+                      <Check className={cn("size-4", editHref === item.href ? "opacity-100" : "opacity-0")} />
+                      {item.label}
+                    </CommandItem>
                   ))}
-                </div>
-              ))
-            )}
-          </div>,
-          document.body,
-        )}
+                </CommandGroup>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
@@ -183,8 +157,6 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
   const [editHref, setEditHref] = React.useState("");
   const [editTarget, setEditTarget] = React.useState("");
   const [editLinkType, setEditLinkType] = React.useState<"external" | "internal">("internal");
-  const [internalSearch, setInternalSearch] = React.useState("");
-  const [internalOpen, setInternalOpen] = React.useState(false);
 
   // Taxonomy edit fields
   const [editName, setEditName] = React.useState("");
@@ -250,7 +222,6 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
     setEditHref("");
     setEditTarget("");
     setEditLinkType("internal");
-    setInternalSearch("");
     setEditName("");
     setEditSlug("");
     setEditAutoSlug(true);
@@ -320,7 +291,6 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
       // Detect link type from existing href
       const isInternal = linkOptions.some((group) => group.items.some((li) => li.href === String(item.href ?? "")));
       setEditLinkType(isInternal ? "internal" : "external");
-      setInternalSearch("");
     } else {
       setEditName(String(item.name ?? ""));
       setEditSlug(String(item.slug ?? ""));
@@ -437,20 +407,6 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
     if (e.key === "Escape") cancelEdit();
   };
 
-  // Filtered internal link options for combobox
-  const filteredLinkOptions = React.useMemo(() => {
-    const q = internalSearch.toLowerCase();
-    if (!q) return linkOptions;
-    return linkOptions
-      .map((group) => ({
-        ...group,
-        items: group.items.filter(
-          (item) => item.label.toLowerCase().includes(q) || item.href.toLowerCase().includes(q),
-        ),
-      }))
-      .filter((group) => group.items.length > 0);
-  }, [linkOptions, internalSearch]);
-
   const renderEditFields = () => {
     if (variant === "menu") {
       return (
@@ -474,11 +430,8 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
             onValueChange={(v) => {
               const newType = (v as "external" | "internal") ?? "external";
               setEditLinkType(newType);
-              if (newType === "external") {
-                setInternalOpen(false);
-              } else {
+              if (newType === "internal") {
                 setEditHref("");
-                setInternalOpen(true);
               }
             }}
           >
@@ -504,21 +457,10 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
           ) : (
             <InternalLinkPicker
               editHref={editHref}
-              internalSearch={internalSearch}
-              internalOpen={internalOpen}
-              filteredLinkOptions={filteredLinkOptions}
-              onSearchChange={(v) => {
-                setInternalSearch(v);
-                setEditHref("");
-                setInternalOpen(true);
-              }}
-              onFocus={() => setInternalOpen(true)}
-              onClose={() => setInternalOpen(false)}
+              linkOptions={linkOptions}
               onSelect={(item) => {
                 setEditHref(item.href);
                 if (!editLabel) setEditLabel(item.label);
-                setInternalSearch("");
-                setInternalOpen(false);
               }}
             />
           )}
