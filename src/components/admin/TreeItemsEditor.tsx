@@ -557,7 +557,7 @@ export default function TreeItemsEditor({ name, value, variant }: Props) {
               </SelectGroup>
             </SelectContent>
           </Select>
-          <Button type="button" variant="outline" size="lg" onClick={handleBulkAdd}>
+          <Button type="button" variant="outline" size="lg" onClick={handleBulkAdd} disabled={!bulkInput.trim()}>
             Add
           </Button>
         </div>
