@@ -34,6 +34,7 @@ const localeConfig = config.locales;
 const locales = localeConfig?.supported ?? [];
 const defaultLocale = localeConfig?.default ?? "en";
 const requestedLocale = Astro.url.searchParams.get("locale") ?? defaultLocale;
+const isEmbed = Astro.url.searchParams.get("_embed") === "1";
 
 // Redirect /admin to recent
 if (route.kind === "dashboard") {
@@ -143,6 +144,14 @@ let docs: Array<Record<string, unknown>> = [];
 let doc: Record<string, unknown> | null = null;
 let baseDoc: Record<string, unknown> | null = null;
 let relationOptionsByField: Record<string, Array<{ value: string; label: string }>> = {};
+let relationMetaByField: Record<
+  string,
+  {
+    collectionSlug: string;
+    collectionLabel: string;
+    hasMany: boolean;
+  }
+> = {};
 let versions: Array<{ version: number; createdAt: string }> = [];
 let menuLinkOptions: Array<{
   collection: string;
@@ -187,6 +196,16 @@ if (collection && collectionSlug) {
         value: String(item._id),
         label: String(item.title ?? item.name ?? item.slug ?? item._id),
       }));
+
+      // Build metadata for RelationField component
+      const relatedCollection = config.collections.find((c) => c.slug === field.collection);
+      if (relatedCollection) {
+        relationMetaByField[fieldName] = {
+          collectionSlug: field.collection,
+          collectionLabel: relatedCollection.labels.singular,
+          hasMany: field.hasMany ?? false,
+        };
+      }
     }
   }
 
@@ -293,6 +312,7 @@ const tableRows =
       : `${collection?.labels?.plural ?? "Admin"} | AstroCMS`}
   collections={config.collections}
   activeCollection={route.kind === "recent" ? "recent" : (collectionSlug ?? "singles")}
+  embed={isEmbed}
 >
   {
     route.kind === "recent" && (
@@ -515,6 +535,7 @@ const tableRows =
                             field={collection.fields[fieldName]}
                             value={getCurrentValue(fieldName)}
                             relationOptions={relationOptionsByField[fieldName] ?? []}
+                            relationMeta={relationMetaByField[fieldName]}
                             menuLinkOptions={menuLinkOptions}
                           />
                         ))}
@@ -533,6 +554,7 @@ const tableRows =
                             field={collection.fields[fieldName]}
                             value={getCurrentValue(fieldName)}
                             relationOptions={relationOptionsByField[fieldName] ?? []}
+                            relationMeta={relationMetaByField[fieldName]}
                             menuLinkOptions={menuLinkOptions}
                           />
                         ))}
@@ -566,6 +588,7 @@ const tableRows =
                             field={collection.fields[fieldName]}
                             value={getCurrentValue(fieldName)}
                             relationOptions={relationOptionsByField[fieldName] ?? []}
+                            relationMeta={relationMetaByField[fieldName]}
                             menuLinkOptions={menuLinkOptions}
                           />
                         ))}
@@ -646,6 +669,14 @@ const tableRows =
               w.remove();
             }, 5200);
             return;
+          }
+          // If embedded in a relation field drawer, notify parent instead of navigating
+          if (window.parent !== window && u.searchParams.get("_toast") === "success") {
+            var idMatch = u.pathname.match(/\/admin\/[^/]+\/([^/]+)/);
+            if (idMatch) {
+              window.parent.postMessage({ type: "cms:created", id: idMatch[1] }, "*");
+              return;
+            }
           }
           window.location.assign(res.url);
         })

@@ -80,7 +80,16 @@ const coerceFieldValue = (field: FieldConfig, value: unknown): unknown => {
   if (field.type === "relation") {
     if (field.hasMany) {
       if (Array.isArray(value)) return value.map((item) => String(item));
-      return String(value)
+      const str = String(value).trim();
+      if (str.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(str);
+          if (Array.isArray(parsed)) return parsed.map((item: unknown) => String(item)).filter(Boolean);
+        } catch {
+          // fall through to comma split
+        }
+      }
+      return str
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);

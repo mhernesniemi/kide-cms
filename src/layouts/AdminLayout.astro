@@ -13,10 +13,12 @@ const {
   title = "Admin",
   collections = [],
   activeCollection = null,
+  embed = false,
 } = Astro.props as {
   title?: string;
   collections?: Array<{ slug: string; labels: { plural: string }; singleton?: boolean }>;
   activeCollection?: string | null;
+  embed?: boolean;
 };
 
 const user = Astro.locals.user;
@@ -109,88 +111,86 @@ navItems.push({ href: "/admin/assets", label: "Assets", Icon: Image, active: fal
     </script>
   </head>
   <body class="bg-background text-foreground min-h-screen antialiased">
-    <div class="min-h-screen lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
-      {/* ── Desktop sidebar ──────────────────────────────────────────── */}
-      <aside class="bg-sidebar/40 mt-1 hidden border-r backdrop-blur lg:flex lg:flex-col">
-        <div class="px-3 pt-3 pb-2">
-          {
-            user && (
-              <SidebarUserMenu
-                client:load
-                userName={user.name}
-                userEmail={user.email}
-                logoutAction="/api/cms/auth/logout"
-              />
-            )
-          }
-        </div>
-
-        <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-3">
-          {
-            navItems.map((item) => (
-              <a
-                href={item.href}
-                class={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                  item.active
-                    ? "bg-accent text-accent-foreground"
-                    : "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
-                )}
-              >
-                <item.Icon className="size-4 shrink-0 stroke-1" />
-                <span>{item.label}</span>
-              </a>
-            ))
-          }
-        </nav>
-      </aside>
-
-      <div class="min-w-0">
-        {/* ── Mobile header ────────────────────────────────────────── */}
-        <header
-          class="bg-background/95 supports-backdrop-filter:bg-background/75 flex items-center gap-3 border-b px-4 py-3 backdrop-blur lg:hidden"
-        >
-          <MobileSidebar client:load>
-            <div class="px-3 pt-3 pb-1">
-              {
-                user && (
-                  <SidebarUserMenu
-                    client:load
-                    userName={user.name}
-                    userEmail={user.email}
-                    logoutAction="/api/cms/auth/logout"
-                  />
-                )
-              }
-              <Separator className="mt-3" />
+    {
+      embed ? (
+        <main class="mx-auto w-full px-4 py-6 lg:px-8 lg:py-8">
+          <slot />
+        </main>
+      ) : (
+        <div class="min-h-screen lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
+          {/* ── Desktop sidebar ──────────────────────────────────────────── */}
+          <aside class="bg-sidebar/40 mt-1 hidden border-r backdrop-blur lg:flex lg:flex-col">
+            <div class="px-3 pt-3 pb-2">
+              {user && (
+                <SidebarUserMenu
+                  client:load
+                  userName={user.name}
+                  userEmail={user.email}
+                  logoutAction="/api/cms/auth/logout"
+                />
+              )}
             </div>
 
             <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-3">
-              {
-                navItems.map((item) => (
-                  <a
-                    href={item.href}
-                    class={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                      item.active
-                        ? "bg-accent text-accent-foreground"
-                        : "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
-                    )}
-                  >
-                    <item.Icon className="size-4 shrink-0 stroke-1" />
-                    <span>{item.label}</span>
-                  </a>
-                ))
-              }
+              {navItems.map((item) => (
+                <a
+                  href={item.href}
+                  class={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                    item.active
+                      ? "bg-accent text-accent-foreground"
+                      : "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
+                  )}
+                >
+                  <item.Icon className="size-4 shrink-0 stroke-1" />
+                  <span>{item.label}</span>
+                </a>
+              ))}
             </nav>
-          </MobileSidebar>
-        </header>
+          </aside>
 
-        <main class="mx-auto w-full max-w-[1900px] px-4 py-6 lg:px-8 lg:py-8">
-          <slot />
-        </main>
-      </div>
-    </div>
+          <div class="min-w-0">
+            {/* ── Mobile header ────────────────────────────────────────── */}
+            <header class="bg-background/95 supports-backdrop-filter:bg-background/75 flex items-center gap-3 border-b px-4 py-3 backdrop-blur lg:hidden">
+              <MobileSidebar client:load>
+                <div class="px-3 pt-3 pb-1">
+                  {user && (
+                    <SidebarUserMenu
+                      client:load
+                      userName={user.name}
+                      userEmail={user.email}
+                      logoutAction="/api/cms/auth/logout"
+                    />
+                  )}
+                  <Separator className="mt-3" />
+                </div>
+
+                <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-3">
+                  {navItems.map((item) => (
+                    <a
+                      href={item.href}
+                      class={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                        item.active
+                          ? "bg-accent text-accent-foreground"
+                          : "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
+                      )}
+                    >
+                      <item.Icon className="size-4 shrink-0 stroke-1" />
+                      <span>{item.label}</span>
+                    </a>
+                  ))}
+                </nav>
+              </MobileSidebar>
+            </header>
+
+            <main class="mx-auto w-full max-w-[1900px] px-4 py-6 lg:px-8 lg:py-8">
+              <slot />
+            </main>
+          </div>
+        </div>
+      )
+    }
 
     {toastStatus && <Toast status={toastStatus} message={toastMessage} />}
 

@@ -139,10 +139,12 @@ export default function DocumentsDataTable({
       try {
         await Promise.all(
           rows.map(async (row) => {
+            // Extract collection slug from editHref (/admin/{slug}/{id})
+            const rowCollection = row.editHref.split("/")[2] ?? collectionSlug;
             const endpoint =
               action === "delete"
-                ? `/api/cms/${collectionSlug}/${row.id}`
-                : `/api/cms/${collectionSlug}/${row.id}/${action}`;
+                ? `/api/cms/${rowCollection}/${row.id}`
+                : `/api/cms/${rowCollection}/${row.id}/${action}`;
 
             const response = await fetch(endpoint, {
               method: action === "delete" ? "DELETE" : "POST",

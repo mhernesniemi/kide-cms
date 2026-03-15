@@ -6,6 +6,7 @@ import ImagePicker from "@/components/admin/ImagePicker";
 import TreeItemsEditor from "@/components/admin/TreeItemsEditor";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import SelectField from "@/components/admin/SelectField";
+import RelationField from "@/components/admin/RelationField";
 import BlockEditor from "@/components/admin/BlockEditor";
 import SlugField from "@/components/admin/SlugField";
 import { Input } from "@/components/admin/ui/input";
@@ -16,6 +17,12 @@ import { cn } from "@/lib/utils";
 type RelationOption = {
   value: string;
   label: string;
+};
+
+type RelationMeta = {
+  collectionSlug: string;
+  collectionLabel: string;
+  hasMany: boolean;
 };
 
 type LinkOptionGroup = {
@@ -29,6 +36,7 @@ const {
   field,
   value,
   relationOptions = [],
+  relationMeta,
   readOnly = false,
   menuLinkOptions = [],
 } = Astro.props as {
@@ -36,6 +44,7 @@ const {
   field: FieldConfig;
   value?: unknown;
   relationOptions?: RelationOption[];
+  relationMeta?: RelationMeta;
   readOnly?: boolean;
   menuLinkOptions?: LinkOptionGroup[];
 };
@@ -176,7 +185,21 @@ const blockTypesMeta =
   }
 
   {
-    field.type === "relation" && (
+    field.type === "relation" && !readOnly && relationMeta && (
+      <RelationField
+        client:load
+        name={name}
+        value={String(value ?? "")}
+        hasMany={relationMeta.hasMany}
+        options={relationOptions}
+        collectionSlug={relationMeta.collectionSlug}
+        collectionLabel={relationMeta.collectionLabel}
+      />
+    )
+  }
+
+  {
+    field.type === "relation" && (readOnly || !relationMeta) && (
       <SelectField
         client:load
         name={name}

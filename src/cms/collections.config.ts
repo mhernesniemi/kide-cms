@@ -131,6 +131,7 @@ export default defineConfig({
           defaultValue: "landing",
         }),
         heroImage: fields.image(),
+        relatedPosts: fields.relation({ collection: "posts", hasMany: true }),
         blocks: fields.blocks({
           translatable: true,
           types: {
