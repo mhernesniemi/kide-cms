@@ -156,7 +156,7 @@ export default function RelationField({
         type="button"
         variant="outline"
         size="sm"
-        className="text-muted-foreground"
+        className="text-foreground/70"
         onClick={() => setSheetOpen(true)}
       >
         <Plus className="size-3.5" />
