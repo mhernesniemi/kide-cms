@@ -7,7 +7,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/admin/ui/dropdown-menu";
 import { DropdownMenuTrigger } from "@/components/admin/ui/dropdown-menu";
@@ -73,10 +72,7 @@ export default function SidebarUserMenu({
         <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent side="bottom" align="start" className="w-56">
-        <DropdownMenuLabel>{userEmail}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-
+      <DropdownMenuContent side="bottom" align="start" className="w-(--radix-dropdown-menu-trigger-width)">
         <DropdownMenuItem onClick={() => changeTheme("light")}>
           <Sun className="size-4" />
           Light
