@@ -1,7 +1,13 @@
 ---
 import "../styles/public.css";
+import { cms } from "../cms/.generated/api";
 
 const { title = "AstroCMS", description = "A code-first CMS built inside Astro." } = Astro.props;
+
+type MenuItem = { id: string; label?: string; href?: string; target?: string; children: MenuItem[] };
+
+const menu = await cms.menus.findOne({ slug: "main" });
+const menuItems: MenuItem[] = menu?.items ? (Array.isArray(menu.items) ? menu.items : []) : [];
 ---
 
 <!doctype html>
@@ -15,6 +21,56 @@ const { title = "AstroCMS", description = "A code-first CMS built inside Astro."
     <title>{title}</title>
   </head>
   <body>
+    <header class="site-header">
+      <a href="/" class="site-name">AstroCMS</a>
+      {
+        menuItems.length > 0 && (
+          <nav>
+            <ul>
+              {menuItems.map((item) => (
+                <li>
+                  <a href={String(item.href ?? "#")} target={item.target || undefined}>
+                    {String(item.label ?? "")}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )
+      }
+    </header>
     <slot />
   </body>
 </html>
+
+<style>
+  .site-header {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+  .site-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    text-decoration: none;
+    color: inherit;
+  }
+  nav ul {
+    display: flex;
+    gap: 1.5rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  nav a {
+    text-decoration: none;
+    color: #555;
+    font-size: 0.9rem;
+  }
+  nav a:hover {
+    color: #111;
+  }
+</style>
