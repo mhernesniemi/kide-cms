@@ -18,10 +18,18 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   if (!id) return Response.json({ error: "Asset ID is required." }, { status: 400 });
 
   const body = await request.json();
-  const data: { alt?: string; filename?: string; folder?: string | null } = {};
+  const data: {
+    alt?: string;
+    filename?: string;
+    folder?: string | null;
+    focalX?: number | null;
+    focalY?: number | null;
+  } = {};
   if (typeof body.alt === "string") data.alt = body.alt;
   if (typeof body.filename === "string") data.filename = body.filename;
   if (body.folder === null || typeof body.folder === "string") data.folder = body.folder;
+  if (body.focalX === null || typeof body.focalX === "number") data.focalX = body.focalX;
+  if (body.focalY === null || typeof body.focalY === "number") data.focalY = body.focalY;
 
   const result = await assets.update(id, data);
   if (!result) return Response.json({ error: "Not found." }, { status: 404 });
@@ -56,9 +64,13 @@ export const POST: APIRoute = async ({ params, request }) => {
   if (action === "update") {
     const alt = formData.get("alt");
     const folder = formData.get("folder");
+    const focalX = formData.get("focalX");
+    const focalY = formData.get("focalY");
     await assets.update(id, {
       alt: alt !== null ? alt : undefined,
       folder: folder !== null ? (folder === "" ? null : folder) : undefined,
+      focalX: focalX !== null ? (focalX === "" ? null : Number(focalX)) : undefined,
+      focalY: focalY !== null ? (focalY === "" ? null : Number(focalY)) : undefined,
     });
     return new Response(null, {
       status: 303,

@@ -3,6 +3,8 @@ import { ArrowLeft, Trash2 } from "lucide-react";
 
 import AdminCard from "@/components/admin/AdminCard.astro";
 import AiGenerateButton from "@/components/admin/AiGenerateButton";
+import FocalPointSelector from "@/components/admin/FocalPointSelector";
+import SelectField from "@/components/admin/SelectField";
 import { buttonVariants } from "@/components/admin/ui/button";
 import { Label } from "@/components/admin/ui/label";
 import { Textarea } from "@/components/admin/ui/textarea";
@@ -29,6 +31,8 @@ const formatSize = (bytes: number) => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
+
+const folderItems = [{ value: "", label: "None" }, ...allFolders.map((f) => ({ value: f._id, label: f.name }))];
 ---
 
 <AdminLayout title={`${asset.filename} | Assets | AstroCMS`} collections={config.collections} activeCollection={null}>
@@ -64,9 +68,13 @@ const formatSize = (bytes: number) => {
           {
             isImage && (
               <AdminCard title="Preview">
-                <div class="bg-muted/30 overflow-hidden rounded-md">
-                  <img src={asset.url} alt={asset.alt ?? asset.filename} class="max-h-[500px] w-full object-contain" />
-                </div>
+                <FocalPointSelector
+                  client:load
+                  src={asset.url}
+                  alt={asset.alt ?? asset.filename}
+                  focalX={asset.focalX}
+                  focalY={asset.focalY}
+                />
               </AdminCard>
             )
           }
@@ -92,28 +100,11 @@ const formatSize = (bytes: number) => {
                   <div>
                     <dt class="text-muted-foreground text-xs">Dimensions</dt>
                     <dd class="mt-0.5">
-                      {asset.width} × {asset.height}
+                      {asset.width} &times; {asset.height} px
                     </dd>
                   </div>
                 )
               }
-              <div>
-                <dt class="text-muted-foreground text-xs">Folder</dt>
-                <dd class="mt-0.5">
-                  {
-                    currentFolder ? (
-                      <a
-                        href={`/admin/assets?folder=${currentFolder._id}`}
-                        class="hover:text-foreground transition-colors"
-                      >
-                        {currentFolder.name}
-                      </a>
-                    ) : (
-                      <span class="text-muted-foreground">—</span>
-                    )
-                  }
-                </dd>
-              </div>
               <div>
                 <dt class="text-muted-foreground text-xs">Path</dt>
                 <dd class="mt-0.5 font-mono text-xs break-all">{asset.storagePath}</dd>
@@ -129,20 +120,13 @@ const formatSize = (bytes: number) => {
             <div class="grid gap-5">
               <div class="grid gap-2">
                 <Label htmlFor="folder">Folder</Label>
-                <select
-                  id="folder"
+                <SelectField
+                  client:load
                   name="folder"
-                  class="border-input bg-background hover:border-foreground/20 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus-visible:ring-1 focus-visible:outline-none"
-                >
-                  <option value="" selected={!asset.folder}>None</option>
-                  {
-                    allFolders.map((f) => (
-                      <option value={f._id} selected={asset.folder === f._id}>
-                        {f.name}
-                      </option>
-                    ))
-                  }
-                </select>
+                  value={asset.folder ?? ""}
+                  placeholder="None"
+                  items={folderItems}
+                />
               </div>
               <div class="grid gap-2">
                 <Label htmlFor="alt">Alt text</Label>

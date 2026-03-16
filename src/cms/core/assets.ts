@@ -21,6 +21,8 @@ export type AssetRecord = {
   size: number;
   width: number | null;
   height: number | null;
+  focalX: number | null;
+  focalY: number | null;
   alt: string | null;
   folder: string | null;
   storagePath: string;
@@ -74,6 +76,8 @@ export const assets = {
       size: file.size,
       width: null,
       height: null,
+      focalX: null,
+      focalY: null,
       alt: options?.alt ?? null,
       folder,
       storagePath,
@@ -138,7 +142,7 @@ export const assets = {
 
   async update(
     id: string,
-    data: { alt?: string; filename?: string; folder?: string | null },
+    data: { alt?: string; filename?: string; folder?: string | null; focalX?: number | null; focalY?: number | null },
   ): Promise<AssetRecord | null> {
     const db = await getDb();
     const schema = await import("../.generated/schema");
@@ -150,6 +154,8 @@ export const assets = {
     if (data.alt !== undefined) updateValues.alt = data.alt;
     if (data.filename !== undefined) updateValues.filename = data.filename;
     if (data.folder !== undefined) updateValues.folder = data.folder;
+    if (data.focalX !== undefined) updateValues.focalX = data.focalX;
+    if (data.focalY !== undefined) updateValues.focalY = data.focalY;
 
     if (Object.keys(updateValues).length > 0) {
       await db.update(schema.cmsAssets).set(updateValues).where(eq(schema.cmsAssets._id, id));

@@ -123,7 +123,7 @@ const generateVersionsTable = (collection: CollectionConfig): string | null => {
 const generateSchemaFile = (): string => {
   const parts: string[] = [
     `// auto-generated — do not edit`,
-    `import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";`,
+    `import { sqliteTable, text, integer, real, unique } from "drizzle-orm/sqlite-core";`,
     ``,
   ];
 
@@ -144,6 +144,8 @@ const generateSchemaFile = (): string => {
   size: integer("size").notNull(),
   width: integer("width"),
   height: integer("height"),
+  focalX: real("focal_x"),
+  focalY: real("focal_y"),
   alt: text("alt"),
   folder: text("folder"),
   storagePath: text("storage_path").notNull(),

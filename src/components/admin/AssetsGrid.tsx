@@ -140,7 +140,7 @@ function DraggableAssetCard({
         {...attributes}
         {...listeners}
       >
-        <GripVertical className="size-3.5" />
+        <GripVertical className="text-foreground size-3.5" />
       </div>
     </div>
   );
