@@ -114,7 +114,16 @@ const coerceFieldValue = (field: FieldConfig, value: unknown): unknown => {
     return value ?? field.defaultValue ?? (field.type === "blocks" ? [] : {});
   }
   if (field.type === "richText") {
-    if (typeof value === "string") return createRichTextFromPlainText(value);
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed.startsWith("{")) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (parsed?.type === "root") return parsed;
+        } catch {}
+      }
+      return createRichTextFromPlainText(value);
+    }
     return (value as RichTextDocument | undefined) ?? createRichTextFromPlainText("");
   }
   return value;

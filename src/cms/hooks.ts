@@ -1,13 +1,12 @@
 import { defineHooks } from "./core/define";
+import { richTextToPlainText } from "./core/values";
 
 export default defineHooks({
   posts: {
     beforeCreate(data) {
       if (!data.excerpt && typeof data.body === "object" && data.body) {
-        const firstParagraph = JSON.stringify(data.body)
-          .replace(/[\[\]{}"]/g, " ")
-          .trim();
-        data.excerpt = firstParagraph.slice(0, 180);
+        const text = richTextToPlainText(data.body as never);
+        if (text) data.excerpt = text.slice(0, 180);
       }
       return data;
     },
