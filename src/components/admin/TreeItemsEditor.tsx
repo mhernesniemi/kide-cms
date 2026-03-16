@@ -1,18 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  Check,
-  ChevronRight,
-  ChevronsUpDown,
-  GripVertical,
-  Indent,
-  Outdent,
-  Pencil,
-  Plus,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Check, ChevronRight, GripVertical, Indent, Outdent, Pencil, Plus, Trash2, X } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -25,16 +14,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { Button } from "@/components/admin/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/admin/ui/command";
 import { Input } from "@/components/admin/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/admin/ui/popover";
 import {
   Select,
   SelectContent,
@@ -45,17 +25,34 @@ import {
 } from "@/components/admin/ui/select";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/admin/ui/collapsible";
 import { cn } from "@/lib/utils";
+import InternalLinkPicker, { type LinkOptionGroup } from "./InternalLinkPicker";
+import {
+  type TreeItem,
+  generateId,
+  slugify,
+  parseItems,
+  cloneItems,
+  createBlankItem,
+  getItemLabel,
+  getItemSublabel,
+  findItemById,
+  findParentList,
+  findItemDepth,
+  canIndent,
+  canOutdent,
+} from "./tree-utils";
 
-type TreeItem = {
+// --- Types ---
+
+type EditState = {
   id: string;
-  children: TreeItem[];
-  [key: string]: unknown;
-};
-
-type LinkOptionGroup = {
-  collection: string;
   label: string;
-  items: Array<{ id: string; label: string; href: string }>;
+  href: string;
+  target: string;
+  linkType: "external" | "internal";
+  name: string;
+  slug: string;
+  autoSlug: boolean;
 };
 
 type Props = {
@@ -65,110 +62,11 @@ type Props = {
   linkOptions?: LinkOptionGroup[];
 };
 
-function generateId() {
-  return "ti_" + Math.random().toString(36).slice(2, 9);
+function blankEdit(id: string): EditState {
+  return { id, label: "", href: "", target: "", linkType: "internal", name: "", slug: "", autoSlug: true };
 }
 
-function slugify(value: string) {
-  return value
-    .normalize("NFKD")
-    .replace(/[^\w\s-]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function parseItems(value?: string): TreeItem[] {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    if (Array.isArray(parsed)) return parsed;
-  } catch {}
-  return [];
-}
-
-function cloneItems(items: TreeItem[]): TreeItem[] {
-  return JSON.parse(JSON.stringify(items));
-}
-
-function createBlankItem(): TreeItem {
-  return { id: generateId(), children: [] };
-}
-
-function getItemLabel(item: TreeItem, variant: "menu" | "taxonomy"): string {
-  return String(variant === "menu" ? item.label : item.name) || "—";
-}
-
-function getItemSublabel(item: TreeItem, variant: "menu" | "taxonomy"): string {
-  return String(variant === "menu" ? item.href : item.slug) || "";
-}
-
-function InternalLinkPicker({
-  editHref,
-  linkOptions,
-  onSelect,
-}: {
-  editHref: string;
-  linkOptions: LinkOptionGroup[];
-  onSelect: (item: { id: string; label: string; href: string }) => void;
-}) {
-  const [open, setOpen] = React.useState(false);
-
-  const selectedLabel = React.useMemo(() => {
-    if (!editHref) return "";
-    for (const group of linkOptions) {
-      const found = group.items.find((item) => item.href === editHref);
-      if (found) return found.label;
-    }
-    return editHref;
-  }, [editHref, linkOptions]);
-
-  return (
-    <div className="min-w-0 flex-[3]">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="h-7 w-full justify-between font-normal"
-          >
-            <span className={cn("truncate", !selectedLabel && "text-muted-foreground")}>
-              {selectedLabel || "Search documents..."}
-            </span>
-            <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Search documents..." />
-            <CommandList>
-              <CommandEmpty>No documents found.</CommandEmpty>
-              {linkOptions.map((group) => (
-                <CommandGroup key={group.collection} heading={group.label}>
-                  {group.items.map((item) => (
-                    <CommandItem
-                      key={item.id}
-                      value={`${item.label} ${item.href}`}
-                      onSelect={() => {
-                        onSelect(item);
-                        setOpen(false);
-                      }}
-                    >
-                      <Check className={cn("size-4", editHref === item.href ? "opacity-100" : "opacity-0")} />
-                      {item.label}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              ))}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-    </div>
-  );
-}
+// --- Sortable wrapper ---
 
 function SortableTreeItem({
   id,
@@ -199,45 +97,21 @@ function SortableTreeItem({
   return <>{children({ attributes, listeners, setNodeRef, setActivatorNodeRef, style, isDragging })}</>;
 }
 
-function findItemById(items: TreeItem[], id: string): TreeItem | null {
-  for (const item of items) {
-    if (item.id === id) return item;
-    const found = findItemById(item.children, id);
-    if (found) return found;
-  }
-  return null;
-}
-
-function findParentList(items: TreeItem[], id: string): TreeItem[] | null {
-  for (const item of items) {
-    if (item.id === id) return items;
-    const found = findParentList(item.children, id);
-    if (found) return found;
-  }
-  return null;
-}
+// --- Main component ---
 
 export default function TreeItemsEditor({ name, value, variant, linkOptions = [] }: Props) {
   const [items, setItems] = React.useState<TreeItem[]>(() => parseItems(value));
-  const [editingId, setEditingId] = React.useState<string | null>(null);
-
-  // Menu edit fields
-  const [editLabel, setEditLabel] = React.useState("");
-  const [editHref, setEditHref] = React.useState("");
-  const [editTarget, setEditTarget] = React.useState("");
-  const [editLinkType, setEditLinkType] = React.useState<"external" | "internal">("internal");
-
-  // Taxonomy edit fields
-  const [editName, setEditName] = React.useState("");
-  const [editSlug, setEditSlug] = React.useState("");
-  const [editAutoSlug, setEditAutoSlug] = React.useState(true);
+  const [editing, setEditing] = React.useState<EditState | null>(null);
+  const [activeId, setActiveId] = React.useState<string | null>(null);
   const newItemIds = React.useRef(new Set<string>());
   const hiddenRef = React.useRef<HTMLInputElement>(null);
 
+  const updateEditing = (patch: Partial<EditState>) => setEditing((prev) => (prev ? { ...prev, ...patch } : prev));
+
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(() => {
     const ids = new Set<string>();
-    const collectIds = (items: TreeItem[]) => {
-      for (const item of items) {
+    const collectIds = (list: TreeItem[]) => {
+      for (const item of list) {
         if (item.children.length > 0) ids.add(item.id);
         collectIds(item.children);
       }
@@ -246,20 +120,20 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
     return ids;
   });
 
-  // Compute serialized value that includes any pending inline edit
+  // Serialized value includes any pending inline edit
   const serialized = React.useMemo(() => {
-    if (!editingId) return JSON.stringify(items);
+    if (!editing) return JSON.stringify(items);
     const merged = cloneItems(items);
     const apply = (list: TreeItem[]) => {
       for (const item of list) {
-        if (item.id === editingId) {
+        if (item.id === editing.id) {
           if (variant === "menu") {
-            item.label = editLabel;
-            item.href = editHref;
-            item.target = editTarget || undefined;
+            item.label = editing.label;
+            item.href = editing.href;
+            item.target = editing.target || undefined;
           } else {
-            item.name = editName;
-            item.slug = editSlug || slugify(editName);
+            item.name = editing.name;
+            item.slug = editing.slug || slugify(editing.name);
           }
           return;
         }
@@ -268,12 +142,14 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
     };
     apply(merged);
     return JSON.stringify(merged);
-  }, [items, editingId, variant, editLabel, editHref, editTarget, editName, editSlug]);
+  }, [items, editing, variant]);
 
   // Notify form of changes so UnsavedGuard can detect them
   React.useEffect(() => {
     hiddenRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
   }, [serialized]);
+
+  // --- Tree operations ---
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -284,28 +160,70 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
     });
   };
 
-  const startEditNewItem = (id: string) => {
-    newItemIds.current.add(id);
-    setEditingId(id);
-    setEditLabel("");
-    setEditHref("");
-    setEditTarget("");
-    setEditLinkType("internal");
-    setEditName("");
-    setEditSlug("");
-    setEditAutoSlug(true);
+  const removeItem = (id: string) => {
+    setItems((prev) => {
+      const next = cloneItems(prev);
+      const remove = (list: TreeItem[]): TreeItem[] =>
+        list.filter((item) => {
+          if (item.id === id) return false;
+          item.children = remove(item.children);
+          return true;
+        });
+      return remove(next);
+    });
+    if (editing?.id === id) setEditing(null);
+  };
+
+  const saveEdit = () => {
+    if (!editing) return;
+    newItemIds.current.delete(editing.id);
+    setItems((prev) => {
+      const next = cloneItems(prev);
+      const update = (list: TreeItem[]) => {
+        for (const item of list) {
+          if (item.id === editing.id) {
+            if (variant === "menu") {
+              item.label = editing.label;
+              item.href = editing.href;
+              item.target = editing.target || undefined;
+            } else {
+              item.name = editing.name;
+              item.slug = editing.slug || slugify(editing.name);
+            }
+            return;
+          }
+          update(item.children);
+        }
+      };
+      update(next);
+      return next;
+    });
+    setEditing(null);
+  };
+
+  const cancelEdit = () => {
+    if (editing && newItemIds.current.has(editing.id)) {
+      removeItem(editing.id);
+      newItemIds.current.delete(editing.id);
+    }
+    setEditing(null);
   };
 
   const saveOrDiscardEdit = () => {
-    if (!editingId) return;
-    const isEmpty = variant === "menu" ? !editLabel.trim() && !editHref.trim() : !editName.trim();
+    if (!editing) return;
+    const isEmpty = variant === "menu" ? !editing.label.trim() && !editing.href.trim() : !editing.name.trim();
     if (isEmpty) {
-      removeItem(editingId);
-      newItemIds.current.delete(editingId);
-      setEditingId(null);
+      removeItem(editing.id);
+      newItemIds.current.delete(editing.id);
+      setEditing(null);
     } else {
       saveEdit();
     }
+  };
+
+  const startEditNewItem = (id: string) => {
+    newItemIds.current.add(id);
+    setEditing(blankEdit(id));
   };
 
   const addRootItem = () => {
@@ -320,8 +238,8 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
     const newItem = createBlankItem();
     setItems((prev) => {
       const next = cloneItems(prev);
-      const addToParent = (items: TreeItem[]): boolean => {
-        for (const item of items) {
+      const addToParent = (list: TreeItem[]): boolean => {
+        for (const item of list) {
           if (item.id === parentId) {
             item.children.push(newItem);
             return true;
@@ -337,86 +255,38 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
     startEditNewItem(newItem.id);
   };
 
-  const removeItem = (id: string) => {
-    setItems((prev) => {
-      const next = cloneItems(prev);
-      const remove = (items: TreeItem[]): TreeItem[] =>
-        items.filter((item) => {
-          if (item.id === id) return false;
-          item.children = remove(item.children);
-          return true;
-        });
-      return remove(next);
-    });
-    if (editingId === id) setEditingId(null);
-  };
-
   const startEdit = (item: TreeItem) => {
-    setEditingId(item.id);
     if (variant === "menu") {
-      setEditLabel(String(item.label ?? ""));
-      setEditHref(String(item.href ?? ""));
-      setEditTarget(String(item.target ?? ""));
-      // Detect link type from existing href
       const isInternal = linkOptions.some((group) => group.items.some((li) => li.href === String(item.href ?? "")));
-      setEditLinkType(isInternal ? "internal" : "external");
+      setEditing({
+        ...blankEdit(item.id),
+        label: String(item.label ?? ""),
+        href: String(item.href ?? ""),
+        target: String(item.target ?? ""),
+        linkType: isInternal ? "internal" : "external",
+      });
     } else {
-      setEditName(String(item.name ?? ""));
-      setEditSlug(String(item.slug ?? ""));
-      setEditAutoSlug(false);
+      setEditing({
+        ...blankEdit(item.id),
+        name: String(item.name ?? ""),
+        slug: String(item.slug ?? ""),
+        autoSlug: false,
+      });
     }
-  };
-
-  const cancelEdit = () => {
-    if (editingId && newItemIds.current.has(editingId)) {
-      removeItem(editingId);
-      newItemIds.current.delete(editingId);
-    }
-    setEditingId(null);
-  };
-
-  const saveEdit = () => {
-    if (!editingId) return;
-    newItemIds.current.delete(editingId);
-    setItems((prev) => {
-      const next = cloneItems(prev);
-      const update = (items: TreeItem[]) => {
-        for (const item of items) {
-          if (item.id === editingId) {
-            if (variant === "menu") {
-              item.label = editLabel;
-              item.href = editHref;
-              item.target = editTarget || undefined;
-            } else {
-              item.name = editName;
-              item.slug = editSlug || slugify(editName);
-              if (item.description !== undefined || false) {
-                // preserve existing description
-              }
-            }
-            return;
-          }
-          update(item.children);
-        }
-      };
-      update(next);
-      return next;
-    });
-    setEditingId(null);
   };
 
   const indentItem = (id: string) => {
     setItems((prev) => {
       const next = cloneItems(prev);
-      const doIndent = (items: TreeItem[]): boolean => {
-        for (let i = 0; i < items.length; i++) {
-          if (items[i].id === id && i > 0) {
-            const [item] = items.splice(i, 1);
-            items[i - 1].children.push(item);
-            setExpandedIds((prev) => new Set([...prev, items[i - 1].id]));
+      const doIndent = (list: TreeItem[]): boolean => {
+        for (let i = 0; i < list.length; i++) {
+          if (list[i].id === id && i > 0) {
+            const [item] = list.splice(i, 1);
+            list[i - 1].children.push(item);
+            setExpandedIds((prev) => new Set([...prev, list[i - 1].id]));
             return true;
           }
-          if (doIndent(items[i].children)) return true;
+          if (doIndent(list[i].children)) return true;
         }
         return false;
       };
@@ -428,17 +298,17 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
   const outdentItem = (id: string) => {
     setItems((prev) => {
       const next = cloneItems(prev);
-      const doOutdent = (items: TreeItem[], parentItems: TreeItem[] | null): boolean => {
-        for (let i = 0; i < items.length; i++) {
-          if (items[i].id === id && parentItems) {
-            const [item] = items.splice(i, 1);
-            const parentIdx = parentItems.findIndex((p) => p.children === items);
+      const doOutdent = (list: TreeItem[], parentList: TreeItem[] | null): boolean => {
+        for (let i = 0; i < list.length; i++) {
+          if (list[i].id === id && parentList) {
+            const [item] = list.splice(i, 1);
+            const parentIdx = parentList.findIndex((p) => p.children === list);
             if (parentIdx >= 0) {
-              parentItems.splice(parentIdx + 1, 0, item);
+              parentList.splice(parentIdx + 1, 0, item);
               return true;
             }
           }
-          if (doOutdent(items[i].children, items)) return true;
+          if (doOutdent(list[i].children, list)) return true;
         }
         return false;
       };
@@ -447,123 +317,14 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
     });
   };
 
-  const findItemDepth = (items: TreeItem[], id: string, depth = 0): number => {
-    for (const item of items) {
-      if (item.id === id) return depth;
-      const found = findItemDepth(item.children, id, depth + 1);
-      if (found >= 0) return found;
-    }
-    return -1;
-  };
-
-  const canIndent = (items: TreeItem[], id: string): boolean => {
-    const check = (items: TreeItem[]): boolean => {
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].id === id) return i > 0;
-        if (check(items[i].children)) return true;
-      }
-      return false;
-    };
-    return check(items);
-  };
-
-  const canOutdent = (id: string): boolean => {
-    return findItemDepth(items, id) > 0;
-  };
-
   const editKeyHandler = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") saveEdit();
     if (e.key === "Escape") cancelEdit();
   };
 
-  const renderEditFields = () => {
-    if (variant === "menu") {
-      return (
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          {/* Label — 50% */}
-          <Input
-            value={editLabel}
-            onChange={(e) => setEditLabel(e.target.value)}
-            placeholder="Label"
-            className="h-7 min-w-0 flex-[3] text-sm"
-            autoFocus
-            onKeyDown={editKeyHandler}
-          />
-          {/* Link type — 25% */}
-          <Select
-            items={[
-              { value: "external", label: "External link" },
-              { value: "internal", label: "Internal link" },
-            ]}
-            value={editLinkType}
-            onValueChange={(v) => {
-              const newType = (v as "external" | "internal") ?? "external";
-              setEditLinkType(newType);
-              if (newType === "internal") {
-                setEditHref("");
-              }
-            }}
-          >
-            <SelectTrigger className="!h-7 min-w-0 flex-[2] text-sm">
-              <SelectValue placeholder="Link type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="external">External link</SelectItem>
-                <SelectItem value="internal">Internal link</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          {/* URL / Internal picker — 25% */}
-          {editLinkType === "external" ? (
-            <Input
-              value={editHref}
-              onChange={(e) => setEditHref(e.target.value)}
-              placeholder="https://..."
-              className="h-7 min-w-0 flex-[3] text-sm"
-              onKeyDown={editKeyHandler}
-            />
-          ) : (
-            <InternalLinkPicker
-              editHref={editHref}
-              linkOptions={linkOptions}
-              onSelect={(item) => {
-                setEditHref(item.href);
-                if (!editLabel) setEditLabel(item.label);
-              }}
-            />
-          )}
-        </div>
-      );
-    }
-    return (
-      <>
-        <Input
-          value={editName}
-          onChange={(e) => {
-            setEditName(e.target.value);
-            if (editAutoSlug) setEditSlug(slugify(e.target.value));
-          }}
-          placeholder="Name"
-          className="h-7 flex-1 text-sm"
-          autoFocus
-          onKeyDown={editKeyHandler}
-        />
-        <Input
-          value={editSlug}
-          onChange={(e) => {
-            setEditSlug(e.target.value);
-            setEditAutoSlug(false);
-          }}
-          placeholder="slug"
-          className="h-7 w-36 text-sm"
-          onKeyDown={editKeyHandler}
-        />
-      </>
-    );
-  };
+  // --- Drag and drop ---
 
-  const [activeId, setActiveId] = React.useState<string | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const handleDragStart = React.useCallback((event: DragStartEvent) => {
     setActiveId(String(event.active.id));
@@ -578,7 +339,6 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
       const next = cloneItems(prev);
       const activeSiblings = findParentList(next, String(active.id));
       const overSiblings = findParentList(next, String(over.id));
-      // Only allow reorder within the same parent level
       if (!activeSiblings || !overSiblings || activeSiblings !== overSiblings) return prev;
 
       const oldIndex = activeSiblings.findIndex((item) => item.id === active.id);
@@ -595,9 +355,6 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
     setActiveId(null);
   }, []);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-
-  // Check if an item is an ancestor of the currently dragged item
   const isAncestorOfActive = React.useCallback(
     (item: TreeItem): boolean => {
       if (!activeId) return false;
@@ -616,7 +373,7 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
   const activeItem = activeId ? findItemById(items, activeId) : null;
   const activeDepth = activeId ? findItemDepth(items, activeId) : 0;
 
-  // IDs of items that are siblings of the active dragged item — collapse their children during drag
+  // Collapse siblings of dragged item during drag for uniform height
   const activeSiblingIds = React.useMemo(() => {
     if (!activeId) return null;
     const parentList = findParentList(items, activeId);
@@ -624,13 +381,93 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
     return new Set(parentList.map((item) => item.id));
   }, [activeId, items]);
 
+  // --- Edit fields ---
+
+  const renderEditFields = () => {
+    if (!editing) return null;
+    if (variant === "menu") {
+      return (
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <Input
+            value={editing.label}
+            onChange={(e) => updateEditing({ label: e.target.value })}
+            placeholder="Label"
+            className="h-7 min-w-0 flex-[3] text-sm"
+            autoFocus
+            onKeyDown={editKeyHandler}
+          />
+          <Select
+            items={[
+              { value: "external", label: "External link" },
+              { value: "internal", label: "Internal link" },
+            ]}
+            value={editing.linkType}
+            onValueChange={(v) => {
+              const newType = (v as "external" | "internal") ?? "external";
+              updateEditing({ linkType: newType, ...(newType === "internal" ? { href: "" } : {}) });
+            }}
+          >
+            <SelectTrigger className="!h-7 min-w-0 flex-[2] text-sm">
+              <SelectValue placeholder="Link type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="external">External link</SelectItem>
+                <SelectItem value="internal">Internal link</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          {editing.linkType === "external" ? (
+            <Input
+              value={editing.href}
+              onChange={(e) => updateEditing({ href: e.target.value })}
+              placeholder="https://..."
+              className="h-7 min-w-0 flex-[3] text-sm"
+              onKeyDown={editKeyHandler}
+            />
+          ) : (
+            <InternalLinkPicker
+              editHref={editing.href}
+              linkOptions={linkOptions}
+              onSelect={(item) => {
+                updateEditing({ href: item.href, ...(!editing.label ? { label: item.label } : {}) });
+              }}
+            />
+          )}
+        </div>
+      );
+    }
+    return (
+      <>
+        <Input
+          value={editing.name}
+          onChange={(e) => {
+            const name = e.target.value;
+            updateEditing({ name, ...(editing.autoSlug ? { slug: slugify(name) } : {}) });
+          }}
+          placeholder="Name"
+          className="h-7 flex-1 text-sm"
+          autoFocus
+          onKeyDown={editKeyHandler}
+        />
+        <Input
+          value={editing.slug}
+          onChange={(e) => updateEditing({ slug: e.target.value, autoSlug: false })}
+          placeholder="slug"
+          className="h-7 w-36 text-sm"
+          onKeyDown={editKeyHandler}
+        />
+      </>
+    );
+  };
+
+  // --- Tree rendering ---
+
   const renderItem = (item: TreeItem, depth: number) => {
     const hasChildren = item.children.length > 0;
-    // Collapse all siblings of the dragged item during drag for uniform height
     const isDragSibling = activeSiblingIds?.has(item.id) ?? false;
     const isExpanded = expandedIds.has(item.id) && !isDragSibling;
-    const isEditing = editingId === item.id;
-    // Disable sorting on this item if one of its descendants is being dragged
+    const isEditing = editing?.id === item.id;
     const sortDisabled = isAncestorOfActive(item);
 
     return (
@@ -642,7 +479,6 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
                 className="hover:bg-accent/40 flex items-center gap-1 border-b py-1.5 pr-2 text-sm transition-colors"
                 style={{ paddingLeft: `${depth * 1.5 + 0.25}rem` }}
               >
-                {/* Drag handle */}
                 <button
                   type="button"
                   ref={setActivatorNodeRef}
@@ -668,31 +504,15 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
                 )}
 
                 {isEditing ? (
-                  <>
-                    {variant === "menu" ? (
-                      <>
-                        {renderEditFields()}
-                        <div className="flex shrink-0 items-center gap-0.5">
-                          <Button variant="ghost" size="icon-sm" className="size-7" onClick={saveEdit} title="Save">
-                            <Check className="size-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon-sm" className="size-7" onClick={cancelEdit} title="Cancel">
-                            <X className="size-3.5" />
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex min-w-0 flex-1 items-center gap-2">
-                        {renderEditFields()}
-                        <Button variant="ghost" size="icon-sm" className="size-7" onClick={saveEdit} title="Save">
-                          <Check className="size-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon-sm" className="size-7" onClick={cancelEdit} title="Cancel">
-                          <X className="size-3.5" />
-                        </Button>
-                      </div>
-                    )}
-                  </>
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    {renderEditFields()}
+                    <Button variant="ghost" size="icon-sm" className="size-7" onClick={saveEdit} title="Save">
+                      <Check className="size-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon-sm" className="size-7" onClick={cancelEdit} title="Cancel">
+                      <X className="size-3.5" />
+                    </Button>
+                  </div>
                 ) : (
                   <>
                     <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -721,7 +541,7 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
                         className="size-7"
                         title="Outdent"
                         onClick={() => outdentItem(item.id)}
-                        disabled={!canOutdent(item.id)}
+                        disabled={!canOutdent(items, item.id)}
                       >
                         <Outdent className="size-3.5" />
                       </Button>
@@ -771,7 +591,8 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
     );
   };
 
-  // Bulk-add for taxonomy variant
+  // --- Bulk add (taxonomy only) ---
+
   const [bulkInput, setBulkInput] = React.useState("");
   const [bulkParent, setBulkParent] = React.useState("");
 
@@ -828,6 +649,8 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
     });
     setBulkInput("");
   };
+
+  // --- Render ---
 
   const emptyLabel = variant === "menu" ? "No menu items." : "No terms.";
   const addLabel = variant === "menu" ? "Add menu item" : "Add term";
