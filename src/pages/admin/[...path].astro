@@ -405,7 +405,7 @@ const tableRows =
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
-            {route.kind === "edit" && doc?.slug && (
+            {route.kind === "edit" && doc?.slug && !["taxonomies", "menus", "authors"].includes(collection.slug) && (
               <a
                 href={cms.meta.getRouteForDocument(collection.slug, doc)}
                 target="_blank"
