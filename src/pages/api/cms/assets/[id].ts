@@ -13,6 +13,17 @@ export const GET: APIRoute = async ({ params }) => {
   return Response.json(asset);
 };
 
+export const PATCH: APIRoute = async ({ params, request }) => {
+  const id = params.id;
+  if (!id) return Response.json({ error: "Asset ID is required." }, { status: 400 });
+
+  const body = await request.json();
+  const result = await assets.update(id, body);
+  if (!result) return Response.json({ error: "Not found." }, { status: 404 });
+
+  return Response.json(result);
+};
+
 export const DELETE: APIRoute = async ({ params }) => {
   const id = params.id;
   if (!id) return new Response(null, { status: 400 });

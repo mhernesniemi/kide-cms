@@ -1,5 +1,15 @@
 ---
-import { ChevronRight, Folder, FolderPlus, ImagePlus, MoreHorizontal, Pencil, Trash2, Upload } from "lucide-react";
+import {
+  ChevronRight,
+  Folder,
+  FolderPlus,
+  GripVertical,
+  ImagePlus,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Upload,
+} from "lucide-react";
 
 import { Badge } from "@/components/admin/ui/badge";
 import { buttonVariants } from "@/components/admin/ui/button";
@@ -32,12 +42,6 @@ if (currentFolder) {
   }
   breadcrumbs.push(...chain);
 }
-
-const formatSize = (bytes: number) => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
 ---
 
 <AdminLayout title="Assets | AstroCMS" collections={config.collections} activeCollection={null}>
@@ -48,13 +52,21 @@ const formatSize = (bytes: number) => {
         {
           breadcrumbs.length > 0 && (
             <nav class="text-muted-foreground mt-1 flex items-center gap-1 text-sm">
-              <a href="/admin/assets" class="hover:text-foreground transition-colors">
+              <a
+                href="/admin/assets"
+                class="breadcrumb-drop-target hover:text-foreground rounded px-1 transition-colors"
+                data-folder-id=""
+              >
                 All
               </a>
               {breadcrumbs.map((crumb) => (
                 <>
                   <ChevronRight className="size-3" />
-                  <a href={crumb.href} class="hover:text-foreground transition-colors">
+                  <a
+                    href={crumb.href}
+                    class="breadcrumb-drop-target hover:text-foreground rounded px-1 transition-colors"
+                    data-folder-id={crumb.id}
+                  >
                     {crumb.label}
                   </a>
                 </>
@@ -64,33 +76,45 @@ const formatSize = (bytes: number) => {
         }
       </div>
       <div class="flex items-center gap-2">
-        <button type="button" id="new-folder-btn" class={buttonVariants({ variant: "outline", size: "sm" })}>
-          <FolderPlus className="size-4" />
-          New folder
-        </button>
-        <label class={buttonVariants({ size: "sm" }) + " cursor-pointer"}>
-          <Upload className="size-4" />
-          Upload
-          <form method="post" action="/api/cms/assets/upload" enctype="multipart/form-data" class="hidden">
-            <input type="hidden" name="redirectTo" value="/admin/assets" />
-            {currentFolderId && <input type="hidden" name="folder" value={currentFolderId} />}
-            <input
-              type="file"
-              name="file"
-              accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
-              required
-              onchange="this.closest('form').submit()"
-            />
-          </form>
-        </label>
+        <div id="bulk-actions" class="hidden items-center gap-2">
+          <span id="bulk-count" class="text-muted-foreground text-sm"></span>
+          <button type="button" id="bulk-delete-btn" class={buttonVariants({ variant: "destructive", size: "sm" })}>
+            <Trash2 className="size-3.5" />
+            Delete
+          </button>
+          <button type="button" id="bulk-cancel-btn" class={buttonVariants({ variant: "outline", size: "sm" })}>
+            Cancel
+          </button>
+        </div>
+        <div id="default-actions" class="flex items-center gap-2">
+          <button type="button" id="new-folder-btn" class={buttonVariants({ variant: "outline", size: "sm" })}>
+            <FolderPlus className="size-4" />
+            New folder
+          </button>
+          <label class={buttonVariants({ size: "sm" }) + " cursor-pointer"}>
+            <Upload className="size-4" />
+            Upload
+            <form method="post" action="/api/cms/assets/upload" enctype="multipart/form-data" class="hidden">
+              <input type="hidden" name="redirectTo" value="/admin/assets" />
+              {currentFolderId && <input type="hidden" name="folder" value={currentFolderId} />}
+              <input
+                type="file"
+                name="file"
+                accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+                required
+                onchange="this.closest('form').submit()"
+              />
+            </form>
+          </label>
+        </div>
       </div>
     </div>
 
     {
       subfolders.length > 0 && (
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {subfolders.map((folder) => (
-            <div class="group relative">
+            <div class="folder-drop-target group relative" data-folder-id={folder._id}>
               <a href={`/admin/assets?folder=${folder._id}`}>
                 <Card className="transition-colors hover:border-foreground/20">
                   <CardContent className="flex items-center gap-3 py-3">
@@ -129,28 +153,54 @@ const formatSize = (bytes: number) => {
         </Card>
       ) : (
         folderAssets.length > 0 && (
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {folderAssets.map((asset) => (
-              <a href={`/admin/assets/${asset._id}`} class="block">
-                <Card className="overflow-hidden transition-colors hover:border-foreground/20">
-                  {asset.mimeType.startsWith("image/") ? (
-                    <div class="bg-muted/30 aspect-video w-full overflow-hidden border-b">
-                      <img src={asset.url} alt={asset.alt ?? asset.filename} class="size-full object-cover" />
+              <div class="asset-card group relative" data-asset-id={asset._id}>
+                <a href={`/admin/assets/${asset._id}`} class="block">
+                  <Card className="overflow-hidden transition-colors hover:border-foreground/20 pt-0">
+                    <div class="relative">
+                      {asset.mimeType.startsWith("image/") ? (
+                        <div class="bg-muted/30 aspect-square w-full overflow-hidden">
+                          <img src={asset.url} alt={asset.alt ?? asset.filename} class="size-full object-cover" />
+                        </div>
+                      ) : (
+                        <div class="bg-muted/30 flex aspect-square items-center justify-center">
+                          <Badge variant="outline">{asset.mimeType}</Badge>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div class="bg-muted/30 flex aspect-video items-center justify-center border-b">
-                      <Badge variant="outline">{asset.mimeType}</Badge>
-                    </div>
-                  )}
-                  <CardContent className="space-y-2 py-3">
-                    <div class="truncate text-sm font-medium">{asset.filename}</div>
-                    <div class="text-muted-foreground flex items-center justify-between text-xs">
-                      <span>{formatSize(asset.size)}</span>
-                      <span>{new Date(asset._createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </a>
+                    <CardContent className="px-3">
+                      <div class="truncate text-sm font-medium">{asset.filename}</div>
+                      <div class="text-muted-foreground mt-0.5 text-xs">
+                        {new Date(asset._createdAt).toLocaleDateString()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </a>
+                {/* Checkbox overlay */}
+                <label class="border-foreground/25 bg-background/80 has-[:checked]:border-primary has-[:checked]:bg-primary absolute top-2.5 right-2.5 z-10 flex size-5 cursor-pointer items-center justify-center rounded border opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 has-[:checked]:opacity-100">
+                  <input type="checkbox" class="asset-checkbox peer sr-only" data-asset-id={asset._id} />
+                  <svg
+                    class="text-primary-foreground hidden size-3 peer-checked:block"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </label>
+                {/* Drag handle */}
+                <div
+                  class="drag-handle bg-background/80 text-muted-foreground absolute top-2.5 left-2.5 z-10 flex size-5 cursor-grab items-center justify-center rounded opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+                  draggable="true"
+                  data-asset-id={asset._id}
+                >
+                  <GripVertical className="size-3.5" />
+                </div>
+              </div>
             ))}
           </div>
         )
@@ -158,6 +208,21 @@ const formatSize = (bytes: number) => {
     }
   </section>
 </AdminLayout>
+
+<style>
+  .drop-highlight > a > [data-slot="card"],
+  .drop-highlight[data-slot="card"] {
+    border-color: var(--primary) !important;
+    background-color: color-mix(in oklch, var(--primary), transparent 92%);
+  }
+  .breadcrumb-drop-target.drop-highlight {
+    background-color: color-mix(in oklch, var(--primary), transparent 85%);
+    color: var(--foreground);
+  }
+  .asset-card.dragging {
+    opacity: 0.5;
+  }
+</style>
 
 <!-- Folder context menu (hidden, shown on click) -->
 <div
@@ -258,4 +323,118 @@ const formatSize = (bytes: number) => {
       else alert("Failed to delete folder.");
     });
   });
+
+  // Bulk selection
+  var bulkActions = document.getElementById("bulk-actions");
+  var defaultActions = document.getElementById("default-actions");
+  var bulkCount = document.getElementById("bulk-count");
+
+  function getSelected() {
+    return Array.from(document.querySelectorAll(".asset-checkbox:checked")).map(function (cb) {
+      return cb.dataset.assetId;
+    });
+  }
+
+  function updateBulkUI() {
+    var selected = getSelected();
+    if (selected.length > 0) {
+      bulkActions.classList.remove("hidden");
+      bulkActions.classList.add("flex");
+      defaultActions.classList.add("hidden");
+      bulkCount.textContent = selected.length + " selected";
+    } else {
+      bulkActions.classList.add("hidden");
+      bulkActions.classList.remove("flex");
+      defaultActions.classList.remove("hidden");
+    }
+  }
+
+  document.querySelectorAll(".asset-checkbox").forEach(function (cb) {
+    cb.addEventListener("change", updateBulkUI);
+    // Prevent checkbox click from navigating to asset page
+    cb.closest("label").addEventListener("click", function (e) {
+      e.stopPropagation();
+    });
+  });
+
+  document.getElementById("bulk-delete-btn").addEventListener("click", function () {
+    var selected = getSelected();
+    if (!selected.length) return;
+    if (!confirm("Delete " + selected.length + " asset" + (selected.length > 1 ? "s" : "") + "?")) return;
+
+    Promise.all(
+      selected.map(function (id) {
+        return fetch("/api/cms/assets/" + id, { method: "DELETE" });
+      }),
+    ).then(function () {
+      location.reload();
+    });
+  });
+
+  document.getElementById("bulk-cancel-btn").addEventListener("click", function () {
+    document.querySelectorAll(".asset-checkbox:checked").forEach(function (cb) {
+      cb.checked = false;
+    });
+    updateBulkUI();
+  });
+
+  // Drag and drop: drag handles → folders
+  var draggedAssetId = null;
+
+  document.querySelectorAll(".drag-handle").forEach(function (handle) {
+    var card = handle.closest(".asset-card");
+    handle.addEventListener("dragstart", function (e) {
+      draggedAssetId = handle.dataset.assetId;
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", draggedAssetId);
+      // Use the full card as the drag image, offset so cursor stays on the drag handle
+      var cardEl = card.querySelector("[data-slot='card']");
+      if (cardEl) {
+        var handleRect = handle.getBoundingClientRect();
+        var cardRect = cardEl.getBoundingClientRect();
+        var offsetX = handleRect.left - cardRect.left + handleRect.width / 2;
+        var offsetY = handleRect.top - cardRect.top + handleRect.height / 2;
+        e.dataTransfer.setDragImage(cardEl, offsetX, offsetY);
+      }
+      card.classList.add("dragging");
+    });
+    handle.addEventListener("dragend", function () {
+      card.classList.remove("dragging");
+      draggedAssetId = null;
+      document.querySelectorAll(".folder-drop-target, .breadcrumb-drop-target").forEach(function (t) {
+        t.classList.remove("drop-highlight");
+      });
+    });
+  });
+
+  function setupDropTarget(el) {
+    el.addEventListener("dragover", function (e) {
+      if (!draggedAssetId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      el.classList.add("drop-highlight");
+    });
+    el.addEventListener("dragleave", function () {
+      el.classList.remove("drop-highlight");
+    });
+    el.addEventListener("drop", function (e) {
+      e.preventDefault();
+      el.classList.remove("drop-highlight");
+      var assetId = e.dataTransfer.getData("text/plain");
+      var targetFolderId = el.dataset.folderId;
+      if (!assetId) return;
+
+      fetch("/api/cms/assets/" + assetId, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder: targetFolderId || null }),
+      }).then(function (res) {
+        if (res.ok) location.reload();
+        else alert("Failed to move asset.");
+      });
+    });
+  }
+
+  document.querySelectorAll(".folder-drop-target").forEach(setupDropTarget);
+  document.querySelectorAll(".breadcrumb-drop-target").forEach(setupDropTarget);
 </script>
