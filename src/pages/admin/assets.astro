@@ -4,7 +4,7 @@ import { ImagePlus, Trash2 } from "lucide-react";
 import AdminCard from "@/components/admin/AdminCard.astro";
 import { Badge } from "@/components/admin/ui/badge";
 import { buttonVariants } from "@/components/admin/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/admin/ui/card";
+import { Card, CardContent } from "@/components/admin/ui/card";
 import config from "@/cms/collections.config";
 import { assets } from "@/cms/core/assets";
 import AdminLayout from "@/layouts/AdminLayout.astro";
@@ -12,7 +12,6 @@ import AdminLayout from "@/layouts/AdminLayout.astro";
 export const prerender = false;
 
 const allAssets = await assets.find({ limit: 100 });
-const totalCount = await assets.count();
 
 const formatSize = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -25,35 +24,8 @@ const formatSize = (bytes: number) => {
   <section class="space-y-6">
     <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
       <div class="space-y-2">
-        <div class="text-muted-foreground text-sm font-medium">media</div>
-        <div class="space-y-1">
-          <h1 class="text-3xl font-semibold tracking-tight">Assets</h1>
-          <p class="text-muted-foreground max-w-3xl text-sm leading-6">
-            Uploaded files and images available for use across all collections.
-          </p>
-        </div>
+        <h1 class="text-3xl font-semibold tracking-tight">Assets</h1>
       </div>
-    </div>
-
-    <div class="grid gap-4 sm:grid-cols-3">
-      <Card>
-        <CardHeader className="gap-0">
-          <CardDescription>Total assets</CardDescription>
-          <CardTitle className="text-2xl">{totalCount}</CardTitle>
-        </CardHeader>
-      </Card>
-      <Card>
-        <CardHeader className="gap-0">
-          <CardDescription>Storage</CardDescription>
-          <CardTitle className="text-2xl">Local disk</CardTitle>
-        </CardHeader>
-      </Card>
-      <Card>
-        <CardHeader className="gap-0">
-          <CardDescription>Upload path</CardDescription>
-          <CardTitle className="text-lg">public/uploads/</CardTitle>
-        </CardHeader>
-      </Card>
     </div>
 
     <!-- Upload form -->
