@@ -33,7 +33,6 @@ const folderAssets = await assets.find({ limit: 100, folder: currentFolderId });
 // Build breadcrumb trail
 const breadcrumbs: Array<{ label: string; href: string; id: string }> = [];
 if (currentFolder) {
-  // Walk up the parent chain
   let folder: typeof currentFolder | null = currentFolder;
   const chain: typeof breadcrumbs = [];
   while (folder) {
@@ -51,20 +50,20 @@ if (currentFolder) {
         <h1 class="text-2xl font-semibold tracking-tight">Assets</h1>
         {
           breadcrumbs.length > 0 && (
-            <nav class="text-muted-foreground mt-1 flex items-center gap-1 text-sm">
+            <nav class="text-muted-foreground mt-2 flex items-center gap-1 text-sm">
               <a
                 href="/admin/assets"
-                class="breadcrumb-drop-target hover:text-foreground rounded px-1 transition-colors"
+                class="breadcrumb-drop-target hover:text-foreground hover:border-foreground/20 bg-muted/50 rounded-md border border-border px-2.5 py-1 transition-colors"
                 data-folder-id=""
               >
-                All
+                All assets
               </a>
               {breadcrumbs.map((crumb) => (
                 <>
-                  <ChevronRight className="size-3" />
+                  <ChevronRight className="size-3.5" />
                   <a
                     href={crumb.href}
-                    class="breadcrumb-drop-target hover:text-foreground rounded px-1 transition-colors"
+                    class="breadcrumb-drop-target hover:text-foreground hover:border-foreground/20 bg-muted/50 rounded-md border border-border px-2.5 py-1 transition-colors"
                     data-folder-id={crumb.id}
                   >
                     {crumb.label}
@@ -194,8 +193,7 @@ if (currentFolder) {
                 </label>
                 {/* Drag handle */}
                 <div
-                  class="drag-handle bg-background/80 text-muted-foreground absolute top-2.5 left-2.5 z-10 flex size-5 cursor-grab items-center justify-center rounded opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 active:cursor-grabbing"
-                  draggable="true"
+                  class="drag-handle bg-background/80 text-muted-foreground absolute top-2.5 left-2.5 z-10 flex size-5 cursor-grab items-center justify-center rounded opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
                   data-asset-id={asset._id}
                 >
                   <GripVertical className="size-3.5" />
@@ -209,18 +207,18 @@ if (currentFolder) {
   </section>
 </AdminLayout>
 
-<style>
-  .drop-highlight > a > [data-slot="card"],
-  .drop-highlight[data-slot="card"] {
-    border-color: var(--primary) !important;
+<style is:global>
+  .drop-highlight [data-slot="card"] {
+    border-color: var(--foreground) !important;
     background-color: color-mix(in oklch, var(--primary), transparent 92%);
   }
   .breadcrumb-drop-target.drop-highlight {
-    background-color: color-mix(in oklch, var(--primary), transparent 85%);
+    background-color: color-mix(in oklch, var(--primary), transparent 88%);
+    border-color: var(--primary) !important;
     color: var(--foreground);
   }
   .asset-card.dragging {
-    opacity: 0.5;
+    opacity: 0.4;
   }
 </style>
 
@@ -247,8 +245,10 @@ if (currentFolder) {
   </button>
 </div>
 
-<script is:inline define:vars={{ currentFolderId }}>
+<script is:inline>
   // New folder creation
+  var folderParam = new URLSearchParams(location.search).get("folder") || null;
+
   document.getElementById("new-folder-btn").addEventListener("click", function () {
     var name = prompt("Folder name:");
     if (!name || !name.trim()) return;
@@ -256,7 +256,7 @@ if (currentFolder) {
     fetch("/api/cms/assets/folders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "create", name: name.trim(), parent: currentFolderId }),
+      body: JSON.stringify({ action: "create", name: name.trim(), parent: folderParam }),
     }).then(function (res) {
       if (res.ok) location.reload();
       else alert("Failed to create folder.");
@@ -351,7 +351,6 @@ if (currentFolder) {
 
   document.querySelectorAll(".asset-checkbox").forEach(function (cb) {
     cb.addEventListener("change", updateBulkUI);
-    // Prevent checkbox click from navigating to asset page
     cb.closest("label").addEventListener("click", function (e) {
       e.stopPropagation();
     });
@@ -378,53 +377,110 @@ if (currentFolder) {
     updateBulkUI();
   });
 
-  // Drag and drop: drag handles → folders
-  var draggedAssetId = null;
+  // Drag and drop (mouse-based)
+  var dragging = false;
+  var dragAssetId = null;
+  var dragCard = null;
+  var dragGhost = null;
+  var dragOffsetX = 0;
+  var dragOffsetY = 0;
+  var currentDropTarget = null;
+  var DRAG_THRESHOLD = 5;
+  var startX = 0;
+  var startY = 0;
+  var mouseIsDown = false;
+  var activeHandle = null;
+
+  var dropTargets = [];
+  document.querySelectorAll(".folder-drop-target").forEach(function (el) {
+    dropTargets.push(el);
+  });
+  document.querySelectorAll(".breadcrumb-drop-target").forEach(function (el) {
+    dropTargets.push(el);
+  });
 
   document.querySelectorAll(".drag-handle").forEach(function (handle) {
-    var card = handle.closest(".asset-card");
-    handle.addEventListener("dragstart", function (e) {
-      draggedAssetId = handle.dataset.assetId;
-      e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", draggedAssetId);
-      // Use the full card as the drag image, offset so cursor stays on the drag handle
-      var cardEl = card.querySelector("[data-slot='card']");
-      if (cardEl) {
-        var handleRect = handle.getBoundingClientRect();
-        var cardRect = cardEl.getBoundingClientRect();
-        var offsetX = handleRect.left - cardRect.left + handleRect.width / 2;
-        var offsetY = handleRect.top - cardRect.top + handleRect.height / 2;
-        e.dataTransfer.setDragImage(cardEl, offsetX, offsetY);
-      }
-      card.classList.add("dragging");
-    });
-    handle.addEventListener("dragend", function () {
-      card.classList.remove("dragging");
-      draggedAssetId = null;
-      document.querySelectorAll(".folder-drop-target, .breadcrumb-drop-target").forEach(function (t) {
-        t.classList.remove("drop-highlight");
-      });
+    handle.addEventListener("mousedown", function (e) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      mouseIsDown = true;
+      activeHandle = handle;
+      startX = e.clientX;
+      startY = e.clientY;
     });
   });
 
-  function setupDropTarget(el) {
-    el.addEventListener("dragover", function (e) {
-      if (!draggedAssetId) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      el.classList.add("drop-highlight");
-    });
-    el.addEventListener("dragleave", function () {
-      el.classList.remove("drop-highlight");
-    });
-    el.addEventListener("drop", function (e) {
-      e.preventDefault();
-      el.classList.remove("drop-highlight");
-      var assetId = e.dataTransfer.getData("text/plain");
-      var targetFolderId = el.dataset.folderId;
-      if (!assetId) return;
+  document.addEventListener("mousemove", function (e) {
+    if (!mouseIsDown) return;
 
-      fetch("/api/cms/assets/" + assetId, {
+    if (!dragging) {
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+      if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+
+      // Start drag
+      dragging = true;
+      dragCard = activeHandle.closest(".asset-card");
+      dragAssetId = activeHandle.dataset.assetId;
+
+      // Create ghost
+      var cardEl = dragCard.querySelector("[data-slot='card']");
+      var rect = cardEl.getBoundingClientRect();
+      dragGhost = cardEl.cloneNode(true);
+      dragGhost.style.position = "fixed";
+      dragGhost.style.width = rect.width + "px";
+      dragGhost.style.zIndex = "9999";
+      dragGhost.style.pointerEvents = "none";
+      dragGhost.style.opacity = "0.85";
+      dragGhost.style.transform = "rotate(2deg) scale(0.95)";
+      dragGhost.style.boxShadow = "0 8px 25px rgba(0,0,0,0.2)";
+      dragGhost.style.transition = "none";
+      document.body.appendChild(dragGhost);
+
+      var handleRect = activeHandle.getBoundingClientRect();
+      dragOffsetX = handleRect.left - rect.left + handleRect.width / 2;
+      dragOffsetY = handleRect.top - rect.top + handleRect.height / 2;
+
+      dragCard.classList.add("dragging");
+      document.body.style.cursor = "grabbing";
+      document.body.style.userSelect = "none";
+    }
+
+    // Move ghost
+    if (dragGhost) {
+      dragGhost.style.left = e.clientX - dragOffsetX + "px";
+      dragGhost.style.top = e.clientY - dragOffsetY + "px";
+    }
+
+    // Hit-test drop targets
+    var hit = null;
+    for (var i = 0; i < dropTargets.length; i++) {
+      var r = dropTargets[i].getBoundingClientRect();
+      if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+        hit = dropTargets[i];
+        break;
+      }
+    }
+    if (hit !== currentDropTarget) {
+      if (currentDropTarget) currentDropTarget.classList.remove("drop-highlight");
+      currentDropTarget = hit;
+      if (currentDropTarget) currentDropTarget.classList.add("drop-highlight");
+    }
+  });
+
+  document.addEventListener("mouseup", function () {
+    if (!mouseIsDown) return;
+    mouseIsDown = false;
+
+    if (!dragging) {
+      activeHandle = null;
+      return;
+    }
+
+    // Drop
+    if (currentDropTarget && dragAssetId) {
+      var targetFolderId = currentDropTarget.dataset.folderId;
+      fetch("/api/cms/assets/" + dragAssetId, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ folder: targetFolderId || null }),
@@ -432,9 +488,25 @@ if (currentFolder) {
         if (res.ok) location.reload();
         else alert("Failed to move asset.");
       });
-    });
-  }
+    }
 
-  document.querySelectorAll(".folder-drop-target").forEach(setupDropTarget);
-  document.querySelectorAll(".breadcrumb-drop-target").forEach(setupDropTarget);
+    // Cleanup
+    if (dragGhost) {
+      dragGhost.remove();
+      dragGhost = null;
+    }
+    if (dragCard) {
+      dragCard.classList.remove("dragging");
+      dragCard = null;
+    }
+    if (currentDropTarget) {
+      currentDropTarget.classList.remove("drop-highlight");
+      currentDropTarget = null;
+    }
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    dragging = false;
+    dragAssetId = null;
+    activeHandle = null;
+  });
 </script>
