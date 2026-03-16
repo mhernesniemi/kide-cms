@@ -1,18 +1,18 @@
 import { generateText } from "ai";
 
+const env = (key: string) => import.meta.env[key];
+
 export function isAiEnabled(): boolean {
-  const provider = process.env.AI_PROVIDER;
-  const apiKey = process.env.AI_API_KEY;
-  return !!(provider && apiKey);
+  return !!(env("AI_PROVIDER") && env("AI_API_KEY"));
 }
 
 export async function getAiModel() {
-  const provider = process.env.AI_PROVIDER || "openai";
-  const modelName = process.env.AI_MODEL || "gpt-4o-mini";
+  const provider = env("AI_PROVIDER") || "openai";
+  const modelName = env("AI_MODEL") || "gpt-4o-mini";
 
   if (provider === "openai") {
     const { createOpenAI } = await import("@ai-sdk/openai");
-    const openai = createOpenAI({ apiKey: process.env.AI_API_KEY });
+    const openai = createOpenAI({ apiKey: env("AI_API_KEY") });
     return openai(modelName);
   }
 
@@ -30,7 +30,7 @@ export async function generateAltText(imageUrl: string, filename: string): Promi
         content: [
           {
             type: "image",
-            image: new URL(imageUrl, process.env.SITE_URL || "http://localhost:4321"),
+            image: new URL(imageUrl, env("SITE_URL") || "http://localhost:4321"),
           },
           {
             type: "text",
