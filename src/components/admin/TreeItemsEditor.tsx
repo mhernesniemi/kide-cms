@@ -1,7 +1,29 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronRight, ChevronsUpDown, Indent, Outdent, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  ChevronsUpDown,
+  GripVertical,
+  Indent,
+  Outdent,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { Button } from "@/components/admin/ui/button";
 import {
   Command,
@@ -146,6 +168,53 @@ function InternalLinkPicker({
       </Popover>
     </div>
   );
+}
+
+function SortableTreeItem({
+  id,
+  disabled,
+  children,
+}: {
+  id: string;
+  disabled?: boolean;
+  children: (props: {
+    attributes: ReturnType<typeof useSortable>["attributes"];
+    listeners: ReturnType<typeof useSortable>["listeners"];
+    setNodeRef: (node: HTMLElement | null) => void;
+    setActivatorNodeRef: (node: HTMLElement | null) => void;
+    style: React.CSSProperties;
+    isDragging: boolean;
+  }) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled,
+  });
+
+  const style: React.CSSProperties = {
+    transform: transform ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)` : undefined,
+    transition,
+  };
+
+  return <>{children({ attributes, listeners, setNodeRef, setActivatorNodeRef, style, isDragging })}</>;
+}
+
+function findItemById(items: TreeItem[], id: string): TreeItem | null {
+  for (const item of items) {
+    if (item.id === id) return item;
+    const found = findItemById(item.children, id);
+    if (found) return found;
+  }
+  return null;
+}
+
+function findParentList(items: TreeItem[], id: string): TreeItem[] | null {
+  for (const item of items) {
+    if (item.id === id) return items;
+    const found = findParentList(item.children, id);
+    if (found) return found;
+  }
+  return null;
 }
 
 export default function TreeItemsEditor({ name, value, variant, linkOptions = [] }: Props) {
@@ -494,119 +563,211 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
     );
   };
 
+  const [activeId, setActiveId] = React.useState<string | null>(null);
+
+  const handleDragStart = React.useCallback((event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  }, []);
+
+  const handleDragEnd = React.useCallback((event: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setItems((prev) => {
+      const next = cloneItems(prev);
+      const activeSiblings = findParentList(next, String(active.id));
+      const overSiblings = findParentList(next, String(over.id));
+      // Only allow reorder within the same parent level
+      if (!activeSiblings || !overSiblings || activeSiblings !== overSiblings) return prev;
+
+      const oldIndex = activeSiblings.findIndex((item) => item.id === active.id);
+      const newIndex = activeSiblings.findIndex((item) => item.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+
+      const reordered = arrayMove(activeSiblings, oldIndex, newIndex);
+      activeSiblings.splice(0, activeSiblings.length, ...reordered);
+      return next;
+    });
+  }, []);
+
+  const handleDragCancel = React.useCallback(() => {
+    setActiveId(null);
+  }, []);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  // Check if an item is an ancestor of the currently dragged item
+  const isAncestorOfActive = React.useCallback(
+    (item: TreeItem): boolean => {
+      if (!activeId) return false;
+      const check = (children: TreeItem[]): boolean => {
+        for (const child of children) {
+          if (child.id === activeId) return true;
+          if (check(child.children)) return true;
+        }
+        return false;
+      };
+      return check(item.children);
+    },
+    [activeId],
+  );
+
+  const activeItem = activeId ? findItemById(items, activeId) : null;
+  const activeDepth = activeId ? findItemDepth(items, activeId) : 0;
+
+  // IDs of items that are siblings of the active dragged item — collapse their children during drag
+  const activeSiblingIds = React.useMemo(() => {
+    if (!activeId) return null;
+    const parentList = findParentList(items, activeId);
+    if (!parentList) return null;
+    return new Set(parentList.map((item) => item.id));
+  }, [activeId, items]);
+
   const renderItem = (item: TreeItem, depth: number) => {
     const hasChildren = item.children.length > 0;
-    const isExpanded = expandedIds.has(item.id);
+    // Collapse all siblings of the dragged item during drag for uniform height
+    const isDragSibling = activeSiblingIds?.has(item.id) ?? false;
+    const isExpanded = expandedIds.has(item.id) && !isDragSibling;
     const isEditing = editingId === item.id;
+    // Disable sorting on this item if one of its descendants is being dragged
+    const sortDisabled = isAncestorOfActive(item);
 
     return (
-      <Collapsible key={item.id} open={isExpanded}>
-        <div
-          className="hover:bg-accent/40 flex items-center gap-2 border-b py-1.5 pr-2 text-sm transition-colors"
-          style={{ paddingLeft: `${depth * 1.5 + 0.5}rem` }}
-        >
-          {hasChildren ? (
-            <CollapsibleTrigger
-              onClick={() => toggleExpand(item.id)}
-              className="text-muted-foreground hover:text-foreground flex size-6 shrink-0 items-center justify-center rounded-md transition-colors"
-            >
-              <ChevronRight
-                className="size-3.5 transition-transform duration-150"
-                style={{ transform: isExpanded ? "rotate(90deg)" : undefined }}
-              />
-            </CollapsibleTrigger>
-          ) : (
-            <span className="size-6 shrink-0" />
-          )}
+      <SortableTreeItem key={item.id} id={item.id} disabled={sortDisabled}>
+        {({ attributes, listeners, setNodeRef, setActivatorNodeRef, style, isDragging }) => (
+          <Collapsible open={isExpanded}>
+            <div ref={setNodeRef} style={style} className={cn(isDragging && "z-10 opacity-30")}>
+              <div
+                className="hover:bg-accent/40 flex items-center gap-1 border-b py-1.5 pr-2 text-sm transition-colors"
+                style={{ paddingLeft: `${depth * 1.5 + 0.25}rem` }}
+              >
+                {/* Drag handle */}
+                <button
+                  type="button"
+                  ref={setActivatorNodeRef}
+                  className="text-muted-foreground/50 hover:text-muted-foreground -ml-0.5 cursor-grab touch-none rounded p-0.5 transition-colors active:cursor-grabbing"
+                  {...attributes}
+                  {...listeners}
+                >
+                  <GripVertical className="size-3.5" />
+                </button>
 
-          {isEditing ? (
-            <>
-              {variant === "menu" ? (
-                <>
-                  {renderEditFields()}
-                  <div className="flex shrink-0 items-center gap-0.5">
-                    <Button variant="ghost" size="icon-sm" className="size-7" onClick={saveEdit} title="Save">
-                      <Check className="size-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon-sm" className="size-7" onClick={cancelEdit} title="Cancel">
-                      <X className="size-3.5" />
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  {renderEditFields()}
-                  <Button variant="ghost" size="icon-sm" className="size-7" onClick={saveEdit} title="Save">
-                    <Check className="size-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon-sm" className="size-7" onClick={cancelEdit} title="Cancel">
-                    <X className="size-3.5" />
-                  </Button>
-                </div>
+                {hasChildren ? (
+                  <CollapsibleTrigger
+                    onClick={() => toggleExpand(item.id)}
+                    className="text-muted-foreground hover:text-foreground flex size-6 shrink-0 items-center justify-center rounded-md transition-colors"
+                  >
+                    <ChevronRight
+                      className="size-3.5 transition-transform duration-150"
+                      style={{ transform: isExpanded ? "rotate(90deg)" : undefined }}
+                    />
+                  </CollapsibleTrigger>
+                ) : (
+                  <span className="size-6 shrink-0" />
+                )}
+
+                {isEditing ? (
+                  <>
+                    {variant === "menu" ? (
+                      <>
+                        {renderEditFields()}
+                        <div className="flex shrink-0 items-center gap-0.5">
+                          <Button variant="ghost" size="icon-sm" className="size-7" onClick={saveEdit} title="Save">
+                            <Check className="size-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" className="size-7" onClick={cancelEdit} title="Cancel">
+                            <X className="size-3.5" />
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        {renderEditFields()}
+                        <Button variant="ghost" size="icon-sm" className="size-7" onClick={saveEdit} title="Save">
+                          <Check className="size-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" className="size-7" onClick={cancelEdit} title="Cancel">
+                          <X className="size-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <span className="truncate font-medium">{getItemLabel(item, variant)}</span>
+                      {variant === "menu" && (
+                        <span className="text-muted-foreground truncate text-xs">{getItemSublabel(item, variant)}</span>
+                      )}
+                      {variant === "menu" && item.target === "_blank" && (
+                        <span className="text-muted-foreground text-xs">(new tab)</span>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-7"
+                        title="Indent"
+                        onClick={() => indentItem(item.id)}
+                        disabled={!canIndent(items, item.id)}
+                      >
+                        <Indent className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-7"
+                        title="Outdent"
+                        onClick={() => outdentItem(item.id)}
+                        disabled={!canOutdent(item.id)}
+                      >
+                        <Outdent className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-7"
+                        title="Add child"
+                        onClick={() => addChildItem(item.id)}
+                      >
+                        <Plus className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-7"
+                        title="Edit"
+                        onClick={() => startEdit(item)}
+                      >
+                        <Pencil className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-destructive hover:text-destructive size-7"
+                        title="Delete"
+                        onClick={() => removeItem(item.id)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {hasChildren && (
+                <CollapsibleContent>
+                  <SortableContext items={item.children.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                    {item.children.map((child) => renderItem(child, depth + 1))}
+                  </SortableContext>
+                </CollapsibleContent>
               )}
-            </>
-          ) : (
-            <>
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <span className="truncate font-medium">{getItemLabel(item, variant)}</span>
-                {variant === "menu" && (
-                  <span className="text-muted-foreground truncate text-xs">{getItemSublabel(item, variant)}</span>
-                )}
-                {variant === "menu" && item.target === "_blank" && (
-                  <span className="text-muted-foreground text-xs">(new tab)</span>
-                )}
-              </div>
-              <div className="flex shrink-0 items-center gap-0.5">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="size-7"
-                  title="Indent"
-                  onClick={() => indentItem(item.id)}
-                  disabled={!canIndent(items, item.id)}
-                >
-                  <Indent className="size-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="size-7"
-                  title="Outdent"
-                  onClick={() => outdentItem(item.id)}
-                  disabled={!canOutdent(item.id)}
-                >
-                  <Outdent className="size-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="size-7"
-                  title="Add child"
-                  onClick={() => addChildItem(item.id)}
-                >
-                  <Plus className="size-3.5" />
-                </Button>
-                <Button variant="ghost" size="icon-sm" className="size-7" title="Edit" onClick={() => startEdit(item)}>
-                  <Pencil className="size-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-destructive hover:text-destructive size-7"
-                  title="Delete"
-                  onClick={() => removeItem(item.id)}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {hasChildren && (
-          <CollapsibleContent>{item.children.map((child) => renderItem(child, depth + 1))}</CollapsibleContent>
+            </div>
+          </Collapsible>
         )}
-      </Collapsible>
+      </SortableTreeItem>
     );
   };
 
@@ -713,13 +874,38 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
         </div>
       )}
 
-      <div className="rounded-lg border">
-        {items.length > 0 ? (
-          items.map((item) => renderItem(item, 0))
-        ) : (
-          <div className="text-muted-foreground py-8 text-center text-sm">{emptyLabel}</div>
-        )}
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <div className="rounded-lg border">
+          {items.length > 0 ? (
+            <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+              {items.map((item) => renderItem(item, 0))}
+            </SortableContext>
+          ) : (
+            <div className="text-muted-foreground py-8 text-center text-sm">{emptyLabel}</div>
+          )}
+        </div>
+        <DragOverlay dropAnimation={null}>
+          {activeItem && (
+            <div
+              className="bg-background flex items-center gap-1 rounded-md border py-1.5 pr-2 text-sm shadow-lg"
+              style={{ paddingLeft: `${activeDepth * 1.5 + 0.25}rem` }}
+            >
+              <GripVertical className="text-muted-foreground/50 size-3.5" />
+              <span className="size-6 shrink-0" />
+              <span className="truncate font-medium">{getItemLabel(activeItem, variant)}</span>
+              {variant === "menu" && (
+                <span className="text-muted-foreground truncate text-xs">{getItemSublabel(activeItem, variant)}</span>
+              )}
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
       <Button type="button" variant="outline" size="sm" onClick={addRootItem}>
         <Plus className="size-4" />
         {addLabel}
