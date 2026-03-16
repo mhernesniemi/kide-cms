@@ -1,0 +1,41 @@
+---
+// Injected into public pages when ?preview=true is present.
+// Listens for postMessage from the admin editor and updates DOM in place.
+---
+
+<script>
+  import { renderRichText } from "../cms/core/richtext";
+  import type { RichTextDocument } from "../cms/core/define";
+
+  window.addEventListener("message", (event) => {
+    if (event.data?.type !== "cms:preview-update") return;
+
+    const fields = event.data.fields as Record<string, string>;
+
+    for (const [fieldName, value] of Object.entries(fields)) {
+      const el = document.querySelector(`[data-preview-field="${fieldName}"]`);
+      if (!el) continue;
+
+      const fieldType = el.getAttribute("data-preview-type") ?? "text";
+
+      if (fieldType === "richText") {
+        try {
+          const parsed = JSON.parse(value) as RichTextDocument;
+          el.innerHTML = renderRichText(parsed);
+        } catch {
+          // Invalid JSON — skip
+        }
+      } else if (fieldType === "image") {
+        const img = el.querySelector("img") ?? el;
+        if (img instanceof HTMLImageElement && value) {
+          img.src = value;
+        }
+      } else {
+        el.textContent = value;
+      }
+    }
+  });
+
+  // Signal to parent that the preview script is ready
+  window.parent.postMessage({ type: "cms:preview-ready" }, "*");
+</script>

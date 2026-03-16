@@ -1,6 +1,7 @@
 ---
 import PublicLayout from "../layouts/PublicLayout.astro";
 import RichTextContent from "../components/RichTextContent.astro";
+import PreviewReceiver from "../components/PreviewReceiver.astro";
 import { cms } from "../cms/.generated/api";
 
 export const prerender = false;
@@ -8,13 +9,14 @@ export const prerender = false;
 type AnyRecord = Record<string, any>;
 
 const segments = (Astro.params.slug ?? "").split("/").filter(Boolean);
+const isPreview = Astro.url.searchParams.get("preview") === "true";
 
 let document: AnyRecord | null = null;
 
 if (segments[0] === "blog" && segments[1]) {
   document = await cms.posts.findOne({
     slug: segments[1],
-    status: "published",
+    status: isPreview ? "any" : "published",
   });
 }
 
@@ -22,14 +24,25 @@ if (!document) {
   return Astro.redirect("/");
 }
 
-Astro.cache.set({ tags: ["posts", `post:${document._id}`] });
+if (!isPreview) {
+  Astro.cache.set({ tags: ["posts", `post:${document._id}`] });
+}
 ---
 
 <PublicLayout title={String(document.title)}>
   <article style="max-width: 640px; margin: 0 auto; padding: 2rem 1rem;">
     <a href="/" style="color: #0f766e; font-size: 0.9rem;">&larr; Back</a>
-    <h1 style="font-size: 1.5rem; margin: 1rem 0 0.5rem;">{String(document.title)}</h1>
-    {document.excerpt && <p style="color: #666; margin: 0 0 1.5rem;">{String(document.excerpt)}</p>}
-    <RichTextContent content={document.body} />
+    <h1 data-preview-field="title" style="font-size: 1.5rem; margin: 1rem 0 0.5rem;">{String(document.title)}</h1>
+    {
+      (document.excerpt || isPreview) && (
+        <p data-preview-field="excerpt" style="color: #666; margin: 0 0 1.5rem;">
+          {document.excerpt ? String(document.excerpt) : ""}
+        </p>
+      )
+    }
+    <div data-preview-field="body" data-preview-type="richText">
+      <RichTextContent content={document.body} />
+    </div>
   </article>
+  {isPreview && <PreviewReceiver />}
 </PublicLayout>

@@ -247,3 +247,64 @@
 .dark .tiptap p.is-editor-empty:first-child::before {
   color: var(--color-placeholder) !important;
 }
+
+/* ── Live preview split-screen ───────────────────────────────────── */
+
+/* Hide sidebar */
+html.preview-open > body > div > aside {
+  display: none !important;
+}
+
+/* Collapse the sidebar+content grid to single column */
+html.preview-open > body > div {
+  grid-template-columns: 1fr !important;
+}
+
+/* Split the content column into two equal halves */
+html.preview-open > body > div > div.min-w-0 {
+  display: grid !important;
+  grid-template-columns: 50% 50%;
+  grid-template-rows: 100vh;
+  overflow: hidden;
+}
+
+/* Hide the mobile header row in preview */
+html.preview-open > body > div > div.min-w-0 > header {
+  display: none !important;
+}
+
+/* Editor scrolls independently */
+html.preview-open > body > div > div.min-w-0 > main {
+  overflow-y: auto;
+  max-width: none;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+/* Preview pane sits in the right column */
+#preview-pane.preview-active {
+  display: flex !important;
+  flex-direction: column;
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
+#preview-pane.preview-active > div {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+}
+
+#preview-pane.preview-active iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+}
+
+/* Force single-column form layout when preview is active */
+html.preview-open form#document-form {
+  grid-template-columns: 1fr !important;
+}

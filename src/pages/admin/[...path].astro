@@ -1,10 +1,11 @@
 ---
-import { ArrowUpRight, Dot, Languages, Plus } from "lucide-react";
+import { Dot, Languages, Plus } from "lucide-react";
 
 import AdminCard from "@/components/admin/AdminCard.astro";
 import DocumentActions from "@/components/admin/DocumentActions";
 import DocumentsDataTable from "@/components/admin/DocumentsDataTable";
 import LiveHeading from "@/components/admin/LiveHeading";
+import LivePreview from "@/components/admin/LivePreview";
 import UnsavedGuard from "@/components/admin/UnsavedGuard";
 import FieldControl from "@/components/admin/FieldControl.astro";
 import { StatusBadge } from "@/components/admin/ui/badge";
@@ -274,6 +275,8 @@ const mainFieldSets = primaryFieldSets.length > 0 ? primaryFieldSets : fieldSets
 const effectiveSidebarFieldSets =
   sidebarFieldSets.length > 0 ? sidebarFieldSets : fieldSets.slice(mainFieldSets.length);
 const listColumns = collection ? getListColumns(collection, viewConfig.list) : [];
+const hasPreview = !!(collection?.pathPrefix && route.kind === "edit" && doc?.slug);
+const previewUrl = hasPreview ? `${cms.meta.getRouteForDocument(collection.slug, doc)}?preview=true` : null;
 const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
 const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
 
@@ -405,15 +408,13 @@ const tableRows =
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
-            {route.kind === "edit" && doc?.slug && !["taxonomies", "menus", "authors"].includes(collection.slug) && (
-              <a
-                href={cms.meta.getRouteForDocument(collection.slug, doc)}
-                target="_blank"
-                class="text-foreground/70 hover:text-foreground flex items-center gap-1 text-sm transition-colors"
-              >
-                Preview
-                <ArrowUpRight className="size-3.5" />
-              </a>
+            {hasPreview && previewUrl && (
+              <LivePreview
+                client:load
+                previewUrl={previewUrl}
+                formId="document-form"
+                fieldNames={Object.keys(collection.fields)}
+              />
             )}
             {route.kind === "list" && (
               <a href={`/admin/${collection.slug}/new`} class={buttonVariants({ size: "sm" })}>
