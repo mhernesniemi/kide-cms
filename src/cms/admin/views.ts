@@ -38,7 +38,7 @@ export default {
       layout: [
         { fields: ["title", "excerpt", "body"], width: "2/3" },
         {
-          fields: ["slug", "category", "author", "tags", "cover", "seoTitle", "seoDescription"],
+          fields: ["slug", "category", "author", "tags", "cover", "seoDescription"],
           width: "1/3",
         },
       ],
@@ -52,7 +52,7 @@ export default {
     edit: {
       layout: [
         { fields: ["title", "summary", "blocks"], width: "2/3" },
-        { fields: ["slug", "layout", "heroImage", "relatedPosts", "seoTitle", "seoDescription"], width: "1/3" },
+        { fields: ["slug", "layout", "heroImage", "relatedPosts", "seoDescription"], width: "1/3" },
       ],
     },
   },

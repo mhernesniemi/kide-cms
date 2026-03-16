@@ -558,7 +558,7 @@ const tableRows =
                               relationMeta={relationMetaByField[fieldName]}
                               menuLinkOptions={menuLinkOptions}
                             />
-                            {aiEnabled && (fieldName === "seoTitle" || fieldName === "seoDescription") && (
+                            {aiEnabled && fieldName === "seoDescription" && (
                               <div class="mt-1.5">
                                 <AiGenerateButton
                                   client:load
@@ -566,10 +566,9 @@ const tableRows =
                                   payload={{
                                     title: getCurrentValue("title") ?? "",
                                     excerpt: getCurrentValue("excerpt") ?? "",
-                                    field: fieldName,
                                   }}
                                   targetField={fieldName}
-                                  label={fieldName === "seoTitle" ? "Generate SEO title" : "Generate description"}
+                                  label="Generate description"
                                 />
                               </div>
                             )}

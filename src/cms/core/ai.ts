@@ -42,22 +42,10 @@ export async function streamAltText(imageUrl: string, filename: string) {
   });
 }
 
-export async function streamSeoMetadata(content: {
-  title: string;
-  excerpt?: string;
-  body?: string;
-  field: "seoTitle" | "seoDescription";
-}) {
+export async function streamSeoDescription(content: { title: string; excerpt?: string; body?: string }) {
   const model = await getAiModel();
 
-  const prompt =
-    content.field === "seoTitle"
-      ? `Generate an SEO-optimized page title (max 60 characters) for a page with the following content. Return only the title, no quotes or extra formatting.
-
-Title: ${content.title}
-${content.excerpt ? `Excerpt: ${content.excerpt}` : ""}
-${content.body ? `Body preview: ${content.body.substring(0, 500)}` : ""}`
-      : `Generate an SEO-optimized meta description (max 155 characters) for a page with the following content. Return only the description, no quotes or extra formatting.
+  const prompt = `Generate an SEO-optimized meta description (max 155 characters) for a page with the following content. Return only the description, no quotes or extra formatting.
 
 Title: ${content.title}
 ${content.excerpt ? `Excerpt: ${content.excerpt}` : ""}

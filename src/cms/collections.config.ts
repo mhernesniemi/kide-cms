@@ -67,10 +67,6 @@ export default defineConfig({
         }),
         author: fields.relation({ collection: "authors" }),
         tags: fields.array({ of: fields.text(), defaultValue: [] }),
-        seoTitle: fields.text({
-          translatable: true,
-          admin: { help: "Override the page title for search engines." },
-        }),
         seoDescription: fields.text({
           maxLength: 160,
           translatable: true,
@@ -137,10 +133,6 @@ export default defineConfig({
         }),
         heroImage: fields.image(),
         relatedPosts: fields.relation({ collection: "posts", hasMany: true }),
-        seoTitle: fields.text({
-          translatable: true,
-          admin: { help: "Override the page title for search engines." },
-        }),
         seoDescription: fields.text({
           maxLength: 160,
           translatable: true,
