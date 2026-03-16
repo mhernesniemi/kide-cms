@@ -1,5 +1,5 @@
 ---
-import { ImagePlus, Trash2 } from "lucide-react";
+import { ImagePlus } from "lucide-react";
 
 import AdminCard from "@/components/admin/AdminCard.astro";
 import { Badge } from "@/components/admin/ui/badge";
@@ -64,31 +64,26 @@ const formatSize = (bytes: number) => {
       ) : (
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {allAssets.map((asset) => (
-            <Card className="overflow-hidden">
-              {asset.mimeType.startsWith("image/") ? (
-                <div class="bg-muted/30 aspect-video w-full overflow-hidden border-b">
-                  <img src={asset.url} alt={asset.alt ?? asset.filename} class="size-full object-cover" />
-                </div>
-              ) : (
-                <div class="bg-muted/30 flex aspect-video items-center justify-center border-b">
-                  <Badge variant="outline">{asset.mimeType}</Badge>
-                </div>
-              )}
-              <CardContent className="space-y-2 py-3">
-                <div class="truncate text-sm font-medium">{asset.filename}</div>
-                <div class="text-muted-foreground flex items-center justify-between text-xs">
-                  <span>{formatSize(asset.size)}</span>
-                  <span>{new Date(asset._createdAt).toLocaleDateString()}</span>
-                </div>
-                <form method="post" action={`/api/cms/assets/${asset._id}`}>
-                  <input type="hidden" name="_method" value="DELETE" />
-                  <button type="submit" class={buttonVariants({ variant: "ghost", size: "sm", className: "w-full" })}>
-                    <Trash2 className="size-3" />
-                    Delete
-                  </button>
-                </form>
-              </CardContent>
-            </Card>
+            <a href={`/admin/assets/${asset._id}`} class="block">
+              <Card className="overflow-hidden transition-colors hover:border-foreground/20">
+                {asset.mimeType.startsWith("image/") ? (
+                  <div class="bg-muted/30 aspect-video w-full overflow-hidden border-b">
+                    <img src={asset.url} alt={asset.alt ?? asset.filename} class="size-full object-cover" />
+                  </div>
+                ) : (
+                  <div class="bg-muted/30 flex aspect-video items-center justify-center border-b">
+                    <Badge variant="outline">{asset.mimeType}</Badge>
+                  </div>
+                )}
+                <CardContent className="space-y-2 py-3">
+                  <div class="truncate text-sm font-medium">{asset.filename}</div>
+                  <div class="text-muted-foreground flex items-center justify-between text-xs">
+                    <span>{formatSize(asset.size)}</span>
+                    <span>{new Date(asset._createdAt).toLocaleDateString()}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </a>
           ))}
         </div>
       )

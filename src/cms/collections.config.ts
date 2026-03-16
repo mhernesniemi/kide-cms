@@ -67,9 +67,14 @@ export default defineConfig({
         }),
         author: fields.relation({ collection: "authors" }),
         tags: fields.array({ of: fields.text(), defaultValue: [] }),
-        metadata: fields.json({
-          defaultValue: {},
-          admin: { rows: 6, help: "JSON object for SEO extras." },
+        seoTitle: fields.text({
+          translatable: true,
+          admin: { help: "Override the page title for search engines." },
+        }),
+        seoDescription: fields.text({
+          maxLength: 160,
+          translatable: true,
+          admin: { rows: 3, help: "Meta description for search engines. Max 160 characters." },
         }),
       },
     }),
@@ -132,6 +137,15 @@ export default defineConfig({
         }),
         heroImage: fields.image(),
         relatedPosts: fields.relation({ collection: "posts", hasMany: true }),
+        seoTitle: fields.text({
+          translatable: true,
+          admin: { help: "Override the page title for search engines." },
+        }),
+        seoDescription: fields.text({
+          maxLength: 160,
+          translatable: true,
+          admin: { rows: 3, help: "Meta description for search engines. Max 160 characters." },
+        }),
         blocks: fields.blocks({
           translatable: true,
           types: {

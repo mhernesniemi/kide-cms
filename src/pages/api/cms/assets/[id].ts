@@ -20,3 +20,31 @@ export const DELETE: APIRoute = async ({ params }) => {
   await assets.delete(id);
   return new Response(null, { status: 204 });
 };
+
+export const POST: APIRoute = async ({ params, request }) => {
+  const id = params.id;
+  if (!id) return new Response(null, { status: 400 });
+
+  const formData = new URLSearchParams(await request.text());
+  const method = formData.get("_method");
+
+  if (method === "DELETE") {
+    await assets.delete(id);
+    return new Response(null, {
+      status: 303,
+      headers: { Location: "/admin/assets?_toast=success&_msg=Asset+deleted" },
+    });
+  }
+
+  const action = formData.get("_action");
+  if (action === "update") {
+    const alt = formData.get("alt");
+    await assets.update(id, { alt: alt !== null ? alt : undefined });
+    return new Response(null, {
+      status: 303,
+      headers: { Location: `/admin/assets/${id}?_toast=success&_msg=Asset+updated` },
+    });
+  }
+
+  return new Response(null, { status: 400 });
+};

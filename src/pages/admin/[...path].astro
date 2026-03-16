@@ -2,6 +2,7 @@
 import { Dot, Languages, Plus } from "lucide-react";
 
 import AdminCard from "@/components/admin/AdminCard.astro";
+import AiGenerateButton from "@/components/admin/AiGenerateButton";
 import DocumentActions from "@/components/admin/DocumentActions";
 import DocumentsDataTable from "@/components/admin/DocumentsDataTable";
 import LiveHeading from "@/components/admin/LiveHeading";
@@ -14,6 +15,7 @@ import { Card, CardContent } from "@/components/admin/ui/card";
 import config from "@/cms/collections.config";
 import views from "@/cms/admin/views";
 import { cms } from "@/cms/.generated/api";
+import { isAiEnabled } from "@/cms/core/ai";
 import {
   formatDate,
   formatFieldValue,
@@ -129,11 +131,7 @@ const getFormAction = (collectionSlug: string, documentId?: string) =>
 
 const getFieldSetTitle = (fields: string[], index: number) => {
   if (fields.includes("body") || fields.includes("blocks")) return "Content";
-  if (
-    fields.some((field) =>
-      ["slug", "category", "author", "tags", "cover", "metadata", "layout", "heroImage"].includes(field),
-    )
-  ) {
+  if (fields.some((field) => ["slug", "category", "author", "tags", "cover", "layout", "heroImage"].includes(field))) {
     return "Settings";
   }
   return index === 0 ? "Details" : "Configuration";
@@ -279,6 +277,7 @@ const hasPreview = !!(collection?.pathPrefix && route.kind === "edit" && doc?.sl
 const previewUrl = hasPreview ? `${cms.meta.getRouteForDocument(collection.slug, doc)}?preview=true` : null;
 const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
 const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
+const aiEnabled = isAiEnabled();
 
 const tableRows =
   collection && route.kind === "list"
@@ -550,14 +549,31 @@ const tableRows =
                     <AdminCard title={getFieldSetTitle(set.fields, index + mainFieldSets.length)}>
                       <div class="grid gap-5">
                         {set.fields.map((fieldName) => (
-                          <FieldControl
-                            name={fieldName}
-                            field={collection.fields[fieldName]}
-                            value={getCurrentValue(fieldName)}
-                            relationOptions={relationOptionsByField[fieldName] ?? []}
-                            relationMeta={relationMetaByField[fieldName]}
-                            menuLinkOptions={menuLinkOptions}
-                          />
+                          <div>
+                            <FieldControl
+                              name={fieldName}
+                              field={collection.fields[fieldName]}
+                              value={getCurrentValue(fieldName)}
+                              relationOptions={relationOptionsByField[fieldName] ?? []}
+                              relationMeta={relationMetaByField[fieldName]}
+                              menuLinkOptions={menuLinkOptions}
+                            />
+                            {aiEnabled && (fieldName === "seoTitle" || fieldName === "seoDescription") && (
+                              <div class="mt-1.5">
+                                <AiGenerateButton
+                                  client:load
+                                  endpoint="/api/cms/ai/seo"
+                                  payload={{
+                                    title: getCurrentValue("title") ?? "",
+                                    excerpt: getCurrentValue("excerpt") ?? "",
+                                    field: fieldName,
+                                  }}
+                                  targetField={fieldName}
+                                  label={fieldName === "seoTitle" ? "Generate SEO title" : "Generate description"}
+                                />
+                              </div>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </AdminCard>
@@ -583,16 +599,45 @@ const tableRows =
 
                     <AdminCard title="Localized content">
                       <div class="grid gap-5">
-                        {translatableFields.map((fieldName) => (
-                          <FieldControl
-                            name={fieldName}
-                            field={collection.fields[fieldName]}
-                            value={getCurrentValue(fieldName)}
-                            relationOptions={relationOptionsByField[fieldName] ?? []}
-                            relationMeta={relationMetaByField[fieldName]}
-                            menuLinkOptions={menuLinkOptions}
-                          />
-                        ))}
+                        {translatableFields.map((fieldName) => {
+                          const fieldDef = collection.fields[fieldName];
+                          const fieldType =
+                            fieldDef.type === "richText" ? "richText" : fieldDef.type === "slug" ? "slug" : "text";
+                          const sourceValue = getSharedValue(fieldName);
+                          const sourceText =
+                            typeof sourceValue === "object" && sourceValue !== null
+                              ? JSON.stringify(sourceValue)
+                              : String(sourceValue ?? "");
+                          return (
+                            <div>
+                              <FieldControl
+                                name={fieldName}
+                                field={fieldDef}
+                                value={getCurrentValue(fieldName)}
+                                relationOptions={relationOptionsByField[fieldName] ?? []}
+                                relationMeta={relationMetaByField[fieldName]}
+                                menuLinkOptions={menuLinkOptions}
+                              />
+                              {aiEnabled && sourceText && (
+                                <div class="mt-1.5">
+                                  <AiGenerateButton
+                                    client:load
+                                    endpoint="/api/cms/ai/translate"
+                                    payload={{
+                                      text: sourceText,
+                                      sourceLocale: defaultLocale,
+                                      targetLocale: selectedLocale,
+                                      fieldName,
+                                      fieldType,
+                                    }}
+                                    targetField={fieldName}
+                                    label={`Translate from ${defaultLocale}`}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </AdminCard>
 

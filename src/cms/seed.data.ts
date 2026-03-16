@@ -72,9 +72,6 @@ const seeds: Record<string, SeedDocument[]> = {
       category: "Engineering",
       author: "author_maya",
       tags: ["astro", "cms", "content systems"],
-      metadata: {
-        ogTitle: "Launch faster with an editorial system your team can actually own",
-      },
       sortOrder: 10,
       _status: "published",
       _translations: [

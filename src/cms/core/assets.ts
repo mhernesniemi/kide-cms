@@ -118,6 +118,24 @@ export const assets = {
     await db.delete(schema.cmsAssets).where(eq(schema.cmsAssets._id, id));
   },
 
+  async update(id: string, data: { alt?: string; filename?: string }): Promise<AssetRecord | null> {
+    const db = await getDb();
+    const schema = await import("../.generated/schema");
+
+    const rows = await db.select().from(schema.cmsAssets).where(eq(schema.cmsAssets._id, id)).limit(1);
+    if (rows.length === 0) return null;
+
+    const updateValues: Record<string, unknown> = {};
+    if (data.alt !== undefined) updateValues.alt = data.alt;
+    if (data.filename !== undefined) updateValues.filename = data.filename;
+
+    if (Object.keys(updateValues).length > 0) {
+      await db.update(schema.cmsAssets).set(updateValues).where(eq(schema.cmsAssets._id, id));
+    }
+
+    return this.findById(id);
+  },
+
   async count(): Promise<number> {
     const db = await getDb();
     const schema = await import("../.generated/schema");
