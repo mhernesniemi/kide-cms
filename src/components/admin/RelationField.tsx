@@ -43,9 +43,15 @@ export default function RelationField({
   });
   const [open, setOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const hiddenRef = useRef<HTMLInputElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const hiddenValue = hasMany ? JSON.stringify(selected) : (selected[0] ?? "");
+
+  // Notify form of changes so UnsavedGuard can detect them
+  useEffect(() => {
+    hiddenRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
+  }, [hiddenValue]);
 
   const getLabel = useCallback((id: string) => options.find((o) => o.value === id)?.label ?? id, [options]);
 
@@ -102,7 +108,7 @@ export default function RelationField({
 
   return (
     <div className="space-y-2">
-      <input type="hidden" name={name} value={hiddenValue} />
+      <input ref={hiddenRef} type="hidden" name={name} value={hiddenValue} />
 
       {/* Selected items (hasMany chips) */}
       {hasMany && selected.length > 0 && (

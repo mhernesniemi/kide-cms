@@ -189,7 +189,7 @@ const blockTypesMeta =
       <RelationField
         client:load
         name={name}
-        value={String(value ?? "")}
+        value={Array.isArray(value) ? JSON.stringify(value) : String(value ?? "")}
         hasMany={relationMeta.hasMany}
         options={relationOptions}
         collectionSlug={relationMeta.collectionSlug}
