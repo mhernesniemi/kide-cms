@@ -19,5 +19,14 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const asset = await assets.upload(file, alt ? String(alt) : undefined);
+  const redirectTo = formData.get("redirectTo");
+
+  if (redirectTo) {
+    return new Response(null, {
+      status: 303,
+      headers: { Location: `/admin/assets/${asset._id}?_toast=success&_msg=Asset+uploaded` },
+    });
+  }
+
   return Response.json(asset, { status: 201 });
 };

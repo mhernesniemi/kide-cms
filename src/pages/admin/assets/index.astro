@@ -1,7 +1,6 @@
 ---
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, Upload } from "lucide-react";
 
-import AdminCard from "@/components/admin/AdminCard.astro";
 import { Badge } from "@/components/admin/ui/badge";
 import { buttonVariants } from "@/components/admin/ui/button";
 import { Card, CardContent } from "@/components/admin/ui/card";
@@ -22,31 +21,23 @@ const formatSize = (bytes: number) => {
 
 <AdminLayout title="Assets | AstroCMS" collections={config.collections} activeCollection={null}>
   <section class="space-y-6">
-    <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-      <div class="space-y-2">
-        <h1 class="text-3xl font-semibold tracking-tight">Assets</h1>
-      </div>
-    </div>
-
-    <!-- Upload form -->
-    <AdminCard title="Upload new asset" description="Select a file to add to the media library.">
-      <form method="post" action="/api/cms/assets/upload" enctype="multipart/form-data" class="flex items-end gap-3">
-        <input type="hidden" name="redirectTo" value="/admin/assets" />
-        <div class="flex-1">
+    <div class="flex items-start justify-between gap-4">
+      <h1 class="text-2xl font-semibold tracking-tight">Assets</h1>
+      <label class={buttonVariants({ size: "sm" }) + " cursor-pointer"}>
+        <Upload className="size-4" />
+        Upload
+        <form method="post" action="/api/cms/assets/upload" enctype="multipart/form-data" class="hidden">
+          <input type="hidden" name="redirectTo" value="/admin/assets" />
           <input
             type="file"
             name="file"
             accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
             required
-            class="file:bg-background hover:file:bg-accent w-full text-sm file:mr-3 file:rounded-md file:border file:px-3 file:py-1.5 file:text-sm file:transition-colors"
+            onchange="this.closest('form').submit()"
           />
-        </div>
-        <button type="submit" class={buttonVariants({ size: "sm" })}>
-          <ImagePlus className="size-4" />
-          Upload
-        </button>
-      </form>
-    </AdminCard>
+        </form>
+      </label>
+    </div>
 
     {
       allAssets.length === 0 ? (
