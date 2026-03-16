@@ -14,7 +14,7 @@ const buttonVariants = cva(
         secondary:
           "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         publish:
-          "bg-emerald-200 hover:bg-emerald-200/80 text-emerald-800 border-emerald-400 dark:bg-emerald-500/30 dark:hover:bg-emerald-500/40 dark:border-emerald-700 dark:text-emerald-200",
+          "bg-emerald-200/80 hover:bg-emerald-200/60 text-emerald-800 border-emerald-400 dark:bg-emerald-500/30 dark:hover:bg-emerald-500/40 dark:border-emerald-700 dark:text-emerald-200",
         ghost:
           "border-transparent hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive:
