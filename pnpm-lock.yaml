@@ -34,6 +34,9 @@ importers:
       "@radix-ui/react-popover":
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      "@tailwindcss/typography":
+        specifier: ^0.5.19
+        version: 0.5.19(tailwindcss@4.2.1)
       "@tailwindcss/vite":
         specifier: ^4.2.1
         version: 4.2.1(vite@7.3.1(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2))
@@ -1976,6 +1979,12 @@ packages:
     resolution:
       { integrity: sha512-yv9jeEFWnjKCI6/T3Oq50yQEOqmpmpfzG1hcZsAOaXFQPfzWprWrlHSdGPEF3WQTi8zu8ohC9Mh9J470nT5pUw== }
     engines: { node: ">= 20" }
+
+  "@tailwindcss/typography@0.5.19":
+    resolution:
+      { integrity: sha512-w31dd8HOx3k9vPtcQh5QHP9GwKcgbMp87j58qi6xgiBnFFtKEAgCWnDw4qUT8aHwkCp8bKvb/KGKWWHedP0AAg== }
+    peerDependencies:
+      tailwindcss: ">=3.0.0 || insiders || >=4.0.0-alpha.20 || >=4.0.0-beta.1"
 
   "@tailwindcss/vite@4.2.1":
     resolution:
@@ -4271,6 +4280,11 @@ packages:
     resolution:
       { integrity: sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ== }
     engines: { node: ">=16.20.0" }
+
+  postcss-selector-parser@6.0.10:
+    resolution:
+      { integrity: sha512-IQ7TZdoaqbT+LCpShg46jnZVlhWD2w6iQYAcYXfHARZ7X1t/UGhhceQDs5X0cGqKvYlHNOuv7Oa1xmb0oQuA3w== }
+    engines: { node: ">=4" }
 
   postcss-selector-parser@7.1.1:
     resolution:
@@ -6942,6 +6956,11 @@ snapshots:
       "@tailwindcss/oxide-win32-arm64-msvc": 4.2.1
       "@tailwindcss/oxide-win32-x64-msvc": 4.2.1
 
+  "@tailwindcss/typography@0.5.19(tailwindcss@4.2.1)":
+    dependencies:
+      postcss-selector-parser: 6.0.10
+      tailwindcss: 4.2.1
+
   "@tailwindcss/vite@4.2.1(vite@7.3.1(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2))":
     dependencies:
       "@tailwindcss/node": 4.2.1
@@ -9015,6 +9034,11 @@ snapshots:
   picomatch@4.0.3: {}
 
   pkce-challenge@5.0.1: {}
+
+  postcss-selector-parser@6.0.10:
+    dependencies:
+      cssesc: 3.0.0
+      util-deprecate: 1.0.2
 
   postcss-selector-parser@7.1.1:
     dependencies:

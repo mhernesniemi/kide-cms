@@ -217,7 +217,7 @@ if (collection && collectionSlug) {
     for (const lc of linkableCollections) {
       const lcApi = cmsRuntime[lc.slug];
       const lcDocs = await lcApi.find(
-        { status: "any", limit: 200, sort: { field: "_updatedAt", direction: "desc" }, locale: defaultLocale },
+        { status: "published", limit: 200, sort: { field: "_updatedAt", direction: "desc" }, locale: defaultLocale },
         runtimeContext,
       );
       menuLinkOptions.push({

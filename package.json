@@ -27,6 +27,7 @@
     "@fontsource-variable/geist": "^5.2.8",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-popover": "^1.1.15",
+    "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.2.1",
     "@tanstack/react-table": "^8.21.3",
     "@tiptap/core": "^3.20.1",

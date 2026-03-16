@@ -213,7 +213,7 @@ const blockTypesMeta =
 
   {
     field.type === "richText" && !readOnly && (
-      <RichTextEditor client:load name={name} initialValue={serializedValue} rows={rows} />
+      <RichTextEditor client:load name={name} initialValue={value ? JSON.stringify(value) : ""} rows={rows} />
     )
   }
 

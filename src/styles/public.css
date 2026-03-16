@@ -1,3 +1,6 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
 *,
 *::before,
 *::after {
@@ -25,26 +28,4 @@ a {
 img {
   display: block;
   max-width: 100%;
-}
-
-.rich-text h2,
-.rich-text h3 {
-  margin-top: 1.5rem;
-}
-
-.rich-text p {
-  margin: 0.75rem 0;
-  color: #333;
-}
-
-.rich-text ul,
-.rich-text ol {
-  padding-left: 1.5rem;
-}
-
-.rich-text blockquote {
-  border-left: 3px solid #ddd;
-  padding-left: 1rem;
-  margin: 1rem 0;
-  color: #666;
 }

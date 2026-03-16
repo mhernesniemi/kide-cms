@@ -2,7 +2,17 @@
 import { renderRichText } from "../cms/core/richtext";
 
 const { content, className } = Astro.props;
-const html = renderRichText(content);
+const parsed =
+  typeof content === "string"
+    ? (() => {
+        try {
+          return JSON.parse(content);
+        } catch {
+          return null;
+        }
+      })()
+    : content;
+const html = renderRichText(parsed);
 ---
 
-<div class:list={["rich-text", className]} set:html={html} />
+{html && <div class:list={["prose", className]} set:html={html} />}

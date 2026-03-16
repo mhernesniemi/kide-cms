@@ -37,8 +37,10 @@ export const createRichTextFromPlainText = (text: string): RichTextDocument => (
 
 const renderNode = (node: RichTextNode): string => {
   if (node.type === "text") {
-    const content = escapeHtml(String(node.value ?? ""));
-    return node.bold ? `<strong>${content}</strong>` : content;
+    let content = escapeHtml(String(node.value ?? ""));
+    if (node.bold) content = `<strong>${content}</strong>`;
+    if (node.italic) content = `<em>${content}</em>`;
+    return content;
   }
 
   if (node.type === "paragraph") {
