@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { streamText } from "ai";
 
 const env = (key: string) => import.meta.env[key];
@@ -22,6 +24,9 @@ export async function getAiModel() {
 export async function streamAltText(imageUrl: string, filename: string) {
   const model = await getAiModel();
 
+  // Read image from disk since the server can't fetch its own URLs reliably
+  const diskPath = path.join(process.cwd(), "public", imageUrl);
+  const buffer = await readFile(diskPath);
   return streamText({
     model,
     messages: [
@@ -30,7 +35,7 @@ export async function streamAltText(imageUrl: string, filename: string) {
         content: [
           {
             type: "image",
-            image: new URL(imageUrl, env("SITE_URL") || "http://localhost:4321"),
+            image: buffer,
           },
           {
             type: "text",

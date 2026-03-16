@@ -44,34 +44,80 @@ const formatSize = (bytes: number) => {
       </div>
     </div>
 
-    <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]">
-      <div class="space-y-6">
-        {
-          isImage && (
-            <AdminCard title="Preview">
-              <div class="bg-muted/30 overflow-hidden rounded-md">
-                <img src={asset.url} alt={asset.alt ?? asset.filename} class="max-h-[500px] w-full object-contain" />
-              </div>
-            </AdminCard>
-          )
-        }
+    <div class="flex flex-wrap items-center justify-end gap-2">
+      <button type="submit" form="asset-form" class={buttonVariants({ variant: "outline" })}> Save </button>
+      <form method="post" action={`/api/cms/assets/${asset._id}`}>
+        <input type="hidden" name="_method" value="DELETE" />
+        <button type="submit" class={buttonVariants({ variant: "destructive" })}>
+          <Trash2 className="size-3.5" />
+          Delete
+        </button>
+      </form>
+    </div>
 
-        <form method="post" action={`/api/cms/assets/${asset._id}`}>
-          <input type="hidden" name="_action" value="update" />
+    <form id="asset-form" method="post" action={`/api/cms/assets/${asset._id}`}>
+      <input type="hidden" name="_action" value="update" />
+      <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]">
+        <div class="space-y-6">
+          {
+            isImage && (
+              <AdminCard title="Preview">
+                <div class="bg-muted/30 overflow-hidden rounded-md">
+                  <img src={asset.url} alt={asset.alt ?? asset.filename} class="max-h-[500px] w-full object-contain" />
+                </div>
+              </AdminCard>
+            )
+          }
+        </div>
+
+        <div class="space-y-6 text-sm [&_input]:text-sm [&_textarea]:text-sm">
+          <AdminCard title="Info">
+            <dl class="grid gap-3">
+              <div>
+                <dt class="text-muted-foreground text-xs">Filename</dt>
+                <dd class="mt-0.5">{asset.filename}</dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground text-xs">Type</dt>
+                <dd class="mt-0.5">{asset.mimeType}</dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground text-xs">Size</dt>
+                <dd class="mt-0.5">{formatSize(asset.size)}</dd>
+              </div>
+              {
+                asset.width && asset.height && (
+                  <div>
+                    <dt class="text-muted-foreground text-xs">Dimensions</dt>
+                    <dd class="mt-0.5">
+                      {asset.width} × {asset.height}
+                    </dd>
+                  </div>
+                )
+              }
+              <div>
+                <dt class="text-muted-foreground text-xs">Path</dt>
+                <dd class="mt-0.5 font-mono text-xs break-all">{asset.storagePath}</dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground text-xs">Created</dt>
+                <dd class="mt-0.5">{new Date(asset._createdAt).toLocaleString()}</dd>
+              </div>
+            </dl>
+          </AdminCard>
+
           <AdminCard title="Details">
             <div class="grid gap-5">
               <div class="grid gap-2">
                 <Label htmlFor="alt">Alt text</Label>
-                <div class="flex gap-2">
-                  <Textarea
-                    className="w-full shadow-none"
-                    id="alt"
-                    name="alt"
-                    rows={3}
-                    defaultValue={asset.alt ?? ""}
-                    placeholder="Describe the image for accessibility..."
-                  />
-                </div>
+                <Textarea
+                  className="w-full shadow-none"
+                  id="alt"
+                  name="alt"
+                  rows={3}
+                  defaultValue={asset.alt ?? ""}
+                  placeholder="Describe the image for accessibility..."
+                />
                 {
                   aiEnabled && isImage && (
                     <AiGenerateButton
@@ -86,57 +132,8 @@ const formatSize = (bytes: number) => {
               </div>
             </div>
           </AdminCard>
-
-          <div class="mt-4 flex items-center justify-between">
-            <button type="submit" class={buttonVariants({ size: "sm" })}> Save </button>
-          </div>
-        </form>
+        </div>
       </div>
-
-      <div class="space-y-6 text-sm">
-        <AdminCard title="Info">
-          <dl class="grid gap-3">
-            <div>
-              <dt class="text-muted-foreground text-xs">Filename</dt>
-              <dd class="mt-0.5">{asset.filename}</dd>
-            </div>
-            <div>
-              <dt class="text-muted-foreground text-xs">Type</dt>
-              <dd class="mt-0.5">{asset.mimeType}</dd>
-            </div>
-            <div>
-              <dt class="text-muted-foreground text-xs">Size</dt>
-              <dd class="mt-0.5">{formatSize(asset.size)}</dd>
-            </div>
-            {
-              asset.width && asset.height && (
-                <div>
-                  <dt class="text-muted-foreground text-xs">Dimensions</dt>
-                  <dd class="mt-0.5">
-                    {asset.width} × {asset.height}
-                  </dd>
-                </div>
-              )
-            }
-            <div>
-              <dt class="text-muted-foreground text-xs">Path</dt>
-              <dd class="mt-0.5 font-mono text-xs break-all">{asset.storagePath}</dd>
-            </div>
-            <div>
-              <dt class="text-muted-foreground text-xs">Created</dt>
-              <dd class="mt-0.5">{new Date(asset._createdAt).toLocaleString()}</dd>
-            </div>
-          </dl>
-        </AdminCard>
-
-        <form method="post" action={`/api/cms/assets/${asset._id}`}>
-          <input type="hidden" name="_method" value="DELETE" />
-          <button type="submit" class={buttonVariants({ variant: "destructive", size: "sm", className: "w-full" })}>
-            <Trash2 className="size-3" />
-            Delete asset
-          </button>
-        </form>
-      </div>
-    </div>
+    </form>
   </section>
 </AdminLayout>
