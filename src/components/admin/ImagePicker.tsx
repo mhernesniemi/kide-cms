@@ -78,7 +78,7 @@ export default function ImagePicker({ name, value: initialValue, placeholder, on
     <div className="space-y-3">
       <input type="hidden" name={name} value={value} />
 
-      {value ? (
+      {value && (
         <div className="group relative">
           {isImage ? (
             <img src={value} alt="" className="h-40 w-full rounded-lg border object-cover" />
@@ -97,13 +97,6 @@ export default function ImagePicker({ name, value: initialValue, placeholder, on
           >
             <X className="size-4" />
           </button>
-        </div>
-      ) : (
-        <div className="bg-muted/20 flex h-32 items-center justify-center rounded-lg border border-dashed">
-          <div className="text-center">
-            <ImagePlus className="text-muted-foreground/50 mx-auto size-8" />
-            <p className="text-muted-foreground mt-1 text-xs">{placeholder || "Upload or select an image"}</p>
-          </div>
         </div>
       )}
 

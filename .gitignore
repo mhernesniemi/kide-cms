@@ -16,6 +16,9 @@ pnpm-debug.log*
 .cms-data/
 data/
 
+# uploaded assets
+public/uploads/
+
 # environment variables
 .env
 .env.production

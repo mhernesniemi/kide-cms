@@ -86,7 +86,7 @@ const blockTypesMeta =
 <div class="grid gap-2">
   <Label htmlFor={name}>{label}{field.required ? " *" : ""}</Label>
   {field.description && <p class="text-muted-foreground text-xs leading-5">{field.description}</p>}
-  {field.admin?.help && <p class="text-muted-foreground text-xs leading-5">{field.admin.help}</p>}
+  {field.admin?.help && <p class="text-muted-foreground -mb-0.5 text-xs leading-5">{field.admin.help}</p>}
 
   {
     field.type === "image" && !readOnly && (
