@@ -66,7 +66,7 @@ export default function SidebarUserMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="hover:bg-accent/60 flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors">
-        <div className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-medium">
+        <div className="bg-primary/80 text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-full font-medium">
           {userName.charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1 text-left">
