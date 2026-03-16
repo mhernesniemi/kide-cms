@@ -18,7 +18,12 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   if (!id) return Response.json({ error: "Asset ID is required." }, { status: 400 });
 
   const body = await request.json();
-  const result = await assets.update(id, body);
+  const data: { alt?: string; filename?: string; folder?: string | null } = {};
+  if (typeof body.alt === "string") data.alt = body.alt;
+  if (typeof body.filename === "string") data.filename = body.filename;
+  if (body.folder === null || typeof body.folder === "string") data.folder = body.folder;
+
+  const result = await assets.update(id, data);
   if (!result) return Response.json({ error: "Not found." }, { status: 404 });
 
   return Response.json(result);
