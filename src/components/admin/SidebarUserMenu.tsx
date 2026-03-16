@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronsUpDown, ExternalLink, LogOut, Monitor, Moon, Sun } from "lucide-react";
+import { ChevronsUpDown, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -9,9 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
 } from "@/components/admin/ui/dropdown-menu";
 import { DropdownMenuTrigger } from "@/components/admin/ui/dropdown-menu";
 
@@ -80,36 +77,21 @@ export default function SidebarUserMenu({
         <DropdownMenuLabel>{userEmail}</DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem asChild>
-          <a href="/" target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="size-4" />
-            Storefront
-          </a>
+        <DropdownMenuItem onClick={() => changeTheme("light")}>
+          <Sun className="size-4" />
+          Light
+          {theme === "light" && <span className="ml-auto text-xs">&#10003;</span>}
         </DropdownMenuItem>
-
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            {themeIcon(theme)}
-            Theme
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuItem onClick={() => changeTheme("light")}>
-              <Sun className="size-4" />
-              Light
-              {theme === "light" && <span className="ml-auto text-xs">&#10003;</span>}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => changeTheme("dark")}>
-              <Moon className="size-4" />
-              Dark
-              {theme === "dark" && <span className="ml-auto text-xs">&#10003;</span>}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => changeTheme("system")}>
-              <Monitor className="size-4" />
-              System
-              {theme === "system" && <span className="ml-auto text-xs">&#10003;</span>}
-            </DropdownMenuItem>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+        <DropdownMenuItem onClick={() => changeTheme("dark")}>
+          <Moon className="size-4" />
+          Dark
+          {theme === "dark" && <span className="ml-auto text-xs">&#10003;</span>}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => changeTheme("system")}>
+          <Monitor className="size-4" />
+          System
+          {theme === "system" && <span className="ml-auto text-xs">&#10003;</span>}
+        </DropdownMenuItem>
 
         <DropdownMenuSeparator />
 
