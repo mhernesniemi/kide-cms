@@ -109,18 +109,30 @@ const blockTypesMeta =
   }
 
   {
-    (field.type === "text" || field.type === "email" || field.type === "date") && (
-      <Input
-        className={controlClass}
-        type={field.type === "email" ? "email" : field.type === "date" ? "date" : "text"}
-        id={name}
-        name={name}
-        defaultValue={serializedValue}
-        placeholder={placeholder}
-        readOnly={readOnly}
-        required={field.required}
-      />
-    )
+    (field.type === "text" || field.type === "email" || field.type === "date") &&
+      (field.type === "text" && field.admin?.rows ? (
+        <Textarea
+          className={controlClass}
+          id={name}
+          name={name}
+          rows={field.admin.rows}
+          defaultValue={serializedValue}
+          placeholder={placeholder}
+          readOnly={readOnly}
+          required={field.required}
+        />
+      ) : (
+        <Input
+          className={controlClass}
+          type={field.type === "email" ? "email" : field.type === "date" ? "date" : "text"}
+          id={name}
+          name={name}
+          defaultValue={serializedValue}
+          placeholder={placeholder}
+          readOnly={readOnly}
+          required={field.required}
+        />
+      ))
   }
 
   {
