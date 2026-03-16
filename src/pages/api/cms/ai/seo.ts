@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { isAiEnabled, generateSeoMetadata } from "@/cms/core/ai";
+import { isAiEnabled, streamSeoMetadata } from "@/cms/core/ai";
 
 export const prerender = false;
 
@@ -20,8 +20,8 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
-    const result = await generateSeoMetadata({ title, excerpt, body: pageBody, field });
-    return Response.json({ result });
+    const result = await streamSeoMetadata({ title, excerpt, body: pageBody, field });
+    return result.toTextStreamResponse();
   } catch (e) {
     const message = e instanceof Error ? e.message : "Generation failed";
     return Response.json({ error: message }, { status: 500 });

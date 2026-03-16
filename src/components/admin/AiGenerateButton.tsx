@@ -9,6 +9,25 @@ interface AiGenerateButtonProps {
   label?: string;
 }
 
+function setFieldValue(name: string, value: string) {
+  const field = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${name}"]`);
+  if (!field) return;
+
+  const nativeSetter = Object.getOwnPropertyDescriptor(
+    field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
+    "value",
+  )?.set;
+
+  if (nativeSetter) {
+    nativeSetter.call(field, value);
+  } else {
+    field.value = value;
+  }
+
+  field.dispatchEvent(new Event("input", { bubbles: true }));
+  field.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 export default function AiGenerateButton({
   endpoint,
   payload,
@@ -22,7 +41,6 @@ export default function AiGenerateButton({
     setLoading(true);
     setError(null);
     try {
-      // Build payload with current form values where possible
       const livePayload = { ...payload };
       for (const key of Object.keys(livePayload)) {
         const el = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${key}"]`);
@@ -40,24 +58,17 @@ export default function AiGenerateButton({
         throw new Error(err.error || "Generation failed");
       }
 
-      const data = await response.json();
-      const result = data.result;
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response stream");
 
-      const field = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${targetField}"]`);
-      if (field) {
-        const nativeSetter = Object.getOwnPropertyDescriptor(
-          field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
-          "value",
-        )?.set;
+      const decoder = new TextDecoder();
+      let accumulated = "";
 
-        if (nativeSetter) {
-          nativeSetter.call(field, result);
-        } else {
-          field.value = result;
-        }
-
-        field.dispatchEvent(new Event("input", { bubbles: true }));
-        field.dispatchEvent(new Event("change", { bubbles: true }));
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accumulated += decoder.decode(value, { stream: true });
+        setFieldValue(targetField, accumulated);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed");
@@ -68,8 +79,15 @@ export default function AiGenerateButton({
 
   return (
     <div>
-      <Button type="button" variant="outline" size="sm" onClick={handleGenerate} disabled={loading} className="gap-1.5">
-        {loading ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={handleGenerate}
+        disabled={loading}
+        className="text-foreground/70"
+      >
+        {loading ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-4 stroke-1" />}
         {label}
       </Button>
       {error && <p className="text-destructive mt-1 text-xs">{error}</p>}

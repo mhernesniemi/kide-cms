@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { isAiEnabled, generateTranslation } from "@/cms/core/ai";
+import { isAiEnabled, streamTranslation } from "@/cms/core/ai";
 
 export const prerender = false;
 
@@ -16,14 +16,14 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
-    const result = await generateTranslation({
+    const result = await streamTranslation({
       text,
       sourceLocale,
       targetLocale,
       fieldName,
       fieldType: fieldType || "text",
     });
-    return Response.json({ result });
+    return result.toTextStreamResponse();
   } catch (e) {
     const message = e instanceof Error ? e.message : "Generation failed";
     return Response.json({ error: message }, { status: 500 });

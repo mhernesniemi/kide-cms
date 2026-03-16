@@ -1,4 +1,4 @@
-import { generateText } from "ai";
+import { streamText } from "ai";
 
 const env = (key: string) => import.meta.env[key];
 
@@ -19,10 +19,10 @@ export async function getAiModel() {
   throw new Error(`Unsupported AI provider: ${provider}`);
 }
 
-export async function generateAltText(imageUrl: string, filename: string): Promise<string> {
+export async function streamAltText(imageUrl: string, filename: string) {
   const model = await getAiModel();
 
-  const { text } = await generateText({
+  return streamText({
     model,
     messages: [
       {
@@ -40,16 +40,14 @@ export async function generateAltText(imageUrl: string, filename: string): Promi
       },
     ],
   });
-
-  return text.trim();
 }
 
-export async function generateSeoMetadata(content: {
+export async function streamSeoMetadata(content: {
   title: string;
   excerpt?: string;
   body?: string;
   field: "seoTitle" | "seoDescription";
-}): Promise<string> {
+}) {
   const model = await getAiModel();
 
   const prompt =
@@ -65,21 +63,16 @@ Title: ${content.title}
 ${content.excerpt ? `Excerpt: ${content.excerpt}` : ""}
 ${content.body ? `Body preview: ${content.body.substring(0, 500)}` : ""}`;
 
-  const { text } = await generateText({
-    model,
-    prompt,
-  });
-
-  return text.trim();
+  return streamText({ model, prompt });
 }
 
-export async function generateTranslation(content: {
+export async function streamTranslation(content: {
   text: string;
   sourceLocale: string;
   targetLocale: string;
   fieldName: string;
   fieldType: "text" | "richText" | "slug";
-}): Promise<string> {
+}) {
   const model = await getAiModel();
 
   let prompt: string;
@@ -96,10 +89,5 @@ ${content.text}`;
 ${content.text}`;
   }
 
-  const { text } = await generateText({
-    model,
-    prompt,
-  });
-
-  return text.trim();
+  return streamText({ model, prompt });
 }

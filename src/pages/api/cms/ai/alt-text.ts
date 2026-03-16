@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { isAiEnabled, generateAltText } from "@/cms/core/ai";
+import { isAiEnabled, streamAltText } from "@/cms/core/ai";
 
 export const prerender = false;
 
@@ -16,8 +16,8 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
-    const result = await generateAltText(imageUrl, filename);
-    return Response.json({ result });
+    const result = await streamAltText(imageUrl, filename);
+    return result.toTextStreamResponse();
   } catch (e) {
     const message = e instanceof Error ? e.message : "Generation failed";
     return Response.json({ error: message }, { status: 500 });
