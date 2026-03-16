@@ -145,7 +145,17 @@ const generateSchemaFile = (): string => {
   width: integer("width"),
   height: integer("height"),
   alt: text("alt"),
+  folder: text("folder"),
   storagePath: text("storage_path").notNull(),
+  _createdAt: text("_created_at").notNull(),
+});`);
+
+  parts.push("");
+
+  parts.push(`export const cmsAssetFolders = sqliteTable("cms_asset_folders", {
+  _id: text("_id").primaryKey(),
+  name: text("name").notNull(),
+  parent: text("parent"),
   _createdAt: text("_created_at").notNull(),
 });`);
 

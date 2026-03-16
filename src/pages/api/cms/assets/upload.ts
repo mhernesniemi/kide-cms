@@ -13,12 +13,16 @@ export const POST: APIRoute = async ({ request }) => {
   const formData = await request.formData();
   const file = formData.get("file");
   const alt = formData.get("alt");
+  const folder = formData.get("folder");
 
   if (!file || !(file instanceof File)) {
     return Response.json({ error: "No file provided." }, { status: 400 });
   }
 
-  const asset = await assets.upload(file, alt ? String(alt) : undefined);
+  const asset = await assets.upload(file, {
+    alt: alt ? String(alt) : undefined,
+    folder: folder ? String(folder) : undefined,
+  });
   const redirectTo = formData.get("redirectTo");
 
   if (redirectTo) {

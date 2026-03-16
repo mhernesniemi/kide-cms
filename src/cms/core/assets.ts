@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { getDb } from "./db";
@@ -22,13 +22,21 @@ export type AssetRecord = {
   width: number | null;
   height: number | null;
   alt: string | null;
+  folder: string | null;
   storagePath: string;
   url: string;
   _createdAt: string;
 };
 
+export type FolderRecord = {
+  _id: string;
+  name: string;
+  parent: string | null;
+  _createdAt: string;
+};
+
 export const assets = {
-  async upload(file: File, alt?: string): Promise<AssetRecord> {
+  async upload(file: File, options?: { alt?: string; folder?: string }): Promise<AssetRecord> {
     ensureUploadsDir();
 
     const db = await getDb();
@@ -44,6 +52,7 @@ export const assets = {
 
     const id = nanoid();
     const now = new Date().toISOString();
+    const folder = options?.folder || null;
 
     await db.insert(schema.cmsAssets).values({
       _id: id,
@@ -52,7 +61,8 @@ export const assets = {
       size: file.size,
       width: null,
       height: null,
-      alt: alt ?? null,
+      alt: options?.alt ?? null,
+      folder,
       storagePath,
       _createdAt: now,
     });
@@ -64,18 +74,26 @@ export const assets = {
       size: file.size,
       width: null,
       height: null,
-      alt: alt ?? null,
+      alt: options?.alt ?? null,
+      folder,
       storagePath,
       url: storagePath,
       _createdAt: now,
     };
   },
 
-  async find(options: { limit?: number; offset?: number } = {}): Promise<AssetRecord[]> {
+  async find(options: { limit?: number; offset?: number; folder?: string | null } = {}): Promise<AssetRecord[]> {
     const db = await getDb();
     const schema = await import("../.generated/schema");
 
-    let query = db.select().from(schema.cmsAssets).orderBy(desc(schema.cmsAssets._createdAt));
+    const conditions =
+      options.folder !== undefined
+        ? options.folder === null
+          ? isNull(schema.cmsAssets.folder)
+          : eq(schema.cmsAssets.folder, options.folder)
+        : undefined;
+
+    let query = db.select().from(schema.cmsAssets).where(conditions).orderBy(desc(schema.cmsAssets._createdAt));
 
     if (options.limit) query = query.limit(options.limit) as any;
     if (options.offset) query = query.offset(options.offset) as any;
@@ -118,7 +136,10 @@ export const assets = {
     await db.delete(schema.cmsAssets).where(eq(schema.cmsAssets._id, id));
   },
 
-  async update(id: string, data: { alt?: string; filename?: string }): Promise<AssetRecord | null> {
+  async update(
+    id: string,
+    data: { alt?: string; filename?: string; folder?: string | null },
+  ): Promise<AssetRecord | null> {
     const db = await getDb();
     const schema = await import("../.generated/schema");
 
@@ -128,6 +149,7 @@ export const assets = {
     const updateValues: Record<string, unknown> = {};
     if (data.alt !== undefined) updateValues.alt = data.alt;
     if (data.filename !== undefined) updateValues.filename = data.filename;
+    if (data.folder !== undefined) updateValues.folder = data.folder;
 
     if (Object.keys(updateValues).length > 0) {
       await db.update(schema.cmsAssets).set(updateValues).where(eq(schema.cmsAssets._id, id));
@@ -141,5 +163,72 @@ export const assets = {
     const schema = await import("../.generated/schema");
     const rows = await db.select({ count: sql<number>`count(*)` }).from(schema.cmsAssets);
     return Number(rows[0]?.count ?? 0);
+  },
+};
+
+export const folders = {
+  async create(name: string, parent?: string | null): Promise<FolderRecord> {
+    const db = await getDb();
+    const schema = await import("../.generated/schema");
+
+    const id = nanoid();
+    const now = new Date().toISOString();
+
+    await db.insert(schema.cmsAssetFolders).values({
+      _id: id,
+      name,
+      parent: parent ?? null,
+      _createdAt: now,
+    });
+
+    return { _id: id, name, parent: parent ?? null, _createdAt: now };
+  },
+
+  async findByParent(parent: string | null): Promise<FolderRecord[]> {
+    const db = await getDb();
+    const schema = await import("../.generated/schema");
+
+    const condition =
+      parent === null ? isNull(schema.cmsAssetFolders.parent) : eq(schema.cmsAssetFolders.parent, parent);
+
+    const rows = await db.select().from(schema.cmsAssetFolders).where(condition).orderBy(schema.cmsAssetFolders.name);
+
+    return rows as FolderRecord[];
+  },
+
+  async findById(id: string): Promise<FolderRecord | null> {
+    const db = await getDb();
+    const schema = await import("../.generated/schema");
+
+    const rows = await db.select().from(schema.cmsAssetFolders).where(eq(schema.cmsAssetFolders._id, id)).limit(1);
+    return rows.length > 0 ? (rows[0] as FolderRecord) : null;
+  },
+
+  async findAll(): Promise<FolderRecord[]> {
+    const db = await getDb();
+    const schema = await import("../.generated/schema");
+
+    const rows = await db.select().from(schema.cmsAssetFolders).orderBy(schema.cmsAssetFolders.name);
+    return rows as FolderRecord[];
+  },
+
+  async rename(id: string, name: string): Promise<FolderRecord | null> {
+    const db = await getDb();
+    const schema = await import("../.generated/schema");
+
+    await db.update(schema.cmsAssetFolders).set({ name }).where(eq(schema.cmsAssetFolders._id, id));
+    return this.findById(id);
+  },
+
+  async delete(id: string): Promise<void> {
+    const db = await getDb();
+    const schema = await import("../.generated/schema");
+
+    // Move assets in this folder to root
+    await db.update(schema.cmsAssets).set({ folder: null }).where(eq(schema.cmsAssets.folder, id));
+    // Move subfolders to root
+    await db.update(schema.cmsAssetFolders).set({ parent: null }).where(eq(schema.cmsAssetFolders.parent, id));
+    // Delete the folder
+    await db.delete(schema.cmsAssetFolders).where(eq(schema.cmsAssetFolders._id, id));
   },
 };

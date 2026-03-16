@@ -39,7 +39,11 @@ export const POST: APIRoute = async ({ params, request }) => {
   const action = formData.get("_action");
   if (action === "update") {
     const alt = formData.get("alt");
-    await assets.update(id, { alt: alt !== null ? alt : undefined });
+    const folder = formData.get("folder");
+    await assets.update(id, {
+      alt: alt !== null ? alt : undefined,
+      folder: folder !== null ? (folder === "" ? null : folder) : undefined,
+    });
     return new Response(null, {
       status: 303,
       headers: { Location: `/admin/assets/${id}?_toast=success&_msg=Asset+updated` },

@@ -7,7 +7,7 @@ import { buttonVariants } from "@/components/admin/ui/button";
 import { Label } from "@/components/admin/ui/label";
 import { Textarea } from "@/components/admin/ui/textarea";
 import config from "@/cms/collections.config";
-import { assets } from "@/cms/core/assets";
+import { assets, folders } from "@/cms/core/assets";
 import { isAiEnabled } from "@/cms/core/ai";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 
@@ -21,6 +21,8 @@ if (!asset) return Astro.redirect("/admin/assets");
 
 const aiEnabled = isAiEnabled();
 const isImage = asset.mimeType.startsWith("image/");
+const currentFolder = asset.folder ? await folders.findById(asset.folder) : null;
+const allFolders = await folders.findAll();
 
 const formatSize = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -34,11 +36,11 @@ const formatSize = (bytes: number) => {
     <div class="flex items-start justify-between gap-4">
       <div>
         <a
-          href="/admin/assets"
+          href={asset.folder ? `/admin/assets?folder=${asset.folder}` : "/admin/assets"}
           class="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm transition-colors"
         >
           <ArrowLeft className="size-3.5" />
-          Assets
+          {currentFolder ? currentFolder.name : "Assets"}
         </a>
         <h1 class="text-2xl font-semibold tracking-tight">{asset.filename}</h1>
       </div>
@@ -96,6 +98,23 @@ const formatSize = (bytes: number) => {
                 )
               }
               <div>
+                <dt class="text-muted-foreground text-xs">Folder</dt>
+                <dd class="mt-0.5">
+                  {
+                    currentFolder ? (
+                      <a
+                        href={`/admin/assets?folder=${currentFolder._id}`}
+                        class="hover:text-foreground transition-colors"
+                      >
+                        {currentFolder.name}
+                      </a>
+                    ) : (
+                      <span class="text-muted-foreground">—</span>
+                    )
+                  }
+                </dd>
+              </div>
+              <div>
                 <dt class="text-muted-foreground text-xs">Path</dt>
                 <dd class="mt-0.5 font-mono text-xs break-all">{asset.storagePath}</dd>
               </div>
@@ -108,6 +127,23 @@ const formatSize = (bytes: number) => {
 
           <AdminCard title="Details">
             <div class="grid gap-5">
+              <div class="grid gap-2">
+                <Label htmlFor="folder">Folder</Label>
+                <select
+                  id="folder"
+                  name="folder"
+                  class="border-input bg-background hover:border-foreground/20 flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs transition-colors focus-visible:ring-1 focus-visible:outline-none"
+                >
+                  <option value="" selected={!asset.folder}>None</option>
+                  {
+                    allFolders.map((f) => (
+                      <option value={f._id} selected={asset.folder === f._id}>
+                        {f.name}
+                      </option>
+                    ))
+                  }
+                </select>
+              </div>
               <div class="grid gap-2">
                 <Label htmlFor="alt">Alt text</Label>
                 <Textarea
