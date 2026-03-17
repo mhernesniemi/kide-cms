@@ -440,9 +440,13 @@ const tableRows =
           <>
             <UnsavedGuard
               client:load
-              formId="document-form"
+              formId={translationMode ? "translation-form" : "document-form"}
               isNew={route.kind === "new"}
-              isDraft={collection.drafts && (doc?._status === "draft" || (doc && getVisualStatus(doc) === "changed"))}
+              isDraft={
+                !translationMode &&
+                collection.drafts &&
+                (doc?._status === "draft" || (doc && getVisualStatus(doc) === "changed"))
+              }
             />
             <div class="flex flex-wrap items-center justify-between gap-2">
               <div class="flex flex-wrap items-center gap-2">
@@ -469,9 +473,10 @@ const tableRows =
               <div class="flex flex-wrap items-center gap-2">
                 {translationMode ? (
                   <button
-                    class={buttonVariants({ variant: "outline", size: "lg" })}
+                    class={buttonVariants({ variant: "outline" })}
                     type="submit"
                     form="translation-form"
+                    value="save"
                   >
                     Save translation
                   </button>

@@ -83,9 +83,9 @@ export default function UnsavedGuard({
     const handleKeydown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
-        const saveBtn = document.querySelector<HTMLButtonElement>(
-          `button[type="submit"][form="${formId}"][value="save"]`,
-        );
+        const saveBtn =
+          document.querySelector<HTMLButtonElement>(`button[type="submit"][form="${formId}"][value="save"]`) ??
+          document.querySelector<HTMLButtonElement>(`button[type="submit"][form="${formId}"]`);
         if (saveBtn && !saveBtn.disabled) {
           saveBtn.click();
         }
