@@ -24,7 +24,7 @@ export default function CheckboxField({ name, checked: initial = false, disabled
         }}
         disabled={disabled}
       />
-      <span className="text-muted-foreground select-none">{checked ? "Enabled" : "Disabled"}</span>
+      <span className="text-foreground select-none">{checked ? "Enabled" : "Disabled"}</span>
     </label>
   );
 }
