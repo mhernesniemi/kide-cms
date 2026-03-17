@@ -1,6 +1,7 @@
-import { useState, useRef, useCallback } from "react";
-import { ImagePlus, Upload, X, Loader2 } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { ChevronRight, Folder, ImagePlus, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/admin/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/admin/ui/dialog";
 
 type AssetRecord = {
   _id: string;
@@ -10,6 +11,19 @@ type AssetRecord = {
   _createdAt: string;
 };
 
+type FolderRecord = {
+  _id: string;
+  name: string;
+};
+
+type BrowseState = {
+  folderId: string | null;
+  folders: FolderRecord[];
+  assets: AssetRecord[];
+  breadcrumbs: Array<{ id: string | null; name: string }>;
+  loading: boolean;
+};
+
 type Props = {
   name: string;
   value?: string;
@@ -17,12 +31,17 @@ type Props = {
   onChange?: (value: string) => void;
 };
 
-export default function ImagePicker({ name, value: initialValue, placeholder, onChange: onChangeProp }: Props) {
+export default function ImagePicker({ name, value: initialValue, onChange: onChangeProp }: Props) {
   const [value, setValue] = useState(initialValue ?? "");
   const [uploading, setUploading] = useState(false);
-  const [showBrowser, setShowBrowser] = useState(false);
-  const [assets, setAssets] = useState<AssetRecord[]>([]);
-  const [loadingAssets, setLoadingAssets] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [browse, setBrowse] = useState<BrowseState>({
+    folderId: null,
+    folders: [],
+    assets: [],
+    breadcrumbs: [{ id: null, name: "All assets" }],
+    loading: false,
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = useCallback(async (file: File) => {
@@ -50,28 +69,60 @@ export default function ImagePicker({ name, value: initialValue, placeholder, on
     [handleUpload],
   );
 
-  const openBrowser = useCallback(async () => {
-    setShowBrowser(true);
-    setLoadingAssets(true);
+  const loadFolder = useCallback(async (folderId: string | null, breadcrumbs: BrowseState["breadcrumbs"]) => {
+    setBrowse((prev) => ({ ...prev, loading: true, folderId, breadcrumbs }));
     try {
-      const res = await fetch("/api/cms/assets?limit=50");
-      const data = await res.json();
-      setAssets(data.items ?? []);
+      const folderParam = folderId ? `&folder=${folderId}` : "&folder=";
+      const [assetsRes, foldersRes] = await Promise.all([
+        fetch(`/api/cms/assets?limit=50${folderParam}`),
+        fetch(`/api/cms/assets/folders?parent=${folderId ?? ""}`),
+      ]);
+      const assetsData = await assetsRes.json();
+      const foldersData = await foldersRes.json();
+      setBrowse((prev) => ({
+        ...prev,
+        folders: foldersData ?? [],
+        assets: (assetsData.items ?? []).filter((a: AssetRecord) => a.mimeType.startsWith("image/")),
+        loading: false,
+      }));
     } catch {
-      setAssets([]);
-    } finally {
-      setLoadingAssets(false);
+      setBrowse((prev) => ({ ...prev, folders: [], assets: [], loading: false }));
     }
   }, []);
+
+  const navigateToFolder = useCallback(
+    (folder: FolderRecord) => {
+      const newBreadcrumbs = [...browse.breadcrumbs, { id: folder._id, name: folder.name }];
+      loadFolder(folder._id, newBreadcrumbs);
+    },
+    [browse.breadcrumbs, loadFolder],
+  );
+
+  const navigateToBreadcrumb = useCallback(
+    (index: number) => {
+      const crumb = browse.breadcrumbs[index];
+      const newBreadcrumbs = browse.breadcrumbs.slice(0, index + 1);
+      loadFolder(crumb.id, newBreadcrumbs);
+    },
+    [browse.breadcrumbs, loadFolder],
+  );
 
   const selectAsset = useCallback(
     (asset: AssetRecord) => {
       setValue(asset.url);
       onChangeProp?.(asset.url);
-      setShowBrowser(false);
+      setOpen(false);
     },
     [onChangeProp],
   );
+
+  // Load root folder when dialog opens
+  useEffect(() => {
+    if (open) {
+      const initial: BrowseState["breadcrumbs"] = [{ id: null, name: "All assets" }];
+      loadFolder(null, initial);
+    }
+  }, [open, loadFolder]);
 
   const isImage = value && (value.match(/\.(jpg|jpeg|png|gif|webp|avif|svg)$/i) || value.startsWith("http"));
 
@@ -114,55 +165,97 @@ export default function ImagePicker({ name, value: initialValue, placeholder, on
           {uploading ? <Loader2 className="size-3 animate-spin" /> : <Upload className="size-4 stroke-1" />}
           Upload
         </Button>
-        <Button type="button" variant="outline" size="sm" className="text-foreground/70" onClick={openBrowser}>
+        <Button type="button" variant="outline" size="sm" className="text-foreground/70" onClick={() => setOpen(true)}>
           <ImagePlus className="size-4 stroke-1" />
           Browse
         </Button>
       </div>
 
-      {/* Asset Browser Modal */}
-      {showBrowser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-background max-h-[80vh] w-full max-w-3xl overflow-hidden rounded-xl border shadow-lg">
-            <div className="flex items-center justify-between border-b px-4 py-3">
-              <h3 className="font-semibold">Media Library</h3>
-              <button type="button" onClick={() => setShowBrowser(false)} className="hover:bg-accent rounded-md p-1">
-                <X className="size-4" />
-              </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Media Library</DialogTitle>
+              <DialogClose>
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors"
+                >
+                  <X className="size-5" />
+                </button>
+              </DialogClose>
             </div>
+          </DialogHeader>
 
-            <div className="max-h-[60vh] overflow-y-auto p-4">
-              {loadingAssets ? (
-                <div className="flex h-40 items-center justify-center">
-                  <Loader2 className="text-muted-foreground size-6 animate-spin" />
-                </div>
-              ) : assets.length === 0 ? (
-                <div className="text-muted-foreground flex h-40 items-center justify-center text-sm">
-                  No assets uploaded yet.
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                  {assets
-                    .filter((a) => a.mimeType.startsWith("image/"))
-                    .map((asset) => (
+          {browse.breadcrumbs.length > 1 && (
+            <nav className="text-muted-foreground flex items-center gap-1 text-sm">
+              {browse.breadcrumbs.map((crumb, i) => (
+                <span key={crumb.id ?? "root"} className="contents">
+                  {i > 0 && <ChevronRight className="size-3.5 shrink-0" />}
+                  {i < browse.breadcrumbs.length - 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => navigateToBreadcrumb(i)}
+                      className="hover:text-foreground truncate transition-colors"
+                    >
+                      {crumb.name}
+                    </button>
+                  ) : (
+                    <span className="text-foreground truncate font-medium">{crumb.name}</span>
+                  )}
+                </span>
+              ))}
+            </nav>
+          )}
+
+          <div className="max-h-[60vh] overflow-y-auto">
+            {browse.loading ? (
+              <div className="flex h-48 items-center justify-center">
+                <Loader2 className="text-muted-foreground size-6 animate-spin" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {browse.folders.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    {browse.folders.map((folder) => (
+                      <button
+                        key={folder._id}
+                        type="button"
+                        onClick={() => navigateToFolder(folder)}
+                        className="hover:bg-accent flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors"
+                      >
+                        <Folder className="text-muted-foreground size-4 shrink-0" />
+                        <span className="truncate">{folder.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {browse.assets.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                    {browse.assets.map((asset) => (
                       <button
                         key={asset._id}
                         type="button"
                         onClick={() => selectAsset(asset)}
-                        className="group hover:ring-primary relative aspect-square overflow-hidden rounded-lg border transition-all hover:ring-2"
+                        className="hover:border-foreground relative aspect-square overflow-hidden rounded-lg border transition-colors"
                       >
                         <img src={asset.url} alt={asset.filename} className="size-full object-cover" />
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
-                          <p className="truncate text-xs text-white">{asset.filename}</p>
-                        </div>
                       </button>
                     ))}
-                </div>
-              )}
-            </div>
+                  </div>
+                ) : (
+                  browse.folders.length === 0 && (
+                    <div className="text-muted-foreground flex h-48 items-center justify-center text-sm">
+                      {browse.folderId ? "This folder is empty." : "No images uploaded yet."}
+                    </div>
+                  )
+                )}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
