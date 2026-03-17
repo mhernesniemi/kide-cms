@@ -202,7 +202,7 @@ const blockTypesMeta =
   }
 
   {
-    field.type === "select" && (
+    field.type === "select" && field.admin?.component !== "radio" && (
       <SelectField
         client:load
         name={name}
@@ -211,6 +211,26 @@ const blockTypesMeta =
         disabled={readOnly}
         items={field.options.map((option) => ({ value: option, label: option }))}
       />
+    )
+  }
+
+  {
+    field.type === "select" && field.admin?.component === "radio" && (
+      <div class="flex flex-wrap gap-x-5 gap-y-2">
+        {field.options.map((option) => (
+          <label class="flex items-center gap-2 text-sm">
+            <input
+              class="border-input text-primary focus:ring-primary size-4"
+              type="radio"
+              name={name}
+              value={option}
+              checked={String(value ?? "") === option}
+              disabled={readOnly}
+            />
+            <span>{option}</span>
+          </label>
+        ))}
+      </div>
     )
   }
 

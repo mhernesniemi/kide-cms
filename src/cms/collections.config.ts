@@ -70,6 +70,7 @@ export default defineConfig({
         postType: fields.select({
           options: ["article", "video", "podcast"],
           defaultValue: "article",
+          admin: { component: "radio" },
         }),
         videoUrl: fields.text({
           label: "Video URL",

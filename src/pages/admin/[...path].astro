@@ -701,11 +701,18 @@ const tableRows =
       };
 
       var getFieldValue = function (fieldName) {
-        // Check checkboxes first (boolean fields have a hidden "false" fallback that would match otherwise)
+        // Radio buttons: find the checked one
+        var radio = document.querySelector('input[type="radio"][name="' + fieldName + '"]:checked');
+        if (radio) return radio.value;
+        // Check if radios exist but none checked
+        if (document.querySelector('input[type="radio"][name="' + fieldName + '"]')) return "";
+        // Checkboxes (boolean fields have a hidden "false" fallback that would match otherwise)
         var checkbox = document.querySelector('input[type="checkbox"][name="' + fieldName + '"]');
         if (checkbox) return checkbox.checked ? "true" : "false";
+        // Hidden inputs (React select components)
         var hidden = document.querySelector('input[type="hidden"][name="' + fieldName + '"]');
         if (hidden) return hidden.value;
+        // Other inputs
         var input = document.querySelector('[name="' + fieldName + '"]');
         if (input) return input.value;
         return "";
