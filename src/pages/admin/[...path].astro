@@ -465,7 +465,7 @@ const tableRows =
                             : "text-muted-foreground border-border/60",
                         ]}
                       >
-                        {locale}
+                        {locale.toUpperCase()}
                       </a>
                     );
                   })}
@@ -645,7 +645,7 @@ const tableRows =
                                       fieldType,
                                     }}
                                     targetField={fieldName}
-                                    label={`Translate from ${defaultLocale}`}
+                                    label={`Translate from ${defaultLocale.toUpperCase()}`}
                                   />
                                 </div>
                               )}
