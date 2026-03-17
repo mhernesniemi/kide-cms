@@ -40,7 +40,7 @@ const assetData = folderAssets.map((a) => ({
 }));
 ---
 
-<AdminLayout title="Assets | AstroCMS" collections={config.collections} activeCollection={null}>
+<AdminLayout title="Assets | AstroCMS" collections={config.collections} activeCollection="assets">
   <AssetsGrid
     client:load
     folders={folderData}

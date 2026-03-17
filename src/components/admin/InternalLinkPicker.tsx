@@ -41,7 +41,7 @@ export default function InternalLinkPicker({
   }, [editHref, linkOptions]);
 
   return (
-    <div className="min-w-0 flex-[3]">
+    <div className="min-w-0 flex-3">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
