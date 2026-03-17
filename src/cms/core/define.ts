@@ -20,6 +20,11 @@ export type AdminFieldComponent = {
   help?: string;
 };
 
+export type FieldCondition = {
+  field: string;
+  value: string | string[] | boolean;
+};
+
 type BaseFieldConfig<TType extends string, TValue = unknown> = {
   type: TType;
   label?: string;
@@ -29,6 +34,7 @@ type BaseFieldConfig<TType extends string, TValue = unknown> = {
   indexed?: boolean;
   unique?: boolean;
   translatable?: boolean;
+  condition?: FieldCondition;
   admin?: AdminFieldComponent;
   access?: {
     update?: (context: {

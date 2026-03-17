@@ -42,7 +42,7 @@ const generateColumnDef = (fieldName: string, field: FieldConfig): string => {
     col = `text("${colName}")`;
   }
 
-  if (field.required) col += ".notNull()";
+  if (field.required && !field.condition) col += ".notNull()";
   if (field.unique) col += ".unique()";
   if (field.defaultValue !== undefined && !isJsonField(field)) {
     if (field.type === "number") {
@@ -246,7 +246,8 @@ const generateValidatorsFile = (): string => {
     const name = pascalCase(collection.slug);
     const fieldEntries = Object.entries(collection.fields).map(([fieldName, field]) => {
       const zodType = zodTypeForField(field);
-      return `  ${fieldName}: ${zodType}${field.required ? "" : ".optional()"},`;
+      const isOptional = !field.required || !!field.condition;
+      return `  ${fieldName}: ${zodType}${isOptional ? ".optional()" : ""},`;
     });
 
     parts.push(`export const ${name}CreateSchema = z.object({\n${fieldEntries.join("\n")}\n});`);
@@ -318,7 +319,10 @@ const generateTypesFile = (): string => {
     const translatableFields = getTranslatableFieldNames(collection);
 
     const fieldEntries = Object.entries(collection.fields)
-      .map(([fieldName, field]) => `  ${fieldName}${field.required ? "" : "?"}: ${typeForField(field)};`)
+      .map(([fieldName, field]) => {
+        const isOptional = !field.required || !!field.condition;
+        return `  ${fieldName}${isOptional ? "?" : ""}: ${typeForField(field)};`;
+      })
       .join("\n");
 
     const translationEntries = translatableFields.length

@@ -85,7 +85,16 @@ const blockTypesMeta =
     : {};
 ---
 
-<div class="grid gap-2">
+<div
+  class="grid gap-2"
+  data-field-name={name}
+  {...field.condition
+    ? {
+        "data-condition-field": field.condition.field,
+        "data-condition-value": JSON.stringify(field.condition.value),
+      }
+    : {}}
+>
   {
     !isTreeEditor && (
       <Label htmlFor={name}>

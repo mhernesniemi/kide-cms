@@ -683,6 +683,63 @@ const tableRows =
 
 <script is:inline>
   (function () {
+    // --- Conditional fields ---
+    var conditionals = document.querySelectorAll("[data-condition-field]");
+    if (conditionals.length > 0) {
+      var matchesCondition = function (currentValue, expected) {
+        if (Array.isArray(expected)) {
+          return expected.some(function (v) {
+            return String(v) === String(currentValue);
+          });
+        }
+        if (typeof expected === "boolean") {
+          return expected
+            ? currentValue === "true" || currentValue === true
+            : currentValue === "false" || currentValue === false || currentValue === "";
+        }
+        return String(expected) === String(currentValue);
+      };
+
+      var getFieldValue = function (fieldName) {
+        // Check checkboxes first (boolean fields have a hidden "false" fallback that would match otherwise)
+        var checkbox = document.querySelector('input[type="checkbox"][name="' + fieldName + '"]');
+        if (checkbox) return checkbox.checked ? "true" : "false";
+        var hidden = document.querySelector('input[type="hidden"][name="' + fieldName + '"]');
+        if (hidden) return hidden.value;
+        var input = document.querySelector('[name="' + fieldName + '"]');
+        if (input) return input.value;
+        return "";
+      };
+
+      var updateVisibility = function () {
+        conditionals.forEach(function (el) {
+          var depField = el.getAttribute("data-condition-field");
+          var expected = JSON.parse(el.getAttribute("data-condition-value"));
+          var currentValue = getFieldValue(depField);
+          var visible = matchesCondition(currentValue, expected);
+          el.style.display = visible ? "" : "none";
+          // Disable hidden inputs so they don't submit stale values
+          el.querySelectorAll("input, textarea, select").forEach(function (input) {
+            input.disabled = !visible;
+          });
+        });
+      };
+
+      // Run on load
+      updateVisibility();
+
+      // Listen for changes on the form
+      var form = document.getElementById("document-form");
+      if (form) {
+        form.addEventListener("input", updateVisibility);
+        form.addEventListener("change", updateVisibility);
+      }
+    }
+  })();
+</script>
+
+<script is:inline>
+  (function () {
     var form = document.getElementById("document-form");
     if (!form) return;
     // Autofocus first text input on new document pages

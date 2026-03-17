@@ -67,6 +67,12 @@ export default defineConfig({
         }),
         author: fields.relation({ collection: "authors" }),
         tags: fields.array({ of: fields.text(), defaultValue: [] }),
+        featured: fields.boolean({ defaultValue: false }),
+        featuredLabel: fields.text({
+          translatable: true,
+          description: "Custom label shown on the featured banner",
+          condition: { field: "featured", value: true },
+        }),
         seoDescription: fields.text({
           maxLength: 160,
           translatable: true,

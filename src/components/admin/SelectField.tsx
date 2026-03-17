@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -28,16 +28,18 @@ export default function SelectField({
   onChange: onChangeProp,
 }: Props) {
   const [value, setValue] = useState(initialValue ?? "");
+  const hiddenRef = useRef<HTMLInputElement>(null);
 
   return (
     <>
-      <input type="hidden" name={name} value={value} />
+      <input type="hidden" name={name} value={value} ref={hiddenRef} />
       <Select
         items={items}
         value={value}
         onValueChange={(v) => {
           setValue(v ?? "");
           onChangeProp?.(v ?? "");
+          hiddenRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
         }}
         disabled={disabled}
       >
