@@ -1,7 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronRight, GripVertical, Indent, Outdent, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  GripVertical,
+  Indent,
+  Outdent,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -59,6 +71,7 @@ type Props = {
   name: string;
   value?: string;
   variant: "menu" | "taxonomy";
+  label?: string;
   linkOptions?: LinkOptionGroup[];
 };
 
@@ -99,7 +112,7 @@ function SortableTreeItem({
 
 // --- Main component ---
 
-export default function TreeItemsEditor({ name, value, variant, linkOptions = [] }: Props) {
+export default function TreeItemsEditor({ name, value, variant, label, linkOptions = [] }: Props) {
   const [items, setItems] = React.useState<TreeItem[]>(() => parseItems(value));
   const [editing, setEditing] = React.useState<EditState | null>(null);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -150,6 +163,27 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
   }, [serialized]);
 
   // --- Tree operations ---
+
+  const allParentIds = React.useMemo(() => {
+    const ids = new Set<string>();
+    const collect = (list: TreeItem[]) => {
+      for (const item of list) {
+        if (item.children.length > 0) {
+          ids.add(item.id);
+          collect(item.children);
+        }
+      }
+    };
+    collect(items);
+    return ids;
+  }, [items]);
+
+  const hasExpandableItems = allParentIds.size > 0;
+  const allExpanded = hasExpandableItems && [...allParentIds].every((id) => expandedIds.has(id));
+
+  const toggleExpandAll = () => {
+    setExpandedIds(allExpanded ? new Set() : new Set(allParentIds));
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -658,6 +692,31 @@ export default function TreeItemsEditor({ name, value, variant, linkOptions = []
   return (
     <div className="space-y-2">
       <input ref={hiddenRef} type="hidden" name={name} value={serialized} />
+
+      {label && (
+        <div className="flex items-center justify-between">
+          <label className="text-sm leading-none font-medium">{label}</label>
+          {hasExpandableItems && (
+            <button
+              type="button"
+              onClick={toggleExpandAll}
+              className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors"
+            >
+              {allExpanded ? (
+                <>
+                  <ChevronsDownUp className="size-3.5" />
+                  Collapse all
+                </>
+              ) : (
+                <>
+                  <ChevronsUpDown className="size-3.5" />
+                  Expand all
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      )}
 
       {variant === "taxonomy" && (
         <div className="flex items-center gap-2">

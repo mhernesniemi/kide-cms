@@ -11,7 +11,6 @@ import UnsavedGuard from "@/components/admin/UnsavedGuard";
 import FieldControl from "@/components/admin/FieldControl.astro";
 import { StatusBadge } from "@/components/admin/ui/badge";
 import { buttonVariants } from "@/components/admin/ui/button";
-import { Card, CardContent } from "@/components/admin/ui/card";
 import config from "@/cms/collections.config";
 import views from "@/cms/admin/views";
 import { cms } from "@/cms/.generated/api";
@@ -468,36 +467,48 @@ const tableRows =
                   })}
               </div>
               <div class="flex flex-wrap items-center gap-2">
-                <button
-                  class={buttonVariants({ variant: "outline" })}
-                  type="submit"
-                  form="document-form"
-                  name="_intent"
-                  value="save"
-                  disabled={route.kind === "edit" && collection?.drafts}
-                >
-                  {collection?.drafts ? "Save draft" : "Save"}
-                </button>
-                {collection.drafts && (
+                {translationMode ? (
                   <button
-                    class={buttonVariants({ variant: "publish" })}
+                    class={buttonVariants({ variant: "outline", size: "lg" })}
                     type="submit"
-                    form="document-form"
-                    name="_intent"
-                    value="publish"
-                    disabled={
-                      route.kind === "edit" &&
-                      !(
-                        doc?._status === "draft" ||
-                        doc?._status === "scheduled" ||
-                        (doc && getVisualStatus(doc) === "changed")
-                      )
-                    }
+                    form="translation-form"
                   >
-                    Publish
+                    Save translation
                   </button>
+                ) : (
+                  <>
+                    <button
+                      class={buttonVariants({ variant: "outline" })}
+                      type="submit"
+                      form="document-form"
+                      name="_intent"
+                      value="save"
+                      disabled={route.kind === "edit" && collection?.drafts}
+                    >
+                      {collection?.drafts ? "Save draft" : "Save"}
+                    </button>
+                    {collection.drafts && (
+                      <button
+                        class={buttonVariants({ variant: "publish" })}
+                        type="submit"
+                        form="document-form"
+                        name="_intent"
+                        value="publish"
+                        disabled={
+                          route.kind === "edit" &&
+                          !(
+                            doc?._status === "draft" ||
+                            doc?._status === "scheduled" ||
+                            (doc && getVisualStatus(doc) === "changed")
+                          )
+                        }
+                      >
+                        Publish
+                      </button>
+                    )}
+                  </>
                 )}
-                {route.kind === "edit" && (
+                {route.kind === "edit" && !translationMode && (
                   <DocumentActions
                     client:load
                     formId="document-form"
@@ -584,14 +595,17 @@ const tableRows =
             {translationMode && (
               <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]">
                 <div class="space-y-6">
-                  <Card>
-                    <CardContent className="flex items-center gap-2 py-3 text-sm">
-                      <Languages className="size-4" />
-                      Editing {selectedLocale} translation — only translatable fields are editable.
-                    </CardContent>
-                  </Card>
+                  <div class="flex items-center gap-2.5 rounded-lg border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-sm text-blue-600 dark:text-blue-400">
+                    <Languages className="size-4 shrink-0" />
+                    Editing <strong>{selectedLocale}</strong> translation — only translatable fields are editable.
+                  </div>
 
-                  <form method="post" action={getFormAction(collection.slug, route.documentId)} class="space-y-6">
+                  <form
+                    id="translation-form"
+                    method="post"
+                    action={getFormAction(collection.slug, route.documentId)}
+                    class="space-y-6"
+                  >
                     <input type="hidden" name="_action" value="save-translation" />
                     <input type="hidden" name="locale" value={selectedLocale} />
                     <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
@@ -639,14 +653,6 @@ const tableRows =
                         })}
                       </div>
                     </AdminCard>
-
-                    <Card>
-                      <CardContent className="flex justify-end py-4">
-                        <button class={buttonVariants({ variant: "default" })} type="submit">
-                          Save translation
-                        </button>
-                      </CardContent>
-                    </Card>
                   </form>
                 </div>
 

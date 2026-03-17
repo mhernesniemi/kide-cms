@@ -56,6 +56,8 @@ const rows =
   field.admin?.rows ?? (field.type === "richText" ? 10 : field.type === "json" || field.type === "blocks" ? 12 : 5);
 const inputMode = field.type === "number" ? "decimal" : undefined;
 const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg-muted text-muted-foreground");
+const isTreeEditor =
+  field.type === "json" && (field.admin?.component === "menu-items" || field.admin?.component === "taxonomy-terms");
 
 // Build serializable block types metadata for BlockEditor
 const blockTypesMeta =
@@ -84,7 +86,14 @@ const blockTypesMeta =
 ---
 
 <div class="grid gap-2">
-  <Label htmlFor={name}>{label}{field.required ? " *" : ""}</Label>
+  {
+    !isTreeEditor && (
+      <Label htmlFor={name}>
+        {label}
+        {field.required ? " *" : ""}
+      </Label>
+    )
+  }
   {field.description && <p class="text-muted-foreground text-xs leading-5">{field.description}</p>}
   {field.admin?.help && <p class="text-muted-foreground -mb-0.5 text-xs leading-5">{field.admin.help}</p>}
 
@@ -244,13 +253,20 @@ const blockTypesMeta =
 
   {
     field.type === "json" && field.admin?.component === "menu-items" && !readOnly && (
-      <TreeItemsEditor client:load name={name} value={serializedValue} variant="menu" linkOptions={menuLinkOptions} />
+      <TreeItemsEditor
+        client:load
+        name={name}
+        value={serializedValue}
+        variant="menu"
+        label={label}
+        linkOptions={menuLinkOptions}
+      />
     )
   }
 
   {
     field.type === "json" && field.admin?.component === "taxonomy-terms" && !readOnly && (
-      <TreeItemsEditor client:load name={name} value={serializedValue} variant="taxonomy" />
+      <TreeItemsEditor client:load name={name} value={serializedValue} variant="taxonomy" label={label} />
     )
   }
 
