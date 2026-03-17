@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -29,6 +29,15 @@ export default function SelectField({
 }: Props) {
   const [value, setValue] = useState(initialValue ?? "");
   const hiddenRef = useRef<HTMLInputElement>(null);
+  const isInitial = useRef(true);
+
+  useEffect(() => {
+    if (isInitial.current) {
+      isInitial.current = false;
+      return;
+    }
+    hiddenRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
+  }, [value]);
 
   return (
     <>
@@ -39,7 +48,6 @@ export default function SelectField({
         onValueChange={(v) => {
           setValue(v ?? "");
           onChangeProp?.(v ?? "");
-          hiddenRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
         }}
         disabled={disabled}
       >

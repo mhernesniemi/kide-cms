@@ -717,7 +717,9 @@ const tableRows =
           var expected = JSON.parse(el.getAttribute("data-condition-value"));
           var currentValue = getFieldValue(depField);
           var visible = matchesCondition(currentValue, expected);
-          el.style.display = visible ? "" : "none";
+          // Hide the field and its parent wrapper (sidebar fields have an extra wrapping div)
+          var target = el.parentElement && el.parentElement.childElementCount === 1 ? el.parentElement : el;
+          target.style.display = visible ? "" : "none";
           // Disable hidden inputs so they don't submit stale values
           el.querySelectorAll("input, textarea, select").forEach(function (input) {
             input.disabled = !visible;
