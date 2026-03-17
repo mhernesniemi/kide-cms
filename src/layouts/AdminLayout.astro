@@ -1,7 +1,7 @@
 ---
 import "../styles/admin.css";
 
-import { Clock, FileText, FolderTree, Image, Layers, LayoutGrid, Menu, PencilRuler, Users } from "lucide-react";
+import { Clock, FileText, FolderTree, Image, Layers, LayoutGrid, Menu, PencilRuler, Plus, Users } from "lucide-react";
 
 import MobileSidebar from "@/components/admin/MobileSidebar";
 import SidebarUserMenu from "@/components/admin/SidebarUserMenu";
@@ -48,7 +48,7 @@ const singletonSlugs = new Set(collections.filter((c) => c.singleton).map((c) =>
 const isActiveSingles =
   activeCollection === "singles" || (activeCollection !== null && singletonSlugs.has(activeCollection));
 
-type NavItem = { href: string; label: string; Icon: any; active: boolean };
+type NavItem = { href: string; label: string; Icon: any; active: boolean; newHref?: string };
 const navItems: NavItem[] = [];
 
 // 0. Recent — cross-collection recent entries
@@ -69,6 +69,7 @@ for (const c of contentCollections) {
     label: c.labels.plural,
     Icon: Layers,
     active: activeCollection === c.slug,
+    newHref: `/admin/${c.slug}/new`,
   });
 }
 
@@ -86,12 +87,19 @@ for (const slug of pinnedOrder) {
       label: c.labels.plural,
       Icon: pinnedIcons[slug] ?? LayoutGrid,
       active: activeCollection === c.slug,
+      newHref: `/admin/${c.slug}/new`,
     });
   }
 }
 
 // 7. Assets
-navItems.push({ href: "/admin/assets", label: "Assets", Icon: Image, active: activeCollection === "assets" });
+navItems.push({
+  href: "/admin/assets",
+  label: "Assets",
+  Icon: Image,
+  active: activeCollection === "assets",
+  newHref: "/admin/assets/new",
+});
 ---
 
 <!doctype html>
@@ -133,18 +141,33 @@ navItems.push({ href: "/admin/assets", label: "Assets", Icon: Image, active: act
 
             <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-3">
               {navItems.map((item) => (
-                <a
-                  href={item.href}
+                <div
                   class={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                    item.active
-                      ? "bg-accent text-accent-foreground"
-                      : "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
+                    "group relative rounded-lg transition-colors",
+                    item.active ? "bg-accent" : "hover:bg-accent/60",
                   )}
                 >
-                  <item.Icon className="size-4 shrink-0 stroke-1" />
-                  <span>{item.label}</span>
-                </a>
+                  <a
+                    href={item.href}
+                    class={cn(
+                      "flex items-center gap-3 px-3 py-2.5 text-sm",
+                      item.newHref && "pr-8",
+                      item.active ? "text-accent-foreground" : "text-foreground/70 group-hover:text-foreground",
+                    )}
+                  >
+                    <item.Icon className="size-4 shrink-0 stroke-1" />
+                    <span>{item.label}</span>
+                  </a>
+                  {item.newHref && (
+                    <a
+                      href={item.newHref}
+                      title={`New ${item.label.toLowerCase()}`}
+                      class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                    >
+                      <Plus className="size-3.5" />
+                    </a>
+                  )}
+                </div>
               ))}
             </nav>
           </aside>
@@ -167,18 +190,33 @@ navItems.push({ href: "/admin/assets", label: "Assets", Icon: Image, active: act
 
                 <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-3">
                   {navItems.map((item) => (
-                    <a
-                      href={item.href}
+                    <div
                       class={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                        item.active
-                          ? "bg-accent text-accent-foreground"
-                          : "text-foreground/70 hover:bg-accent/60 hover:text-foreground",
+                        "group relative rounded-lg transition-colors",
+                        item.active ? "bg-accent" : "hover:bg-accent/60",
                       )}
                     >
-                      <item.Icon className="size-4 shrink-0 stroke-1" />
-                      <span>{item.label}</span>
-                    </a>
+                      <a
+                        href={item.href}
+                        class={cn(
+                          "flex items-center gap-3 px-3 py-2.5 text-sm",
+                          item.newHref && "pr-8",
+                          item.active ? "text-accent-foreground" : "text-foreground/70 group-hover:text-foreground",
+                        )}
+                      >
+                        <item.Icon className="size-4 shrink-0 stroke-1" />
+                        <span>{item.label}</span>
+                      </a>
+                      {item.newHref && (
+                        <a
+                          href={item.newHref}
+                          title={`New ${item.label.toLowerCase()}`}
+                          class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                        >
+                          <Plus className="size-3.5" />
+                        </a>
+                      )}
+                    </div>
                   ))}
                 </nav>
               </MobileSidebar>
