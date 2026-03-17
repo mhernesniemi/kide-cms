@@ -80,6 +80,12 @@ export default defineConfig({
           label: "Podcast URL",
           condition: { field: "postType", value: "podcast" },
         }),
+        featured: fields.boolean({ defaultValue: false }),
+        featuredLabel: fields.text({
+          translatable: true,
+          description: "Custom label shown on the featured banner",
+          condition: { field: "featured", value: true },
+        }),
         seoDescription: fields.text({
           maxLength: 160,
           translatable: true,

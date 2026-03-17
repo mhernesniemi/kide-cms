@@ -9,6 +9,7 @@ import SelectField from "@/components/admin/SelectField";
 import RelationField from "@/components/admin/RelationField";
 import BlockEditor from "@/components/admin/BlockEditor";
 import SlugField from "@/components/admin/SlugField";
+import CheckboxField from "@/components/admin/CheckboxField";
 import { Input } from "@/components/admin/ui/input";
 import { Label } from "@/components/admin/ui/label";
 import { Textarea } from "@/components/admin/ui/textarea";
@@ -183,23 +184,7 @@ const blockTypesMeta =
     )
   }
 
-  {
-    field.type === "boolean" && (
-      <span class="border-input bg-background inline-flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
-        <input type="hidden" name={name} value="false" />
-        <input
-          class="border-input text-primary focus:ring-primary size-4 rounded"
-          id={name}
-          type="checkbox"
-          name={name}
-          value="true"
-          checked={Boolean(value)}
-          disabled={readOnly}
-        />
-        <span class="text-muted-foreground">{Boolean(value) ? "Enabled" : "Disabled"}</span>
-      </span>
-    )
-  }
+  {field.type === "boolean" && <CheckboxField client:load name={name} checked={Boolean(value)} disabled={readOnly} />}
 
   {
     field.type === "select" && field.admin?.component !== "radio" && (
@@ -216,18 +201,18 @@ const blockTypesMeta =
 
   {
     field.type === "select" && field.admin?.component === "radio" && (
-      <div class="flex flex-wrap gap-x-5 gap-y-2">
+      <div class="flex flex-wrap gap-x-5 gap-y-2 has-[:disabled]:opacity-50">
         {field.options.map((option) => (
-          <label class="flex items-center gap-2 text-sm">
+          <label class="hover:text-foreground flex cursor-pointer items-center gap-2 text-sm transition-colors has-[:disabled]:cursor-not-allowed">
             <input
-              class="border-input text-primary focus:ring-primary size-4"
+              class="border-input checked:border-primary focus-visible:ring-ring/50 size-4 shrink-0 cursor-pointer appearance-none rounded-full border transition-all checked:border-[5px] focus-visible:ring-3 focus-visible:outline-none disabled:cursor-not-allowed"
               type="radio"
               name={name}
               value={option}
               checked={String(value ?? "") === option}
               disabled={readOnly}
             />
-            <span>{option}</span>
+            <span class="select-none">{option}</span>
           </label>
         ))}
       </div>
