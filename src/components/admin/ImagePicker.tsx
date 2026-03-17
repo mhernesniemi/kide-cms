@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { ImagePlus, Upload, X, Loader2 } from "lucide-react";
+import { Button } from "@/components/admin/ui/button";
 
 type AssetRecord = {
   _id: string;
@@ -102,23 +103,21 @@ export default function ImagePicker({ name, value: initialValue, placeholder, on
 
       <div className="flex gap-2">
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
+          className="text-foreground/70"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="bg-background hover:bg-accent inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
         >
-          {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+          {uploading ? <Loader2 className="size-3 animate-spin" /> : <Upload className="size-4 stroke-1" />}
           Upload
-        </button>
-        <button
-          type="button"
-          onClick={openBrowser}
-          className="bg-background hover:bg-accent inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors"
-        >
-          <ImagePlus className="size-4" />
+        </Button>
+        <Button type="button" variant="outline" size="sm" className="text-foreground/70" onClick={openBrowser}>
+          <ImagePlus className="size-4 stroke-1" />
           Browse
-        </button>
+        </Button>
       </div>
 
       {/* Asset Browser Modal */}
