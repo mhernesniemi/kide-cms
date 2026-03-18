@@ -632,7 +632,7 @@ const tableRows =
                                 relationMeta={relationMetaByField[fieldName]}
                                 menuLinkOptions={menuLinkOptions}
                               />
-                              {aiEnabled && sourceText && (
+                              {aiEnabled && sourceText && fieldDef.type !== "slug" && (
                                 <div class="mt-1.5">
                                   <AiGenerateButton
                                     client:load
