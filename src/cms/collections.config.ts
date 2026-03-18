@@ -142,6 +142,14 @@ export default defineConfig({
             },
             featuredPosts: {
               heading: fields.text(),
+              posts: fields.relation({ collection: "posts", hasMany: true }),
+            },
+            faq: {
+              heading: fields.text(),
+              items: fields.json({
+                defaultValue: [] as any,
+                admin: { component: "repeater", help: "Add question and answer pairs" },
+              }),
             },
           },
         }),
@@ -184,6 +192,13 @@ export default defineConfig({
             },
             gallery: {
               images: fields.array({ of: fields.image(), defaultValue: [] }),
+            },
+            faq: {
+              heading: fields.text(),
+              items: fields.json({
+                defaultValue: [] as any,
+                admin: { component: "repeater", help: "Add question and answer pairs" },
+              }),
             },
           },
         }),

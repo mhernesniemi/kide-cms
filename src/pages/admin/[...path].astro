@@ -202,6 +202,30 @@ if (collection && collectionSlug) {
         };
       }
     }
+
+    // Also fetch relation options for relation fields inside blocks
+    if (field.type === "blocks" && field.types) {
+      for (const [typeName, typeFields] of Object.entries(field.types)) {
+        for (const [subFieldName, subField] of Object.entries(typeFields) as [
+          string,
+          import("@/cms/core/define").FieldConfig,
+        ][]) {
+          if (subField.type === "relation") {
+            const key = `block:${typeName}:${subFieldName}`;
+            if (!relationOptionsByField[key]) {
+              const relatedDocs = await cmsRuntime[subField.collection].find(
+                { status: "any", limit: 100, sort: { field: "_updatedAt", direction: "desc" }, locale: defaultLocale },
+                runtimeContext,
+              );
+              relationOptionsByField[key] = relatedDocs.map((item: Record<string, unknown>) => ({
+                value: String(item._id),
+                label: String(item.title ?? item.name ?? item.slug ?? item._id),
+              }));
+            }
+          }
+        }
+      }
+    }
   }
 
   // Build link options for menu editors: fetch linkable documents from content collections
@@ -278,6 +302,13 @@ const hasPreview = !!(
 const previewUrl = hasPreview ? `${cms.meta.getRouteForDocument(collection.slug, doc)}?preview=true` : null;
 const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
 const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
+const getBlockRelationOptions = (fieldName: string): Record<string, Array<{ value: string; label: string }>> => {
+  const result: Record<string, Array<{ value: string; label: string }>> = {};
+  for (const [key, opts] of Object.entries(relationOptionsByField)) {
+    if (key.startsWith("block:")) result[key] = opts;
+  }
+  return result;
+};
 const aiEnabled = isAiEnabled();
 
 const tableRows =
@@ -560,6 +591,7 @@ const tableRows =
                             relationOptions={relationOptionsByField[fieldName] ?? []}
                             relationMeta={relationMetaByField[fieldName]}
                             menuLinkOptions={menuLinkOptions}
+                            blockRelationOptions={getBlockRelationOptions(fieldName)}
                           />
                         ))}
                       </div>

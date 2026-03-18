@@ -27,9 +27,11 @@ type SubFieldMeta = {
   required?: boolean;
   options?: string[];
   from?: string;
-  admin?: { placeholder?: string; rows?: number; help?: string };
+  admin?: { placeholder?: string; rows?: number; help?: string; component?: string };
   defaultValue?: unknown;
   of?: { type: string };
+  collection?: string;
+  hasMany?: boolean;
 };
 
 type BlockTypesMeta = Record<string, Record<string, SubFieldMeta>>;
@@ -40,10 +42,13 @@ type Block = {
   [field: string]: unknown;
 };
 
+type RelationOption = { value: string; label: string };
+
 type Props = {
   name: string;
   value?: string;
   types: BlockTypesMeta;
+  blockRelationOptions?: Record<string, RelationOption[]>;
 };
 
 function generateKey() {
@@ -100,6 +105,7 @@ function SortableBlock({
   onToggle,
   onRemove,
   onUpdateField,
+  getRelationOptions,
 }: {
   block: Block;
   fieldsMeta: Record<string, SubFieldMeta>;
@@ -107,6 +113,7 @@ function SortableBlock({
   onToggle: () => void;
   onRemove: () => void;
   onUpdateField: (fieldName: string, value: unknown) => void;
+  getRelationOptions: (blockType: string, fieldName: string) => RelationOption[];
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: block._key,
@@ -179,6 +186,7 @@ function SortableBlock({
               meta={meta}
               value={block[fieldName]}
               onChange={(v) => onUpdateField(fieldName, v)}
+              relationOptions={meta.type === "relation" ? getRelationOptions(block.type, fieldName) : []}
             />
           ))}
         </div>
@@ -191,7 +199,7 @@ function SortableBlock({
 // Main editor
 // -----------------------------------------------
 
-export default function BlockEditor({ name, value, types }: Props) {
+export default function BlockEditor({ name, value, types, blockRelationOptions = {} }: Props) {
   const [blocks, setBlocks] = useState<Block[]>(() => parseBlocks(value, types));
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
   const hiddenRef = useRef<HTMLInputElement>(null);
@@ -304,6 +312,9 @@ export default function BlockEditor({ name, value, types }: Props) {
                   onToggle={() => toggleExpanded(block._key)}
                   onRemove={() => removeBlock(block._key)}
                   onUpdateField={(fn, v) => updateField(block._key, fn, v)}
+                  getRelationOptions={(blockType, fieldName) =>
+                    blockRelationOptions[`block:${blockType}:${fieldName}`] ?? []
+                  }
                 />
               );
             })}
@@ -334,12 +345,14 @@ function SubField({
   meta,
   value,
   onChange,
+  relationOptions = [],
 }: {
   blockKey: string;
   fieldName: string;
   meta: SubFieldMeta;
   value: unknown;
   onChange: (value: unknown) => void;
+  relationOptions?: RelationOption[];
 }) {
   const label = meta.label ?? humanize(fieldName);
   const fieldId = `${blockKey}_${fieldName}`;
@@ -351,7 +364,13 @@ function SubField({
         {meta.required ? " *" : ""}
       </Label>
       {meta.admin?.help && <p className="text-muted-foreground text-xs leading-5">{meta.admin.help}</p>}
-      <SubFieldControl fieldId={fieldId} meta={meta} value={value} onChange={onChange} />
+      <SubFieldControl
+        fieldId={fieldId}
+        meta={meta}
+        value={value}
+        onChange={onChange}
+        relationOptions={relationOptions}
+      />
     </div>
   );
 }
@@ -361,11 +380,13 @@ function SubFieldControl({
   meta,
   value,
   onChange,
+  relationOptions = [],
 }: {
   fieldId: string;
   meta: SubFieldMeta;
   value: unknown;
   onChange: (value: unknown) => void;
+  relationOptions?: RelationOption[];
 }) {
   const strValue = value == null ? "" : String(value);
 
@@ -446,6 +467,69 @@ function SubFieldControl({
         />
       );
 
+    case "relation": {
+      const selected = meta.hasMany
+        ? Array.isArray(value)
+          ? (value as string[])
+          : typeof value === "string" && value
+            ? (() => {
+                try {
+                  return JSON.parse(value) as string[];
+                } catch {
+                  return [];
+                }
+              })()
+            : []
+        : value
+          ? [String(value)]
+          : [];
+      const getLabel = (id: string) => relationOptions?.find((o) => o.value === id)?.label ?? id;
+      const toggle = (id: string) => {
+        if (meta.hasMany) {
+          const next = selected.includes(id) ? selected.filter((v) => v !== id) : [...selected, id];
+          onChange(next);
+        } else {
+          onChange(selected[0] === id ? "" : id);
+        }
+      };
+      return (
+        <div className="space-y-2">
+          {meta.hasMany && selected.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {selected.map((id) => (
+                <span
+                  key={id}
+                  className="bg-secondary text-secondary-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-sm"
+                >
+                  {getLabel(id)}
+                  <button
+                    type="button"
+                    onClick={() => toggle(id)}
+                    className="text-muted-foreground hover:text-foreground -mr-0.5 rounded p-0.5"
+                  >
+                    <Trash2 className="size-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <SelectField
+            name={fieldId}
+            value={meta.hasMany ? "" : (selected[0] ?? "")}
+            placeholder={`Select ${meta.label?.toLowerCase() ?? "item"}...`}
+            items={(relationOptions ?? []).map((o) => ({ value: o.value, label: o.label }))}
+            onChange={(v) => {
+              if (meta.hasMany && v) {
+                if (!selected.includes(v)) onChange([...selected, v]);
+              } else {
+                onChange(v);
+              }
+            }}
+          />
+        </div>
+      );
+    }
+
     case "array":
       if (meta.of?.type === "image") {
         return <ArrayImageField fieldId={fieldId} value={value} onChange={onChange} />;
@@ -481,6 +565,25 @@ function SubFieldControl({
         />
       );
 
+    case "json":
+      if (meta.admin?.component === "repeater") {
+        return <RepeaterField fieldId={fieldId} value={value} onChange={onChange} />;
+      }
+      return (
+        <Textarea
+          id={fieldId}
+          rows={meta.admin?.rows ?? 5}
+          value={typeof value === "string" ? strValue : JSON.stringify(value ?? {}, null, 2)}
+          onChange={(e) => {
+            try {
+              onChange(JSON.parse(e.target.value));
+            } catch {
+              onChange(e.target.value);
+            }
+          }}
+        />
+      );
+
     default:
       // Fallback: JSON textarea
       return (
@@ -503,6 +606,78 @@ function SubFieldControl({
 // -----------------------------------------------
 // Array of images sub-component
 // -----------------------------------------------
+
+function RepeaterField({
+  fieldId,
+  value,
+  onChange,
+}: {
+  fieldId: string;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const items: Array<Record<string, string>> = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? (() => {
+          try {
+            const p = JSON.parse(value);
+            return Array.isArray(p) ? p : [];
+          } catch {
+            return [];
+          }
+        })()
+      : [];
+
+  // Detect fields from first item or default to title + description
+  const fieldKeys = items.length > 0 ? Object.keys(items[0]).filter((k) => k !== "_key") : ["title", "description"];
+
+  const addItem = () => {
+    const blank: Record<string, string> = { _key: generateKey() };
+    for (const k of fieldKeys) blank[k] = "";
+    onChange([...items, blank]);
+  };
+
+  const removeItem = (index: number) => {
+    onChange(items.filter((_, i) => i !== index));
+  };
+
+  const updateItem = (index: number, key: string, val: string) => {
+    const next = items.map((item, i) => (i === index ? { ...item, [key]: val } : item));
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-3">
+      {items.map((item, index) => (
+        <div key={item._key ?? index} className="bg-muted/30 space-y-2 rounded-lg border p-3">
+          {fieldKeys.map((key) => (
+            <div key={key} className="grid gap-1">
+              <Label className="text-xs">{humanize(key)}</Label>
+              {key.includes("description") ||
+              key.includes("body") ||
+              key.includes("content") ||
+              key.includes("answer") ? (
+                <Textarea rows={3} value={item[key] ?? ""} onChange={(e) => updateItem(index, key, e.target.value)} />
+              ) : (
+                <Input value={item[key] ?? ""} onChange={(e) => updateItem(index, key, e.target.value)} />
+              )}
+            </div>
+          ))}
+          <div className="flex justify-end">
+            <Button type="button" variant="ghost" size="icon-xs" onClick={() => removeItem(index)}>
+              <Trash2 className="size-3" />
+            </Button>
+          </div>
+        </div>
+      ))}
+      <Button type="button" variant="outline" size="sm" className="text-foreground/70" onClick={addItem}>
+        <Plus className="size-3.5" />
+        Add item
+      </Button>
+    </div>
+  );
+}
 
 function ArrayImageField({
   fieldId,

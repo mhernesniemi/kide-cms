@@ -40,6 +40,7 @@ const {
   relationMeta,
   readOnly = false,
   menuLinkOptions = [],
+  blockRelationOptions = {},
 } = Astro.props as {
   name: string;
   field: FieldConfig;
@@ -48,6 +49,7 @@ const {
   relationMeta?: RelationMeta;
   readOnly?: boolean;
   menuLinkOptions?: LinkOptionGroup[];
+  blockRelationOptions?: Record<string, RelationOption[]>;
 };
 
 const label = field.label ?? humanize(name);
@@ -78,6 +80,8 @@ const blockTypesMeta =
                 admin: subField.admin,
                 defaultValue: subField.defaultValue,
                 of: "of" in subField && subField.of ? { type: subField.of.type } : undefined,
+                collection: "collection" in subField ? subField.collection : undefined,
+                hasMany: "hasMany" in subField ? subField.hasMany : undefined,
               },
             ]),
           ),
@@ -301,7 +305,13 @@ const blockTypesMeta =
 
   {
     field.type === "blocks" && !readOnly && (
-      <BlockEditor client:load name={name} value={serializedValue} types={blockTypesMeta} />
+      <BlockEditor
+        client:load
+        name={name}
+        value={serializedValue}
+        types={blockTypesMeta}
+        blockRelationOptions={blockRelationOptions}
+      />
     )
   }
 

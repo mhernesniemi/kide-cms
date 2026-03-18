@@ -45,9 +45,9 @@ const { blocks = [] } = Astro.props as { blocks?: Block[] };
     if (block.type === "gallery" && block.images?.length) {
       return (
         <section style="padding: 2rem 0;">
-          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem;">
+          <div style="display: grid; gap: 1rem;">
             {block.images.map((src) => (
-              <img src={src} alt="" style="width: 100%; border-radius: 0.5rem; aspect-ratio: 1; object-fit: cover;" />
+              <img src={src} alt="" style="width: 100%; border-radius: 0.5rem; object-fit: cover;" />
             ))}
           </div>
         </section>
