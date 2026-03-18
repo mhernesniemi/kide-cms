@@ -1,14 +1,6 @@
 import type { SeedDocument } from "./core/define";
 
 const seeds: Record<string, SeedDocument[]> = {
-  users: [
-    {
-      email: "admin@example.com",
-      name: "Admin",
-      role: "admin",
-      password: "changeme",
-    },
-  ],
   authors: [
     {
       _id: "author_maya",
