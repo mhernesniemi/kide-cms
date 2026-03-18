@@ -71,7 +71,6 @@ posts: {
 - Block editor with repeater fields
 - Hierarchical taxonomies and menus
 - Role-based access control
-- Session auth (Argon2 + HttpOnly cookies)
 - Tag-based cache invalidation
 - AI assistant (alt text, SEO, translations)
 
