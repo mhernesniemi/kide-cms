@@ -15,15 +15,6 @@ pnpm dev
 
 Open `http://localhost:4321/admin`, you'll be prompted to create your admin account on first run.
 
-## Key Commands
-
-```bash
-pnpm dev              # Start dev server
-pnpm build            # Production build
-pnpm db:generate      # Generate DB migrations
-pnpm db:migrate       # Apply migrations
-```
-
 ## How It Works
 
 Define collections in `src/cms/collections.config.ts`:
@@ -80,6 +71,15 @@ posts: {
 - Role-based access control
 - Session auth (Argon2 + HttpOnly cookies)
 - Tag-based cache invalidation
+
+## Key Commands
+
+```bash
+pnpm dev              # Start dev server
+pnpm build            # Production build
+pnpm db:generate      # Generate DB migrations
+pnpm db:migrate       # Apply migrations
+```
 
 ## Stack
 
