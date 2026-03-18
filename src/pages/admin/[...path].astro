@@ -284,7 +284,11 @@ if (route.kind === "list") {
 }
 
 if (route.kind === "edit") {
-  doc = await collectionApi.findById(route.documentId, { status: "any", locale: requestedLocale }, runtimeContext);
+  try {
+    doc = await collectionApi.findById(route.documentId, { status: "any", locale: requestedLocale }, runtimeContext);
+  } catch {
+    return Astro.redirect(`/admin/${route.collectionSlug}?_toast=error&_msg=Access+denied`);
+  }
   if (!doc) {
     return Astro.redirect(`/admin/${route.collectionSlug}`);
   }
@@ -505,7 +509,9 @@ const tableRows =
                 (doc?._status === "draft" || (doc && getVisualStatus(doc) === "changed"))
               }
             />
-            <div class="flex flex-wrap items-center justify-between gap-2">
+            <div
+              class={`flex flex-wrap items-center justify-between gap-2 ${effectiveSidebarFieldSets.length === 0 ? "mx-auto w-full max-w-3xl" : ""}`}
+            >
               <div class="flex flex-wrap items-center gap-2">
                 {locales.length > 1 &&
                   route.kind === "edit" &&
@@ -597,7 +603,7 @@ const tableRows =
                 class={
                   effectiveSidebarFieldSets.length > 0
                     ? "grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
-                    : "grid gap-6"
+                    : "mx-auto grid max-w-3xl gap-6"
                 }
               >
                 <input type="hidden" name="_action" value={route.kind === "new" ? "create" : "update"} />

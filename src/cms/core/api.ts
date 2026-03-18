@@ -471,7 +471,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
           });
         }
 
-        const result = await this.findById(docId);
+        const result = await this.findById(docId, {}, context);
         await hooks?.[collection.slug]?.afterCreate?.(result!, hookContext);
         return result!;
       },
@@ -548,7 +548,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
           }
         }
 
-        const result = await this.findById(id);
+        const result = await this.findById(id, {}, context);
         await hooks?.[collection.slug]?.afterUpdate?.(result!, hookContext);
         return result!;
       },
@@ -603,7 +603,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         if (collection.timestamps !== false) updateValues._updatedAt = timestamp;
         await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
 
-        const result = await this.findById(id, { status: "any" });
+        const result = await this.findById(id, { status: "any" }, context);
         await hooks?.[collection.slug]?.afterPublish?.(result!, hookContext);
         return result!;
       },
@@ -669,7 +669,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         if (collection.timestamps !== false) updateValues._updatedAt = now();
         await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
 
-        const result = (await this.findById(id, { status: "any" }))!;
+        const result = (await this.findById(id, { status: "any" }, context))!;
         await hooks?.[collection.slug]?.afterSchedule?.(result, hookContext);
         return result;
       },
@@ -789,7 +789,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
           });
         }
 
-        return (await this.findById(id, { locale, status: "any" }))!;
+        return (await this.findById(id, { locale, status: "any" }, context))!;
       },
     };
   };
