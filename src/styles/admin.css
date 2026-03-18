@@ -320,6 +320,11 @@ html.preview-open > body > div > div.min-w-0 > main {
 }
 
 /* Force single-column form layout when preview is active */
-html.preview-open form#document-form {
+html.preview-open form#document-form,
+html.preview-open form#translation-form {
+  grid-template-columns: 1fr !important;
+}
+
+html.preview-open .preview-collapse-grid {
   grid-template-columns: 1fr !important;
 }
