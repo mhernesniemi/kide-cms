@@ -166,16 +166,12 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
       {value && (
         <div className="group relative inline-block">
           {isImage ? (
-            assetId ? (
-              <a
-                href={`/admin/assets/${assetId}`}
-                className="hover:border-foreground/50 block size-40 cursor-pointer overflow-hidden rounded-lg border transition-colors"
-              >
-                <img src={imgSrc} alt="" className="size-full object-cover" />
-              </a>
-            ) : (
-              <img src={imgSrc} alt="" className="size-40 rounded-lg border object-cover" />
-            )
+            <a
+              href={assetId ? `/admin/assets/${assetId}` : undefined}
+              className={`block size-40 overflow-hidden rounded-lg border ${assetId ? "cursor-pointer hover:border-foreground/50" : ""}`}
+            >
+              <img src={imgSrc} alt="" className="size-full object-cover" />
+            </a>
           ) : (
             <div className="bg-muted/30 flex size-40 items-center justify-center rounded-lg border">
               <span className="text-muted-foreground truncate px-4 text-sm">{value}</span>
