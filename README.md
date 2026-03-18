@@ -9,7 +9,7 @@ Supports Astro 6's route caching with tag-based invalidation for static-speed co
 ## Quick Start
 
 ```bash
-# Clone this repo
+# Clone this repo, and run:
 pnpm i
 pnpm dev
 ```
