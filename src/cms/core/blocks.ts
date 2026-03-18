@@ -61,14 +61,6 @@ function renderBlock(block: Record<string, any>): string {
     return html;
   }
 
-  if (block.type === "featuredPosts") {
-    let html = `<section style="padding: 2rem 0;">`;
-    if (block.heading)
-      html += `<h2 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 0.75rem;">${esc(block.heading)}</h2>`;
-    html += `</section>`;
-    return html;
-  }
-
   if (block.type === "faq") {
     const items = parseArray(block.items);
     let html = `<section style="padding: 2rem 0;">`;

@@ -120,7 +120,6 @@ const seeds: Record<string, SeedDocument[]> = {
       heroBody: "A code-first, single-schema CMS built inside Astro.",
       heroCtaLabel: "Get started",
       heroCtaHref: "/admin",
-      featuredPosts: [],
     },
   ],
   menus: [

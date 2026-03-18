@@ -136,10 +136,6 @@ export default defineConfig({
               heading: fields.text(),
               content: fields.richText(),
             },
-            featuredPosts: {
-              heading: fields.text(),
-              posts: fields.relation({ collection: "posts", hasMany: true }),
-            },
             faq: {
               heading: fields.text(),
               items: fields.json({
@@ -161,11 +157,11 @@ export default defineConfig({
         title: fields.text({ required: true, translatable: true }),
         slug: fields.slug({ from: "title", unique: true, translatable: true }),
         summary: fields.text({ translatable: true, admin: { rows: 3 } }),
+        image: fields.image(),
         layout: fields.select({
           options: ["default", "landing", "docs"],
           defaultValue: "landing",
         }),
-        heroImage: fields.image(),
         relatedPosts: fields.relation({ collection: "posts", hasMany: true }),
         seoDescription: fields.text({
           maxLength: 160,

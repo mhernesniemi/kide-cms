@@ -75,7 +75,7 @@ const coerceFieldValue = (field: FieldConfig, value: unknown): unknown => {
     return value === true || value === "true" || value === "on" || value === 1 || value === "1";
   }
   if (field.type === "select") {
-    return !value ? undefined : String(value);
+    return value === "" || value === null ? "" : String(value);
   }
   if (field.type === "relation") {
     if (field.hasMany) {

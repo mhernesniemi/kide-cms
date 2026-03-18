@@ -92,10 +92,7 @@ if (route.kind === "recent") {
       id: String(doc._id),
       editHref: `/admin/${cc.slug}/${doc._id}`,
       status: getVisualStatus(doc),
-      locales: [
-        defaultLocale,
-        ...(Array.isArray(doc._availableLocales) ? doc._availableLocales.map((l) => String(l)) : []),
-      ],
+      locales: [defaultLocale, ...(Array.isArray(doc._availableLocales) ? doc._availableLocales.map((l) => String(l)).filter((l) => l !== defaultLocale) : [])],
       searchText: displayTitle,
       values: {
         title: displayTitle,
@@ -109,15 +106,28 @@ if (route.kind === "recent") {
 
 // Singles listing page
 const singletonCollections = config.collections.filter((c) => c.singleton);
-let singletonsData: Array<{ slug: string; label: string; updatedAt: string; editHref: string }> = [];
+let singletonsData: Array<{
+  id: string;
+  collectionSlug: string;
+  label: string;
+  status: string;
+  locales: string[];
+  updatedAt: string;
+  editHref: string;
+}> = [];
 if (route.kind === "singles") {
   for (const sc of singletonCollections) {
     const api = cmsRuntime[sc.slug];
-    const singleDocs = await api.find({ status: "any", limit: 1 }, runtimeContext);
+    const singleDocs = await api.find({ status: "any", limit: 1, locale: defaultLocale }, runtimeContext);
     const singleDoc = singleDocs[0] ?? null;
     singletonsData.push({
-      slug: sc.slug,
+      id: singleDoc ? String(singleDoc._id) : "",
+      collectionSlug: sc.slug,
       label: sc.labels.singular,
+      status: singleDoc && sc.drafts ? String(singleDoc._status ?? "draft") : "",
+      locales: singleDoc
+        ? [defaultLocale, ...(Array.isArray(singleDoc._availableLocales) ? singleDoc._availableLocales.filter((l: string) => l !== defaultLocale) : [])]
+        : [],
       updatedAt: singleDoc ? formatDate(singleDoc._updatedAt) : "—",
       editHref: `/admin/${sc.slug}`,
     });
@@ -317,10 +327,7 @@ const tableRows =
         id: String(entry._id),
         editHref: `/admin/${collection.slug}/${entry._id}`,
         status: getVisualStatus(entry),
-        locales: [
-          defaultLocale,
-          ...(Array.isArray(entry._availableLocales) ? entry._availableLocales.map((locale) => String(locale)) : []),
-        ],
+        locales: [defaultLocale, ...(Array.isArray(entry._availableLocales) ? entry._availableLocales.map((l) => String(l)).filter((l) => l !== defaultLocale) : [])],
         searchText: String(entry.title ?? entry.name ?? entry.slug ?? entry._id ?? ""),
         values: Object.fromEntries(
           listColumns.map((column) => [
@@ -381,18 +388,20 @@ const tableRows =
         <DocumentsDataTable
           client:load
           collectionSlug="singles"
-          draftsEnabled={false}
+          draftsEnabled={true}
           title="Singles"
           columns={[
             { key: "name", label: "Name" },
+            { key: "_status", label: "Status" },
             { key: "updatedAt", label: "Last updated" },
           ]}
           data={singletonsData.map((s) => ({
-            id: s.slug,
+            id: s.id,
+            collectionSlug: s.collectionSlug,
             editHref: s.editHref,
-            locales: [],
+            locales: s.locales,
             searchText: s.label,
-            values: { name: s.label, updatedAt: s.updatedAt },
+            values: { name: s.label, _status: s.status, updatedAt: s.updatedAt },
           }))}
           searchPlaceholder="Filter singles..."
         />

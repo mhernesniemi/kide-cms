@@ -51,8 +51,8 @@ export default {
     },
     edit: {
       layout: [
-        { fields: ["title", "summary", "blocks"], position: "content" },
-        { fields: ["slug", "layout", "heroImage", "relatedPosts", "seoDescription"], position: "sidebar" },
+        { fields: ["title", "summary", "image", "blocks"], position: "content" },
+        { fields: ["slug", "layout", "relatedPosts", "seoDescription"], position: "sidebar" },
       ],
     },
   },
