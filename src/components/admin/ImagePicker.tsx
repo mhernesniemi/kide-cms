@@ -112,7 +112,6 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
         <Button
           type="button"
           variant="outline"
-          size="sm"
           className="text-foreground/70"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
@@ -120,7 +119,7 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
           {uploading ? <Loader2 className="size-3 animate-spin" /> : <Upload className="size-4 stroke-1" />}
           Upload
         </Button>
-        <Button type="button" variant="outline" size="sm" className="text-foreground/70" onClick={() => setOpen(true)}>
+        <Button type="button" variant="outline" className="text-foreground/70" onClick={() => setOpen(true)}>
           <ImagePlus className="size-4 stroke-1" />
           Browse
         </Button>
