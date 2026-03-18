@@ -4,6 +4,13 @@ import { assets } from "@/cms/core/assets";
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url }) => {
+  const lookupUrl = url.searchParams.get("url");
+  if (lookupUrl) {
+    const asset = await assets.findByUrl(lookupUrl);
+    if (!asset) return Response.json(null, { status: 404 });
+    return Response.json(asset);
+  }
+
   const limit = url.searchParams.get("limit") ? Number(url.searchParams.get("limit")) : 50;
   const offset = url.searchParams.get("offset") ? Number(url.searchParams.get("offset")) : 0;
   const folderParam = url.searchParams.get("folder");

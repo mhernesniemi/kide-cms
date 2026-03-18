@@ -120,6 +120,17 @@ export const assets = {
     return { ...row, url: row.storagePath };
   },
 
+  async findByUrl(url: string): Promise<AssetRecord | null> {
+    const db = await getDb();
+    const schema = await import("../.generated/schema");
+
+    const rows = await db.select().from(schema.cmsAssets).where(eq(schema.cmsAssets.storagePath, url)).limit(1);
+
+    if (rows.length === 0) return null;
+    const row = rows[0] as any;
+    return { ...row, url: row.storagePath };
+  },
+
   async delete(id: string): Promise<void> {
     const db = await getDb();
     const schema = await import("../.generated/schema");
