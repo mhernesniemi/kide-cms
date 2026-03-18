@@ -28,11 +28,9 @@ export default defineConfig({
       timestamps: true,
       fields: {
         name: fields.text({ required: true }),
-        test: fields.text({ translatable: true }),
         description: fields.text({ translatable: true }),
         slug: fields.slug({ from: "name", unique: true }),
         role: fields.text({ required: true }),
-        bio: fields.richText({ translatable: true }),
         avatar: fields.image({
           admin: { placeholder: "https://images.example.com/avatar.jpg" },
         }),
