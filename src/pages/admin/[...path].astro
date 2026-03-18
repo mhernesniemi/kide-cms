@@ -510,7 +510,7 @@ const tableRows =
               }
             />
             <div
-              class={`flex flex-wrap items-center justify-between gap-2 ${effectiveSidebarFieldSets.length === 0 ? "mx-auto w-full max-w-3xl" : ""}`}
+              class={`flex flex-wrap items-center justify-between gap-2 ${effectiveSidebarFieldSets.length === 0 ? "max-w-4xl" : ""}`}
             >
               <div class="flex flex-wrap items-center gap-2">
                 {locales.length > 1 &&
@@ -603,7 +603,7 @@ const tableRows =
                 class={
                   effectiveSidebarFieldSets.length > 0
                     ? "grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
-                    : "mx-auto grid max-w-3xl gap-6"
+                    : "grid max-w-4xl gap-6"
                 }
               >
                 <input type="hidden" name="_action" value={route.kind === "new" ? "create" : "update"} />
