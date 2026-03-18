@@ -134,7 +134,13 @@ export default function RelationField({
       {/* Combobox */}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between font-normal">
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            size="lg"
+            className="w-full justify-between font-normal"
+          >
             <span className={cn("truncate", !displayLabel && "text-muted-foreground")}>
               {displayLabel || `Search ${collectionLabel.toLowerCase()}...`}
             </span>
