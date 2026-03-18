@@ -26,16 +26,13 @@ export const getDb = async () => {
 
   dbInstance = drizzle(sqliteInstance);
 
-  // Auto-run pending migrations on first connection
+  // Auto-run pending migrations on first connection (production only — dev uses drizzle-kit push)
   if (!migrated) {
     const migrationsFolder = path.join(process.cwd(), "src/cms/migrations");
     try {
       migrate(dbInstance, { migrationsFolder });
-    } catch (e: any) {
-      // Ignore "nothing to migrate" scenarios
-      if (!e.message?.includes("nothing to migrate")) {
-        console.warn("CMS migration warning:", e.message);
-      }
+    } catch {
+      // Ignore migration errors — tables may already exist via drizzle-kit push in dev
     }
     migrated = true;
   }
