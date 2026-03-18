@@ -128,12 +128,9 @@ const getCollectionView = (slug: string) => (views as Record<string, any>)[slug]
 const getFormAction = (collectionSlug: string, documentId?: string) =>
   documentId ? `/api/cms/${collectionSlug}/${documentId}` : `/api/cms/${collectionSlug}`;
 
-const getFieldSetTitle = (fields: string[], index: number) => {
-  if (fields.includes("body") || fields.includes("blocks")) return "Content";
-  if (fields.some((field) => ["slug", "category", "author", "tags", "cover", "layout", "heroImage"].includes(field))) {
-    return "Details";
-  }
-  return index === 0 ? "Details" : "Configuration";
+const getFieldSetTitle = (position: string, index: number) => {
+  if (position === "sidebar") return "Details";
+  return index === 0 ? "Content" : "Content";
 };
 
 let collectionApi: any = null;
@@ -266,8 +263,8 @@ const sharedFields = collection
   ? Object.keys(collection.fields).filter((fieldName) => !translatableFields.includes(fieldName))
   : [];
 const fieldSets = collection ? getFieldSets(collection, viewConfig.edit) : [];
-const primaryFieldSets = fieldSets.filter((set: { width?: string }) => set.width !== "1/3");
-const sidebarFieldSets = fieldSets.filter((set: { width?: string }) => set.width === "1/3");
+const primaryFieldSets = fieldSets.filter((set: { position?: string }) => set.position !== "sidebar");
+const sidebarFieldSets = fieldSets.filter((set: { position?: string }) => set.position === "sidebar");
 const mainFieldSets = primaryFieldSets.length > 0 ? primaryFieldSets : fieldSets.slice(0, 1);
 const effectiveSidebarFieldSets =
   sidebarFieldSets.length > 0 ? sidebarFieldSets : fieldSets.slice(mainFieldSets.length);
@@ -553,7 +550,7 @@ const tableRows =
 
                 <div class="space-y-6">
                   {mainFieldSets.map((set, index) => (
-                    <AdminCard title={getFieldSetTitle(set.fields, index)}>
+                    <AdminCard title={getFieldSetTitle("content", index)}>
                       <div class="grid gap-5">
                         {set.fields.map((fieldName) => (
                           <FieldControl
@@ -572,7 +569,7 @@ const tableRows =
 
                 <div class="space-y-6 text-sm [&_button]:text-sm [&_input]:text-sm [&_select]:text-sm [&_textarea]:text-sm">
                   {effectiveSidebarFieldSets.map((set, index) => (
-                    <AdminCard title={getFieldSetTitle(set.fields, index + mainFieldSets.length)}>
+                    <AdminCard title={getFieldSetTitle("sidebar", index)}>
                       <div class="grid gap-5">
                         {set.fields.map((fieldName) => (
                           <div>

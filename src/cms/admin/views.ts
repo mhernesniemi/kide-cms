@@ -36,10 +36,10 @@ export default {
     },
     edit: {
       layout: [
-        { fields: ["title", "excerpt", "body"], width: "2/3" },
+        { fields: ["title", "excerpt", "body"], position: "content" },
         {
           fields: ["slug", "category", "author", "tags", "cover", "seoDescription"],
-          width: "1/3",
+          position: "sidebar",
         },
       ],
     },
@@ -51,8 +51,8 @@ export default {
     },
     edit: {
       layout: [
-        { fields: ["title", "summary", "blocks"], width: "2/3" },
-        { fields: ["slug", "layout", "heroImage", "relatedPosts", "seoDescription"], width: "1/3" },
+        { fields: ["title", "summary", "blocks"], position: "content" },
+        { fields: ["slug", "layout", "heroImage", "relatedPosts", "seoDescription"], position: "sidebar" },
       ],
     },
   },
