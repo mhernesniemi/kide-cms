@@ -146,7 +146,7 @@ navItems.push({
                 <div
                   class={cn(
                     "group relative rounded-lg transition-colors",
-                    item.active ? "bg-accent" : "hover:bg-accent/60",
+                    item.active ? "bg-foreground/10 dark:bg-accent" : "hover:bg-foreground/5 dark:hover:bg-accent/60",
                   )}
                 >
                   <a
@@ -195,7 +195,9 @@ navItems.push({
                     <div
                       class={cn(
                         "group relative rounded-lg transition-colors",
-                        item.active ? "bg-accent" : "hover:bg-accent/60",
+                        item.active
+                          ? "bg-foreground/10 dark:bg-accent"
+                          : "hover:bg-foreground/5 dark:hover:bg-accent/60",
                       )}
                     >
                       <a
