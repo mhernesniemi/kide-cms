@@ -139,7 +139,9 @@ const handleHtmlMutation = async (
             ? `${name} unpublished`
             : intent === "schedule"
               ? `${name} scheduled`
-              : `${name} saved as draft`;
+              : collection.drafts
+                ? `${name} saved as draft`
+                : `${name} saved`;
       return redirect(redirectTo, { status: "success", msg });
     }
 
