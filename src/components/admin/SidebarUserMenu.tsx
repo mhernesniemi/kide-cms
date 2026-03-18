@@ -74,17 +74,17 @@ export default function SidebarUserMenu({
 
       <DropdownMenuContent side="bottom" align="start" className="w-(--radix-dropdown-menu-trigger-width)">
         <DropdownMenuItem onClick={() => changeTheme("light")}>
-          <Sun className="size-4" />
+          <Sun className="text-muted-foreground size-3.5" />
           Light
           {theme === "light" && <span className="ml-auto text-xs">&#10003;</span>}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => changeTheme("dark")}>
-          <Moon className="size-4" />
+          <Moon className="text-muted-foreground size-3.5" />
           Dark
           {theme === "dark" && <span className="ml-auto text-xs">&#10003;</span>}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => changeTheme("system")}>
-          <Monitor className="size-4" />
+          <Monitor className="text-muted-foreground size-3.5" />
           System
           {theme === "system" && <span className="ml-auto text-xs">&#10003;</span>}
         </DropdownMenuItem>
@@ -100,7 +100,7 @@ export default function SidebarUserMenu({
             form.submit();
           }}
         >
-          <LogOut className="size-4" />
+          <LogOut className="text-muted-foreground size-3.5" />
           Log out
         </DropdownMenuItem>
       </DropdownMenuContent>
