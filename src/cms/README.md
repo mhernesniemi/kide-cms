@@ -430,7 +430,7 @@ The admin edit view shows a locale switcher when multiple locales are configured
 
 ## Local API
 
-All content operations are typed function calls — no HTTP overhead:
+All content operations are typed function calls without HTTP overhead:
 
 ```ts
 import { cms } from "./cms/.generated/api";
