@@ -5,6 +5,7 @@
 
 <script>
   import { renderRichText } from "../cms/core/richtext";
+  import { renderBlocks } from "../cms/core/blocks";
   import type { RichTextDocument } from "../cms/core/define";
 
   window.addEventListener("message", (event) => {
@@ -22,6 +23,13 @@
         try {
           const parsed = JSON.parse(value) as RichTextDocument;
           el.innerHTML = renderRichText(parsed);
+        } catch {}
+      } else if (fieldType === "blocks") {
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) {
+            el.innerHTML = renderBlocks(parsed);
+          }
         } catch {}
       } else if (fieldType === "image") {
         const img = el.querySelector("img") ?? el;
