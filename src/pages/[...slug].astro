@@ -71,8 +71,14 @@ const blocks = (() => {
     {
       kind === "page" && (
         <>
-          {document.summary && <p style="color: #666; margin: 0 0 1.5rem;">{String(document.summary)}</p>}
-          <BlockRenderer blocks={blocks} />
+          {(document.summary || isPreview) && (
+            <p data-preview-field="summary" style="color: #666; margin: 0 0 1.5rem;">
+              {document.summary ? String(document.summary) : ""}
+            </p>
+          )}
+          <div data-preview-field="blocks" data-preview-type="blocks">
+            <BlockRenderer blocks={blocks} />
+          </div>
         </>
       )
     }

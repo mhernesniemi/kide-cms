@@ -272,7 +272,12 @@ const mainFieldSets = primaryFieldSets.length > 0 ? primaryFieldSets : fieldSets
 const effectiveSidebarFieldSets =
   sidebarFieldSets.length > 0 ? sidebarFieldSets : fieldSets.slice(mainFieldSets.length);
 const listColumns = collection ? getListColumns(collection, viewConfig.list) : [];
-const hasPreview = !!(collection?.pathPrefix && route.kind === "edit" && doc?.slug);
+const hasPreview = !!(
+  collection &&
+  route.kind === "edit" &&
+  doc?.slug &&
+  (collection.pathPrefix || collection.slug === "pages")
+);
 const previewUrl = hasPreview ? `${cms.meta.getRouteForDocument(collection.slug, doc)}?preview=true` : null;
 const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
 const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
