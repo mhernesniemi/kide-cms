@@ -34,6 +34,7 @@ type Props = {
 export default function ImagePicker({ name, value: initialValue, onChange: onChangeProp }: Props) {
   const [value, setValue] = useState(initialValue ?? "");
   const [assetId, setAssetId] = useState<string | null>(null);
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [open, setOpen] = useState(false);
   const [browse, setBrowse] = useState<BrowseState>({
@@ -69,18 +70,20 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
   const handleUpload = useCallback(async (file: File) => {
     setUploading(true);
     try {
+      // Use local file for preview — doesn't depend on Vite serving the new file
+      setLocalPreview(URL.createObjectURL(file));
+
       const formData = new FormData();
       formData.append("file", file);
       const res = await fetch("/api/cms/assets/upload", { method: "POST", body: formData });
       if (!res.ok) throw new Error("Upload failed");
       const asset: AssetRecord = await res.json();
-      // Wait for Vite to pick up the new file before showing thumbnail
-      await new Promise((r) => setTimeout(r, 300));
       setValue(asset.url);
       setAssetId(asset._id);
       onChangeProp?.(asset.url);
     } catch (e) {
       console.error("Upload failed:", e);
+      setLocalPreview(null);
     } finally {
       setUploading(false);
     }
@@ -134,12 +137,14 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
 
   const selectAsset = useCallback(
     (asset: AssetRecord) => {
+      if (localPreview) URL.revokeObjectURL(localPreview);
+      setLocalPreview(null);
       setValue(asset.url);
       setAssetId(asset._id);
       onChangeProp?.(asset.url);
       setOpen(false);
     },
-    [onChangeProp],
+    [onChangeProp, localPreview],
   );
 
   // Load root folder when dialog opens
@@ -150,7 +155,9 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
     }
   }, [open, loadFolder]);
 
-  const isImage = value && (value.match(/\.(jpg|jpeg|png|gif|webp|avif|svg)$/i) || value.startsWith("http"));
+  const imgSrc = localPreview ?? value;
+  const isImage =
+    value && (value.match(/\.(jpg|jpeg|png|gif|webp|avif|svg)$/i) || value.startsWith("http") || localPreview);
 
   return (
     <div className="space-y-3">
@@ -164,10 +171,10 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
                 href={`/admin/assets/${assetId}`}
                 className="hover:border-foreground/50 block size-40 cursor-pointer overflow-hidden rounded-lg border transition-colors"
               >
-                <img src={value} alt="" className="size-full object-cover" />
+                <img src={imgSrc} alt="" className="size-full object-cover" />
               </a>
             ) : (
-              <img src={value} alt="" className="size-40 rounded-lg border object-cover" />
+              <img src={imgSrc} alt="" className="size-40 rounded-lg border object-cover" />
             )
           ) : (
             <div className="bg-muted/30 flex size-40 items-center justify-center rounded-lg border">
@@ -177,6 +184,8 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
           <button
             type="button"
             onClick={() => {
+              if (localPreview) URL.revokeObjectURL(localPreview);
+              setLocalPreview(null);
               setValue("");
               setAssetId(null);
               onChangeProp?.("");

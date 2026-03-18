@@ -24,12 +24,11 @@ export const POST: APIRoute = async ({ request }) => {
     folder: folder ? String(folder) : undefined,
   });
 
-  // Brief delay so Vite's dev server picks up the new file
-  await new Promise((r) => setTimeout(r, 300));
-
   const redirectTo = formData.get("redirectTo");
 
   if (redirectTo) {
+    // Delay so Vite's dev server picks up the new file before the redirect
+    await new Promise((r) => setTimeout(r, 1000));
     return new Response(null, {
       status: 303,
       headers: { Location: `/admin/assets/${asset._id}?_toast=success&_msg=Asset+uploaded` },
