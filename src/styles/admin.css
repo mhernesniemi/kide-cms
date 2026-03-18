@@ -250,21 +250,30 @@
 
 /* ── Live preview split-screen ───────────────────────────────────── */
 
-/* Hide sidebar */
-html.preview-open > body > div > aside {
-  display: none !important;
-}
-
-/* Collapse the sidebar+content grid to single column */
+/* Slide sidebar off to the left */
 html.preview-open > body > div {
-  grid-template-columns: 1fr !important;
+  grid-template-columns: 0px 1fr !important;
 }
 
-/* Split the content column into two equal halves */
+html.preview-open > body > div > aside {
+  min-width: 0;
+  transform: translateX(-100%);
+}
+
+/* Closing: restore sidebar while layout stays in preview mode */
+html.preview-open.preview-closing > body > div {
+  grid-template-columns: 17rem 1fr !important;
+}
+
+html.preview-open.preview-closing > body > div > aside {
+  transform: translateX(0);
+}
+
+/* Content wrapper becomes a flex row so we can animate widths */
 html.preview-open > body > div > div.min-w-0 {
-  display: grid !important;
-  grid-template-columns: 50% 50%;
-  grid-template-rows: 100vh;
+  display: flex !important;
+  flex-direction: row;
+  height: 100vh;
   overflow: hidden;
 }
 
@@ -277,17 +286,23 @@ html.preview-open > body > div > div.min-w-0 > header {
 html.preview-open > body > div > div.min-w-0 > main {
   overflow-y: auto;
   max-width: none;
-  grid-column: 1;
-  grid-row: 1;
+  flex: 1;
+  min-width: 0;
 }
 
-/* Preview pane sits in the right column */
-#preview-pane.preview-active {
-  display: flex !important;
+/* Preview pane — always in flow, visibility controlled by width */
+#preview-pane {
+  display: flex;
   flex-direction: column;
-  grid-column: 2;
-  grid-row: 1;
+  width: 0;
   min-width: 0;
+  overflow: hidden;
+  transition: width 200ms ease;
+}
+
+#preview-pane.preview-active {
+  width: 50%;
+  transition: width 300ms ease;
 }
 
 #preview-pane.preview-active > div {

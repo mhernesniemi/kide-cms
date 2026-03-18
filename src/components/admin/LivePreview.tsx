@@ -35,22 +35,37 @@ export default function LivePreview({ previewUrl, formId, fieldNames }: Props) {
     } catch {}
   }, [open]);
 
-  // Toggle preview class on <html> and the preview pane
+  // Toggle preview class on <html>, main, and the preview pane
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
   useEffect(() => {
     const pane = document.getElementById("preview-pane");
     if (!pane) return;
+
     if (open) {
+      clearTimeout(closeTimerRef.current);
       document.documentElement.classList.add("preview-open");
-      pane.classList.add("preview-active");
+      requestAnimationFrame(() => {
+        pane.classList.add("preview-active");
+      });
     } else {
-      document.documentElement.classList.remove("preview-open");
+      document.documentElement.classList.add("preview-closing");
       pane.classList.remove("preview-active");
+      closeTimerRef.current = setTimeout(() => {
+        document.documentElement.classList.remove("preview-open", "preview-closing");
+      }, 250);
     }
-    return () => {
-      document.documentElement.classList.remove("preview-open");
-      pane.classList.remove("preview-active");
-    };
   }, [open]);
+
+  // Cleanup only on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(closeTimerRef.current);
+      const pane = document.getElementById("preview-pane");
+      document.documentElement.classList.remove("preview-open", "preview-closing");
+      pane?.classList.remove("preview-active");
+    };
+  }, []);
 
   // Collect form state and post to iframe
   const sendUpdate = useCallback(() => {
