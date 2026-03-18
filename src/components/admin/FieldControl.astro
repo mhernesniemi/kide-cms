@@ -109,8 +109,8 @@ const blockTypesMeta =
       </Label>
     )
   }
-  {field.description && <p class="text-muted-foreground text-xs leading-5">{field.description}</p>}
-  {field.admin?.help && <p class="text-muted-foreground -mb-0.5 text-xs leading-5">{field.admin.help}</p>}
+  {field.description && <p class="text-muted-foreground -mt-1 text-xs leading-5">{field.description}</p>}
+  {field.admin?.help && <p class="text-muted-foreground -mt-1 -mb-0.5 text-xs leading-5">{field.admin.help}</p>}
 
   {
     field.type === "image" && !readOnly && (
