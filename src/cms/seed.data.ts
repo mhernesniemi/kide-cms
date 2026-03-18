@@ -6,7 +6,7 @@ const seeds: Record<string, SeedDocument[]> = {
       _id: "author_maya",
       name: "Maya Rinne",
       slug: "maya-rinne",
-      role: "Editor in chief",
+      title: "Editor in chief",
       bio: {
         type: "root",
         children: [

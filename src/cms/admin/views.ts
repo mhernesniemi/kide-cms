@@ -25,7 +25,7 @@ export default {
   },
   authors: {
     list: {
-      columns: ["name", "role", "_updatedAt"],
+      columns: ["name", "title", "_updatedAt"],
       defaultSort: { field: "_updatedAt", direction: "desc" },
     },
   },

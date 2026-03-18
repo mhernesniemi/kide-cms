@@ -30,7 +30,7 @@ export default defineConfig({
         name: fields.text({ required: true }),
         description: fields.text({ translatable: true }),
         slug: fields.slug({ from: "name", unique: true }),
-        role: fields.text({ required: true }),
+        title: fields.text({ required: true }),
         avatar: fields.image({
           admin: { placeholder: "https://images.example.com/avatar.jpg" },
         }),
