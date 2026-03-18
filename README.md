@@ -69,9 +69,11 @@ posts: {
 - Asset management with folders and focal points
 - Rich text editor (Tiptap) with image support
 - Block editor with repeater fields
+- Nested taxonomies and menu builder
 - Role-based access control
 - Session auth (Argon2 + HttpOnly cookies)
 - Tag-based cache invalidation
+- AI assistant (alt text, SEO, translations)
 
 ## Key Commands
 
