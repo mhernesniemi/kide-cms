@@ -57,7 +57,9 @@ export default defineConfig({
         }),
         image: fields.image(),
         body: fields.richText({ translatable: true, admin: { rows: 14 } }),
-        category: fields.relation({ collection: "taxonomies" }),
+        category: fields.text({
+          admin: { component: "taxonomy-select", placeholder: "categories" },
+        }),
         author: fields.relation({ collection: "authors" }),
         tags: fields.array({
           of: fields.text(),

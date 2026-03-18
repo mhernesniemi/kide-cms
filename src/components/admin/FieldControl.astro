@@ -10,6 +10,7 @@ import RelationField from "@/components/admin/RelationField";
 import BlockEditor from "@/components/admin/BlockEditor";
 import SlugField from "@/components/admin/SlugField";
 import CheckboxField from "@/components/admin/CheckboxField";
+import TaxonomySelect from "@/components/admin/TaxonomySelect";
 import { Input } from "@/components/admin/ui/input";
 import { Label } from "@/components/admin/ui/label";
 import { Textarea } from "@/components/admin/ui/textarea";
@@ -132,7 +133,14 @@ const blockTypesMeta =
   }
 
   {
+    field.type === "text" && field.admin?.component === "taxonomy-select" && !readOnly && (
+      <TaxonomySelect client:load name={name} value={serializedValue} taxonomySlug={field.admin?.placeholder ?? ""} />
+    )
+  }
+
+  {
     (field.type === "text" || field.type === "email" || field.type === "date") &&
+      field.admin?.component !== "taxonomy-select" &&
       (field.type === "text" && field.admin?.rows ? (
         <Textarea
           className={controlClass}
