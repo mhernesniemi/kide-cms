@@ -1,22 +1,21 @@
 # AstroCMS
 
-Code-first, single-schema CMS built inside an Astro app. One config file defines everything — Drizzle tables, Zod validators, end-to-end TypeScript types, and a runtime admin UI are all generated from it. Supports Astro 6's route caching with tag-based invalidation for static-speed content delivery.
+Code-first, single-schema CMS built inside an Astro app. One config file defines everything: Drizzle tables, Zod validators, end-to-end TypeScript types, and a runtime admin UI are all generated from it. Supports Astro 6's route caching with tag-based invalidation for static-speed content delivery.
 
 ## Quick Start
 
 ```bash
-pnpm install
+pnpm i
 pnpm dev
 ```
 
-Open `http://localhost:4321/admin` — you'll be prompted to create your admin account on first run.
+Open `http://localhost:4321/admin`, you'll be prompted to create your admin account on first run.
 
 ## Key Commands
 
 ```bash
 pnpm dev              # Start dev server
 pnpm build            # Production build
-pnpm cms:generate     # Regenerate schema from collections.config.ts
 pnpm db:generate      # Generate DB migrations
 pnpm db:migrate       # Apply migrations
 ```
