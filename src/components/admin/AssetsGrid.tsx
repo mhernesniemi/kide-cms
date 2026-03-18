@@ -109,7 +109,7 @@ function DraggableAssetCard({
       </a>
       {/* Checkbox */}
       <label
-        className={`border-foreground/25 bg-background/80 absolute top-2.5 right-2.5 z-10 flex size-5 cursor-pointer items-center justify-center rounded border backdrop-blur-sm transition-opacity ${selected ? "border-primary bg-primary opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+        className={`border-foreground/60 hover:border-foreground/80 bg-background/80 absolute top-2.5 right-2.5 z-10 flex size-5 cursor-default items-center justify-center rounded border backdrop-blur-sm transition-[opacity,border-color] ${selected ? "border-primary bg-primary opacity-100" : "opacity-0 group-hover:opacity-100"}`}
         onClick={(e) => e.stopPropagation()}
       >
         <input

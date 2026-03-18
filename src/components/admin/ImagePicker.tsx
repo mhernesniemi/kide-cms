@@ -168,7 +168,7 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
           {isImage ? (
             <a
               href={assetId ? `/admin/assets/${assetId}` : undefined}
-              className={`block size-40 overflow-hidden rounded-lg border ${assetId ? "cursor-pointer hover:border-foreground/50" : ""}`}
+              className={`block size-40 overflow-hidden rounded-lg border ${assetId ? "hover:border-foreground/50 cursor-pointer" : ""}`}
             >
               <img src={imgSrc} alt="" className="size-full object-cover" />
             </a>
