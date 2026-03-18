@@ -1,6 +1,6 @@
 import type { AstroIntegration } from "astro";
 import { execSync } from "node:child_process";
-import { watch } from "node:fs";
+import { mkdirSync, watch } from "node:fs";
 import path from "node:path";
 
 function runGenerator() {
@@ -11,6 +11,8 @@ function runGenerator() {
 }
 
 function pushSchema() {
+  // Ensure data directory exists before drizzle-kit connects
+  mkdirSync(path.join(process.cwd(), "data"), { recursive: true });
   execSync("npx drizzle-kit push --force", {
     stdio: "inherit",
     cwd: process.cwd(),
@@ -29,15 +31,13 @@ export default function cmsIntegration(): AstroIntegration {
           console.error("  [cms] Generator failed:", (e as Error).message);
         }
 
-        // In dev mode, push schema directly to DB (no migration files).
-        // For production, use `drizzle-kit generate` + `drizzle-kit migrate` manually.
         if (command === "dev") {
+          // Push schema changes directly to DB in dev (no migration files needed)
           try {
             pushSchema();
           } catch (e) {
             console.error("  [cms] Schema push failed:", (e as Error).message);
           }
-
           const configPath = path.join(process.cwd(), "src/cms/collections.config.ts");
           let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 

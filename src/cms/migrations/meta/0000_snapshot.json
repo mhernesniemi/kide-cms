@@ -199,9 +199,7 @@
       "indexes": {
         "cms_authors_slug_unique": {
           "name": "cms_authors_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         }
       },
@@ -245,10 +243,7 @@
       "indexes": {
         "cms_authors_translations__entity_id__language_code_unique": {
           "name": "cms_authors_translations__entity_id__language_code_unique",
-          "columns": [
-            "_entity_id",
-            "_language_code"
-          ],
+          "columns": ["_entity_id", "_language_code"],
           "isUnique": true
         }
       },
@@ -257,12 +252,8 @@
           "name": "cms_authors_translations__entity_id_cms_authors__id_fk",
           "tableFrom": "cms_authors_translations",
           "tableTo": "cms_authors",
-          "columnsFrom": [
-            "_entity_id"
-          ],
-          "columnsTo": [
-            "_id"
-          ],
+          "columnsFrom": ["_entity_id"],
+          "columnsTo": ["_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -373,10 +364,7 @@
       "indexes": {
         "cms_front_page_translations__entity_id__language_code_unique": {
           "name": "cms_front_page_translations__entity_id__language_code_unique",
-          "columns": [
-            "_entity_id",
-            "_language_code"
-          ],
+          "columns": ["_entity_id", "_language_code"],
           "isUnique": true
         }
       },
@@ -385,12 +373,8 @@
           "name": "cms_front_page_translations__entity_id_cms_front_page__id_fk",
           "tableFrom": "cms_front_page_translations",
           "tableTo": "cms_front_page",
-          "columnsFrom": [
-            "_entity_id"
-          ],
-          "columnsTo": [
-            "_id"
-          ],
+          "columnsFrom": ["_entity_id"],
+          "columnsTo": ["_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -448,9 +432,7 @@
       "indexes": {
         "cms_menus_slug_unique": {
           "name": "cms_menus_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         }
       },
@@ -494,10 +476,7 @@
       "indexes": {
         "cms_menus_translations__entity_id__language_code_unique": {
           "name": "cms_menus_translations__entity_id__language_code_unique",
-          "columns": [
-            "_entity_id",
-            "_language_code"
-          ],
+          "columns": ["_entity_id", "_language_code"],
           "isUnique": true
         }
       },
@@ -506,12 +485,8 @@
           "name": "cms_menus_translations__entity_id_cms_menus__id_fk",
           "tableFrom": "cms_menus_translations",
           "tableTo": "cms_menus",
-          "columnsFrom": [
-            "_entity_id"
-          ],
-          "columnsTo": [
-            "_id"
-          ],
+          "columnsFrom": ["_entity_id"],
+          "columnsTo": ["_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -634,9 +609,7 @@
       "indexes": {
         "cms_pages_slug_unique": {
           "name": "cms_pages_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         }
       },
@@ -708,17 +681,12 @@
       "indexes": {
         "cms_pages_translations_slug_unique": {
           "name": "cms_pages_translations_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         },
         "cms_pages_translations__entity_id__language_code_unique": {
           "name": "cms_pages_translations__entity_id__language_code_unique",
-          "columns": [
-            "_entity_id",
-            "_language_code"
-          ],
+          "columns": ["_entity_id", "_language_code"],
           "isUnique": true
         }
       },
@@ -727,12 +695,8 @@
           "name": "cms_pages_translations__entity_id_cms_pages__id_fk",
           "tableFrom": "cms_pages_translations",
           "tableTo": "cms_pages",
-          "columnsFrom": [
-            "_entity_id"
-          ],
-          "columnsTo": [
-            "_id"
-          ],
+          "columnsFrom": ["_entity_id"],
+          "columnsTo": ["_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -786,12 +750,8 @@
           "name": "cms_pages_versions__doc_id_cms_pages__id_fk",
           "tableFrom": "cms_pages_versions",
           "tableTo": "cms_pages",
-          "columnsFrom": [
-            "_doc_id"
-          ],
-          "columnsTo": [
-            "_id"
-          ],
+          "columnsFrom": ["_doc_id"],
+          "columnsTo": ["_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -942,9 +902,7 @@
       "indexes": {
         "cms_posts_slug_unique": {
           "name": "cms_posts_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         }
       },
@@ -1016,17 +974,12 @@
       "indexes": {
         "cms_posts_translations_slug_unique": {
           "name": "cms_posts_translations_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         },
         "cms_posts_translations__entity_id__language_code_unique": {
           "name": "cms_posts_translations__entity_id__language_code_unique",
-          "columns": [
-            "_entity_id",
-            "_language_code"
-          ],
+          "columns": ["_entity_id", "_language_code"],
           "isUnique": true
         }
       },
@@ -1035,12 +988,8 @@
           "name": "cms_posts_translations__entity_id_cms_posts__id_fk",
           "tableFrom": "cms_posts_translations",
           "tableTo": "cms_posts",
-          "columnsFrom": [
-            "_entity_id"
-          ],
-          "columnsTo": [
-            "_id"
-          ],
+          "columnsFrom": ["_entity_id"],
+          "columnsTo": ["_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1094,12 +1043,8 @@
           "name": "cms_posts_versions__doc_id_cms_posts__id_fk",
           "tableFrom": "cms_posts_versions",
           "tableTo": "cms_posts",
-          "columnsFrom": [
-            "_doc_id"
-          ],
-          "columnsTo": [
-            "_id"
-          ],
+          "columnsFrom": ["_doc_id"],
+          "columnsTo": ["_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1188,9 +1133,7 @@
       "indexes": {
         "cms_taxonomies_slug_unique": {
           "name": "cms_taxonomies_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         }
       },
@@ -1234,10 +1177,7 @@
       "indexes": {
         "cms_taxonomies_translations__entity_id__language_code_unique": {
           "name": "cms_taxonomies_translations__entity_id__language_code_unique",
-          "columns": [
-            "_entity_id",
-            "_language_code"
-          ],
+          "columns": ["_entity_id", "_language_code"],
           "isUnique": true
         }
       },
@@ -1246,12 +1186,8 @@
           "name": "cms_taxonomies_translations__entity_id_cms_taxonomies__id_fk",
           "tableFrom": "cms_taxonomies_translations",
           "tableTo": "cms_taxonomies",
-          "columnsFrom": [
-            "_entity_id"
-          ],
-          "columnsTo": [
-            "_id"
-          ],
+          "columnsFrom": ["_entity_id"],
+          "columnsTo": ["_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1317,9 +1253,7 @@
       "indexes": {
         "cms_users_email_unique": {
           "name": "cms_users_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": true
         }
       },
