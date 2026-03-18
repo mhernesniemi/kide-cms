@@ -2,6 +2,7 @@
   "name": "liito-cms",
   "author": "Matti Hernesniemi",
   "description": "Code-first, single-schema CMS built inside an Astro app.",
+  "license": "MIT",
   "type": "module",
   "version": "0.0.1",
   "engines": {
