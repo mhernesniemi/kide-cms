@@ -153,9 +153,11 @@ function DraggableAssetCard({
 function DroppableFolder({
   folder,
   onOpenMenu,
+  menuActive,
 }: {
   folder: FolderItem;
   onOpenMenu: (folderId: string, folderName: string, rect: DOMRect) => void;
+  menuActive?: boolean;
 }) {
   const { isOver, setNodeRef } = useDroppable({
     id: `folder-${folder._id}`,
@@ -174,7 +176,9 @@ function DroppableFolder({
           </CardContent>
         </Card>
       </a>
-      <div className="absolute top-1/2 right-3 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100">
+      <div
+        className={`absolute top-1/2 right-3 -translate-y-1/2 transition-opacity ${menuActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+      >
         <button
           type="button"
           className="text-muted-foreground hover:text-foreground rounded-md p-1"
@@ -486,7 +490,12 @@ export default function AssetsGrid({ folders, assets, breadcrumbs, currentFolder
         {folders.length > 0 && (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {folders.map((folder) => (
-              <DroppableFolder key={folder._id} folder={folder} onOpenMenu={openMenu} />
+              <DroppableFolder
+                key={folder._id}
+                folder={folder}
+                onOpenMenu={openMenu}
+                menuActive={menuOpen && activeFolderId === folder._id}
+              />
             ))}
           </div>
         )}
@@ -544,7 +553,7 @@ export default function AssetsGrid({ folders, assets, breadcrumbs, currentFolder
           </button>
           <button
             type="button"
-            className="hover:bg-destructive hover:text-destructive-foreground flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm"
+            className="text-destructive hover:bg-destructive/10 flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm"
             onClick={() => {
               setMenuOpen(false);
               resetDialogState();
