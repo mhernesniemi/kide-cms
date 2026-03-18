@@ -302,7 +302,7 @@ html.preview-open > body > div > div.min-w-0 > main {
 
 #preview-pane.preview-active {
   width: 50%;
-  transition: width 300ms ease;
+  transition: width 200ms ease;
 }
 
 #preview-pane.preview-active > div {
