@@ -44,7 +44,7 @@ const post = await cms.posts.create({ title: "Hello" });
 
 ## Hooks
 
-Lifecycle hooks in `src/cms/hooks.ts` run inside the API on every operation — transform data, validate, trigger side effects, invalidate cache:
+Lifecycle hooks in `src/cms/hooks.ts` run inside the API on every operation. Use them to transform data, validate, trigger side effects, and invalidate cache:
 
 ```typescript
 posts: {
