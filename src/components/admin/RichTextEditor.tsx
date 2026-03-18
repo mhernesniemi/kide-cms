@@ -1,6 +1,6 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Undo, Redo } from "lucide-react";
 
 // -----------------------------------------------
@@ -163,6 +163,8 @@ type Props = {
 };
 
 export default function RichTextEditor({ name, initialValue, rows = 10, onChange }: Props) {
+  const hiddenRef = useRef<HTMLInputElement>(null);
+
   const [cmsJson, setCmsJson] = useState<string>(() => {
     if (!initialValue) return JSON.stringify({ type: "root", children: [] });
     try {
@@ -183,6 +185,15 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
       return { type: "root", children: [] };
     }
   })();
+
+  // Notify the form of value changes so UnsavedGuard detects them
+  const prevCmsJsonRef = useRef(cmsJson);
+  useEffect(() => {
+    if (prevCmsJsonRef.current !== cmsJson) {
+      prevCmsJsonRef.current = cmsJson;
+      hiddenRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }, [cmsJson]);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -209,7 +220,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
 
   return (
     <div className="border-input focus-within:border-ring focus-within:ring-ring/50 overflow-hidden rounded-lg border transition-colors focus-within:ring-3">
-      <input type="hidden" name={name} value={cmsJson} />
+      <input ref={hiddenRef} type="hidden" name={name} value={cmsJson} />
 
       {/* Toolbar */}
       <div className="bg-muted/40 dark:bg-input/30 flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5">

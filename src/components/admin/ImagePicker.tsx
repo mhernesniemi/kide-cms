@@ -43,6 +43,16 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
     loading: false,
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const hiddenRef = useRef<HTMLInputElement>(null);
+
+  // Notify the form of value changes so UnsavedGuard detects them
+  const prevValueRef = useRef(value);
+  useEffect(() => {
+    if (prevValueRef.current !== value) {
+      prevValueRef.current = value;
+      hiddenRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }, [value]);
 
   const handleUpload = useCallback(async (file: File) => {
     setUploading(true);
@@ -128,14 +138,14 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
 
   return (
     <div className="space-y-3">
-      <input type="hidden" name={name} value={value} />
+      <input ref={hiddenRef} type="hidden" name={name} value={value} />
 
       {value && (
         <div className="group relative">
           {isImage ? (
-            <img src={value} alt="" className="h-40 w-full rounded-lg border object-cover" />
+            <img src={value} alt="" className="size-40 rounded-lg border object-cover" />
           ) : (
-            <div className="bg-muted/30 flex h-40 items-center justify-center rounded-lg border">
+            <div className="bg-muted/30 flex size-40 items-center justify-center rounded-lg border">
               <span className="text-muted-foreground truncate px-4 text-sm">{value}</span>
             </div>
           )}

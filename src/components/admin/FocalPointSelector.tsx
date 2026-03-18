@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Crosshair, X } from "lucide-react";
 import { Button } from "@/components/admin/ui/button";
 import { Input } from "@/components/admin/ui/input";
@@ -16,6 +16,12 @@ export default function FocalPointSelector({ src, alt, focalX: initialX, focalY:
   const [focalX, setFocalX] = useState<number | null>(initialX);
   const [focalY, setFocalY] = useState<number | null>(initialY);
   const imageRef = useRef<HTMLImageElement>(null);
+  const hiddenXRef = useRef<HTMLInputElement>(null);
+
+  // Notify the form of value changes so UnsavedGuard detects them
+  useEffect(() => {
+    hiddenXRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
+  }, [focalX, focalY]);
 
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const img = imageRef.current;
@@ -87,7 +93,7 @@ export default function FocalPointSelector({ src, alt, focalX: initialX, focalY:
           </div>
         )}
       </div>
-      <input type="hidden" name="focalX" value={focalX ?? ""} />
+      <input ref={hiddenXRef} type="hidden" name="focalX" value={focalX ?? ""} />
       <input type="hidden" name="focalY" value={focalY ?? ""} />
     </div>
   );
