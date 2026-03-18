@@ -69,7 +69,7 @@ posts: {
 - Asset management with folders and focal points
 - Rich text editor (Tiptap)
 - Block editor with repeater fields
-- Nested taxonomies and menu builder
+- Hierarchical taxonomies and menus
 - Role-based access control
 - Session auth (Argon2 + HttpOnly cookies)
 - Tag-based cache invalidation
