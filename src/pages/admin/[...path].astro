@@ -92,7 +92,12 @@ if (route.kind === "recent") {
       id: String(doc._id),
       editHref: `/admin/${cc.slug}/${doc._id}`,
       status: getVisualStatus(doc),
-      locales: [defaultLocale, ...(Array.isArray(doc._availableLocales) ? doc._availableLocales.map((l) => String(l)).filter((l) => l !== defaultLocale) : [])],
+      locales: [
+        defaultLocale,
+        ...(Array.isArray(doc._availableLocales)
+          ? doc._availableLocales.map((l) => String(l)).filter((l) => l !== defaultLocale)
+          : []),
+      ],
       searchText: displayTitle,
       values: {
         title: displayTitle,
@@ -126,7 +131,12 @@ if (route.kind === "singles") {
       label: sc.labels.singular,
       status: singleDoc && sc.drafts ? String(singleDoc._status ?? "draft") : "",
       locales: singleDoc
-        ? [defaultLocale, ...(Array.isArray(singleDoc._availableLocales) ? singleDoc._availableLocales.filter((l: string) => l !== defaultLocale) : [])]
+        ? [
+            defaultLocale,
+            ...(Array.isArray(singleDoc._availableLocales)
+              ? singleDoc._availableLocales.filter((l: string) => l !== defaultLocale)
+              : []),
+          ]
         : [],
       updatedAt: singleDoc ? formatDate(singleDoc._updatedAt) : "—",
       editHref: `/admin/${sc.slug}`,
@@ -327,7 +337,12 @@ const tableRows =
         id: String(entry._id),
         editHref: `/admin/${collection.slug}/${entry._id}`,
         status: getVisualStatus(entry),
-        locales: [defaultLocale, ...(Array.isArray(entry._availableLocales) ? entry._availableLocales.map((l) => String(l)).filter((l) => l !== defaultLocale) : [])],
+        locales: [
+          defaultLocale,
+          ...(Array.isArray(entry._availableLocales)
+            ? entry._availableLocales.map((l) => String(l)).filter((l) => l !== defaultLocale)
+            : []),
+        ],
         searchText: String(entry.title ?? entry.name ?? entry.slug ?? entry._id ?? ""),
         values: Object.fromEntries(
           listColumns.map((column) => [

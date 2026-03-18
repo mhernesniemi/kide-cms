@@ -248,9 +248,14 @@ export default function DocumentsDataTable({
         cell: ({ row }) => (
           <div className="flex flex-wrap gap-1.5">
             {row.original.locales.map((locale) => (
-              <Badge key={locale} variant="outline" className="text-muted-foreground uppercase">
-                {locale}
-              </Badge>
+              <a key={locale} href={`${row.original.editHref}?locale=${locale}`} onClick={(e) => e.stopPropagation()}>
+                <Badge
+                  variant="outline"
+                  className="text-muted-foreground hover:border-foreground/50 hover:text-foreground uppercase transition-colors"
+                >
+                  {locale}
+                </Badge>
+              </a>
             ))}
           </div>
         ),
