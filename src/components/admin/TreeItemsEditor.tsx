@@ -700,7 +700,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
             <button
               type="button"
               onClick={toggleExpandAll}
-              className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors"
+              className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs leading-none transition-colors"
             >
               {allExpanded ? (
                 <>

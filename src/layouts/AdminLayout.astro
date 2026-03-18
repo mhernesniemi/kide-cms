@@ -16,7 +16,7 @@ const {
   embed = false,
 } = Astro.props as {
   title?: string;
-  collections?: Array<{ slug: string; labels: { plural: string }; singleton?: boolean }>;
+  collections?: Array<{ slug: string; labels: { singular: string; plural: string }; singleton?: boolean }>;
   activeCollection?: string | null;
   embed?: boolean;
 };
@@ -48,7 +48,7 @@ const singletonSlugs = new Set(collections.filter((c) => c.singleton).map((c) =>
 const isActiveSingles =
   activeCollection === "singles" || (activeCollection !== null && singletonSlugs.has(activeCollection));
 
-type NavItem = { href: string; label: string; Icon: any; active: boolean; newHref?: string };
+type NavItem = { href: string; label: string; singularLabel?: string; Icon: any; active: boolean; newHref?: string };
 const navItems: NavItem[] = [];
 
 // 0. Recent — cross-collection recent entries
@@ -67,6 +67,7 @@ for (const c of contentCollections) {
   navItems.push({
     href: `/admin/${c.slug}`,
     label: c.labels.plural,
+    singularLabel: c.labels.singular,
     Icon: Layers,
     active: activeCollection === c.slug,
     newHref: `/admin/${c.slug}/new`,
@@ -85,6 +86,7 @@ for (const slug of pinnedOrder) {
     navItems.push({
       href: `/admin/${c.slug}`,
       label: c.labels.plural,
+      singularLabel: c.labels.singular,
       Icon: pinnedIcons[slug] ?? LayoutGrid,
       active: activeCollection === c.slug,
       newHref: `/admin/${c.slug}/new`,
@@ -163,7 +165,7 @@ navItems.push({
                   {item.newHref && (
                     <a
                       href={item.newHref}
-                      title={`New ${item.label.toLowerCase()}`}
+                      title={`Add new ${(item.singularLabel ?? item.label).toLowerCase()}`}
                       class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block"
                     >
                       <Plus className="size-3.5" />
@@ -214,7 +216,7 @@ navItems.push({
                       {item.newHref && (
                         <a
                           href={item.newHref}
-                          title={`New ${item.label.toLowerCase()}`}
+                          title={`Add new ${(item.singularLabel ?? item.label).toLowerCase()}`}
                           class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block"
                         >
                           <Plus className="size-3.5" />
