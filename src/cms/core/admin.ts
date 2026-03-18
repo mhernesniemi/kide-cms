@@ -120,7 +120,7 @@ export const getFieldSets = (
   viewConfig?: { layout?: Array<{ fields: string[]; width?: string }> },
 ) => {
   if (!viewConfig?.layout?.length) {
-    const allFields = Object.keys(collection.fields);
+    const allFields = Object.keys(collection.fields).filter((f) => !collection.fields[f].admin?.hidden);
     const sidebarTypes = new Set(["slug", "relation"]);
     const sidebarFields = allFields.filter((f) => sidebarTypes.has(collection.fields[f].type));
     const mainFields = allFields.filter((f) => !sidebarTypes.has(collection.fields[f].type));
@@ -135,14 +135,23 @@ export const getFieldSets = (
     return [{ fields: allFields, width: "full" }];
   }
 
-  const allFields = Object.keys(collection.fields);
+  const allFields = Object.keys(collection.fields).filter((f) => !collection.fields[f].admin?.hidden);
+  const hiddenFields = new Set(Object.keys(collection.fields).filter((f) => collection.fields[f].admin?.hidden));
   const listedFields = new Set(viewConfig.layout.flatMap((set) => set.fields));
   const unlisted = allFields.filter((f) => !listedFields.has(f));
 
-  if (unlisted.length === 0) return viewConfig.layout;
+  if (unlisted.length === 0) {
+    return viewConfig.layout.map((set) => ({
+      ...set,
+      fields: set.fields.filter((f) => !hiddenFields.has(f)),
+    }));
+  }
 
   // Insert unlisted fields in config-defined order next to their nearest neighbor
-  const layout = viewConfig.layout.map((set) => ({ ...set, fields: [...set.fields] }));
+  const layout = viewConfig.layout.map((set) => ({
+    ...set,
+    fields: set.fields.filter((f) => !hiddenFields.has(f)),
+  }));
 
   for (const field of unlisted) {
     const configIndex = allFields.indexOf(field);

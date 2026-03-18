@@ -18,6 +18,7 @@ export type AdminFieldComponent = {
   placeholder?: string;
   rows?: number;
   help?: string;
+  hidden?: boolean;
 };
 
 export type FieldCondition = {

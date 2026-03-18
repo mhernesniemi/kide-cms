@@ -19,7 +19,7 @@ export default defineConfig({
           options: ["admin", "editor", "viewer"],
           defaultValue: "editor",
         }),
-        password: fields.text({ required: true }),
+        password: fields.text({ required: true, admin: { hidden: true } }),
       },
     }),
     defineCollection({
