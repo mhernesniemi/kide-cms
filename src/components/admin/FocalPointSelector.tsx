@@ -82,7 +82,7 @@ export default function FocalPointSelector({ src, alt, focalX: initialX, focalY:
         )}
       </div>
       <div className="bg-muted/30 relative cursor-crosshair overflow-hidden rounded-md" onClick={handleClick}>
-        <img ref={imageRef} src={src} alt={alt} className="max-h-[500px] w-full object-contain" draggable={false} />
+        <img ref={imageRef} src={src} alt={alt} className="max-h-125 w-full object-contain" draggable={false} />
         {hasFocal && (
           <div
             className="pointer-events-none absolute size-8 -translate-x-1/2 -translate-y-1/2"

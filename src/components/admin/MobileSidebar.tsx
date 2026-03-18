@@ -17,7 +17,7 @@ export default function MobileSidebar({ children }: { children: React.ReactNode 
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="left" className="w-[17rem] p-0" showCloseButton={false}>
+        <SheetContent side="left" className="w-68 p-0" showCloseButton={false}>
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <div className="flex h-full flex-col" onClick={() => setOpen(false)}>
             {children}

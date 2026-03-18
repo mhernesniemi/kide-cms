@@ -65,6 +65,28 @@ const renderNode = (node: RichTextNode): string => {
     return `<blockquote>${(node.children ?? []).map(renderNode).join("")}</blockquote>`;
   }
 
+  if (node.type === "image") {
+    const src = escapeHtml(String(node.src ?? ""));
+    const alt = escapeHtml(String(node.alt ?? ""));
+    return `<img src="${src}" alt="${alt}" style="max-width: 100%; border-radius: 0.5rem;" />`;
+  }
+
+  if (node.type === "table") {
+    return `<table>${(node.children ?? []).map(renderNode).join("")}</table>`;
+  }
+
+  if (node.type === "table-row") {
+    return `<tr>${(node.children ?? []).map(renderNode).join("")}</tr>`;
+  }
+
+  if (node.type === "table-header") {
+    return `<th>${(node.children ?? []).map(renderNode).join("")}</th>`;
+  }
+
+  if (node.type === "table-cell") {
+    return `<td>${(node.children ?? []).map(renderNode).join("")}</td>`;
+  }
+
   return "";
 };
 

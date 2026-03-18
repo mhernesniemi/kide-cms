@@ -1,7 +1,24 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import Image from "@tiptap/extension-image";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Undo, Redo } from "lucide-react";
+import {
+  Bold,
+  Italic,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  Quote,
+  ImageIcon,
+  Table as TableIcon,
+  Undo,
+  Redo,
+} from "lucide-react";
 
 // -----------------------------------------------
 // CMS AST ↔ Tiptap JSON conversion
@@ -59,6 +76,25 @@ const cmsNodeToTiptap = (node: CmsNode): any => {
     const content = (node.children ?? []).map(cmsNodeToTiptap).filter(Boolean);
     return { type: "blockquote", ...(content.length > 0 ? { content } : {}) };
   }
+  if (node.type === "image") {
+    return { type: "image", attrs: { src: node.src ?? "", alt: node.alt ?? "", title: node.title ?? "" } };
+  }
+  if (node.type === "table") {
+    const content = (node.children ?? []).map(cmsNodeToTiptap).filter(Boolean);
+    return { type: "table", ...(content.length > 0 ? { content } : {}) };
+  }
+  if (node.type === "table-row") {
+    const content = (node.children ?? []).map(cmsNodeToTiptap).filter(Boolean);
+    return { type: "tableRow", ...(content.length > 0 ? { content } : {}) };
+  }
+  if (node.type === "table-cell" || node.type === "table-header") {
+    const content = (node.children ?? []).map(cmsNodeToTiptap).filter(Boolean);
+    const wrapped = content.map((c: any) => (c.type === "paragraph" ? c : { type: "paragraph", content: [c] }));
+    return {
+      type: node.type === "table-header" ? "tableHeader" : "tableCell",
+      ...(wrapped.length > 0 ? { content: wrapped } : {}),
+    };
+  }
   return null;
 };
 
@@ -112,6 +148,21 @@ const tiptapNodeToCms = (node: any): CmsNode | null => {
       type: "quote",
       children: (node.content ?? []).map(tiptapNodeToCms).filter(Boolean),
     };
+  }
+  if (node.type === "image") {
+    return { type: "image", src: node.attrs?.src ?? "", alt: node.attrs?.alt ?? "", title: node.attrs?.title ?? "" };
+  }
+  if (node.type === "table") {
+    return { type: "table", children: (node.content ?? []).map(tiptapNodeToCms).filter(Boolean) };
+  }
+  if (node.type === "tableRow") {
+    return { type: "table-row", children: (node.content ?? []).map(tiptapNodeToCms).filter(Boolean) };
+  }
+  if (node.type === "tableCell") {
+    return { type: "table-cell", children: (node.content ?? []).map(tiptapNodeToCms).filter(Boolean) };
+  }
+  if (node.type === "tableHeader") {
+    return { type: "table-header", children: (node.content ?? []).map(tiptapNodeToCms).filter(Boolean) };
   }
   return null;
 };
@@ -218,7 +269,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
 
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [StarterKit],
+    extensions: [StarterKit, Image, Table.configure({ resizable: false }), TableRow, TableCell, TableHeader],
     content: cmsToTiptap(parsedInitial),
     onUpdate: ({ editor }) => {
       const tiptapJson = editor.getJSON();
@@ -306,6 +357,26 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
           title="Blockquote"
         >
           <Quote className="size-4" />
+        </ToolbarButton>
+
+        <div className="bg-border mx-1 h-5 w-px" />
+
+        <ToolbarButton
+          onClick={() => {
+            const url = window.prompt("Image URL");
+            if (url) editor?.chain().focus().setImage({ src: url }).run();
+          }}
+          disabled={!editor}
+          title="Insert image"
+        >
+          <ImageIcon className="size-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+          disabled={!editor}
+          title="Insert table"
+        >
+          <TableIcon className="size-4" />
         </ToolbarButton>
 
         <div className="bg-border mx-1 h-5 w-px" />

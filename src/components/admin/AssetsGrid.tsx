@@ -109,7 +109,7 @@ function DraggableAssetCard({
       </a>
       {/* Checkbox */}
       <label
-        className={`border-foreground/40 hover:border-foreground/80 bg-background/80 absolute top-2.5 right-2.5 z-10 flex size-5 cursor-default items-center justify-center rounded border backdrop-blur-sm transition-[opacity,border-color] ${selected ? "!border-foreground opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+        className={`border-foreground/40 hover:border-foreground/80 bg-background/80 absolute top-2.5 right-2.5 z-10 flex size-5 cursor-default items-center justify-center rounded border backdrop-blur-sm transition-[opacity,border-color] ${selected ? "border-foreground! opacity-100" : "opacity-0 group-hover:opacity-100"}`}
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -210,7 +210,7 @@ function DroppableBreadcrumb({ href, folderId, label }: { href: string; folderId
     <a
       ref={setNodeRef}
       href={href}
-      className={`bg-muted/50 border-border hover:border-foreground/20 hover:text-foreground rounded-md border px-2.5 py-1 transition-colors ${isOver ? "!border-primary !bg-primary/12 text-foreground" : ""}`}
+      className={`bg-muted/50 border-border hover:border-foreground/20 hover:text-foreground rounded-md border px-2.5 py-1 transition-colors ${isOver ? "border-primary! bg-primary/12! text-foreground" : ""}`}
     >
       {label}
     </a>
@@ -534,7 +534,7 @@ export default function AssetsGrid({ folders, assets, breadcrumbs, currentFolder
       {/* Context menu */}
       {menuOpen && (
         <div
-          className="bg-popover text-popover-foreground border-border fixed z-50 min-w-[160px] rounded-md border p-1 shadow-md"
+          className="bg-popover text-popover-foreground border-border fixed z-50 min-w-40 rounded-md border p-1 shadow-md"
           style={{ top: menuPos.top, left: menuPos.left }}
           onClick={(e) => e.stopPropagation()}
         >
