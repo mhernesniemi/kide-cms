@@ -37,12 +37,27 @@ export default function LivePreview({ previewUrl, formId, fieldNames }: Props) {
 
   // Toggle preview class on <html>, main, and the preview pane
   const closeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const isInitialRef = useRef(true);
 
   useEffect(() => {
     const pane = document.getElementById("preview-pane");
     if (!pane) return;
+    const shell = document.getElementById("admin-shell") ?? pane.closest("[style*='grid-template']");
+    const skipTransition = isInitialRef.current && open;
+    isInitialRef.current = false;
 
-    if (open) {
+    if (skipTransition) {
+      // On mount with preview already open — apply instantly, no animation
+      if (shell) shell.style.transition = "none";
+      pane.style.transition = "none";
+      document.documentElement.classList.add("preview-open");
+      pane.classList.add("preview-active");
+      // Re-enable transitions next frame
+      requestAnimationFrame(() => {
+        if (shell) shell.style.transition = "";
+        pane.style.transition = "";
+      });
+    } else if (open) {
       clearTimeout(closeTimerRef.current);
       document.documentElement.classList.add("preview-open");
       requestAnimationFrame(() => {
@@ -53,7 +68,7 @@ export default function LivePreview({ previewUrl, formId, fieldNames }: Props) {
       pane.classList.remove("preview-active");
       closeTimerRef.current = setTimeout(() => {
         document.documentElement.classList.remove("preview-open", "preview-closing");
-      }, 250);
+      }, 150);
     }
   }, [open]);
 

@@ -297,7 +297,7 @@ html.preview-open > body > div > div.min-w-0 > main {
   width: 0;
   min-width: 0;
   overflow: hidden;
-  transition: width 200ms ease;
+  transition: width 150ms ease;
 }
 
 #preview-pane.preview-active {
