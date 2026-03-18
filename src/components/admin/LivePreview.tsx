@@ -145,15 +145,25 @@ export default function LivePreview({ previewUrl, formId, fieldNames }: Props) {
 
   return (
     <>
+      {/* Desktop: toggle split panel */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="text-foreground/70 hover:text-foreground flex items-center gap-1 text-sm transition-colors"
+        className="text-foreground/70 hover:text-foreground hidden items-center gap-1 text-sm transition-colors lg:flex"
         title={open ? "Close preview" : "Open preview"}
       >
         {open ? <PanelRightClose className="size-4" /> : <PanelRight className="size-4" />}
         Preview
       </button>
+      {/* Mobile: open in new tab */}
+      <a
+        href={previewUrl}
+        target="_blank"
+        className="text-foreground/70 hover:text-foreground flex items-center gap-1 text-sm transition-colors lg:hidden"
+      >
+        <ArrowUpRight className="size-4" />
+        Preview
+      </a>
 
       {open &&
         portalTarget &&
