@@ -542,7 +542,11 @@ const tableRows =
                 id="document-form"
                 method="post"
                 action={getFormAction(collection.slug, route.kind === "edit" ? route.documentId : undefined)}
-                class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
+                class={
+                  effectiveSidebarFieldSets.length > 0
+                    ? "grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
+                    : "grid gap-6"
+                }
               >
                 <input type="hidden" name="_action" value={route.kind === "new" ? "create" : "update"} />
                 <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />

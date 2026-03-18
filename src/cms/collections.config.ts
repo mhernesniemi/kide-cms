@@ -126,12 +126,25 @@ export default defineConfig({
       timestamps: true,
       drafts: true,
       fields: {
-        heroHeading: fields.text({ required: true, translatable: true }),
-        heroBody: fields.text({ translatable: true, admin: { rows: 3 } }),
-        heroCtaLabel: fields.text({ translatable: true }),
-        heroCtaHref: fields.text(),
-        heroImage: fields.image(),
-        featuredPosts: fields.relation({ collection: "posts", hasMany: true }),
+        blocks: fields.blocks({
+          translatable: true,
+          types: {
+            hero: {
+              eyebrow: fields.text(),
+              heading: fields.text({ required: true }),
+              body: fields.text(),
+              ctaLabel: fields.text(),
+              ctaHref: fields.text(),
+            },
+            text: {
+              heading: fields.text(),
+              content: fields.richText(),
+            },
+            featuredPosts: {
+              heading: fields.text(),
+            },
+          },
+        }),
       },
     }),
     defineCollection({
