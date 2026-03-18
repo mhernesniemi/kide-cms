@@ -513,9 +513,8 @@ const tableRows =
                 (doc?._status === "draft" || (doc && getVisualStatus(doc) === "changed"))
               }
             />
-            <div
-              class={`flex flex-wrap items-center justify-between gap-2 ${effectiveSidebarFieldSets.length === 0 || translationMode ? "max-w-4xl" : ""}`}
-            >
+            <div class={effectiveSidebarFieldSets.length === 0 || translationMode ? "grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]" : ""}>
+            <div class="flex flex-wrap items-center justify-between gap-2">
               <div class="flex flex-wrap items-center gap-2">
                 {locales.length > 1 &&
                   route.kind === "edit" &&
@@ -598,17 +597,14 @@ const tableRows =
                 )}
               </div>
             </div>
+            </div>
 
             {!translationMode && (
               <form
                 id="document-form"
                 method="post"
                 action={getFormAction(collection.slug, route.kind === "edit" ? route.documentId : undefined)}
-                class={
-                  effectiveSidebarFieldSets.length > 0
-                    ? "grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
-                    : "grid max-w-4xl gap-6"
-                }
+                class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
               >
                 <input type="hidden" name="_action" value={route.kind === "new" ? "create" : "update"} />
                 <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
@@ -676,7 +672,7 @@ const tableRows =
                   id="translation-form"
                   method="post"
                   action={getFormAction(collection.slug, route.documentId)}
-                  class="grid max-w-4xl gap-6"
+                  class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
                 >
                   <input type="hidden" name="_action" value="save-translation" />
                   <input type="hidden" name="locale" value={selectedLocale} />
