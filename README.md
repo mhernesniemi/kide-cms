@@ -67,22 +67,13 @@ posts: {
 - Drafts, publishing, scheduling, versioning
 - i18n with per-field translation tables
 - Asset management with folders and focal points
-- Rich text editor (Tiptap) with image support
+- Rich text editor (Tiptap)
 - Block editor with repeater fields
 - Nested taxonomies and menu builder
 - Role-based access control
 - Session auth (Argon2 + HttpOnly cookies)
 - Tag-based cache invalidation
 - AI assistant (alt text, SEO, translations)
-
-## Key Commands
-
-```bash
-pnpm dev              # Start dev server
-pnpm build            # Production build
-pnpm db:generate      # Generate DB migrations
-pnpm db:migrate       # Apply migrations
-```
 
 ## Stack
 
