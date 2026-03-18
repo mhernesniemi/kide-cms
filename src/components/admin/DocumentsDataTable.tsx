@@ -248,7 +248,7 @@ export default function DocumentsDataTable({
         cell: ({ row }) => (
           <div className="flex flex-wrap gap-1.5">
             {row.original.locales.map((locale) => (
-              <Badge key={locale} variant="outline" className="uppercase">
+              <Badge key={locale} variant="outline" className="text-muted-foreground uppercase">
                 {locale}
               </Badge>
             ))}
