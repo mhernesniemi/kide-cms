@@ -168,7 +168,7 @@ function DroppableFolder({
     <div ref={setNodeRef} className="group relative">
       <a href={`/admin/assets?folder=${folder._id}`}>
         <Card
-          className={`hover:border-foreground/20 transition-colors ${isOver ? "ring-foreground bg-primary/8" : ""}`}
+          className={`transition-shadow ${isOver ? "ring-foreground/40 bg-primary/8 ring-1" : "hover:ring-foreground/20 hover:ring-1"}`}
         >
           <CardContent className="flex items-center gap-3 py-3">
             <Folder className="text-muted-foreground size-5" />
