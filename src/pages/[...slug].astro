@@ -1,6 +1,7 @@
 ---
 import PublicLayout from "../layouts/PublicLayout.astro";
 import RichTextContent from "../components/RichTextContent.astro";
+import BlockRenderer from "../components/BlockRenderer.astro";
 import PreviewReceiver from "../components/PreviewReceiver.astro";
 import { cms } from "../cms/.generated/api";
 
@@ -12,12 +13,22 @@ const segments = (Astro.params.slug ?? "").split("/").filter(Boolean);
 const isPreview = Astro.url.searchParams.get("preview") === "true";
 
 let document: AnyRecord | null = null;
+let kind: "post" | "page" | null = null;
 
 if (segments[0] === "blog" && segments[1]) {
   document = await cms.posts.findOne({
     slug: segments[1],
     status: isPreview ? "any" : "published",
   });
+  kind = "post";
+}
+
+if (!document && segments.length >= 1) {
+  document = await cms.pages.findOne({
+    slug: segments.join("/"),
+    status: isPreview ? "any" : "published",
+  });
+  kind = "page";
 }
 
 if (!document) {
@@ -25,8 +36,18 @@ if (!document) {
 }
 
 if (!isPreview) {
-  Astro.cache.set({ tags: ["posts", `post:${document._id}`] });
+  const tag = kind === "post" ? "posts" : "pages";
+  Astro.cache.set({ tags: [tag, `${tag.slice(0, -1)}:${document._id}`] });
 }
+
+const blocks = (() => {
+  if (!document.blocks) return [];
+  try {
+    return typeof document.blocks === "string" ? JSON.parse(document.blocks) : document.blocks;
+  } catch {
+    return [];
+  }
+})();
 ---
 
 <PublicLayout title={String(document.title)}>
@@ -34,15 +55,27 @@ if (!isPreview) {
     <a href="/" style="color: #0f766e; font-size: 0.9rem;">&larr; Back</a>
     <h1 data-preview-field="title" style="font-size: 1.5rem; margin: 1rem 0 0.5rem;">{String(document.title)}</h1>
     {
-      (document.excerpt || isPreview) && (
+      kind === "post" && (document.excerpt || isPreview) && (
         <p data-preview-field="excerpt" style="color: #666; margin: 0 0 1.5rem;">
           {document.excerpt ? String(document.excerpt) : ""}
         </p>
       )
     }
-    <div data-preview-field="body" data-preview-type="richText">
-      <RichTextContent content={document.body} />
-    </div>
+    {
+      kind === "post" && (
+        <div data-preview-field="body" data-preview-type="richText">
+          <RichTextContent content={document.body} />
+        </div>
+      )
+    }
+    {
+      kind === "page" && (
+        <>
+          {document.summary && <p style="color: #666; margin: 0 0 1.5rem;">{String(document.summary)}</p>}
+          <BlockRenderer blocks={blocks} />
+        </>
+      )
+    }
   </article>
   {isPreview && <PreviewReceiver />}
 </PublicLayout>
