@@ -62,7 +62,7 @@ posts: {
 
 ## Features
 
-- Schema-driven code generation (Drizzle + Zod + TypeScript)
+- Custom collections with 13 field types, blocks, and repeaters
 - Runtime admin UI with field editors, DataTable, live preview
 - Drafts, publishing, scheduling, versioning
 - i18n with per-field translation tables
