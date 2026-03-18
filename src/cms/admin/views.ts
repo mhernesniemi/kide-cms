@@ -36,9 +36,9 @@ export default {
     },
     edit: {
       layout: [
-        { fields: ["title", "excerpt", "body"], position: "content" },
+        { fields: ["title", "excerpt", "image", "body"], position: "content" },
         {
-          fields: ["slug", "category", "author", "tags", "cover", "seoDescription"],
+          fields: ["slug", "category", "author", "tags", "seoDescription"],
           position: "sidebar",
         },
       ],

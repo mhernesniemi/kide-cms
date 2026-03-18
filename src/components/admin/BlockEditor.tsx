@@ -537,14 +537,16 @@ function SubFieldControl({
       if (meta.of?.type === "text") {
         const items = Array.isArray(value) ? value : [];
         return (
-          <Textarea
+          <Input
             id={fieldId}
-            rows={meta.admin?.rows ?? 4}
-            value={items.join("\n")}
-            placeholder="One item per line"
+            value={items.join(", ")}
+            placeholder={meta.admin?.placeholder ?? "item1, item2, item3"}
             onChange={(e) => {
-              const lines = e.target.value.split("\n").filter((l: string) => l.trim() !== "");
-              onChange(lines);
+              const parts = e.target.value
+                .split(",")
+                .map((s: string) => s.trim())
+                .filter(Boolean);
+              onChange(parts);
             }}
           />
         );

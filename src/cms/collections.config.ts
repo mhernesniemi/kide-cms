@@ -55,16 +55,18 @@ export default defineConfig({
           translatable: true,
           admin: { rows: 3 },
         }),
+        image: fields.image(),
         body: fields.richText({ translatable: true, admin: { rows: 14 } }),
-        cover: fields.image({
-          admin: { placeholder: "/images/post-cover.jpg" },
-        }),
         category: fields.select({
           options: ["Product", "Design", "Engineering", "Business"],
           defaultValue: "Product",
         }),
         author: fields.relation({ collection: "authors" }),
-        tags: fields.array({ of: fields.text(), defaultValue: [] }),
+        tags: fields.array({
+          of: fields.text(),
+          defaultValue: [],
+          admin: { placeholder: "e.g. design, tutorial, astro" },
+        }),
         postType: fields.select({
           options: ["article", "video", "podcast"],
           defaultValue: "article",
@@ -77,12 +79,6 @@ export default defineConfig({
         podcastUrl: fields.text({
           label: "Podcast URL",
           condition: { field: "postType", value: "podcast" },
-        }),
-        featured: fields.boolean({ defaultValue: false }),
-        featuredLabel: fields.text({
-          translatable: true,
-          description: "Custom label shown on the featured banner",
-          condition: { field: "featured", value: true },
         }),
         seoDescription: fields.text({
           maxLength: 160,

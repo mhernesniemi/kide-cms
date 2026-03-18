@@ -329,7 +329,21 @@ const blockTypesMeta =
   }
 
   {
-    (field.type === "array" ||
+    field.type === "array" && "of" in field && field.of?.type === "text" && (
+      <Input
+        className={controlClass}
+        id={name}
+        name={name}
+        placeholder={placeholder || "item1, item2, item3"}
+        readOnly={readOnly}
+        required={field.required}
+        defaultValue={serializedValue}
+      />
+    )
+  }
+
+  {
+    ((field.type === "array" && !("of" in field && field.of?.type === "text")) ||
       (field.type === "json" &&
         field.admin?.component !== "menu-items" &&
         field.admin?.component !== "taxonomy-terms")) && (

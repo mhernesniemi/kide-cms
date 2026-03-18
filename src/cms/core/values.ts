@@ -108,7 +108,7 @@ export const serializeFieldValue = (field: FieldConfig, value: unknown): string 
   }
 
   if (field.type === "array") {
-    return Array.isArray(value) ? value.map((item) => String(item ?? "")).join("\n") : "";
+    return Array.isArray(value) ? value.map((item) => String(item ?? "")).join(", ") : "";
   }
 
   if (field.type === "json" || field.type === "blocks") {
