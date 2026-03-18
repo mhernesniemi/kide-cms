@@ -56,6 +56,9 @@ export default function SelectField({
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
+            <SelectItem value="">
+              <span className="text-muted-foreground">None</span>
+            </SelectItem>
             {items.map((item) => (
               <SelectItem key={item.value} value={item.value}>
                 {item.label}
