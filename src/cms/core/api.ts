@@ -520,10 +520,10 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         // Save version
         if (collection.versions && tables.versions) {
           const versionRows = await db
-            .select({ count: sql<number>`count(*)` })
+            .select({ maxVersion: sql<number>`coalesce(max(_version), 0)` })
             .from(tables.versions)
             .where(eq(tables.versions._docId, id));
-          const nextVersion = Number(versionRows[0]?.count ?? 0) + 1;
+          const nextVersion = Number(versionRows[0]?.maxVersion ?? 0) + 1;
           const maxVersions = collection.versions.max;
 
           await db.insert(tables.versions).values({
@@ -776,10 +776,10 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         // Save version
         if (collection.versions && tables.versions) {
           const versionRows = await db
-            .select({ count: sql<number>`count(*)` })
+            .select({ maxVersion: sql<number>`coalesce(max(_version), 0)` })
             .from(tables.versions)
             .where(eq(tables.versions._docId, id));
-          const nextVersion = Number(versionRows[0]?.count ?? 0) + 1;
+          const nextVersion = Number(versionRows[0]?.maxVersion ?? 0) + 1;
           await db.insert(tables.versions).values({
             _id: nanoid(),
             _docId: id,
