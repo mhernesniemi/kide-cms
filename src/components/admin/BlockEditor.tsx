@@ -164,6 +164,7 @@ function SortableBlock({
             type="button"
             variant="ghost"
             size="icon"
+            title="Remove block"
             className="text-muted-foreground hover:text-destructive size-7"
             onClick={(e) => {
               e.stopPropagation();
@@ -667,7 +668,7 @@ function RepeaterField({
             </div>
           ))}
           <div className="flex justify-end">
-            <Button type="button" variant="ghost" size="icon-xs" onClick={() => removeItem(index)}>
+            <Button type="button" variant="ghost" size="icon-xs" title="Remove item" onClick={() => removeItem(index)}>
               <Trash2 className="size-3" />
             </Button>
           </div>

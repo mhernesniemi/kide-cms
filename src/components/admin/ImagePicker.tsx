@@ -92,6 +92,7 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
           )}
           <button
             type="button"
+            title="Remove image"
             onClick={() => {
               if (localPreview) URL.revokeObjectURL(localPreview);
               setLocalPreview(null);

@@ -89,6 +89,7 @@ export default function ImageBrowseDialog({ open, onOpenChange, onSelect }: Prop
             <DialogClose>
               <button
                 type="button"
+                title="Close"
                 className="text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors"
               >
                 <X className="size-5" />

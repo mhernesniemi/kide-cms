@@ -121,6 +121,7 @@ export default function RelationField({
               {getLabel(id)}
               <button
                 type="button"
+                title="Remove"
                 onClick={() => remove(id)}
                 className="text-muted-foreground hover:text-foreground -mr-0.5 rounded p-0.5"
               >

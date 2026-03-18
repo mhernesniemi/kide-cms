@@ -75,7 +75,7 @@ export default function FocalPointSelector({ src, alt, focalX: initialX, focalY:
                 className="h-6 w-14 px-1.5 text-center text-xs"
               />
             </div>
-            <Button type="button" variant="ghost" size="icon-xs" onClick={handleClear}>
+            <Button type="button" variant="ghost" size="icon-xs" title="Clear focal point" onClick={handleClear}>
               <X className="size-3" />
             </Button>
           </div>

@@ -181,6 +181,7 @@ function DroppableFolder({
       >
         <button
           type="button"
+          title="Folder options"
           className="text-muted-foreground hover:text-foreground rounded-md p-1"
           onClick={(e) => {
             e.preventDefault();
