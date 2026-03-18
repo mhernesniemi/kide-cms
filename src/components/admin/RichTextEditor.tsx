@@ -19,6 +19,7 @@ import {
   Undo,
   Redo,
 } from "lucide-react";
+import ImageBrowseDialog from "@/components/admin/ImageBrowseDialog";
 
 // -----------------------------------------------
 // CMS AST ↔ Tiptap JSON conversion
@@ -215,6 +216,7 @@ type Props = {
 
 export default function RichTextEditor({ name, initialValue, rows = 10, onChange }: Props) {
   const hiddenRef = useRef<HTMLInputElement>(null);
+  const [imageBrowseOpen, setImageBrowseOpen] = useState(false);
 
   const [cmsJson, setCmsJson] = useState<string>(() => {
     if (!initialValue) return JSON.stringify({ type: "root", children: [] });
@@ -361,14 +363,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
 
         <div className="bg-border mx-1 h-5 w-px" />
 
-        <ToolbarButton
-          onClick={() => {
-            const url = window.prompt("Image URL");
-            if (url) editor?.chain().focus().setImage({ src: url }).run();
-          }}
-          disabled={!editor}
-          title="Insert image"
-        >
+        <ToolbarButton onClick={() => setImageBrowseOpen(true)} disabled={!editor} title="Insert image">
           <ImageIcon className="size-4" />
         </ToolbarButton>
         <ToolbarButton
@@ -403,6 +398,14 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
       ) : (
         <div className="prose prose-sm max-w-none" style={{ minHeight, padding: "0.625rem 0.75rem" }} />
       )}
+
+      <ImageBrowseDialog
+        open={imageBrowseOpen}
+        onOpenChange={setImageBrowseOpen}
+        onSelect={(asset) => {
+          editor?.chain().focus().setImage({ src: asset.url, alt: asset.filename }).run();
+        }}
+      />
     </div>
   );
 }
