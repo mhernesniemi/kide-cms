@@ -21,7 +21,7 @@ function pushSchema() {
 
 export default function cmsIntegration(): AstroIntegration {
   return {
-    name: "astro-cms",
+    name: "liito-cms",
     hooks: {
       "astro:config:setup": ({ command }) => {
         console.log("  [cms] Generating schema, types, validators, and API...");

@@ -108,7 +108,7 @@ const seeds: Record<string, SeedDocument[]> = {
   ],
   "front-page": [
     {
-      heroHeading: "Welcome to AstroCMS",
+      heroHeading: "Welcome to Liito CMS",
       heroBody: "A code-first, single-schema CMS built inside Astro.",
       heroCtaLabel: "Get started",
       heroCtaHref: "/admin",
@@ -132,7 +132,7 @@ const seeds: Record<string, SeedDocument[]> = {
   ],
   pages: [
     {
-      title: "AstroCMS",
+      title: "Liito CMS",
       slug: "home",
       summary: "A monolithic, code-first CMS experience built inside Astro.",
       layout: "landing",
@@ -171,7 +171,7 @@ const seeds: Record<string, SeedDocument[]> = {
         {
           locale: "fi",
           values: {
-            title: "AstroCMS",
+            title: "Liito CMS",
             slug: "etusivu",
             summary: "Astroon rakennettu monoliittinen ja koodilahtoinen CMS-kokemus.",
           },

@@ -1,4 +1,4 @@
-# AstroCMS
+# Liito CMS
 
 Code-first, single-schema, AI-native CMS built inside an Astro 6 app. Monolith architecture — no separate API server.
 
@@ -121,7 +121,7 @@ collections.config.ts
 - Visual page builder / drag-and-drop layout
 - Real-time collaborative editing
 
-# Original spec: AstroCMS — Technical Specification
+# Original spec: Liito CMS — Technical Specification
 
 **Version:** 0.1 (Draft)
 **Architecture:** Monolith, code-first, single-schema, AI-native

@@ -370,10 +370,10 @@ const tableRows =
 
 <AdminLayout
   title={route.kind === "recent"
-    ? "Recent | AstroCMS"
+    ? "Recent | Liito CMS"
     : route.kind === "singles"
-      ? "Singles | AstroCMS"
-      : `${collection?.labels?.plural ?? "Admin"} | AstroCMS`}
+      ? "Singles | Liito CMS"
+      : `${collection?.labels?.plural ?? "Admin"} | Liito CMS`}
   collections={config.collections}
   activeCollection={route.kind === "recent" ? "recent" : (collectionSlug ?? "singles")}
   embed={isEmbed}

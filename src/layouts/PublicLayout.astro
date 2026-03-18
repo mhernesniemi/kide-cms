@@ -2,7 +2,7 @@
 import "../styles/public.css";
 import { cms } from "../cms/.generated/api";
 
-const { title = "AstroCMS", description = "A code-first CMS built inside Astro." } = Astro.props;
+const { title = "Liito CMS", description = "A code-first CMS built inside Astro." } = Astro.props;
 
 type MenuItem = { id: string; label?: string; href?: string; target?: string; children: MenuItem[] };
 
@@ -22,7 +22,7 @@ const menuItems: MenuItem[] = menu?.items ? (Array.isArray(menu.items) ? menu.it
   </head>
   <body>
     <header class="site-header">
-      <a href="/" class="site-name">AstroCMS</a>
+      <a href="/" class="site-name">Liito CMS</a>
       {
         menuItems.length > 0 && (
           <nav>

@@ -1,4 +1,4 @@
-# AstroCMS
+# Liito CMS
 
 Code-first, single-schema CMS built inside an Astro app. ~2k lines of core engine.
 
