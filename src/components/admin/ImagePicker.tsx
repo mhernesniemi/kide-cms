@@ -74,6 +74,8 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
       const res = await fetch("/api/cms/assets/upload", { method: "POST", body: formData });
       if (!res.ok) throw new Error("Upload failed");
       const asset: AssetRecord = await res.json();
+      // Wait for Vite to pick up the new file before showing thumbnail
+      await new Promise((r) => setTimeout(r, 300));
       setValue(asset.url);
       setAssetId(asset._id);
       onChangeProp?.(asset.url);
