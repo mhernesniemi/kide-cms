@@ -177,7 +177,10 @@ export default function RelationField({
 
       {/* Create sheet — full-width iframe with the actual add-new page */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="right" className="data-[side=right]:w-[80vw] data-[side=right]:sm:max-w-[80vw]">
+        <SheetContent
+          side="right"
+          className="data-[side=right]:w-[90vw] data-[side=right]:sm:max-w-[90vw] data-[side=right]:lg:w-[50vw] data-[side=right]:lg:max-w-[50vw]"
+        >
           <SheetHeader>
             <SheetTitle>Create {collectionLabel.toLowerCase()}</SheetTitle>
           </SheetHeader>
