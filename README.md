@@ -1,43 +1,83 @@
-# Astro Starter Kit: Minimal
+# AstroCMS
 
-```sh
-pnpm create astro@latest -- --template minimal
+Code-first, single-schema CMS built inside an Astro app. One config file defines everything — Drizzle tables, Zod validators, end-to-end TypeScript types, and a runtime admin UI are all generated from it. Supports Astro 6's route caching with tag-based invalidation for static-speed content delivery.
+
+## Quick Start
+
+```bash
+pnpm install
+pnpm dev
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+Admin at `http://localhost:4321/admin`. Default login: `admin@example.com` / `admin`.
 
-## 🚀 Project Structure
+## Key Commands
 
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+```bash
+pnpm dev              # Start dev server
+pnpm build            # Production build
+pnpm cms:generate     # Regenerate schema from collections.config.ts
+pnpm db:generate      # Generate DB migrations
+pnpm db:migrate       # Apply migrations
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## How It Works
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+Define collections in `src/cms/collections.config.ts`:
 
-Any static assets, like images, can be placed in the `public/` directory.
+```typescript
+defineCollection({
+  slug: "posts",
+  labels: { singular: "Post", plural: "Posts" },
+  drafts: true,
+  fields: {
+    title: fields.text({ required: true, translatable: true }),
+    body: fields.richText({ translatable: true }),
+    author: fields.relation({ collection: "authors" }),
+  },
+});
+```
 
-## 🧞 Commands
+Use the local API anywhere in server code:
 
-All commands are run from the root of the project, from a terminal:
+```typescript
+import { cms } from "./cms/.generated/api";
 
-| Command                | Action                                           |
-| :--------------------- | :----------------------------------------------- |
-| `pnpm install`         | Installs dependencies                            |
-| `pnpm dev`             | Starts local dev server at `localhost:4321`      |
-| `pnpm build`           | Build your production site to `./dist/`          |
-| `pnpm preview`         | Preview your build locally, before deploying     |
-| `pnpm astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `pnpm astro -- --help` | Get help using the Astro CLI                     |
+const posts = await cms.posts.find({ status: "published" });
+const post = await cms.posts.create({ title: "Hello" });
+```
 
-## 👀 Want to learn more?
+## Hooks
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Lifecycle hooks in `src/cms/hooks.ts` run inside the API on every operation — transform data, validate, trigger side effects, invalidate cache:
+
+```typescript
+posts: {
+  beforeCreate(data) {
+    if (!data.excerpt && data.body) {
+      data.excerpt = richTextToPlainText(data.body).slice(0, 180);
+    }
+    return data;
+  },
+  afterPublish(doc, context) {
+    context.cache?.invalidate({ tags: ["posts", `post:${doc._id}`] });
+  },
+}
+```
+
+## Features
+
+- Schema-driven code generation (Drizzle + Zod + TypeScript)
+- Runtime admin UI with field editors, DataTable, live preview
+- Drafts, publishing, scheduling, versioning
+- i18n with per-field translation tables
+- Asset management with folders and focal points
+- Rich text editor (Tiptap) with image support
+- Block editor with repeater fields
+- Role-based access control
+- Session auth (Argon2 + HttpOnly cookies)
+- Tag-based cache invalidation
+
+## Stack
+
+Astro 6, React 19, Drizzle ORM, SQLite, Zod, Tiptap, shadcn/ui, Tailwind CSS v4
