@@ -109,7 +109,7 @@ function DraggableAssetCard({
       </a>
       {/* Checkbox */}
       <label
-        className={`border-foreground/40 hover:border-foreground/80 bg-background/80 absolute top-2.5 right-2.5 z-10 flex size-5 cursor-default items-center justify-center rounded border backdrop-blur-sm transition-[opacity,border-color] ${selected ? "border-primary bg-primary opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+        className={`border-foreground/40 hover:border-foreground/80 bg-background/80 absolute top-2.5 right-2.5 z-10 flex size-5 cursor-default items-center justify-center rounded border backdrop-blur-sm transition-[opacity,border-color] ${selected ? "!border-foreground opacity-100" : "opacity-0 group-hover:opacity-100"}`}
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -122,7 +122,7 @@ function DraggableAssetCard({
           }}
         />
         <svg
-          className={`text-primary-foreground size-3 ${selected ? "block" : "hidden"}`}
+          className={`text-foreground size-3 ${selected ? "block" : "hidden"}`}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
