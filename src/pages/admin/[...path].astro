@@ -420,7 +420,7 @@ const tableRows =
               />
             )}
             {route.kind === "list" && (
-              <a href={`/admin/${collection.slug}/new`} class={buttonVariants({ size: "sm" })}>
+              <a href={`/admin/${collection.slug}/new`} class={buttonVariants({})}>
                 <Plus className="size-4" />
                 New {collection.labels.singular}
               </a>
