@@ -1,0 +1,102 @@
+---
+import "../../styles/admin.css";
+
+import { Boxes } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/admin/ui/card";
+import { Input } from "@/components/admin/ui/input";
+import { Label } from "@/components/admin/ui/label";
+import { buttonVariants } from "@/components/admin/ui/button";
+import { getDb } from "@/cms/core/db";
+
+export const prerender = false;
+
+// If users already exist, redirect to login
+const db = await getDb();
+const schema = await import("@/cms/.generated/schema");
+const tables = schema.cmsTables as Record<string, { main: any }>;
+if (tables.users) {
+  const rows = await db.select().from(tables.users.main).limit(1);
+  if (rows.length > 0) {
+    return Astro.redirect("/admin/login");
+  }
+}
+
+const error = Astro.url.searchParams.get("error");
+const errorMessage =
+  error === "missing"
+    ? "All fields are required."
+    : error === "password"
+      ? "Passwords do not match."
+      : error === "short"
+        ? "Password must be at least 8 characters."
+        : null;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>Setup | AstroCMS</title>
+  </head>
+  <body class="bg-background text-foreground min-h-screen antialiased">
+    <div class="flex min-h-screen items-center justify-center px-4">
+      <div class="w-full max-w-sm space-y-6">
+        <div class="flex flex-col items-center gap-3">
+          <div class="bg-card rounded-lg border p-3 shadow-sm">
+            <Boxes className="size-5" />
+          </div>
+          <div class="text-center">
+            <h1 class="text-lg font-semibold">AstroCMS</h1>
+            <p class="text-muted-foreground text-sm">Create your admin account to get started</p>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Create admin account</CardTitle>
+            <CardDescription>This will be the first user with admin privileges</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {
+              errorMessage && (
+                <div class="border-destructive/50 bg-destructive/10 text-destructive mb-4 rounded-lg border px-3 py-2 text-sm">
+                  {errorMessage}
+                </div>
+              )
+            }
+            <form method="post" action="/api/cms/auth/setup" class="grid gap-4">
+              <div class="grid gap-2">
+                <Label htmlFor="name">Name</Label>
+                <Input id="name" name="name" type="text" placeholder="Your name" required autoFocus />
+              </div>
+              <div class="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" name="email" type="email" placeholder="admin@example.com" required />
+              </div>
+              <div class="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" name="password" type="password" placeholder="Min 8 characters" required />
+              </div>
+              <div class="grid gap-2">
+                <Label htmlFor="confirmPassword">Confirm password</Label>
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  placeholder="Repeat password"
+                  required
+                />
+              </div>
+              <button class={buttonVariants({ size: "lg", className: "w-full" })} type="submit">
+                Create account
+              </button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  </body>
+</html>

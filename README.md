@@ -9,7 +9,7 @@ pnpm install
 pnpm dev
 ```
 
-Admin at `http://localhost:4321/admin`. Default login: `admin@example.com` / `admin`.
+Open `http://localhost:4321/admin` — you'll be prompted to create your admin account on first run.
 
 ## Key Commands
 
