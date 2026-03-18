@@ -195,6 +195,27 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
     }
   }, [cmsJson]);
 
+  // Listen for external content updates (e.g. AI translate)
+  useEffect(() => {
+    const hidden = hiddenRef.current;
+    if (!hidden) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (typeof detail !== "string") return;
+      try {
+        const parsed = JSON.parse(detail);
+        if (parsed?.type === "root") {
+          setCmsJson(detail);
+          if (editor) {
+            editor.commands.setContent(cmsToTiptap(parsed));
+          }
+        }
+      } catch {}
+    };
+    hidden.addEventListener("cms:set-value", handler);
+    return () => hidden.removeEventListener("cms:set-value", handler);
+  });
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [StarterKit],

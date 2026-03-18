@@ -13,6 +13,12 @@ function setFieldValue(name: string, value: string) {
   const field = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${name}"]`);
   if (!field) return;
 
+  // Rich text fields use a custom event to update the Tiptap editor
+  if (field.type === "hidden") {
+    field.dispatchEvent(new CustomEvent("cms:set-value", { detail: value }));
+    return;
+  }
+
   const nativeSetter = Object.getOwnPropertyDescriptor(
     field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
     "value",
