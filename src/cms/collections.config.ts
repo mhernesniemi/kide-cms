@@ -57,10 +57,7 @@ export default defineConfig({
         }),
         image: fields.image(),
         body: fields.richText({ translatable: true, admin: { rows: 14 } }),
-        category: fields.select({
-          options: ["Product", "Design", "Engineering", "Business"],
-          defaultValue: "Product",
-        }),
+        category: fields.relation({ collection: "taxonomies" }),
         author: fields.relation({ collection: "authors" }),
         tags: fields.array({
           of: fields.text(),
