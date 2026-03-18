@@ -1,6 +1,6 @@
 # AstroCMS
 
-Code-first, single-schema CMS built inside an Astro app.
+Code-first, single-schema CMS built inside an Astro app. ~2k lines of core runtime.
 
 One config file defines everything: Drizzle tables, Zod validators, end-to-end TypeScript types, and a runtime admin UI are all generated from it.
 
