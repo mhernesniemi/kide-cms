@@ -7,37 +7,6 @@
   import { renderRichText } from "../cms/core/richtext";
   import type { RichTextDocument } from "../cms/core/define";
 
-  function renderBlock(block: Record<string, any>): string {
-    let html = `<section style="padding: 1rem 0;">`;
-    for (const [key, val] of Object.entries(block)) {
-      if (key === "type" || val == null || val === "") continue;
-      if (typeof val === "string" && val.startsWith("{")) {
-        try {
-          const parsed = JSON.parse(val);
-          if (parsed?.type === "root") {
-            html += `<div class="prose">${renderRichText(parsed)}</div>`;
-            continue;
-          }
-        } catch {}
-      }
-      if (typeof val === "object" && val?.type === "root") {
-        html += `<div class="prose">${renderRichText(val)}</div>`;
-      } else if (Array.isArray(val)) {
-        const images = val.filter((v) => typeof v === "string" && v.match(/\.(jpg|jpeg|png|gif|webp|avif|svg)$/i));
-        if (images.length) {
-          html += `<div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">`;
-          for (const src of images)
-            html += `<img src="${src}" alt="" style="width: 120px; border-radius: 0.375rem; aspect-ratio: 1; object-fit: cover;" />`;
-          html += `</div>`;
-        }
-      } else if (typeof val === "string") {
-        html += `<p style="margin: 0 0 0.25rem;">${val}</p>`;
-      }
-    }
-    html += `</section>`;
-    return html;
-  }
-
   window.addEventListener("message", (event) => {
     if (event.data?.type !== "cms:preview-update") return;
 
@@ -53,13 +22,6 @@
         try {
           const parsed = JSON.parse(value) as RichTextDocument;
           el.innerHTML = renderRichText(parsed);
-        } catch {}
-      } else if (fieldType === "blocks") {
-        try {
-          const parsed = JSON.parse(value);
-          if (Array.isArray(parsed)) {
-            el.innerHTML = parsed.map(renderBlock).join("");
-          }
         } catch {}
       } else if (fieldType === "image") {
         const img = el.querySelector("img") ?? el;
