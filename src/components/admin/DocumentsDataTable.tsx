@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Loader2,
   MoreHorizontal,
   Search,
 } from "lucide-react";
@@ -45,6 +46,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/admin/ui/dropdown-menu";
 import { Input } from "@/components/admin/ui/input";
+import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/admin/ui/table";
 
 type DataTableColumn = {
@@ -61,6 +63,15 @@ type DataTableRow = {
   values: Record<string, string>;
 };
 
+type ServerPaginationConfig = {
+  totalDocs: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+  currentSort: { field: string; direction: "asc" | "desc" };
+  currentSearch: string;
+};
+
 type DocumentsDataTableProps = {
   collectionSlug: string;
   draftsEnabled?: boolean;
@@ -69,6 +80,29 @@ type DocumentsDataTableProps = {
   searchPlaceholder?: string;
   columns: DataTableColumn[];
   data: DataTableRow[];
+  serverPagination?: ServerPaginationConfig;
+};
+
+const formatDateClient = (value: unknown): string => {
+  if (!value) return "\u2014";
+  const date = new Date(String(value));
+  if (isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const getVisualStatus = (d: Record<string, unknown>): string => {
+  const status = String(d._status ?? "draft");
+  if (status === "scheduled") return "scheduled";
+  if (status === "published" && d._publishedAt && d._updatedAt) {
+    return String(d._updatedAt) > String(d._publishedAt) ? "changed" : "published";
+  }
+  return status;
 };
 
 function DataTableColumnHeader({ column, title }: { column: Column<DataTableRow, unknown>; title: string }) {
@@ -100,7 +134,10 @@ export default function DocumentsDataTable({
   searchPlaceholder = "Filter documents...",
   columns,
   data,
+  serverPagination,
 }: DocumentsDataTableProps) {
+  const isServerMode = !!serverPagination;
+
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -110,6 +147,93 @@ export default function DocumentsDataTable({
   const [rowSelection, setRowSelection] = React.useState({});
   const [isPending, startTransition] = React.useTransition();
   const [deleteConfirm, setDeleteConfirm] = React.useState<DataTableRow[] | null>(null);
+
+  // Server-side pagination state
+  const [serverData, setServerData] = React.useState<DataTableRow[]>(data);
+  const [serverTotalDocs, setServerTotalDocs] = React.useState(serverPagination?.totalDocs ?? 0);
+  const [serverTotalPages, setServerTotalPages] = React.useState(serverPagination?.totalPages ?? 1);
+  const [serverPage, setServerPage] = React.useState(serverPagination?.currentPage ?? 1);
+  const [serverSort, setServerSort] = React.useState(serverPagination?.currentSort ?? null);
+  const [serverSearch, setServerSearch] = React.useState(serverPagination?.currentSearch ?? "");
+  const [searchInput, setSearchInput] = React.useState(serverPagination?.currentSearch ?? "");
+  const [isLoading, setIsLoading] = React.useState(false);
+  const searchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pageSize = serverPagination?.pageSize ?? 20;
+
+  const fetchPage = React.useCallback(
+    async (page: number, sort: { field: string; direction: string } | null, search: string) => {
+      if (!isServerMode) return;
+      setIsLoading(true);
+      setRowSelection({});
+      try {
+        const params = new URLSearchParams();
+        params.set("status", "any");
+        params.set("limit", String(pageSize));
+        params.set("offset", String((page - 1) * pageSize));
+        if (sort) {
+          params.set("sort", JSON.stringify(sort));
+        }
+        if (search) {
+          params.set("search", search);
+        }
+
+        const response = await fetch(`/api/cms/${collectionSlug}?${params}`);
+        if (!response.ok) throw new Error("Failed to fetch");
+        const result = await response.json();
+
+        setServerData(
+          result.docs.map((entry: Record<string, unknown>) => ({
+            id: String(entry._id),
+            editHref: `/admin/${collectionSlug}/${entry._id}`,
+            status: getVisualStatus(entry),
+            locales: [...(Array.isArray(entry._availableLocales) ? (entry._availableLocales as string[]) : [])],
+            searchText: String(entry.title ?? entry.name ?? entry.slug ?? entry._id ?? ""),
+            values: Object.fromEntries(
+              columns.map((column) => [
+                column.key,
+                column.key === "_status"
+                  ? getVisualStatus(entry)
+                  : column.key === "_updatedAt" || column.key === "_createdAt"
+                    ? formatDateClient(entry[column.key])
+                    : String(entry[column.key] ?? "\u2014"),
+              ]),
+            ),
+          })),
+        );
+        setServerTotalDocs(result.totalDocs);
+        setServerTotalPages(result.totalPages);
+        setServerPage(page);
+
+        // Update URL for bookmarkability
+        const url = new URL(window.location.href);
+        url.searchParams.set("page", String(page));
+        if (sort) {
+          url.searchParams.set("sort", sort.field);
+          url.searchParams.set("dir", sort.direction);
+        }
+        if (search) {
+          url.searchParams.set("q", search);
+        } else {
+          url.searchParams.delete("q");
+        }
+        url.searchParams.delete("_toast");
+        url.searchParams.delete("_msg");
+        window.history.replaceState({}, "", url.pathname + url.search);
+      } catch (error) {
+        console.error("Failed to fetch page:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [isServerMode, collectionSlug, columns, pageSize],
+  );
+
+  // Cleanup debounce timer
+  React.useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
 
   // "C" hotkey to create new document
   React.useEffect(() => {
@@ -127,6 +251,36 @@ export default function DocumentsDataTable({
   }, [newHref]);
 
   const primaryColumnKey = columns.find((column) => !column.key.startsWith("_"))?.key ?? columns[0]?.key;
+
+  const handleSearchChange = React.useCallback(
+    (value: string) => {
+      setSearchInput(value);
+      if (!isServerMode) return;
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+      searchTimerRef.current = setTimeout(() => {
+        setServerSearch(value);
+        void fetchPage(1, serverSort, value);
+      }, 300);
+    },
+    [isServerMode, serverSort, fetchPage],
+  );
+
+  const handleSortingChange = React.useCallback(
+    (updater: React.SetStateAction<SortingState>) => {
+      const newSorting = typeof updater === "function" ? updater(sorting) : updater;
+      setSorting(newSorting);
+
+      if (isServerMode && newSorting.length > 0) {
+        const sort = {
+          field: newSorting[0].id,
+          direction: (newSorting[0].desc ? "desc" : "asc") as "asc" | "desc",
+        };
+        setServerSort(sort);
+        void fetchPage(1, sort, serverSearch);
+      }
+    },
+    [isServerMode, sorting, serverSearch, fetchPage],
+  );
 
   const runAction = React.useCallback(
     async (action: "publish" | "unpublish" | "delete", rows: DataTableRow[]) => {
@@ -159,6 +313,13 @@ export default function DocumentsDataTable({
           }),
         );
 
+        if (isServerMode) {
+          // Re-fetch current page after action
+          const targetPage = action === "delete" ? 1 : serverPage;
+          await fetchPage(targetPage, serverSort, serverSearch);
+          return;
+        }
+
         // Reload with toast params so the server-side Toast component renders
         const count = rows.length;
         const label = count === 1 ? "document" : "documents";
@@ -170,13 +331,17 @@ export default function DocumentsDataTable({
         window.location.assign(url.pathname + url.search);
       } catch (error) {
         const msg = error instanceof Error ? error.message : "Action failed";
+        if (isServerMode) {
+          setActionError(msg);
+          return;
+        }
         const url = new URL(window.location.href);
         url.searchParams.set("_toast", "error");
         url.searchParams.set("_msg", msg);
         window.location.assign(url.pathname + url.search);
       }
     },
-    [collectionSlug],
+    [collectionSlug, isServerMode, serverPage, serverSort, serverSearch, fetchPage],
   );
 
   const tableColumns = React.useMemo<ColumnDef<DataTableRow>[]>(
@@ -201,21 +366,25 @@ export default function DocumentsDataTable({
         enableSorting: false,
         enableHiding: false,
       },
-      {
-        id: "search",
-        accessorFn: (row) =>
-          [row.searchText, ...Object.values(row.values), row.locales.join(" ")].join(" ").toLowerCase(),
-        header: () => null,
-        cell: () => null,
-        enableSorting: false,
-        enableHiding: false,
-      },
+      ...(!isServerMode
+        ? [
+            {
+              id: "search",
+              accessorFn: (row: DataTableRow) =>
+                [row.searchText, ...Object.values(row.values), row.locales.join(" ")].join(" ").toLowerCase(),
+              header: () => null,
+              cell: () => null,
+              enableSorting: false,
+              enableHiding: false,
+            } as ColumnDef<DataTableRow>,
+          ]
+        : []),
       ...columns.map<ColumnDef<DataTableRow>>((column) => ({
         accessorFn: (row) => row.values[column.key] ?? "",
         id: column.key,
         header: ({ column: headerColumn }) => <DataTableColumnHeader column={headerColumn} title={column.label} />,
         cell: ({ row }) => {
-          const value = row.original.values[column.key] ?? "—";
+          const value = row.original.values[column.key] ?? "\u2014";
           if (column.key === "_status") {
             return (
               <StatusBadge
@@ -317,32 +486,45 @@ export default function DocumentsDataTable({
         ),
       },
     ],
-    [columns, draftsEnabled, isPending, primaryColumnKey],
+    [columns, draftsEnabled, isPending, primaryColumnKey, isServerMode],
   );
 
   const table = useReactTable({
-    data,
+    data: isServerMode ? serverData : data,
     columns: tableColumns,
     getRowId: (row) => row.id,
     enableRowSelection: true,
-    onSortingChange: setSorting,
+    onSortingChange: isServerMode ? handleSortingChange : setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
+    ...(isServerMode
+      ? {
+          manualPagination: true,
+          manualSorting: true,
+          manualFiltering: true,
+          pageCount: serverTotalPages,
+        }
+      : {
+          getPaginationRowModel: getPaginationRowModel(),
+          getSortedRowModel: getSortedRowModel(),
+          getFilteredRowModel: getFilteredRowModel(),
+        }),
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
+      ...(isServerMode ? { pagination: { pageIndex: serverPage - 1, pageSize } } : {}),
     },
   });
 
-  const searchColumn = table.getColumn("search");
+  const searchColumn = !isServerMode ? table.getColumn("search") : null;
   const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original);
+  const displayedTotal = isServerMode ? serverTotalDocs : table.getFilteredRowModel().rows.length;
+  const displayedPageCount = isServerMode ? serverTotalPages : table.getPageCount();
+  const displayedPageIndex = isServerMode ? serverPage : table.getState().pagination.pageIndex + 1;
 
   return (
     <div className="space-y-4">
@@ -352,13 +534,26 @@ export default function DocumentsDataTable({
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <Input
               placeholder={searchPlaceholder}
-              value={(searchColumn?.getFilterValue() as string) ?? ""}
-              onChange={(event) => searchColumn?.setFilterValue(event.target.value)}
+              value={isServerMode ? searchInput : ((searchColumn?.getFilterValue() as string) ?? "")}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (isServerMode) {
+                  handleSearchChange(value);
+                } else {
+                  searchColumn?.setFilterValue(value);
+                }
+              }}
               className="pl-9 text-sm"
             />
           </div>
           <div className="text-muted-foreground hidden text-sm md:block">
-            {table.getFilteredRowModel().rows.length} {title.toLowerCase()}
+            {isLoading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <>
+                {displayedTotal} {title.toLowerCase()}
+              </>
+            )}
           </div>
         </div>
 
@@ -423,7 +618,7 @@ export default function DocumentsDataTable({
         </div>
       )}
 
-      <div className="rounded-lg border">
+      <div className={cn("rounded-lg border", isLoading && "opacity-60")}>
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -463,22 +658,39 @@ export default function DocumentsDataTable({
         </Table>
       </div>
 
-      {table.getPageCount() > 1 && (
+      {displayedPageCount > 1 && (
         <div className="flex items-center justify-end px-1">
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
+              onClick={() => {
+                if (isServerMode) {
+                  void fetchPage(serverPage - 1, serverSort, serverSearch);
+                } else {
+                  table.previousPage();
+                }
+              }}
+              disabled={isServerMode ? serverPage <= 1 || isLoading : !table.getCanPreviousPage()}
             >
               <ChevronLeft className="size-4" />
               Previous
             </Button>
             <div className="text-muted-foreground text-sm">
-              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+              Page {displayedPageIndex} of {displayedPageCount}
             </div>
-            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (isServerMode) {
+                  void fetchPage(serverPage + 1, serverSort, serverSearch);
+                } else {
+                  table.nextPage();
+                }
+              }}
+              disabled={isServerMode ? serverPage >= serverTotalPages || isLoading : !table.getCanNextPage()}
+            >
               Next
               <ChevronRight className="size-4" />
             </Button>

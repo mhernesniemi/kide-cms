@@ -272,15 +272,37 @@ if (collection && collectionSlug) {
   }
 }
 
+const PAGE_SIZE = 20;
+let totalDocs = 0;
+let totalPages = 1;
+let currentPage = 1;
+let currentSort = viewConfig.list?.defaultSort ?? { field: "_updatedAt", direction: "desc" };
+const searchParam = Astro.url.searchParams.get("q") ?? "";
+
 if (route.kind === "list") {
-  docs = await collectionApi.find(
-    {
-      status: "any",
-      locale: defaultLocale,
-      sort: viewConfig.list?.defaultSort ?? { field: "_updatedAt", direction: "desc" },
-    },
-    runtimeContext,
-  );
+  const sortParam = Astro.url.searchParams.get("sort");
+  const sortDirParam = Astro.url.searchParams.get("dir");
+  if (sortParam) {
+    currentSort = { field: sortParam, direction: (sortDirParam === "asc" ? "asc" : "desc") as "asc" | "desc" };
+  }
+  currentPage = Math.max(1, Number(Astro.url.searchParams.get("page") ?? "1"));
+  const offset = (currentPage - 1) * PAGE_SIZE;
+
+  const findOptions = {
+    status: "any" as const,
+    locale: defaultLocale,
+    sort: currentSort,
+    limit: PAGE_SIZE,
+    offset,
+    search: searchParam || undefined,
+  };
+
+  [docs, totalDocs] = await Promise.all([
+    collectionApi.find(findOptions, runtimeContext),
+    collectionApi.count({ status: "any", locale: defaultLocale, search: searchParam || undefined }, runtimeContext),
+  ]);
+
+  totalPages = Math.max(1, Math.ceil(totalDocs / PAGE_SIZE));
 }
 
 if (route.kind === "edit") {
@@ -498,6 +520,14 @@ const tableRows =
             columns={listColumns.map((column) => ({ key: column, label: humanize(column) }))}
             data={tableRows}
             searchPlaceholder={`Filter ${collection.labels.plural.toLowerCase()}...`}
+            serverPagination={{
+              totalDocs,
+              totalPages,
+              currentPage,
+              pageSize: PAGE_SIZE,
+              currentSort,
+              currentSearch: searchParam,
+            }}
           />
         )}
 

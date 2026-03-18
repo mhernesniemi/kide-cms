@@ -212,19 +212,29 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
     return Response.json(doc);
   }
 
-  const docs = await cmsRuntime[collectionSlug].find(
-    {
-      where: parseJsonQuery(url.searchParams.get("where")),
-      sort: parseJsonQuery(url.searchParams.get("sort")),
-      limit: url.searchParams.get("limit") ? Number(url.searchParams.get("limit")) : undefined,
-      offset: url.searchParams.get("offset") ? Number(url.searchParams.get("offset")) : undefined,
-      locale,
-      status,
-    },
-    ctx,
-  );
+  const limit = url.searchParams.get("limit") ? Number(url.searchParams.get("limit")) : 20;
+  const offset = url.searchParams.get("offset") ? Number(url.searchParams.get("offset")) : 0;
+  const search = url.searchParams.get("search") ?? undefined;
 
-  return Response.json(docs);
+  const findOptions = {
+    where: parseJsonQuery(url.searchParams.get("where")),
+    sort: parseJsonQuery(url.searchParams.get("sort")),
+    limit,
+    offset,
+    locale,
+    status,
+    search,
+  };
+
+  const [docs, totalDocs] = await Promise.all([
+    cmsRuntime[collectionSlug].find(findOptions, ctx),
+    cmsRuntime[collectionSlug].count({ where: findOptions.where, status: findOptions.status, locale, search }, ctx),
+  ]);
+
+  const page = Math.floor(offset / limit) + 1;
+  const totalPages = Math.ceil(totalDocs / limit);
+
+  return Response.json({ docs, totalDocs, limit, offset, page, totalPages });
 };
 
 export const POST: APIRoute = async ({ params, request, locals, cache }) => {

@@ -1,4 +1,4 @@
-import { eq, sql, and, desc, asc, lte } from "drizzle-orm";
+import { eq, sql, and, or, desc, asc, lte, like } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import type { AccessConfig, CMSConfig, CollectionConfig, FieldConfig, HooksConfig, RichTextDocument } from "./define";
@@ -17,6 +17,7 @@ export type FindOptions = {
   offset?: number;
   status?: "draft" | "published" | "scheduled" | "any";
   locale?: string;
+  search?: string;
 };
 
 type RuntimeContext = {
@@ -294,6 +295,19 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
             if (key in tables.main) {
               conditions.push(eq(tables.main[key], value));
             }
+          }
+        }
+
+        // Text search across searchable fields
+        if (options.search?.trim()) {
+          const searchTerm = `%${options.search.trim().toLowerCase()}%`;
+          const searchableTypes = new Set(["text", "slug", "email", "select"]);
+          const searchConditions = Object.entries(collection.fields)
+            .filter(([, f]) => searchableTypes.has(f.type))
+            .filter(([name]) => name in tables.main)
+            .map(([name]) => like(sql`lower(${tables.main[name]})`, searchTerm));
+          if (searchConditions.length > 0) {
+            conditions.push(or(...searchConditions)!);
           }
         }
 
@@ -675,8 +689,43 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
       },
 
       async count(filter: Omit<FindOptions, "limit" | "offset" | "sort"> = {}, context: RuntimeContext = {}) {
-        const docs = await this.find({ ...filter, limit: undefined, offset: undefined }, context);
-        return docs.length;
+        const allowed = await canAccess(access, collection, "read", context);
+        if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
+
+        const db = await getDb();
+        const tables = await getTableRefs(slug);
+        const status = filter.status ?? (collection.drafts ? "published" : "any");
+
+        const conditions: any[] = [];
+        if (status !== "any" && collection.drafts) {
+          conditions.push(eq(tables.main._status, status));
+        }
+        if (filter.where) {
+          for (const [key, value] of Object.entries(filter.where)) {
+            if (key in tables.main) {
+              conditions.push(eq(tables.main[key], value));
+            }
+          }
+        }
+        if (filter.search?.trim()) {
+          const searchTerm = `%${filter.search.trim().toLowerCase()}%`;
+          const searchableTypes = new Set(["text", "slug", "email", "select"]);
+          const searchConditions = Object.entries(collection.fields)
+            .filter(([, f]) => searchableTypes.has(f.type))
+            .filter(([name]) => name in tables.main)
+            .map(([name]) => like(sql`lower(${tables.main[name]})`, searchTerm));
+          if (searchConditions.length > 0) {
+            conditions.push(or(...searchConditions)!);
+          }
+        }
+
+        let query = db.select({ total: sql<number>`count(*)` }).from(tables.main);
+        if (conditions.length > 0) {
+          query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions)) as any;
+        }
+
+        const result = await query;
+        return Number((result[0] as any)?.total ?? 0);
       },
 
       async versions(id: string) {
