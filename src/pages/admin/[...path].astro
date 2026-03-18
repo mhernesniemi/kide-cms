@@ -471,7 +471,7 @@ const tableRows =
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
-            {hasPreview && previewUrl && (
+            {hasPreview && previewUrl && !translationMode && (
               <LivePreview
                 client:load
                 previewUrl={previewUrl}
@@ -514,7 +514,7 @@ const tableRows =
               }
             />
             <div
-              class={`flex flex-wrap items-center justify-between gap-2 ${effectiveSidebarFieldSets.length === 0 ? "max-w-4xl" : ""}`}
+              class={`flex flex-wrap items-center justify-between gap-2 ${effectiveSidebarFieldSets.length === 0 || translationMode ? "max-w-4xl" : ""}`}
             >
               <div class="flex flex-wrap items-center gap-2">
                 {locales.length > 1 &&
@@ -676,7 +676,7 @@ const tableRows =
                   id="translation-form"
                   method="post"
                   action={getFormAction(collection.slug, route.documentId)}
-                  class="space-y-6"
+                  class="grid max-w-4xl gap-6"
                 >
                   <input type="hidden" name="_action" value="save-translation" />
                   <input type="hidden" name="locale" value={selectedLocale} />
