@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "3ab4e4de-3972-470a-8056-ec642cb61407",
+  "id": "9dbf1cee-e8df-4833-bce4-0c19436e0c68",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "cms_asset_folders": {
@@ -167,8 +167,8 @@
           "notNull": false,
           "autoincrement": false
         },
-        "role": {
-          "name": "role",
+        "title": {
+          "name": "title",
           "type": "text",
           "primaryKey": false,
           "notNull": true,

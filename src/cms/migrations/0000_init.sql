@@ -25,7 +25,7 @@ CREATE TABLE `cms_authors` (
 	`name` text NOT NULL,
 	`description` text,
 	`slug` text,
-	`role` text NOT NULL,
+	`title` text NOT NULL,
 	`avatar` text,
 	`_created_at` text NOT NULL,
 	`_updated_at` text NOT NULL
