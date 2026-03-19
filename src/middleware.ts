@@ -1,8 +1,6 @@
 import { defineMiddleware } from "astro:middleware";
 import { getSessionUser } from "./cms/core/auth";
 import { getDb } from "./cms/core/db";
-import { ready } from "./cms/.generated/api";
-
 let hasUsers: boolean | null = null;
 
 export const resetUserCache = () => {
@@ -10,9 +8,6 @@ export const resetUserCache = () => {
 };
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  // Ensure database is initialized and seeded before handling any request
-  await ready;
-
   const { pathname } = context.url;
 
   // Skip auth for public pages and static assets
