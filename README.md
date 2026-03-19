@@ -9,7 +9,14 @@ Supports Astro 6's route caching with tag-based invalidation for static-speed co
 ## Quick Start
 
 ```bash
-# Clone this repo, and run:
+pnpx create-liito-app my-site
+```
+
+Or manually:
+
+```bash
+git clone https://github.com/mhernesniemi/liito-cms.git my-site
+cd my-site
 pnpm i
 pnpm dev
 ```
@@ -59,6 +66,7 @@ posts: {
 - Drafts, publishing, scheduling, versioning
 - i18n with per-field translation tables
 - Asset management with folders and focal points
+- On-demand image optimization
 - Rich text editor (Tiptap)
 - Block editor with repeater fields
 - Hierarchical taxonomies and menus

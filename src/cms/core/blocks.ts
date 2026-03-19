@@ -1,3 +1,4 @@
+import { cmsImage, cmsSrcset } from "./image";
 import { renderRichText } from "./richtext";
 
 function esc(s: unknown): string {
@@ -55,8 +56,15 @@ function renderBlock(block: Record<string, any>): string {
     const images = parseArray(block.images);
     if (!images.length) return "";
     let html = `<section style="padding: 2rem 0;"><div style="display: grid; gap: 1rem;">`;
-    for (const src of images)
-      html += `<img src="${esc(src)}" alt="" style="width: 100%; border-radius: 0.5rem; object-fit: cover;" />`;
+    for (const src of images) {
+      const s = String(src);
+      const isLocal = s.startsWith("/uploads/");
+      if (isLocal) {
+        html += `<img src="${esc(cmsImage(s, 1024))}" srcset="${esc(cmsSrcset(s))}" sizes="(max-width: 768px) 100vw, 768px" alt="" loading="lazy" style="width: 100%; height: auto; border-radius: 0.5rem; object-fit: cover;" />`;
+      } else {
+        html += `<img src="${esc(s)}" alt="" loading="lazy" style="width: 100%; border-radius: 0.5rem; object-fit: cover;" />`;
+      }
+    }
     html += `</div></section>`;
     return html;
   }

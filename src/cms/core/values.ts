@@ -1,4 +1,5 @@
 import type { FieldConfig, RichTextDocument, RichTextNode } from "./define";
+import { cmsImage, cmsSrcset } from "./image";
 
 export const cloneValue = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -66,9 +67,13 @@ const renderNode = (node: RichTextNode): string => {
   }
 
   if (node.type === "image") {
-    const src = escapeHtml(String(node.src ?? ""));
+    const src = String(node.src ?? "");
     const alt = escapeHtml(String(node.alt ?? ""));
-    return `<img src="${src}" alt="${alt}" style="max-width: 100%; border-radius: 0.5rem;" />`;
+    const isLocal = src.startsWith("/uploads/");
+    if (isLocal) {
+      return `<img src="${escapeHtml(cmsImage(src, 1024))}" srcset="${escapeHtml(cmsSrcset(src))}" sizes="(max-width: 768px) 100vw, 768px" alt="${alt}" loading="lazy" style="max-width: 100%; height: auto; border-radius: 0.5rem;" />`;
+    }
+    return `<img src="${escapeHtml(src)}" alt="${alt}" loading="lazy" style="max-width: 100%; border-radius: 0.5rem;" />`;
   }
 
   return "";

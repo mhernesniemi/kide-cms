@@ -28,3 +28,4 @@ public/uploads/
 
 # jetbrains setting folder
 .idea/
+.cms-cache/
