@@ -76,6 +76,7 @@ export default function ImageBrowseDialog({ open, onOpenChange, onSelect }: Prop
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadFolder(null, [{ id: null, name: "All assets" }]);
     }
   }, [open, loadFolder]);

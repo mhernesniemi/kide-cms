@@ -41,7 +41,7 @@ pnpm build                    # generate + production build
 pnpm cms:generate             # regenerate .generated/ from collections.config.ts
 npx drizzle-kit generate      # diff schema → migration SQL
 npx drizzle-kit migrate       # apply pending migrations
-pnpm check                    # run TypeScript/Astro type checking
+pnpm check                    # type-check (astro check) + lint (eslint)
 pnpm format                   # format all files with prettier
 pnpm format:check             # check formatting without writing
 ```
@@ -50,7 +50,7 @@ pnpm format:check             # check formatting without writing
 
 After completing any code changes, ALWAYS run these two commands as a final validation step:
 
-1. `pnpm check` — Run `@astrojs/check` to catch TypeScript errors across all `.ts`, `.tsx`, and `.astro` files. Fix all errors before considering the task done.
+1. `pnpm check` — Runs `astro check` (TypeScript) and `eslint` (lint). Fix all errors before considering the task done.
 2. `pnpm format --write .` — Run Prettier to format all changed files. This must be the very last step.
 
 ## Tech Stack

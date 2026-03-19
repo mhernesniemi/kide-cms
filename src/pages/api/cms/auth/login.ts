@@ -58,7 +58,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     valid = await verifyPassword(storedHash, password);
   } catch {
-    valid = false;
+    // valid remains false
   }
 
   if (!valid) {

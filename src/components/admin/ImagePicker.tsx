@@ -39,26 +39,29 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
     }
   }, [value]);
 
-  const handleUpload = useCallback(async (file: File) => {
-    setUploading(true);
-    try {
-      setLocalPreview(URL.createObjectURL(file));
+  const handleUpload = useCallback(
+    async (file: File) => {
+      setUploading(true);
+      try {
+        setLocalPreview(URL.createObjectURL(file));
 
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/cms/assets/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Upload failed");
-      const asset = await res.json();
-      setValue(asset.url);
-      setAssetId(asset._id);
-      onChangeProp?.(asset.url);
-    } catch (e) {
-      console.error("Upload failed:", e);
-      setLocalPreview(null);
-    } finally {
-      setUploading(false);
-    }
-  }, []);
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch("/api/cms/assets/upload", { method: "POST", body: formData });
+        if (!res.ok) throw new Error("Upload failed");
+        const asset = await res.json();
+        setValue(asset.url);
+        setAssetId(asset._id);
+        onChangeProp?.(asset.url);
+      } catch (e) {
+        console.error("Upload failed:", e);
+        setLocalPreview(null);
+      } finally {
+        setUploading(false);
+      }
+    },
+    [onChangeProp],
+  );
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -272,7 +272,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
 
     const stripSensitiveFields = (doc: Record<string, unknown>) => {
       if (!collection.auth) return doc;
-      const { password, ...rest } = doc;
+      const { password: _password, ...rest } = doc;
       return rest;
     };
 

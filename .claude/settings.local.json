@@ -42,7 +42,8 @@
       "Bash(pkill -f \"drizzle-kit\" 2>/dev/null; echo \"done\")",
       "Bash(sqlite3 ./data/cms.db \"DROP TABLE IF EXISTS cms_categories_translations; DROP TABLE IF EXISTS cms_categories;\" 2>&1)",
       "Bash(pnpm cms:generate 2>&1 && pnpm check 2>&1)",
-      "Bash(pnpm:*)"
+      "Bash(pnpm:*)",
+      "Bash(grep -oE '[a-z@/-]+$')"
     ]
   }
 }

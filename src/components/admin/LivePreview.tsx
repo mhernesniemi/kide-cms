@@ -25,6 +25,7 @@ export default function LivePreview({ previewUrl, formId, fieldNames }: Props) {
 
   // Find the portal target on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPortalTarget(document.getElementById("preview-pane"));
   }, []);
 

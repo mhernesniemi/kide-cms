@@ -1,5 +1,4 @@
 import type { APIRoute } from "astro";
-import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { getDb } from "@/cms/core/db";

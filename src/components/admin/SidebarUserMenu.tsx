@@ -33,6 +33,7 @@ export default function SidebarUserMenu({
   useEffect(() => {
     const saved = localStorage.getItem("admin-theme") as Theme | null;
     if (saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTheme(saved);
       applyTheme(saved);
     }
@@ -51,12 +52,6 @@ export default function SidebarUserMenu({
     setTheme(t);
     localStorage.setItem("admin-theme", t);
     applyTheme(t);
-  };
-
-  const themeIcon = (t: Theme) => {
-    if (t === "light") return <Sun className="size-4" />;
-    if (t === "dark") return <Moon className="size-4" />;
-    return <Monitor className="size-4" />;
   };
 
   return (

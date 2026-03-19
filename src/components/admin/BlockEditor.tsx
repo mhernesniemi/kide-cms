@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { GripVertical, ChevronRight, Plus, Trash2 } from "lucide-react";
 import {
   DndContext,
@@ -427,7 +427,7 @@ function SubFieldControl({
             checked={Boolean(value)}
             onChange={(e) => onChange(e.target.checked)}
           />
-          <span className="text-muted-foreground">{Boolean(value) ? "Enabled" : "Disabled"}</span>
+          <span className="text-muted-foreground">{value ? "Enabled" : "Disabled"}</span>
         </span>
       );
 
@@ -610,15 +610,7 @@ function SubFieldControl({
 // Array of images sub-component
 // -----------------------------------------------
 
-function RepeaterField({
-  fieldId,
-  value,
-  onChange,
-}: {
-  fieldId: string;
-  value: unknown;
-  onChange: (value: unknown) => void;
-}) {
+function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; onChange: (value: unknown) => void }) {
   const items: Array<Record<string, string>> = Array.isArray(value)
     ? value
     : typeof value === "string"
@@ -691,7 +683,7 @@ function ArrayImageField({
   value: unknown;
   onChange: (value: unknown) => void;
 }) {
-  const items: string[] = Array.isArray(value) ? value.map(String) : [];
+  const items: string[] = useMemo(() => (Array.isArray(value) ? value.map(String) : []), [value]);
 
   const addImage = useCallback(() => {
     onChange([...items, ""]);

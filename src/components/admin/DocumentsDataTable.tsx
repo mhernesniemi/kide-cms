@@ -486,7 +486,7 @@ export default function DocumentsDataTable({
         ),
       },
     ],
-    [columns, draftsEnabled, isPending, primaryColumnKey, isServerMode],
+    [columns, draftsEnabled, isPending, primaryColumnKey, isServerMode, runAction],
   );
 
   const table = useReactTable({
