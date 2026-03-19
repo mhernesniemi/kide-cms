@@ -23,6 +23,11 @@ export default function cmsIntegration(): AstroIntegration {
   return {
     name: "liito-cms",
     hooks: {
+      "astro:server:start": ({ address }) => {
+        const host = address.family === "IPv6" ? `[${address.address}]` : address.address;
+        const base = `http://${host === "[::1]" || host === "127.0.0.1" || host === "[::]" ? "localhost" : host}:${address.port}`;
+        console.log(`  [cms] Admin panel: ${base}/admin`);
+      },
       "astro:config:setup": ({ command }) => {
         console.log("  [cms] Generating schema, types, validators, and API...");
         try {

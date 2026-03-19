@@ -396,7 +396,6 @@ const generateApiFile = (): string => {
 import access from "../access";
 import config from "../collections.config";
 import { createCms } from "../core/api";
-import { seedDatabase } from "../core/seed";
 import hooks from "../hooks";
 import type {
   ${imports.map((i) => `${i},`).join("\n  ")}
@@ -405,9 +404,6 @@ import type {
 export const cms = createCms(config, access, hooks) as ReturnType<typeof createCms> & {
 ${apiTypes}
 };
-
-// Auto-seed on first import (idempotent — only inserts if tables are empty)
-export const ready = seedDatabase(config).catch((e: any) => console.warn("CMS seed:", e.message));
 `;
 };
 
