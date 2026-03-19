@@ -42,18 +42,10 @@ const posts = await cms.posts.find({ status: "published" });
 const post = await cms.posts.create({ title: "Hello" });
 ```
 
-## Hooks
-
-Lifecycle hooks in `src/cms/hooks.ts` run inside the API on every operation. Use them to transform data, validate, trigger side effects, and invalidate cache:
+Use lifecycle hooks to transform data, validate, trigger side effects, and invalidate cache:
 
 ```typescript
 posts: {
-  beforeCreate(data) {
-    if (!data.excerpt && data.body) {
-      data.excerpt = richTextToPlainText(data.body).slice(0, 180);
-    }
-    return data;
-  },
   afterPublish(doc, context) {
     context.cache?.invalidate({ tags: ["posts", `post:${doc._id}`] });
   },
