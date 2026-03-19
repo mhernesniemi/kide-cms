@@ -41,7 +41,6 @@
     "@tiptap/react": "^3.20.1",
     "@tiptap/starter-kit": "^3.20.1",
     "ai": "^6.0.116",
-    "argon2": "^0.44.0",
     "astro": "^6.0.4",
     "better-sqlite3": "^12.6.2",
     "class-variance-authority": "^0.7.1",

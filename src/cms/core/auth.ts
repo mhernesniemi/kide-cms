@@ -1,12 +1,53 @@
-import * as argon2 from "argon2";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { getDb } from "./db";
 
-export const hashPassword = (plain: string) => argon2.hash(plain);
+const ITERATIONS = 600_000;
+const HASH_LENGTH = 32;
+const SALT_LENGTH = 16;
 
-export const verifyPassword = (hash: string, plain: string) => argon2.verify(hash, plain);
+const encode = (buffer: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(buffer)));
+
+const decode = (base64: string) => Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+
+const deriveKey = async (plain: string, salt: Uint8Array) => {
+  const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(plain), "PBKDF2", false, [
+    "deriveBits",
+  ]);
+  return crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: salt.buffer as ArrayBuffer, iterations: ITERATIONS, hash: "SHA-256" },
+    keyMaterial,
+    HASH_LENGTH * 8,
+  );
+};
+
+export const hashPassword = async (plain: string): Promise<string> => {
+  const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
+  const derived = await deriveKey(plain, salt);
+  return `pbkdf2:${ITERATIONS}:${encode(salt.buffer as ArrayBuffer)}:${encode(derived)}`;
+};
+
+export const verifyPassword = async (hash: string, plain: string): Promise<boolean> => {
+  const [, iterStr, saltB64, hashB64] = hash.split(":");
+  if (!iterStr || !saltB64 || !hashB64) return false;
+  const salt = decode(saltB64);
+  const expected = decode(hashB64);
+  const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(plain), "PBKDF2", false, [
+    "deriveBits",
+  ]);
+  const derived = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      { name: "PBKDF2", salt, iterations: Number(iterStr), hash: "SHA-256" },
+      keyMaterial,
+      expected.length * 8,
+    ),
+  );
+  if (derived.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < derived.length; i++) diff |= derived[i] ^ expected[i];
+  return diff === 0;
+};
 
 export const createSession = async (userId: string): Promise<{ token: string; expiresAt: string }> => {
   const db = await getDb();
