@@ -26,7 +26,7 @@ export default function cmsIntegration(): AstroIntegration {
       "astro:server:start": ({ address }) => {
         const host = address.family === "IPv6" ? `[${address.address}]` : address.address;
         const base = `http://${host === "[::1]" || host === "127.0.0.1" || host === "[::]" ? "localhost" : host}:${address.port}`;
-        console.log(`  \x1b[36m[cms] Admin panel: ${base}/admin\x1b[0m`);
+        console.log(`  \x1b[36m[cms]\x1b[0m Admin panel: \x1b[36m${base}/admin\x1b[0m`);
       },
       "astro:config:setup": ({ command }) => {
         console.log("  [cms] Generating schema, types, validators, and API...");
