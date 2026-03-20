@@ -15,6 +15,7 @@ import config from "@/cms/collections.config";
 import views from "@/cms/admin/views";
 import { cms } from "@/cms/.generated/api";
 import { isAiEnabled } from "@/cms/core/ai";
+import { getLabelField } from "@/cms/core/define";
 import {
   formatDate,
   formatFieldValue,
@@ -87,7 +88,7 @@ if (route.kind === "recent") {
   recentRows = topEntries.map(({ doc, collection: cc }) => {
     const displayTitle = cc.singleton
       ? cc.labels.singular
-      : String(doc.title ?? doc.name ?? doc.slug ?? cc.labels.singular);
+      : String(doc[getLabelField(cc)] ?? doc.slug ?? cc.labels.singular);
     return {
       id: String(doc._id),
       editHref: `/admin/${cc.slug}/${doc._id}`,
@@ -207,18 +208,18 @@ if (collection && collectionSlug) {
         runtimeContext,
       );
 
+      const relatedCollection = config.collections.find((c) => c.slug === field.collection);
+      const relLabelField = relatedCollection ? getLabelField(relatedCollection) : "title";
       relationOptionsByField[fieldName] = relatedDocs.map((item: Record<string, unknown>) => ({
         value: String(item._id),
-        label: String(item.title ?? item.name ?? item.slug ?? item._id),
+        label: String(item[relLabelField] ?? item.slug ?? item._id),
       }));
-
-      // Build metadata for RelationField component
-      const relatedCollection = config.collections.find((c) => c.slug === field.collection);
       if (relatedCollection) {
         relationMetaByField[fieldName] = {
           collectionSlug: field.collection,
           collectionLabel: relatedCollection.labels.singular,
           hasMany: field.hasMany ?? false,
+          labelField: getLabelField(relatedCollection),
         };
       }
     }
@@ -237,9 +238,11 @@ if (collection && collectionSlug) {
                 { status: "any", limit: 100, sort: { field: "_updatedAt", direction: "desc" }, locale: defaultLocale },
                 runtimeContext,
               );
+              const blkRelCol = config.collections.find((c) => c.slug === subField.collection);
+              const blkLabelField = blkRelCol ? getLabelField(blkRelCol) : "title";
               relationOptionsByField[key] = relatedDocs.map((item: Record<string, unknown>) => ({
                 value: String(item._id),
-                label: String(item.title ?? item.name ?? item.slug ?? item._id),
+                label: String(item[blkLabelField] ?? item.slug ?? item._id),
               }));
             }
           }
@@ -264,7 +267,7 @@ if (collection && collectionSlug) {
         label: lc.labels.plural,
         items: lcDocs.map((d: Record<string, unknown>) => ({
           id: String(d._id),
-          label: String(d.title ?? d.name ?? d.slug ?? d._id),
+          label: String(d[getLabelField(lc)] ?? d.slug ?? d._id),
           href: cms.meta.getRouteForDocument(lc.slug, d),
         })),
       });
@@ -373,7 +376,7 @@ const tableRows =
             ? entry._availableLocales.map((l) => String(l)).filter((l) => l !== defaultLocale)
             : []),
         ],
-        searchText: String(entry.title ?? entry.name ?? entry.slug ?? entry._id ?? ""),
+        searchText: String(entry[getLabelField(collection)] ?? entry.slug ?? entry._id ?? ""),
         values: Object.fromEntries(
           listColumns.map((column) => [
             column,
@@ -465,7 +468,7 @@ const tableRows =
               {route.kind === "edit" && (
                 <LiveHeading
                   client:load
-                  initial={String(doc?.title ?? doc?.name ?? doc?.slug ?? collection.labels.singular)}
+                  initial={String(doc?.[getLabelField(collection)] ?? doc?.slug ?? collection.labels.singular)}
                 />
               )}
             </h1>
@@ -516,6 +519,7 @@ const tableRows =
             collectionSlug={collection.slug}
             draftsEnabled={collection.drafts}
             defaultLocale={locales.length > 1 ? defaultLocale : undefined}
+            labelField={getLabelField(collection)}
             newHref={`/admin/${collection.slug}/new`}
             title={collection.labels.plural}
             columns={listColumns.map((column) => ({ key: column, label: humanize(column) }))}

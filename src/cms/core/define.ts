@@ -130,6 +130,7 @@ export type SeedDocument = Record<string, unknown> & {
 export type CollectionConfig = {
   slug: string;
   labels: CollectionLabels;
+  labelField?: string;
   pathPrefix?: string;
   timestamps?: boolean;
   drafts?: boolean;
@@ -254,3 +255,11 @@ export const isStructuralField = (field: FieldConfig) =>
   ["number", "boolean", "relation", "image", "date"].includes(field.type);
 
 export const getCollectionLabel = (collection: CollectionConfig) => collection.labels.plural;
+
+export const getLabelField = (collection: CollectionConfig): string => {
+  if (collection.labelField && collection.labelField in collection.fields) return collection.labelField;
+  if ("title" in collection.fields) return "title";
+  if ("name" in collection.fields) return "name";
+  const firstTextField = Object.entries(collection.fields).find(([, f]) => f.type === "text");
+  return firstTextField ? firstTextField[0] : Object.keys(collection.fields)[0];
+};

@@ -76,6 +76,7 @@ type DocumentsDataTableProps = {
   collectionSlug: string;
   draftsEnabled?: boolean;
   defaultLocale?: string;
+  labelField?: string;
   newHref?: string;
   title: string;
   searchPlaceholder?: string;
@@ -131,6 +132,7 @@ export default function DocumentsDataTable({
   collectionSlug,
   draftsEnabled = false,
   defaultLocale,
+  labelField = "title",
   newHref,
   title,
   searchPlaceholder = "Filter documents...",
@@ -194,7 +196,7 @@ export default function DocumentsDataTable({
                 ? (entry._availableLocales as string[]).filter((l) => l !== defaultLocale)
                 : []),
             ],
-            searchText: String(entry.title ?? entry.name ?? entry.slug ?? entry._id ?? ""),
+            searchText: String(entry[labelField] ?? entry.slug ?? entry._id ?? ""),
             values: Object.fromEntries(
               columns.map((column) => [
                 column.key,
@@ -232,7 +234,7 @@ export default function DocumentsDataTable({
         setIsLoading(false);
       }
     },
-    [isServerMode, collectionSlug, columns, pageSize, defaultLocale],
+    [isServerMode, collectionSlug, columns, pageSize, defaultLocale, labelField],
   );
 
   // Cleanup debounce timer

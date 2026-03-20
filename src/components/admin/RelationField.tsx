@@ -18,6 +18,7 @@ type Props = {
   options: Option[];
   collectionSlug: string;
   collectionLabel: string;
+  labelField?: string;
 };
 
 export default function RelationField({
@@ -27,6 +28,7 @@ export default function RelationField({
   options: initialOptions,
   collectionSlug,
   collectionLabel,
+  labelField = "title",
 }: Props) {
   const [options, setOptions] = useState(initialOptions);
   const [selected, setSelected] = useState<string[]>(() => {
@@ -85,7 +87,7 @@ export default function RelationField({
         .then((res) => (res.ok ? res.json() : null))
         .then((doc) => {
           if (doc) {
-            const label = String(doc.title ?? doc.name ?? doc.slug ?? docId);
+            const label = String(doc[labelField] ?? doc.slug ?? docId);
             setOptions((prev) => {
               const exists = prev.some((o) => o.value === docId);
               return exists
@@ -104,7 +106,7 @@ export default function RelationField({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [sheetOpen, collectionSlug, hasMany]);
+  }, [sheetOpen, collectionSlug, hasMany, labelField]);
 
   return (
     <div className="space-y-2">

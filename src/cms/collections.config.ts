@@ -25,6 +25,7 @@ export default defineConfig({
     defineCollection({
       slug: "authors",
       labels: { singular: "Author", plural: "Authors" },
+      labelField: "name",
       timestamps: true,
       fields: {
         name: fields.text({ required: true }),

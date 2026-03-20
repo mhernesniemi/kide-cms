@@ -25,6 +25,7 @@ type RelationMeta = {
   collectionSlug: string;
   collectionLabel: string;
   hasMany: boolean;
+  labelField?: string;
 };
 
 type LinkOptionGroup = {
@@ -241,6 +242,7 @@ const blockTypesMeta =
         options={relationOptions}
         collectionSlug={relationMeta.collectionSlug}
         collectionLabel={relationMeta.collectionLabel}
+        labelField={relationMeta.labelField}
       />
     )
   }
