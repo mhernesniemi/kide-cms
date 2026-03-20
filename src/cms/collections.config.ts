@@ -12,6 +12,9 @@ export default defineConfig({
       labels: { singular: "User", plural: "Users" },
       auth: true,
       timestamps: true,
+      views: {
+        list: { columns: ["name", "email", "role", "_updatedAt"] },
+      },
       fields: {
         email: fields.email({ required: true, unique: true }),
         name: fields.text({ required: true }),
@@ -27,6 +30,9 @@ export default defineConfig({
       labels: { singular: "Author", plural: "Authors" },
       labelField: "name",
       timestamps: true,
+      views: {
+        list: { columns: ["name", "title", "_updatedAt"] },
+      },
       fields: {
         name: fields.text({ required: true }),
         description: fields.text({ translatable: true }),
@@ -44,13 +50,16 @@ export default defineConfig({
       timestamps: true,
       drafts: true,
       versions: { max: 20 },
+      views: {
+        list: { columns: ["title", "category", "_status", "_updatedAt"] },
+      },
       fields: {
         title: fields.text({
           required: true,
           indexed: true,
           translatable: true,
         }),
-        slug: fields.slug({ from: "title", unique: true, translatable: true }),
+        slug: fields.slug({ from: "title", unique: true, translatable: true, admin: { position: "sidebar" } }),
         excerpt: fields.text({
           maxLength: 300,
           translatable: true,
@@ -59,9 +68,9 @@ export default defineConfig({
         image: fields.image(),
         body: fields.richText({ translatable: true, admin: { rows: 14 } }),
         category: fields.text({
-          admin: { component: "taxonomy-select", placeholder: "categories" },
+          admin: { component: "taxonomy-select", placeholder: "categories", position: "sidebar" },
         }),
-        author: fields.relation({ collection: "authors" }),
+        author: fields.relation({ collection: "authors", admin: { position: "sidebar" } }),
         postType: fields.select({
           options: ["article", "video", "podcast"],
           defaultValue: "article",
@@ -78,7 +87,7 @@ export default defineConfig({
         seoDescription: fields.text({
           maxLength: 160,
           translatable: true,
-          admin: { rows: 3, help: "Meta description for search engines. Max 160 characters." },
+          admin: { rows: 3, help: "Meta description for search engines. Max 160 characters.", position: "sidebar" },
         }),
       },
     }),
@@ -86,6 +95,9 @@ export default defineConfig({
       slug: "taxonomies",
       labels: { singular: "Taxonomy", plural: "Taxonomies" },
       timestamps: true,
+      views: {
+        list: { columns: ["name", "slug", "_updatedAt"] },
+      },
       fields: {
         name: fields.text({ required: true }),
         slug: fields.slug({ from: "name", unique: true }),
@@ -100,6 +112,9 @@ export default defineConfig({
       slug: "menus",
       labels: { singular: "Menu", plural: "Menus" },
       timestamps: true,
+      views: {
+        list: { columns: ["name", "slug", "_updatedAt"] },
+      },
       fields: {
         name: fields.text({ required: true }),
         slug: fields.slug({ from: "name", unique: true }),
@@ -148,20 +163,24 @@ export default defineConfig({
       timestamps: true,
       drafts: true,
       versions: { max: 20 },
+      views: {
+        list: { columns: ["title", "layout", "_status", "_updatedAt"] },
+      },
       fields: {
         title: fields.text({ required: true, translatable: true }),
-        slug: fields.slug({ from: "title", unique: true, translatable: true }),
+        slug: fields.slug({ from: "title", unique: true, translatable: true, admin: { position: "sidebar" } }),
         summary: fields.text({ translatable: true, admin: { rows: 3 } }),
         image: fields.image(),
         layout: fields.select({
           options: ["default", "landing", "docs"],
           defaultValue: "landing",
+          admin: { position: "sidebar" },
         }),
-        relatedPosts: fields.relation({ collection: "posts", hasMany: true }),
+        relatedPosts: fields.relation({ collection: "posts", hasMany: true, admin: { position: "sidebar" } }),
         seoDescription: fields.text({
           maxLength: 160,
           translatable: true,
-          admin: { rows: 3, help: "Meta description for search engines. Max 160 characters." },
+          admin: { rows: 3, help: "Meta description for search engines. Max 160 characters.", position: "sidebar" },
         }),
         blocks: fields.blocks({
           translatable: true,

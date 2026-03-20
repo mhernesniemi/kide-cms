@@ -115,83 +115,17 @@ export const getListColumns = (collection: CollectionConfig, viewConfig?: { colu
     ? viewConfig.columns
     : ["title" in collection.fields ? "title" : Object.keys(collection.fields)[0], "_status", "_updatedAt"];
 
-export const getFieldSets = (
-  collection: CollectionConfig,
-  viewConfig?: { layout?: Array<{ fields: string[]; position?: string }> },
-) => {
-  if (!viewConfig?.layout?.length) {
-    const allFields = Object.keys(collection.fields).filter((f) => !collection.fields[f].admin?.hidden);
-    const sidebarTypes = new Set(["slug", "relation"]);
-    const sidebarFields = allFields.filter((f) => sidebarTypes.has(collection.fields[f].type));
-    const mainFields = allFields.filter((f) => !sidebarTypes.has(collection.fields[f].type));
-
-    if (sidebarFields.length > 0) {
-      return [
-        { fields: mainFields, position: "content" as const },
-        { fields: sidebarFields, position: "sidebar" as const },
-      ];
-    }
-
-    return [{ fields: allFields, position: "content" as const }];
-  }
-
+export const getFieldSets = (collection: CollectionConfig) => {
   const allFields = Object.keys(collection.fields).filter((f) => !collection.fields[f].admin?.hidden);
-  const hiddenFields = new Set(Object.keys(collection.fields).filter((f) => collection.fields[f].admin?.hidden));
-  const listedFields = new Set(viewConfig.layout.flatMap((set) => set.fields));
-  const unlisted = allFields.filter((f) => !listedFields.has(f));
+  const contentFields = allFields.filter((f) => collection.fields[f].admin?.position !== "sidebar");
+  const sidebarFields = allFields.filter((f) => collection.fields[f].admin?.position === "sidebar");
 
-  if (unlisted.length === 0) {
-    return viewConfig.layout.map((set) => ({
-      fields: set.fields.filter((f) => !hiddenFields.has(f)),
-      position: set.position ?? "content",
-    }));
+  if (sidebarFields.length > 0) {
+    return [
+      { fields: contentFields, position: "content" as const },
+      { fields: sidebarFields, position: "sidebar" as const },
+    ];
   }
 
-  // Insert unlisted fields in config-defined order next to their nearest neighbor
-  const layout = viewConfig.layout.map((set) => ({
-    fields: set.fields.filter((f) => !hiddenFields.has(f)),
-    position: set.position ?? "content",
-  }));
-
-  for (const field of unlisted) {
-    const configIndex = allFields.indexOf(field);
-
-    // Walk backwards in config order to find the nearest preceding field that's already placed
-    let inserted = false;
-    for (let i = configIndex - 1; i >= 0; i--) {
-      const prev = allFields[i];
-      for (const set of layout) {
-        const pos = set.fields.indexOf(prev);
-        if (pos !== -1) {
-          set.fields.splice(pos + 1, 0, field);
-          inserted = true;
-          break;
-        }
-      }
-      if (inserted) break;
-    }
-
-    // No preceding neighbor found — insert before the nearest following field
-    if (!inserted) {
-      for (let i = configIndex + 1; i < allFields.length; i++) {
-        const next = allFields[i];
-        for (const set of layout) {
-          const pos = set.fields.indexOf(next);
-          if (pos !== -1) {
-            set.fields.splice(pos, 0, field);
-            inserted = true;
-            break;
-          }
-        }
-        if (inserted) break;
-      }
-    }
-
-    // Fallback: add to first group
-    if (!inserted) {
-      layout[0].fields.push(field);
-    }
-  }
-
-  return layout;
+  return [{ fields: contentFields, position: "content" as const }];
 };

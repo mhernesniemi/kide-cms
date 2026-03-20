@@ -16,6 +16,7 @@ export type LocaleConfig = {
 export type AdminFieldComponent = {
   component?: string;
   placeholder?: string;
+  position?: "content" | "sidebar";
   rows?: number;
   help?: string;
   hidden?: boolean;
@@ -127,6 +128,13 @@ export type SeedDocument = Record<string, unknown> & {
   _translations?: SeedTranslation[];
 };
 
+export type CollectionViewConfig = {
+  list?: {
+    columns?: string[];
+    defaultSort?: { field: string; direction: "asc" | "desc" };
+  };
+};
+
 export type CollectionConfig = {
   slug: string;
   labels: CollectionLabels;
@@ -138,6 +146,7 @@ export type CollectionConfig = {
   auth?: boolean;
   singleton?: boolean;
   fields: CollectionFieldMap;
+  views?: CollectionViewConfig;
   seed?: SeedDocument[];
 };
 

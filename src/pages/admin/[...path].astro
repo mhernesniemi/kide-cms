@@ -12,7 +12,6 @@ import FieldControl from "@/components/admin/FieldControl.astro";
 import { StatusBadge } from "@/components/admin/ui/badge";
 import { buttonVariants } from "@/components/admin/ui/button";
 import config from "@/cms/collections.config";
-import views from "@/cms/admin/views";
 import { cms } from "@/cms/.generated/api";
 import { isAiEnabled } from "@/cms/core/ai";
 import { getLabelField } from "@/cms/core/define";
@@ -145,7 +144,10 @@ if (route.kind === "singles") {
   }
 }
 
-const getCollectionView = (slug: string) => (views as Record<string, any>)[slug] ?? {};
+const getCollectionView = (slug: string) => {
+  const c = config.collections.find((col) => col.slug === slug);
+  return c?.views ?? {};
+};
 const getFormAction = (collectionSlug: string, documentId?: string) =>
   documentId ? `/api/cms/${collectionSlug}/${documentId}` : `/api/cms/${collectionSlug}`;
 
@@ -339,7 +341,7 @@ const sharedFields = collection
         !translatableFields.includes(fieldName) && !sharedFieldSkipTypes.has(collection.fields[fieldName].type),
     )
   : [];
-const fieldSets = collection ? getFieldSets(collection, viewConfig.edit) : [];
+const fieldSets = collection ? getFieldSets(collection) : [];
 const primaryFieldSets = fieldSets.filter((set: { position?: string }) => set.position !== "sidebar");
 const sidebarFieldSets = fieldSets.filter((set: { position?: string }) => set.position === "sidebar");
 const mainFieldSets = primaryFieldSets.length > 0 ? primaryFieldSets : fieldSets.slice(0, 1);
