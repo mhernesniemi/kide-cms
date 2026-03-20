@@ -28,19 +28,6 @@ export default defineCollection({
       admin: { component: "taxonomy-select", placeholder: "categories", position: "sidebar" },
     }),
     author: fields.relation({ collection: "authors", admin: { position: "sidebar" } }),
-    postType: fields.select({
-      options: ["article", "video", "podcast"],
-      defaultValue: "article",
-      admin: { component: "radio" },
-    }),
-    videoUrl: fields.text({
-      label: "Video URL",
-      condition: { field: "postType", value: "video" },
-    }),
-    podcastUrl: fields.text({
-      label: "Podcast URL",
-      condition: { field: "postType", value: "podcast" },
-    }),
     seoDescription: fields.text({
       maxLength: 160,
       translatable: true,
