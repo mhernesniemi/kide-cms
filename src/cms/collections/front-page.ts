@@ -1,0 +1,34 @@
+import { defineCollection, fields } from "../core/define";
+
+export default defineCollection({
+  slug: "front-page",
+  labels: { singular: "Front Page", plural: "Front Page" },
+  singleton: true,
+  timestamps: true,
+  drafts: true,
+  fields: {
+    blocks: fields.blocks({
+      translatable: true,
+      types: {
+        hero: {
+          eyebrow: fields.text(),
+          heading: fields.text({ required: true }),
+          body: fields.text(),
+          ctaLabel: fields.text(),
+          ctaHref: fields.text(),
+        },
+        text: {
+          heading: fields.text(),
+          content: fields.richText(),
+        },
+        faq: {
+          heading: fields.text(),
+          items: fields.json({
+            defaultValue: [] as any,
+            admin: { component: "repeater", help: "Add question and answer pairs" },
+          }),
+        },
+      },
+    }),
+  },
+});
