@@ -62,11 +62,6 @@ export default defineConfig({
           admin: { component: "taxonomy-select", placeholder: "categories" },
         }),
         author: fields.relation({ collection: "authors" }),
-        tags: fields.array({
-          of: fields.text(),
-          defaultValue: [],
-          admin: { placeholder: "e.g. design, tutorial, astro" },
-        }),
         postType: fields.select({
           options: ["article", "video", "podcast"],
           defaultValue: "article",

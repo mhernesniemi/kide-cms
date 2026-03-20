@@ -32,7 +32,7 @@ export default {
       layout: [
         { fields: ["title", "excerpt", "image", "body"], position: "content" },
         {
-          fields: ["slug", "category", "author", "tags", "seoDescription"],
+          fields: ["slug", "category", "author", "seoDescription"],
           position: "sidebar",
         },
       ],
