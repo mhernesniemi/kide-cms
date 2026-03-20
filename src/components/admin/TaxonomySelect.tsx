@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronsUpDown, X } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/admin/ui/button";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/admin/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/admin/ui/popover";
@@ -86,7 +86,7 @@ export default function TaxonomySelect({ name, value: initialValue, taxonomySlug
               {selectedTerm ? (
                 <span className="flex items-center gap-1">
                   {selectedTerm.path.length > 1 && (
-                    <span className="text-muted-foreground text-xs">
+                    <span className="text-muted-foreground">
                       {selectedTerm.path.slice(0, -1).join(" / ")}
                       {" / "}
                     </span>
@@ -94,20 +94,10 @@ export default function TaxonomySelect({ name, value: initialValue, taxonomySlug
                   {selectedTerm.name}
                 </span>
               ) : (
-                "Select term..."
+                `Search ${taxonomySlug}...`
               )}
             </span>
-            {value ? (
-              <X
-                className="text-muted-foreground hover:text-foreground size-4 shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setValue("");
-                }}
-              />
-            ) : (
-              <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
-            )}
+            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">

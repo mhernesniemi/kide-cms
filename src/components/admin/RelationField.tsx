@@ -155,18 +155,6 @@ export default function RelationField({
             <CommandInput placeholder={`Search ${collectionLabel.toLowerCase()}...`} />
             <CommandList>
               <CommandEmpty>No results found.</CommandEmpty>
-              {!hasMany && (
-                <CommandItem
-                  value="__none__"
-                  onSelect={() => {
-                    setSelected([]);
-                    setOpen(false);
-                  }}
-                >
-                  <Check className={cn("size-4", selected.length === 0 ? "opacity-100" : "opacity-0")} />
-                  <span className="text-muted-foreground">None</span>
-                </CommandItem>
-              )}
               {options.map((o) => (
                 <CommandItem key={o.value} value={o.label} onSelect={() => selectItem(o.value)}>
                   <Check className={cn("size-4", selected.includes(o.value) ? "opacity-100" : "opacity-0")} />
