@@ -1,8 +1,37 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
+import Link from "@tiptap/extension-link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, ImageIcon, Undo, Redo } from "lucide-react";
+import {
+  Bold,
+  Check,
+  ChevronsUpDown,
+  Italic,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  Quote,
+  ImageIcon,
+  Link as LinkIcon,
+  Undo,
+  Redo,
+} from "lucide-react";
+import { Button } from "@/components/admin/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/admin/ui/command";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/admin/ui/dialog";
+import { Input } from "@/components/admin/ui/input";
+import { Label } from "@/components/admin/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/admin/ui/popover";
+import { cn } from "@/lib/utils";
 import ImageBrowseDialog from "@/components/admin/ImageBrowseDialog";
 
 // -----------------------------------------------
@@ -30,6 +59,7 @@ const cmsNodeToTiptap = (node: CmsNode): any => {
     const marks: any[] = [];
     if (node.bold) marks.push({ type: "bold" });
     if (node.italic) marks.push({ type: "italic" });
+    if (node.href) marks.push({ type: "link", attrs: { href: node.href, target: node.target ?? null } });
     return { type: "text", text: node.value ?? "", ...(marks.length > 0 ? { marks } : {}) };
   }
   if (node.type === "paragraph") {
@@ -82,6 +112,10 @@ const tiptapNodeToCms = (node: any): CmsNode | null => {
       for (const mark of node.marks) {
         if (mark.type === "bold") result.bold = true;
         if (mark.type === "italic") result.italic = true;
+        if (mark.type === "link") {
+          result.href = mark.attrs?.href ?? "";
+          if (mark.attrs?.target) result.target = mark.attrs.target;
+        }
       }
     }
     return result;
@@ -160,6 +194,159 @@ const ToolbarButton = ({
 );
 
 // -----------------------------------------------
+// Link dialog
+// -----------------------------------------------
+
+function LinkDialog({
+  open,
+  onOpenChange,
+  linkType,
+  onLinkTypeChange,
+  linkUrl,
+  onLinkUrlChange,
+  linkGroups,
+  isEditing,
+  onApply,
+  onRemove,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  linkType: "internal" | "external";
+  onLinkTypeChange: (type: "internal" | "external") => void;
+  linkUrl: string;
+  onLinkUrlChange: (url: string) => void;
+  linkGroups: Array<{ label: string; items: Array<{ label: string; href: string }> }>;
+  isEditing: boolean;
+  onApply: () => void;
+  onRemove: () => void;
+}) {
+  const [comboOpen, setComboOpen] = useState(false);
+  const selectedLabel = (() => {
+    for (const group of linkGroups) {
+      const found = group.items.find((item) => item.href === linkUrl);
+      if (found) return found.label;
+    }
+    return "";
+  })();
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{isEditing ? "Edit link" : "Insert link"}</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-2">
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="link-type"
+                checked={linkType === "internal"}
+                onChange={() => {
+                  onLinkTypeChange("internal");
+                  onLinkUrlChange("");
+                }}
+                className="size-4"
+              />
+              Internal
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="link-type"
+                checked={linkType === "external"}
+                onChange={() => {
+                  onLinkTypeChange("external");
+                  onLinkUrlChange("");
+                }}
+                className="size-4"
+              />
+              External
+            </label>
+          </div>
+
+          {linkType === "external" ? (
+            <div className="grid gap-2">
+              <Label htmlFor="link-url">URL</Label>
+              <Input
+                id="link-url"
+                value={linkUrl}
+                onChange={(e) => onLinkUrlChange(e.target.value)}
+                placeholder="https://example.com"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onApply();
+                  }
+                }}
+              />
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              <Label>Page</Label>
+              <Popover open={comboOpen} onOpenChange={setComboOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={comboOpen}
+                    size="lg"
+                    className="border-input bg-muted/30 hover:bg-muted dark:bg-input/30 dark:hover:bg-input/50 w-full justify-between text-base font-normal"
+                  >
+                    <span className={cn("truncate", !selectedLabel && "text-muted-foreground")}>
+                      {selectedLabel || "Search documents..."}
+                    </span>
+                    <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search documents..." />
+                    <CommandList>
+                      <CommandEmpty>No documents found.</CommandEmpty>
+                      {linkGroups.map((group) => (
+                        <CommandGroup key={group.label} heading={group.label}>
+                          {group.items.map((item) => (
+                            <CommandItem
+                              key={item.href}
+                              value={`${item.label} ${item.href}`}
+                              onSelect={() => {
+                                onLinkUrlChange(item.href === linkUrl ? "" : item.href);
+                                setComboOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn("ml-1 size-4", linkUrl === item.href ? "opacity-100" : "opacity-0")}
+                              />
+                              {item.label}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      ))}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          {isEditing && (
+            <Button variant="ghost" onClick={onRemove}>
+              Remove link
+            </Button>
+          )}
+          <Button onClick={onApply} disabled={!linkUrl}>
+            Apply
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// -----------------------------------------------
 // Editor component
 // -----------------------------------------------
 
@@ -173,6 +360,12 @@ type Props = {
 export default function RichTextEditor({ name, initialValue, rows = 10, onChange }: Props) {
   const hiddenRef = useRef<HTMLInputElement>(null);
   const [imageBrowseOpen, setImageBrowseOpen] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkType, setLinkType] = useState<"internal" | "external">("internal");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkGroups, setLinkGroups] = useState<Array<{ label: string; items: Array<{ label: string; href: string }> }>>(
+    [],
+  );
 
   const [cmsJson, setCmsJson] = useState<string>(() => {
     if (!initialValue) return JSON.stringify({ type: "root", children: [] });
@@ -206,7 +399,11 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
 
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [StarterKit, Image],
+    extensions: [
+      StarterKit,
+      Image,
+      Link.configure({ openOnClick: false, HTMLAttributes: { class: "text-primary underline" } }),
+    ],
     content: cmsToTiptap(parsedInitial),
     onUpdate: ({ editor }) => {
       const tiptapJson = editor.getJSON();
@@ -317,6 +514,49 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
           <Quote className="size-4" />
         </ToolbarButton>
 
+        <ToolbarButton
+          onClick={() => {
+            const href = editor?.getAttributes("link").href ?? "";
+            setLinkUrl(href);
+            const isExternal = href.startsWith("http://") || href.startsWith("https://");
+            setLinkType(href && !isExternal ? "internal" : href ? "external" : "internal");
+            // Fetch internal pages for the picker
+            if (linkGroups.length === 0) {
+              Promise.all([
+                fetch("/api/cms/pages?status=published&limit=200").then((r) => (r.ok ? r.json() : { docs: [] })),
+                fetch("/api/cms/posts?status=published&limit=200").then((r) => (r.ok ? r.json() : { docs: [] })),
+              ]).then(([pagesRes, postsRes]) => {
+                const groups: typeof linkGroups = [];
+                if (pagesRes.docs?.length) {
+                  groups.push({
+                    label: "Pages",
+                    items: pagesRes.docs.map((p: Record<string, unknown>) => ({
+                      label: String(p.title ?? p.slug),
+                      href: `/${p.slug}`,
+                    })),
+                  });
+                }
+                if (postsRes.docs?.length) {
+                  groups.push({
+                    label: "Posts",
+                    items: postsRes.docs.map((p: Record<string, unknown>) => ({
+                      label: String(p.title ?? p.slug),
+                      href: `/blog/${p.slug}`,
+                    })),
+                  });
+                }
+                setLinkGroups(groups);
+              });
+            }
+            setLinkDialogOpen(true);
+          }}
+          active={editor?.isActive("link")}
+          disabled={!editor}
+          title="Link"
+        >
+          <LinkIcon className="size-4" />
+        </ToolbarButton>
+
         <div className="bg-border mx-1 h-5 w-px" />
 
         <ToolbarButton onClick={() => setImageBrowseOpen(true)} disabled={!editor} title="Insert image">
@@ -352,6 +592,32 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
         onOpenChange={setImageBrowseOpen}
         onSelect={(asset) => {
           editor?.chain().focus().setImage({ src: asset.url, alt: asset.filename }).run();
+        }}
+      />
+
+      <LinkDialog
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
+        linkType={linkType}
+        onLinkTypeChange={setLinkType}
+        linkUrl={linkUrl}
+        onLinkUrlChange={setLinkUrl}
+        linkGroups={linkGroups}
+        isEditing={!!editor?.isActive("link")}
+        onApply={() => {
+          if (linkUrl) {
+            const isExternal = linkUrl.startsWith("http://") || linkUrl.startsWith("https://");
+            editor
+              ?.chain()
+              .focus()
+              .setLink({ href: linkUrl, target: isExternal ? "_blank" : null })
+              .run();
+          }
+          setLinkDialogOpen(false);
+        }}
+        onRemove={() => {
+          editor?.chain().focus().unsetLink().run();
+          setLinkDialogOpen(false);
         }}
       />
     </div>

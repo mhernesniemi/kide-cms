@@ -41,6 +41,12 @@ const renderNode = (node: RichTextNode): string => {
     let content = escapeHtml(String(node.value ?? ""));
     if (node.bold) content = `<strong>${content}</strong>`;
     if (node.italic) content = `<em>${content}</em>`;
+    if (node.href) {
+      const href = escapeHtml(String(node.href));
+      const isExternal = String(node.href).startsWith("http://") || String(node.href).startsWith("https://");
+      const target = isExternal ? ' target="_blank" rel="noopener noreferrer"' : "";
+      content = `<a href="${href}"${target}>${content}</a>`;
+    }
     return content;
   }
 
