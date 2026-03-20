@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { GripVertical, ChevronRight, Plus, Trash2 } from "lucide-react";
 import {
   DndContext,
@@ -102,6 +102,8 @@ function SortableBlock({
   block,
   fieldsMeta,
   isExpanded,
+  autoFocus,
+  onAutoFocused,
   onToggle,
   onRemove,
   onUpdateField,
@@ -110,14 +112,27 @@ function SortableBlock({
   block: Block;
   fieldsMeta: Record<string, SubFieldMeta>;
   isExpanded: boolean;
+  autoFocus?: boolean;
+  onAutoFocused?: () => void;
   onToggle: () => void;
   onRemove: () => void;
   onUpdateField: (fieldName: string, value: unknown) => void;
   getRelationOptions: (blockType: string, fieldName: string) => RelationOption[];
 }) {
+  const contentRef = useRef<HTMLDivElement>(null);
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: block._key,
   });
+
+  useEffect(() => {
+    if (autoFocus && isExpanded && contentRef.current) {
+      const input = contentRef.current.querySelector<HTMLElement>("input, textarea, [contenteditable]");
+      if (input) {
+        input.focus();
+        onAutoFocused?.();
+      }
+    }
+  }, [autoFocus, isExpanded, onAutoFocused]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -178,7 +193,7 @@ function SortableBlock({
 
       {/* Content */}
       {isExpanded && (
-        <div className="space-y-4 border-t px-4 py-4">
+        <div ref={contentRef} className="space-y-4 border-t px-4 py-4">
           {Object.entries(fieldsMeta).map(([fieldName, meta]) => (
             <SubField
               key={fieldName}
@@ -203,6 +218,7 @@ function SortableBlock({
 export default function BlockEditor({ name, value, types, blockRelationOptions = {} }: Props) {
   const [blocks, setBlocks] = useState<Block[]>(() => parseBlocks(value, types));
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
+  const [newBlockKey, setNewBlockKey] = useState<string | null>(null);
   const hiddenRef = useRef<HTMLInputElement>(null);
 
   const typeNames = Object.keys(types);
@@ -258,6 +274,7 @@ export default function BlockEditor({ name, value, types, blockRelationOptions =
           newBlock[fieldName] = "";
         }
       }
+      setNewBlockKey(newBlock._key);
       updateBlocks((prev) => [...prev, newBlock]);
       setExpandedKeys((prev) => new Set(prev).add(newBlock._key));
     },
@@ -310,6 +327,8 @@ export default function BlockEditor({ name, value, types, blockRelationOptions =
                   block={block}
                   fieldsMeta={fieldsMeta}
                   isExpanded={expandedKeys.has(block._key)}
+                  autoFocus={newBlockKey === block._key}
+                  onAutoFocused={() => setNewBlockKey(null)}
                   onToggle={() => toggleExpanded(block._key)}
                   onRemove={() => removeBlock(block._key)}
                   onUpdateField={(fn, v) => updateField(block._key, fn, v)}
@@ -326,7 +345,14 @@ export default function BlockEditor({ name, value, types, blockRelationOptions =
       {/* Add block buttons */}
       <div className="flex flex-wrap gap-2">
         {typeNames.map((typeName) => (
-          <Button key={typeName} type="button" variant="outline" size="sm" className="text-foreground/70" onClick={() => addBlock(typeName)}>
+          <Button
+            key={typeName}
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-foreground/70"
+            onClick={() => addBlock(typeName)}
+          >
             <Plus className="mr-1 size-3.5" />
             {humanize(typeName)}
           </Button>
@@ -611,6 +637,7 @@ function SubFieldControl({
 // -----------------------------------------------
 
 function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; onChange: (value: unknown) => void }) {
+  const [newItemKey, setNewItemKey] = useState<string | null>(null);
   const items: Array<Record<string, string>> = Array.isArray(value)
     ? value
     : typeof value === "string"
@@ -628,8 +655,10 @@ function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; o
   const fieldKeys = items.length > 0 ? Object.keys(items[0]).filter((k) => k !== "_key") : ["title", "description"];
 
   const addItem = () => {
-    const blank: Record<string, string> = { _key: generateKey() };
+    const key = generateKey();
+    const blank: Record<string, string> = { _key: key };
     for (const k of fieldKeys) blank[k] = "";
+    setNewItemKey(key);
     onChange([...items, blank]);
   };
 
@@ -645,7 +674,24 @@ function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; o
   return (
     <div className="space-y-3">
       {items.map((item, index) => (
-        <div key={item._key ?? index} className="bg-muted/30 space-y-2 rounded-lg border p-3">
+        // When a new item is added, use a ref callback to focus its first input on mount
+        <div
+          key={item._key ?? index}
+          className="bg-muted/30 space-y-2 rounded-lg border p-3"
+          ref={
+            item._key === newItemKey
+              ? (el) => {
+                  if (el) {
+                    const input = el.querySelector<HTMLElement>("input, textarea");
+                    if (input) {
+                      input.focus();
+                      setNewItemKey(null);
+                    }
+                  }
+                }
+              : undefined
+          }
+        >
           {fieldKeys.map((key) => (
             <div key={key} className="grid gap-1">
               <Label className="text-xs">{humanize(key)}</Label>
