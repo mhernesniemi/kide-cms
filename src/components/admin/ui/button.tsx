@@ -17,7 +17,7 @@ const buttonVariants = cva(
         publish:
           "bg-emerald-200/80 hover:bg-emerald-200/60 text-emerald-800 border-emerald-400 dark:bg-emerald-500/30 dark:hover:bg-emerald-500/40 dark:border-emerald-700 dark:text-emerald-200",
         ghost:
-          "border-transparent hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+          "border-transparent hover:bg-foreground/15 hover:text-foreground aria-expanded:bg-foreground/15 aria-expanded:text-foreground",
         destructive:
           "border-transparent bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "border-transparent text-primary underline-offset-4 hover:underline",
