@@ -405,7 +405,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
     extensions: [
       StarterKit,
       Image,
-      Link.configure({ openOnClick: false, HTMLAttributes: { class: "text-primary underline" } }),
+      Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false, HTMLAttributes: { class: "text-primary underline cursor-text pointer-events-none" } }),
     ],
     content: cmsToTiptap(parsedInitial),
     onUpdate: ({ editor }) => {
@@ -421,6 +421,22 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
       attributes: {
         class: "prose prose-sm max-w-none text-base focus:outline-none",
         style: `min-height: ${rows * 1.5}rem; padding: 0.625rem 0.75rem`,
+      },
+      handleDOMEvents: {
+        mousedown(view, event) {
+          const target = event.target as HTMLElement;
+          if (target.tagName === "A" || target.closest("a")) {
+            event.preventDefault();
+          }
+        },
+        click(view, event) {
+          const target = event.target as HTMLElement;
+          if (target.tagName === "A" || target.closest("a")) {
+            event.preventDefault();
+            event.stopPropagation();
+            return true;
+          }
+        },
       },
     },
   });
