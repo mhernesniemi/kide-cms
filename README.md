@@ -2,7 +2,7 @@
 
 Code-first, single-schema CMS built inside an Astro app. ~2k lines of core engine.
 
-Collections define everything: Drizzle tables, TypeScript types, and a runtime admin UI.
+Collections config defines everything: Drizzle tables, TypeScript types, and a runtime admin UI.
 
 Supports Astro 6's route caching with tag-based invalidation for static-speed content delivery.
 
