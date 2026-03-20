@@ -18,7 +18,6 @@
     "format:check": "prettier --check .",
     "cms:generate": "tsx src/cms/core/generator.ts",
     "cms:seed": "tsx -e \"import('./src/cms/core/seed.ts').then(m => import('./src/cms/collections.config.ts').then(c => m.seedDatabase(c.default)))\"",
-    "cms:migrate": "npm run cms:generate && npx drizzle-kit generate && npx drizzle-kit migrate",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"
