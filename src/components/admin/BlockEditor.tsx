@@ -714,7 +714,7 @@ function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; o
               className="text-muted-foreground hover:text-destructive"
               onClick={() => removeItem(index)}
             >
-              <Trash2 className="size-3" />
+              <Trash2 className="size-3.5" />
             </Button>
           </div>
         </div>
