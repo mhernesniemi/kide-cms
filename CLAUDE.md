@@ -24,7 +24,7 @@ After code changes, ALWAYS run:
 
 | File                                          | Purpose                                            |
 | --------------------------------------------- | -------------------------------------------------- |
-| `src/cms/cms.config.ts`               | Single source of truth — defines all collections   |
+| `src/cms/cms.config.ts`                       | Single source of truth — defines all collections   |
 | `src/cms/access.ts`                           | Access control rules                               |
 | `src/cms/hooks.ts`                            | Lifecycle hooks (beforeCreate, afterPublish, etc.) |
 | `src/cms/core/`                               | CMS runtime (editable, not an npm package)         |
