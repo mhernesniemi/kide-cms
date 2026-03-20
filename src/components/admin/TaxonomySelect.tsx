@@ -56,9 +56,9 @@ export default function TaxonomySelect({ name, value: initialValue, taxonomySlug
 
   useEffect(() => {
     fetch(`/api/cms/taxonomies?where=${encodeURIComponent(JSON.stringify({ slug: taxonomySlug }))}&status=any`)
-      .then((res) => (res.ok ? res.json() : []))
-      .then((docs) => {
-        const doc = docs[0];
+      .then((res) => (res.ok ? res.json() : { docs: [] }))
+      .then((result) => {
+        const doc = result.docs?.[0] ?? result[0];
         if (!doc?.terms) return;
         const parsed = typeof doc.terms === "string" ? JSON.parse(doc.terms) : doc.terms;
         if (Array.isArray(parsed)) {
