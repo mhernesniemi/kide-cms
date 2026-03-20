@@ -75,6 +75,7 @@ type ServerPaginationConfig = {
 type DocumentsDataTableProps = {
   collectionSlug: string;
   draftsEnabled?: boolean;
+  defaultLocale?: string;
   newHref?: string;
   title: string;
   searchPlaceholder?: string;
@@ -129,6 +130,7 @@ function DataTableColumnHeader({ column, title }: { column: Column<DataTableRow,
 export default function DocumentsDataTable({
   collectionSlug,
   draftsEnabled = false,
+  defaultLocale,
   newHref,
   title,
   searchPlaceholder = "Filter documents...",
@@ -186,7 +188,12 @@ export default function DocumentsDataTable({
             id: String(entry._id),
             editHref: `/admin/${collectionSlug}/${entry._id}`,
             status: getVisualStatus(entry),
-            locales: [...(Array.isArray(entry._availableLocales) ? (entry._availableLocales as string[]) : [])],
+            locales: [
+              ...(defaultLocale ? [defaultLocale] : []),
+              ...(Array.isArray(entry._availableLocales)
+                ? (entry._availableLocales as string[]).filter((l) => l !== defaultLocale)
+                : []),
+            ],
             searchText: String(entry.title ?? entry.name ?? entry.slug ?? entry._id ?? ""),
             values: Object.fromEntries(
               columns.map((column) => [
@@ -225,7 +232,7 @@ export default function DocumentsDataTable({
         setIsLoading(false);
       }
     },
-    [isServerMode, collectionSlug, columns, pageSize],
+    [isServerMode, collectionSlug, columns, pageSize, defaultLocale],
   );
 
   // Cleanup debounce timer

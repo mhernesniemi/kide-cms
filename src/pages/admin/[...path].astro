@@ -515,6 +515,7 @@ const tableRows =
             client:load
             collectionSlug={collection.slug}
             draftsEnabled={collection.drafts}
+            defaultLocale={locales.length > 1 ? defaultLocale : undefined}
             newHref={`/admin/${collection.slug}/new`}
             title={collection.labels.plural}
             columns={listColumns.map((column) => ({ key: column, label: humanize(column) }))}
