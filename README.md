@@ -6,6 +6,8 @@ One config file defines everything: Drizzle tables, TypeScript types, and a runt
 
 Supports Astro 6's route caching with tag-based invalidation for static-speed content delivery.
 
+[Try the demo](https://kide-cms.vercel.app/admin)
+
 ## Quick Start
 
 ```bash
@@ -64,6 +66,8 @@ posts: {
 - Role-based access control
 - Tag-based cache invalidation
 - AI assistant (alt text, SEO, translations)
+
+[Full documentation](https://kide-cms.vercel.app/docs)
 
 ## Stack
 
