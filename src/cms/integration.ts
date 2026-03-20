@@ -21,7 +21,7 @@ function pushSchema() {
 
 export default function cmsIntegration(): AstroIntegration {
   return {
-    name: "liito-cms",
+    name: "kide-cms",
     hooks: {
       "astro:server:start": ({ address }) => {
         const host = address.family === "IPv6" ? `[${address.address}]` : address.address;

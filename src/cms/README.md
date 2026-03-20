@@ -1,4 +1,4 @@
-# Liito CMS Core
+# Kide CMS Core
 
 Code-first CMS built inside Astro. Define collections in `collections.config.ts`, everything else is generated.
 

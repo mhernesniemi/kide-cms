@@ -1,4 +1,4 @@
-# Liito CMS for Astro 6
+# Kide CMS for Astro 6
 
 Code-first, single-schema CMS built inside an Astro app. ~2k lines of core engine.
 
@@ -9,13 +9,13 @@ Supports Astro 6's route caching with tag-based invalidation for static-speed co
 ## Quick Start
 
 ```bash
-pnpx create-liito-app my-site
+pnpx create-kide-app my-site
 ```
 
 Or manually:
 
 ```bash
-git clone https://github.com/mhernesniemi/liito-cms.git my-site
+git clone https://github.com/mhernesniemi/kide-cms.git my-site
 cd my-site
 pnpm i
 pnpm dev

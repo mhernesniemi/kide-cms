@@ -395,10 +395,10 @@ const tableRows =
 
 <AdminLayout
   title={route.kind === "recent"
-    ? "Recent | Liito CMS"
+    ? "Recent | Kide CMS"
     : route.kind === "singles"
-      ? "Singles | Liito CMS"
-      : `${collection?.labels?.plural ?? "Admin"} | Liito CMS`}
+      ? "Singles | Kide CMS"
+      : `${collection?.labels?.plural ?? "Admin"} | Kide CMS`}
   collections={config.collections}
   activeCollection={route.kind === "recent" ? "recent" : (collectionSlug ?? "singles")}
   embed={isEmbed}
@@ -468,7 +468,11 @@ const tableRows =
               {route.kind === "edit" && (
                 <LiveHeading
                   client:load
-                  initial={collection.singleton ? collection.labels.singular : String(doc?.[getLabelField(collection)] ?? doc?.slug ?? collection.labels.singular)}
+                  initial={
+                    collection.singleton
+                      ? collection.labels.singular
+                      : String(doc?.[getLabelField(collection)] ?? doc?.slug ?? collection.labels.singular)
+                  }
                 />
               )}
             </h1>

@@ -35,11 +35,7 @@ const formatSize = (bytes: number) => {
 const folderItems = [{ value: "", label: "None" }, ...allFolders.map((f) => ({ value: f._id, label: f.name }))];
 ---
 
-<AdminLayout
-  title={`${asset.filename} | Assets | Liito CMS`}
-  collections={config.collections}
-  activeCollection="assets"
->
+<AdminLayout title={`${asset.filename} | Assets | Kide CMS`} collections={config.collections} activeCollection="assets">
   <section class="space-y-6">
     <div class="flex items-start justify-between gap-4">
       <div>

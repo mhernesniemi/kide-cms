@@ -706,7 +706,14 @@ function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; o
             </div>
           ))}
           <div className="flex justify-end">
-            <Button type="button" variant="ghost" size="icon-xs" title="Remove item" className="text-muted-foreground hover:text-destructive" onClick={() => removeItem(index)}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              title="Remove item"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => removeItem(index)}
+            >
               <Trash2 className="size-3" />
             </Button>
           </div>
