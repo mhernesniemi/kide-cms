@@ -249,7 +249,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
   const minHeight = `${rows * 1.5}rem`;
 
   return (
-    <div className="border-input focus-within:border-ring focus-within:ring-ring/50 overflow-hidden rounded-lg border transition-colors focus-within:ring-3">
+    <div className="border-input hover:border-foreground/20 focus-within:border-ring focus-within:ring-ring/50 overflow-hidden rounded-lg border transition-colors focus-within:ring-3">
       <input ref={hiddenRef} type="hidden" name={name} value={cmsJson} />
 
       {/* Toolbar */}
