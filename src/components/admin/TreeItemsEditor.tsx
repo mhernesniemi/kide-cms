@@ -600,7 +600,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        className="text-destructive hover:text-destructive size-7"
+                        className="text-muted-foreground hover:text-destructive size-7"
                         title="Delete"
                         onClick={() => removeItem(item.id)}
                       >

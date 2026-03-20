@@ -706,7 +706,7 @@ function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; o
             </div>
           ))}
           <div className="flex justify-end">
-            <Button type="button" variant="ghost" size="icon-xs" title="Remove item" onClick={() => removeItem(index)}>
+            <Button type="button" variant="ghost" size="icon-xs" title="Remove item" className="text-muted-foreground hover:text-destructive" onClick={() => removeItem(index)}>
               <Trash2 className="size-3" />
             </Button>
           </div>
@@ -760,7 +760,7 @@ function ArrayImageField({
             type="button"
             variant="ghost"
             size="icon"
-            className="text-destructive hover:text-destructive absolute top-0 right-0 size-7"
+            className="text-muted-foreground hover:text-destructive absolute top-0 right-0 size-7"
             onClick={() => removeImage(i)}
           >
             <Trash2 className="size-3.5" />

@@ -468,7 +468,7 @@ const tableRows =
               {route.kind === "edit" && (
                 <LiveHeading
                   client:load
-                  initial={String(doc?.[getLabelField(collection)] ?? doc?.slug ?? collection.labels.singular)}
+                  initial={collection.singleton ? collection.labels.singular : String(doc?.[getLabelField(collection)] ?? doc?.slug ?? collection.labels.singular)}
                 />
               )}
             </h1>
