@@ -326,7 +326,7 @@ export default function BlockEditor({ name, value, types, blockRelationOptions =
       {/* Add block buttons */}
       <div className="flex flex-wrap gap-2">
         {typeNames.map((typeName) => (
-          <Button key={typeName} type="button" variant="outline" size="sm" onClick={() => addBlock(typeName)}>
+          <Button key={typeName} type="button" variant="outline" size="sm" className="text-foreground/70" onClick={() => addBlock(typeName)}>
             <Plus className="mr-1 size-3.5" />
             {humanize(typeName)}
           </Button>
