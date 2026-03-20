@@ -333,10 +333,13 @@ function LinkDialog({
         </div>
         <DialogFooter>
           {isEditing && (
-            <Button variant="ghost" onClick={onRemove}>
+            <Button variant="ghost" className="mr-auto" onClick={onRemove}>
               Remove link
             </Button>
           )}
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={onApply} disabled={!linkUrl}>
             Apply
           </Button>
