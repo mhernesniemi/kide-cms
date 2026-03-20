@@ -658,17 +658,19 @@ const tableRows =
                   {mainFieldSets.map((set, index) => (
                     <AdminCard title={getFieldSetTitle("content", index)}>
                       <div class="grid gap-5">
-                        {set.fields.filter((fieldName) => collection.fields[fieldName]).map((fieldName) => (
-                          <FieldControl
-                            name={fieldName}
-                            field={collection.fields[fieldName]}
-                            value={getCurrentValue(fieldName)}
-                            relationOptions={relationOptionsByField[fieldName] ?? []}
-                            relationMeta={relationMetaByField[fieldName]}
-                            menuLinkOptions={menuLinkOptions}
-                            blockRelationOptions={getBlockRelationOptions(fieldName)}
-                          />
-                        ))}
+                        {set.fields
+                          .filter((fieldName) => collection.fields[fieldName])
+                          .map((fieldName) => (
+                            <FieldControl
+                              name={fieldName}
+                              field={collection.fields[fieldName]}
+                              value={getCurrentValue(fieldName)}
+                              relationOptions={relationOptionsByField[fieldName] ?? []}
+                              relationMeta={relationMetaByField[fieldName]}
+                              menuLinkOptions={menuLinkOptions}
+                              blockRelationOptions={getBlockRelationOptions(fieldName)}
+                            />
+                          ))}
                       </div>
                     </AdminCard>
                   ))}
@@ -678,32 +680,34 @@ const tableRows =
                   {effectiveSidebarFieldSets.map((set, index) => (
                     <AdminCard title={getFieldSetTitle("sidebar", index)}>
                       <div class="grid gap-5">
-                        {set.fields.filter((fieldName) => collection.fields[fieldName]).map((fieldName) => (
-                          <div>
-                            <FieldControl
-                              name={fieldName}
-                              field={collection.fields[fieldName]}
-                              value={getCurrentValue(fieldName)}
-                              relationOptions={relationOptionsByField[fieldName] ?? []}
-                              relationMeta={relationMetaByField[fieldName]}
-                              menuLinkOptions={menuLinkOptions}
-                            />
-                            {aiEnabled && fieldName === "seoDescription" && (
-                              <div class="mt-1.5">
-                                <AiGenerateButton
-                                  client:load
-                                  endpoint="/api/cms/ai/seo"
-                                  payload={{
-                                    title: getCurrentValue("title") ?? "",
-                                    excerpt: getCurrentValue("excerpt") ?? "",
-                                  }}
-                                  targetField={fieldName}
-                                  label="Generate description"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                        {set.fields
+                          .filter((fieldName) => collection.fields[fieldName])
+                          .map((fieldName) => (
+                            <div>
+                              <FieldControl
+                                name={fieldName}
+                                field={collection.fields[fieldName]}
+                                value={getCurrentValue(fieldName)}
+                                relationOptions={relationOptionsByField[fieldName] ?? []}
+                                relationMeta={relationMetaByField[fieldName]}
+                                menuLinkOptions={menuLinkOptions}
+                              />
+                              {aiEnabled && fieldName === "seoDescription" && (
+                                <div class="mt-1.5">
+                                  <AiGenerateButton
+                                    client:load
+                                    endpoint="/api/cms/ai/seo"
+                                    payload={{
+                                      title: getCurrentValue("title") ?? "",
+                                      excerpt: getCurrentValue("excerpt") ?? "",
+                                    }}
+                                    targetField={fieldName}
+                                    label="Generate description"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          ))}
                       </div>
                     </AdminCard>
                   ))}

@@ -219,6 +219,7 @@ export default function BlockEditor({ name, value, types, blockRelationOptions =
   const [blocks, setBlocks] = useState<Block[]>(() => parseBlocks(value, types));
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
   const [newBlockKey, setNewBlockKey] = useState<string | null>(null);
+  const savedExpandedRef = useRef<Set<string> | null>(null);
   const hiddenRef = useRef<HTMLInputElement>(null);
 
   const typeNames = Object.keys(types);
@@ -245,8 +246,17 @@ export default function BlockEditor({ name, value, types, blockRelationOptions =
     [dispatchChange],
   );
 
+  const handleDragStart = useCallback(() => {
+    savedExpandedRef.current = new Set(expandedKeys);
+    setExpandedKeys(new Set());
+  }, [expandedKeys]);
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
+      if (savedExpandedRef.current) {
+        setExpandedKeys(savedExpandedRef.current);
+        savedExpandedRef.current = null;
+      }
       const { active, over } = event;
       if (!over || active.id === over.id) return;
       updateBlocks((prev) => {
@@ -316,7 +326,12 @@ export default function BlockEditor({ name, value, types, blockRelationOptions =
         </div>
       )}
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
         <SortableContext items={blocks.map((b) => b._key)} strategy={verticalListSortingStrategy}>
           <div className="space-y-3">
             {blocks.map((block) => {
