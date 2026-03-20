@@ -18,20 +18,20 @@ pnpm cms:seed         # seed database with demo content
 After code changes, ALWAYS run:
 
 1. `pnpm check` — Fix all errors before considering the task done.
-2. `pnpm format --write .` — Must be the very last step.
+2. `pnpm format` — Must be the very last step.
 
 ## Key Files
 
-| File | Purpose |
-|---|---|
-| `src/cms/collections.config.ts` | Single source of truth — defines all collections |
-| `src/cms/access.ts` | Access control rules |
-| `src/cms/hooks.ts` | Lifecycle hooks (beforeCreate, afterPublish, etc.) |
-| `src/cms/admin/views.ts` | List columns, edit layout per collection |
-| `src/cms/core/` | CMS runtime (editable, not an npm package) |
-| `src/cms/.generated/` | Auto-generated — DO NOT EDIT |
-| `src/pages/admin/[...path].astro` | Single catch-all route for all admin views |
-| `src/pages/api/cms/[collection]/[...path].ts` | HTTP API (thin transport for admin islands) |
+| File                                          | Purpose                                            |
+| --------------------------------------------- | -------------------------------------------------- |
+| `src/cms/collections.config.ts`               | Single source of truth — defines all collections   |
+| `src/cms/access.ts`                           | Access control rules                               |
+| `src/cms/hooks.ts`                            | Lifecycle hooks (beforeCreate, afterPublish, etc.) |
+| `src/cms/admin/views.ts`                      | List columns, edit layout per collection           |
+| `src/cms/core/`                               | CMS runtime (editable, not an npm package)         |
+| `src/cms/.generated/`                         | Auto-generated — DO NOT EDIT                       |
+| `src/pages/admin/[...path].astro`             | Single catch-all route for all admin views         |
+| `src/pages/api/cms/[collection]/[...path].ts` | HTTP API (thin transport for admin islands)        |
 
 ## Rules
 
