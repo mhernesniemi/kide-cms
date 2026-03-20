@@ -184,15 +184,16 @@ export default function RelationField({
           side="right"
           className="data-[side=right]:w-[90vw] data-[side=right]:sm:max-w-[90vw] data-[side=right]:lg:w-[50vw] data-[side=right]:lg:max-w-[50vw]"
         >
-          <SheetHeader>
+          <SheetHeader className="sr-only">
             <SheetTitle>Create {collectionLabel.toLowerCase()}</SheetTitle>
           </SheetHeader>
-          <div className="flex-1 overflow-hidden px-4 pb-4">
+          <div className="flex-1 overflow-hidden">
             {sheetOpen && (
               <iframe
                 ref={iframeRef}
                 src={`/admin/${collectionSlug}/new?_embed=1`}
-                className="size-full rounded-md border"
+                title={`Create ${collectionLabel}`}
+                className="size-full"
               />
             )}
           </div>
