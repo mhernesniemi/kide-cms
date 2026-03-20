@@ -14,8 +14,6 @@ pnpx create-kide-app my-site
 
 Or just manually clone this repo and run `pnpm i && pnpm dev`.
 
-Open `http://localhost:4321/admin`, you'll be prompted to create your admin account on first run.
-
 ## How It Works
 
 Define collections in `src/cms/collections.config.ts`:
