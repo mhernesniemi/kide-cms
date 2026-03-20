@@ -52,9 +52,9 @@ const blocks = (() => {
 ---
 
 <PublicLayout title={String(document.title)}>
-  <article style="max-width: 640px; margin: 0 auto; padding: 2rem 1rem;">
-    <a href="/" style="color: #0f766e; font-size: 0.9rem;">&larr; Back</a>
-    <h1 data-preview-field="title" style="font-size: 1.5rem; margin: 1rem 0 0.5rem;">{String(document.title)}</h1>
+  <article class="mx-auto max-w-2xl px-4 py-8">
+    <a href="/" class="text-sm text-teal-700">&larr; Back</a>
+    <h1 data-preview-field="title" class="mt-4 mb-2 text-2xl font-semibold">{String(document.title)}</h1>
     {
       kind === "post" && document.image && (
         <img
@@ -64,13 +64,13 @@ const blocks = (() => {
           sizes="(max-width: 640px) 100vw, 640px"
           alt={String(document.title)}
           loading="eager"
-          style="width: 100%; height: auto; border-radius: 0.5rem; margin: 0 0 1.5rem;"
+          class="mb-6 h-auto w-full rounded-lg"
         />
       )
     }
     {
       kind === "post" && (document.excerpt || isPreview) && (
-        <p data-preview-field="excerpt" style="color: #666; margin: 0 0 1.5rem;">
+        <p data-preview-field="excerpt" class="mb-6 text-gray-500">
           {document.excerpt ? String(document.excerpt) : ""}
         </p>
       )
@@ -86,7 +86,7 @@ const blocks = (() => {
       kind === "page" && (
         <>
           {(document.summary || isPreview) && (
-            <p data-preview-field="summary" style="color: #666; margin: 0 0 1.5rem;">
+            <p data-preview-field="summary" class="mb-6 text-gray-500">
               {document.summary ? String(document.summary) : ""}
             </p>
           )}

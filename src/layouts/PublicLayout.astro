@@ -20,16 +20,20 @@ const menuItems: MenuItem[] = menu?.items ? (Array.isArray(menu.items) ? menu.it
     <link rel="icon" href="/favicon.ico" />
     <title>{title}</title>
   </head>
-  <body>
-    <header class="site-header">
-      <a href="/" class="site-name">Kide CMS</a>
+  <body class="min-h-screen bg-white text-gray-900 antialiased">
+    <header class="mx-auto flex max-w-4xl items-center gap-8 px-4 py-4">
+      <a href="/" class="text-lg font-semibold no-underline">Kide CMS</a>
       {
         menuItems.length > 0 && (
           <nav>
-            <ul>
+            <ul class="flex list-none gap-6 p-0">
               {menuItems.map((item) => (
                 <li>
-                  <a href={String(item.href ?? "#")} target={item.target || undefined}>
+                  <a
+                    href={String(item.href ?? "#")}
+                    target={item.target || undefined}
+                    class="text-sm text-gray-500 no-underline transition-colors hover:text-gray-900"
+                  >
                     {String(item.label ?? "")}
                   </a>
                 </li>
@@ -42,35 +46,3 @@ const menuItems: MenuItem[] = menu?.items ? (Array.isArray(menu.items) ? menu.it
     <slot />
   </body>
 </html>
-
-<style>
-  .site-header {
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 1rem;
-  }
-  .site-name {
-    font-weight: 600;
-    font-size: 1.1rem;
-    text-decoration: none;
-    color: inherit;
-  }
-  nav ul {
-    display: flex;
-    gap: 1.5rem;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  nav a {
-    text-decoration: none;
-    color: #555;
-    font-size: 0.9rem;
-  }
-  nav a:hover {
-    color: #111;
-  }
-</style>
