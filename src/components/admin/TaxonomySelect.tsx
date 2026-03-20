@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronsUpDown, ChevronRight, X } from "lucide-react";
+import { Check, ChevronsUpDown, X } from "lucide-react";
 import { Button } from "@/components/admin/ui/button";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/admin/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/admin/ui/popover";
@@ -124,8 +124,7 @@ export default function TaxonomySelect({ name, value: initialValue, taxonomySlug
                     setOpen(false);
                   }}
                 >
-                  <div className="flex items-center" style={{ paddingLeft: `${term.depth}rem` }}>
-                    {term.depth > 0 && <ChevronRight className="text-muted-foreground mr-1 size-3 shrink-0" />}
+                  <div className="flex items-center" style={{ paddingLeft: `${term.depth * 1.25}rem` }}>
                     <Check className={cn("mr-2 size-4 shrink-0", value === term.slug ? "opacity-100" : "opacity-0")} />
                     {term.name}
                   </div>
