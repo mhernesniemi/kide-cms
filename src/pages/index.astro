@@ -1,6 +1,7 @@
 ---
 import PublicLayout from "../layouts/PublicLayout.astro";
 import { cms } from "../cms/.generated/api";
+import { cmsImage } from "../cms/core/image";
 
 export const prerender = false;
 
@@ -27,13 +28,25 @@ const rendered = new Date().toISOString();
     <ul style="list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem;">
       {
         posts.map((post) => (
-          <li>
-            <a href={`/blog/${post.slug}`} style="color: #0f766e;">
-              {String(post.title)}
-            </a>
-            {post.excerpt && (
-              <span style="color: #999; margin-left: 0.5rem; font-size: 0.9rem;">— {String(post.excerpt)}</span>
+          <li style="display: flex; gap: 1rem; align-items: start;">
+            {post.image && (
+              <a href={`/blog/${post.slug}`} style="flex-shrink: 0;">
+                <img
+                  src={cmsImage(String(post.image), 320)}
+                  alt={String(post.title)}
+                  loading="lazy"
+                  style="width: 120px; height: 80px; object-fit: cover; border-radius: 0.375rem;"
+                />
+              </a>
             )}
+            <div>
+              <a href={`/blog/${post.slug}`} style="color: #0f766e;">
+                {String(post.title)}
+              </a>
+              {post.excerpt && (
+                <p style="color: #999; font-size: 0.9rem; margin: 0.25rem 0 0;">{String(post.excerpt)}</p>
+              )}
+            </div>
           </li>
         ))
       }
