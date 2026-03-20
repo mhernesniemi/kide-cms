@@ -12,14 +12,7 @@ Supports Astro 6's route caching with tag-based invalidation for static-speed co
 pnpx create-kide-app my-site
 ```
 
-Or manually:
-
-```bash
-git clone https://github.com/mhernesniemi/kide-cms.git my-site
-cd my-site
-pnpm i
-pnpm dev
-```
+Or just manually clone this repo and run `pnpm i && pnpm dev`.
 
 Open `http://localhost:4321/admin`, you'll be prompted to create your admin account on first run.
 
