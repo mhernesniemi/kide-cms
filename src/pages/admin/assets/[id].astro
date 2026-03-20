@@ -4,6 +4,7 @@ import { ArrowLeft, Trash2 } from "lucide-react";
 import AdminCard from "@/components/admin/AdminCard.astro";
 import AiGenerateButton from "@/components/admin/AiGenerateButton";
 import FocalPointSelector from "@/components/admin/FocalPointSelector";
+import UnsavedGuard from "@/components/admin/UnsavedGuard";
 import SelectField from "@/components/admin/SelectField";
 import { buttonVariants } from "@/components/admin/ui/button";
 import { Label } from "@/components/admin/ui/label";
@@ -61,6 +62,7 @@ const folderItems = [{ value: "", label: "None" }, ...allFolders.map((f) => ({ v
       </form>
     </div>
 
+    <UnsavedGuard client:load formId="asset-form" isNew={false} isDraft={false} />
     <form id="asset-form" method="post" action={`/api/cms/assets/${asset._id}`}>
       <input type="hidden" name="_action" value="update" />
       <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]">
