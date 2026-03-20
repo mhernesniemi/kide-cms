@@ -2,11 +2,11 @@
 
 Code-first, single-schema CMS built inside an Astro app. ~2k lines of core engine.
 
-One config file defines everything: Drizzle tables, TypeScript types, and a runtime admin UI.
+Collections define everything: Drizzle tables, TypeScript types, and a runtime admin UI.
 
 Supports Astro 6's route caching with tag-based invalidation for static-speed content delivery.
 
-[Try the demo](https://kide-cms.vercel.app/admin)
+[Try live demo](https://kide-cms.vercel.app/admin)
 
 ## Quick Start
 
@@ -18,17 +18,19 @@ Or just manually clone this repo and run `pnpm i && pnpm dev`.
 
 ## How It Works
 
-Define collections in `src/cms/collections.config.ts`:
+Define collections in `src/cms/collections/`:
 
 ```typescript
-defineCollection({
+// src/cms/collections/posts.ts
+
+export default defineCollection({
   slug: "posts",
   labels: { singular: "Post", plural: "Posts" },
   drafts: true,
   fields: {
     title: fields.text({ required: true, translatable: true }),
     body: fields.richText({ translatable: true }),
-    author: fields.relation({ collection: "authors" }),
+    author: fields.relation({ collection: "authors", admin: { position: "sidebar" } }),
   },
 });
 ```
