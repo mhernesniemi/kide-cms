@@ -1,10 +1,4 @@
 export default {
-  theme: {
-    accent: "#0f766e",
-    canvas: "#f6f3ee",
-    panel: "#fffdf8",
-    ink: "#10211b",
-  },
   taxonomies: {
     list: {
       columns: ["name", "slug", "_updatedAt"],
