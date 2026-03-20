@@ -157,7 +157,7 @@ export default function RelationField({
               <CommandEmpty>No results found.</CommandEmpty>
               {options.map((o) => (
                 <CommandItem key={o.value} value={o.label} onSelect={() => selectItem(o.value)}>
-                  <Check className={cn("size-4", selected.includes(o.value) ? "opacity-100" : "opacity-0")} />
+                  <Check className={cn("ml-1 size-4", selected.includes(o.value) ? "opacity-100" : "opacity-0")} />
                   {o.label}
                 </CommandItem>
               ))}

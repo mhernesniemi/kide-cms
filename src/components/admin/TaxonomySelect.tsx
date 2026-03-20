@@ -115,7 +115,9 @@ export default function TaxonomySelect({ name, value: initialValue, taxonomySlug
                   }}
                 >
                   <div className="flex items-center" style={{ paddingLeft: `${term.depth * 1.25}rem` }}>
-                    <Check className={cn("mr-2 size-4 shrink-0", value === term.slug ? "opacity-100" : "opacity-0")} />
+                    <Check
+                      className={cn("mr-2 ml-1 size-4 shrink-0", value === term.slug ? "opacity-100" : "opacity-0")}
+                    />
                     {term.name}
                   </div>
                 </CommandItem>
