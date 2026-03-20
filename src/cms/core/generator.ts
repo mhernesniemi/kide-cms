@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import config from "../collections.config";
+import config from "../cms.config";
 import { getTranslatableFieldNames, type CollectionConfig, type FieldConfig } from "./define";
 
 const generatedDir = path.join(process.cwd(), "src/cms/.generated");
@@ -394,7 +394,7 @@ const generateApiFile = (): string => {
 
   return `// auto-generated — do not edit
 import access from "../access";
-import config from "../collections.config";
+import config from "../cms.config";
 import { createCms } from "../core/api";
 import hooks from "../hooks";
 import type {

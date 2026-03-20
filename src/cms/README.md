@@ -1,6 +1,6 @@
 # Kide CMS Core
 
-Code-first CMS built inside Astro. Define collections in `collections.config.ts`, everything else is generated.
+Code-first CMS built inside Astro. Define collections in `cms.config.ts`, everything else is generated.
 
 ## Quick start
 
@@ -13,7 +13,7 @@ pnpm dev                 # start dev server
 
 ## Defining collections
 
-All collections are defined in a single file — `collections.config.ts`:
+Collections are defined in `collections/` and registered in `cms.config.ts`:
 
 ```ts
 import { defineCollection, defineConfig, fields } from "./core/define";

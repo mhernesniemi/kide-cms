@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 
-import config from "../../../../cms/collections.config";
+import config from "../../../../cms/cms.config";
 import { cms } from "../../../../cms/.generated/api";
 
 export const prerender = false;

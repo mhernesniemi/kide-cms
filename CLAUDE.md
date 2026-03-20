@@ -9,7 +9,7 @@ pnpm dev              # start dev server (auto-generates schema + pushes DB)
 pnpm build            # production build
 pnpm check            # astro check (types) + eslint (lint)
 pnpm format           # prettier --write .
-pnpm cms:generate     # regenerate .generated/ from collections.config.ts
+pnpm cms:generate     # regenerate .generated/ from cms.config.ts
 pnpm cms:seed         # seed database with demo content
 ```
 
@@ -24,7 +24,7 @@ After code changes, ALWAYS run:
 
 | File                                          | Purpose                                            |
 | --------------------------------------------- | -------------------------------------------------- |
-| `src/cms/collections.config.ts`               | Single source of truth — defines all collections   |
+| `src/cms/cms.config.ts`               | Single source of truth — defines all collections   |
 | `src/cms/access.ts`                           | Access control rules                               |
 | `src/cms/hooks.ts`                            | Lifecycle hooks (beforeCreate, afterPublish, etc.) |
 | `src/cms/core/`                               | CMS runtime (editable, not an npm package)         |

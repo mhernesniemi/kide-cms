@@ -43,7 +43,7 @@ export default function cmsIntegration(): AstroIntegration {
           } catch (e) {
             console.error("  [cms] Schema push failed:", (e as Error).message);
           }
-          const configPath = path.join(process.cwd(), "src/cms/collections.config.ts");
+          const configPath = path.join(process.cwd(), "src/cms/cms.config.ts");
           let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
           // Run scheduled publishing every 60s in dev
