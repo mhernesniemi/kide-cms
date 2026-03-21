@@ -67,8 +67,14 @@ export default function cmsIntegration(): AstroIntegration {
         console.log(`  \x1b[36m[cms]\x1b[0m Admin panel: \x1b[36m${base}/admin\x1b[0m`);
 
         if (needsDeferredPush) {
-          console.log("  \x1b[36m[cms]\x1b[0m First run — waiting for D1 database...");
-          const ready = await waitForD1Database();
+          console.log("  \x1b[36m[cms]\x1b[0m First run — setting up database...");
+          // Trigger miniflare to create the D1 database file
+          try {
+            await fetch(`${base}/admin`);
+          } catch {
+            // Expected to fail — tables don't exist yet
+          }
+          const ready = await waitForD1Database(5000);
           if (ready) {
             try {
               pushSchema();
