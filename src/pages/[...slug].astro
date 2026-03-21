@@ -2,7 +2,6 @@
 import PublicLayout from "../layouts/PublicLayout.astro";
 import RichTextContent from "../components/RichTextContent.astro";
 import BlockRenderer from "../components/BlockRenderer.astro";
-import PreviewReceiver from "../components/PreviewReceiver.astro";
 import { cms } from "../cms/.generated/api";
 import { cmsImage, cmsSrcset } from "../cms/core/image";
 
@@ -54,11 +53,10 @@ const blocks = (() => {
 <PublicLayout title={String(document.title)}>
   <article class="mx-auto max-w-2xl px-4 py-8">
     <a href="/" class="text-sm text-teal-700">&larr; Back</a>
-    <h1 data-preview-field="title" class="mt-4 mb-2 text-2xl font-semibold">{String(document.title)}</h1>
+    <h1 class="mt-4 mb-2 text-2xl font-semibold">{String(document.title)}</h1>
     {
       kind === "post" && document.image && (
         <img
-          data-preview-field="image"
           src={cmsImage(String(document.image), 1024)}
           srcset={cmsSrcset(String(document.image))}
           sizes="(max-width: 640px) 100vw, 640px"
@@ -68,16 +66,10 @@ const blocks = (() => {
         />
       )
     }
-    {
-      kind === "post" && (document.excerpt || isPreview) && (
-        <p data-preview-field="excerpt" class="mb-6 text-gray-500">
-          {document.excerpt ? String(document.excerpt) : ""}
-        </p>
-      )
-    }
+    {kind === "post" && document.excerpt && <p class="mb-6 text-gray-500">{String(document.excerpt)}</p>}
     {
       kind === "post" && (
-        <div data-preview-field="body" data-preview-type="richText" class="prose">
+        <div class="prose">
           <RichTextContent content={document.body} />
         </div>
       )
@@ -85,17 +77,10 @@ const blocks = (() => {
     {
       kind === "page" && (
         <>
-          {(document.summary || isPreview) && (
-            <p data-preview-field="summary" class="mb-6 text-gray-500">
-              {document.summary ? String(document.summary) : ""}
-            </p>
-          )}
-          <div data-preview-field="blocks" data-preview-type="blocks">
-            <BlockRenderer blocks={blocks} />
-          </div>
+          {document.summary && <p class="mb-6 text-gray-500">{String(document.summary)}</p>}
+          <BlockRenderer blocks={blocks} />
         </>
       )
     }
   </article>
-  {isPreview && <PreviewReceiver />}
 </PublicLayout>

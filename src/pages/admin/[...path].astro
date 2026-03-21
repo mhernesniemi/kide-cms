@@ -1,12 +1,11 @@
 ---
-import { Dot, Languages, Plus } from "lucide-react";
+import { ArrowUpRight, Dot, Languages, Plus } from "lucide-react";
 
 import AdminCard from "@/components/admin/AdminCard.astro";
 import AiGenerateButton from "@/components/admin/AiGenerateButton";
 import DocumentActions from "@/components/admin/DocumentActions";
 import DocumentsDataTable from "@/components/admin/DocumentsDataTable";
 import LiveHeading from "@/components/admin/LiveHeading";
-import LivePreview from "@/components/admin/LivePreview";
 import UnsavedGuard from "@/components/admin/UnsavedGuard";
 import FieldControl from "@/components/admin/FieldControl.astro";
 import { StatusBadge } from "@/components/admin/ui/badge";
@@ -351,10 +350,13 @@ const listColumns = collection ? getListColumns(collection, viewConfig.list) : [
 const hasPreview = !!(
   collection &&
   route.kind === "edit" &&
-  doc?.slug &&
-  (collection.pathPrefix || collection.slug === "pages")
+  (collection.preview || (collection.pathPrefix && doc?.slug))
 );
-const previewUrl = hasPreview ? `${cms.meta.getRouteForDocument(collection.slug, doc)}?preview=true` : null;
+const previewUrl = hasPreview
+  ? typeof collection.preview === "string"
+    ? `${collection.preview}?preview=true`
+    : `${cms.meta.getRouteForDocument(collection.slug, doc)}?preview=true`
+  : null;
 const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
 const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
 const getBlockRelationOptions = (fieldName: string): Record<string, Array<{ value: string; label: string }>> => {
@@ -503,12 +505,14 @@ const tableRows =
 
           <div class="flex flex-wrap items-center gap-2">
             {hasPreview && previewUrl && !translationMode && (
-              <LivePreview
-                client:load
-                previewUrl={previewUrl}
-                formId="document-form"
-                fieldNames={Object.keys(collection.fields)}
-              />
+              <a
+                href={previewUrl}
+                target="_blank"
+                class="text-foreground/70 hover:text-foreground flex items-center gap-1 text-sm transition-colors"
+              >
+                <ArrowUpRight className="size-4" />
+                Preview
+              </a>
             )}
             {route.kind === "list" && (
               <a href={`/admin/${collection.slug}/new`} class={buttonVariants({})}>

@@ -3,6 +3,7 @@ import { defineCollection, fields } from "../core/define";
 export default defineCollection({
   slug: "pages",
   labels: { singular: "Page", plural: "Pages" },
+  preview: true,
   timestamps: true,
   drafts: true,
   versions: { max: 20 },
