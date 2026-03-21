@@ -8,18 +8,13 @@ export default defineCollection({
   drafts: true,
   versions: { max: 20 },
   views: {
-    list: { columns: ["title", "layout", "_status", "_updatedAt"] },
+    list: { columns: ["title", "_status", "_updatedAt"] },
   },
   fields: {
     title: fields.text({ required: true, translatable: true }),
     slug: fields.slug({ from: "title", unique: true, translatable: true, admin: { position: "sidebar" } }),
     summary: fields.text({ translatable: true, admin: { rows: 3 } }),
     image: fields.image(),
-    layout: fields.select({
-      options: ["default", "landing", "docs"],
-      defaultValue: "landing",
-      admin: { position: "sidebar" },
-    }),
     relatedPosts: fields.relation({ collection: "posts", hasMany: true, admin: { position: "sidebar" } }),
     seoDescription: fields.text({
       maxLength: 160,
