@@ -9,8 +9,8 @@ export default defineCollection({
     list: { columns: ["name", "email", "role", "_updatedAt"] },
   },
   fields: {
-    email: fields.email({ required: true, unique: true }),
     name: fields.text({ required: true }),
+    email: fields.email({ required: true, unique: true }),
     role: fields.select({
       options: ["admin", "editor", "viewer"],
       defaultValue: "editor",
