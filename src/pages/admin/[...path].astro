@@ -325,6 +325,40 @@ if (route.kind === "edit") {
   versions = await collectionApi.versions(route.documentId);
 }
 
+// Find reverse references — documents in other collections that link to this document
+type ReverseRef = { collectionLabel: string; collectionSlug: string; docs: Array<{ _id: string; label: string }> };
+const reverseRefs: ReverseRef[] = [];
+if (route.kind === "edit" && collection && route.documentId) {
+  for (const otherCollection of config.collections) {
+    if (otherCollection.slug === collection.slug) continue;
+    const relationFields = Object.entries(otherCollection.fields).filter(
+      ([, f]) => f.type === "relation" && (f as any).collection === collection.slug,
+    );
+    if (relationFields.length === 0) continue;
+    const otherApi = cmsRuntime[otherCollection.slug];
+    if (!otherApi) continue;
+    const otherLabelField = getLabelField(otherCollection);
+    for (const [fieldName] of relationFields) {
+      try {
+        const refs = await otherApi.find(
+          { status: "any", where: { [fieldName]: route.documentId }, limit: 50, locale: defaultLocale },
+          runtimeContext,
+        );
+        if (refs.length > 0) {
+          reverseRefs.push({
+            collectionLabel: otherCollection.labels.plural,
+            collectionSlug: otherCollection.slug,
+            docs: refs.map((r: Record<string, unknown>) => ({
+              _id: String(r._id),
+              label: String(r[otherLabelField] ?? r.slug ?? r._id),
+            })),
+          });
+        }
+      } catch {}
+    }
+  }
+}
+
 const selectedLocale = route.kind === "new" ? defaultLocale : requestedLocale;
 const translatableFields = collection
   ? Object.entries(collection.fields)
@@ -710,6 +744,55 @@ const tableRows =
                       </div>
                     </AdminCard>
                   ))}
+                  {reverseRefs.length > 0 &&
+                    (() => {
+                      const allDocs = reverseRefs.flatMap((ref) =>
+                        ref.docs.map((d) => ({
+                          ...d,
+                          collectionSlug: ref.collectionSlug,
+                          collectionLabel: ref.collectionLabel,
+                        })),
+                      );
+                      const visible = allDocs.slice(0, 10);
+                      const hidden = allDocs.slice(10);
+                      return (
+                        <AdminCard title="Referenced by">
+                          <ul class="grid gap-1">
+                            {visible.map((d) => (
+                              <li class="flex items-baseline justify-between gap-2">
+                                <a
+                                  href={`/admin/${d.collectionSlug}/${d._id}`}
+                                  class="text-foreground/70 hover:text-foreground truncate text-sm transition-colors hover:underline"
+                                >
+                                  {d.label}
+                                </a>
+                                <span class="text-muted-foreground shrink-0 text-xs">{d.collectionLabel}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          {hidden.length > 0 && (
+                            <details class="mt-2">
+                              <summary class="text-muted-foreground hover:text-foreground cursor-pointer text-xs transition-colors">
+                                Show {hidden.length} more
+                              </summary>
+                              <ul class="mt-1 grid gap-1">
+                                {hidden.map((d) => (
+                                  <li class="flex items-baseline justify-between gap-2">
+                                    <a
+                                      href={`/admin/${d.collectionSlug}/${d._id}`}
+                                      class="text-foreground/70 hover:text-foreground truncate text-sm transition-colors hover:underline"
+                                    >
+                                      {d.label}
+                                    </a>
+                                    <span class="text-muted-foreground shrink-0 text-xs">{d.collectionLabel}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </details>
+                          )}
+                        </AdminCard>
+                      );
+                    })()}
                 </div>
               </form>
             )}
