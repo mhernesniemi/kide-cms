@@ -1,6 +1,6 @@
 import type { AstroIntegration } from "astro";
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, watch } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, watch } from "node:fs";
 import path from "node:path";
 
 function runGenerator() {
@@ -11,15 +11,35 @@ function runGenerator() {
 }
 
 function pushSchema() {
-  // Ensure data directory exists before drizzle-kit connects
-  mkdirSync(path.join(process.cwd(), "data"), { recursive: true });
   execSync("npx drizzle-kit push --force", {
     stdio: "inherit",
     cwd: process.cwd(),
   });
 }
 
+function isCloudflareD1(): boolean {
+  const wranglerPath = path.join(process.cwd(), "wrangler.toml");
+  if (!existsSync(wranglerPath)) return false;
+  try {
+    const content = readFileSync(wranglerPath, "utf-8");
+    return content.includes("[[d1_databases]]");
+  } catch {
+    return false;
+  }
+}
+
+function hasLocalD1Database(): boolean {
+  const dir = path.join(process.cwd(), ".wrangler/state/v3/d1/miniflare-D1DatabaseObject");
+  try {
+    return readdirSync(dir).some((f) => f.endsWith(".sqlite") && f !== "*.sqlite");
+  } catch {
+    return false;
+  }
+}
+
 export default function cmsIntegration(): AstroIntegration {
+  let needsDeferredPush = false;
+
   return {
     name: "kide-cms",
     hooks: {
@@ -27,6 +47,18 @@ export default function cmsIntegration(): AstroIntegration {
         const host = address.family === "IPv6" ? `[${address.address}]` : address.address;
         const base = `http://${host === "[::1]" || host === "127.0.0.1" || host === "[::]" ? "localhost" : host}:${address.port}`;
         console.log(`  \x1b[36m[cms]\x1b[0m Admin panel: \x1b[36m${base}/admin\x1b[0m`);
+
+        if (needsDeferredPush) {
+          console.log("  \x1b[36m[cms]\x1b[0m First run — setting up database...");
+          try {
+            pushSchema();
+            console.log("  \x1b[36m[cms]\x1b[0m Database ready. Open /admin to create your admin account.");
+          } catch (e) {
+            console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (e as Error).message);
+            console.error("  \x1b[31m[cms]\x1b[0m Try running: npx drizzle-kit push --force");
+          }
+          needsDeferredPush = false;
+        }
       },
       "astro:config:setup": ({ command }) => {
         console.log("  [cms] Generating schema, types, validators, and API...");
@@ -37,21 +69,43 @@ export default function cmsIntegration(): AstroIntegration {
         }
 
         if (command === "dev") {
-          const dbPath = path.join(process.cwd(), "data", "cms.db");
-          const isFirstRun = !existsSync(dbPath);
-          if (isFirstRun) {
-            console.log("  \x1b[36m[cms]\x1b[0m First run — setting up database...");
+          const useD1 = isCloudflareD1();
+
+          if (useD1) {
+            if (hasLocalD1Database()) {
+              // Subsequent run — D1 file exists, push schema now
+              try {
+                pushSchema();
+              } catch (e) {
+                console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (e as Error).message);
+                console.error("  \x1b[31m[cms]\x1b[0m Try running: npx drizzle-kit push --force");
+              }
+            } else {
+              // First run — D1 file doesn't exist yet, defer until server starts
+              needsDeferredPush = true;
+            }
+          } else {
+            // Local SQLite
+            const dbPath = path.join(process.cwd(), "data", "cms.db");
+            const isFirstRun = !existsSync(dbPath);
+            if (isFirstRun) {
+              console.log("  \x1b[36m[cms]\x1b[0m First run — setting up database...");
+            }
+
+            try {
+              mkdirSync(path.join(process.cwd(), "data"), {
+                recursive: true,
+              });
+              pushSchema();
+              if (isFirstRun) {
+                console.log("  \x1b[36m[cms]\x1b[0m Database ready. Open /admin to create your admin account.");
+              }
+            } catch (e) {
+              console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (e as Error).message);
+              console.error("  \x1b[31m[cms]\x1b[0m Try running: npx drizzle-kit push --force");
+            }
           }
 
-          try {
-            pushSchema();
-            if (isFirstRun) {
-              console.log("  \x1b[36m[cms]\x1b[0m Database ready. Open /admin to create your admin account.");
-            }
-          } catch (e) {
-            console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (e as Error).message);
-            console.error("  \x1b[31m[cms]\x1b[0m Try running: npx drizzle-kit push --force");
-          }
           const configPath = path.join(process.cwd(), "src/cms/cms.config.ts");
           let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
