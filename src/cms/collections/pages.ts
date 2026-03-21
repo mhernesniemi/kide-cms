@@ -45,7 +45,6 @@ export default defineCollection({
         faq: {
           heading: fields.text(),
           items: fields.json({
-            defaultValue: [] as any,
             admin: { component: "repeater", help: "Add question and answer pairs" },
           }),
         },

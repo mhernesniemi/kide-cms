@@ -11,7 +11,6 @@ export default defineCollection({
     name: fields.text({ required: true }),
     slug: fields.slug({ from: "name", unique: true, admin: { position: "sidebar" } }),
     items: fields.json({
-      defaultValue: {} as any,
       translatable: true,
       admin: { component: "menu-items" },
     }),

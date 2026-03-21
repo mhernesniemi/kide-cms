@@ -405,7 +405,12 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
     extensions: [
       StarterKit,
       Image,
-      Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false, HTMLAttributes: { class: "text-primary underline cursor-text pointer-events-none" } }),
+      Link.configure({
+        openOnClick: false,
+        autolink: false,
+        linkOnPaste: false,
+        HTMLAttributes: { class: "text-primary underline cursor-text pointer-events-none" },
+      }),
     ],
     content: cmsToTiptap(parsedInitial),
     onUpdate: ({ editor }) => {

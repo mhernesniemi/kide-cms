@@ -94,7 +94,7 @@ export type ArrayFieldConfig = BaseFieldConfig<"array", unknown[]> & {
   of: FieldConfig;
 };
 
-export type JsonFieldConfig = BaseFieldConfig<"json", Record<string, unknown>> & {
+export type JsonFieldConfig = BaseFieldConfig<"json", unknown> & {
   schema?: string;
 };
 
