@@ -338,21 +338,43 @@ if (route.kind === "edit" && collection && route.documentId) {
     const otherApi = cmsRuntime[otherCollection.slug];
     if (!otherApi) continue;
     const otherLabelField = getLabelField(otherCollection);
-    for (const [fieldName] of relationFields) {
+    for (const [fieldName, field] of relationFields) {
       try {
-        const refs = await otherApi.find(
-          { status: "any", where: { [fieldName]: route.documentId }, limit: 50, locale: defaultLocale },
-          runtimeContext,
-        );
-        if (refs.length > 0) {
-          reverseRefs.push({
-            collectionLabel: otherCollection.labels.plural,
-            collectionSlug: otherCollection.slug,
-            docs: refs.map((r: Record<string, unknown>) => ({
-              _id: String(r._id),
-              label: String(r[otherLabelField] ?? r.slug ?? r._id),
-            })),
+        const isMany = (field as any).hasMany;
+        if (isMany) {
+          // hasMany stores JSON array — fetch all and filter in JS
+          const allDocs = await otherApi.find({ status: "any", limit: 200, locale: defaultLocale }, runtimeContext);
+          const matched = allDocs.filter((r: Record<string, unknown>) => {
+            const val = r[fieldName];
+            if (Array.isArray(val)) return val.includes(route.documentId);
+            if (typeof val === "string") return val.includes(route.documentId);
+            return false;
           });
+          if (matched.length > 0) {
+            reverseRefs.push({
+              collectionLabel: otherCollection.labels.plural,
+              collectionSlug: otherCollection.slug,
+              docs: matched.map((r: Record<string, unknown>) => ({
+                _id: String(r._id),
+                label: String(r[otherLabelField] ?? r.slug ?? r._id),
+              })),
+            });
+          }
+        } else {
+          const refs = await otherApi.find(
+            { status: "any", where: { [fieldName]: route.documentId }, limit: 50, locale: defaultLocale },
+            runtimeContext,
+          );
+          if (refs.length > 0) {
+            reverseRefs.push({
+              collectionLabel: otherCollection.labels.plural,
+              collectionSlug: otherCollection.slug,
+              docs: refs.map((r: Record<string, unknown>) => ({
+                _id: String(r._id),
+                label: String(r[otherLabelField] ?? r.slug ?? r._id),
+              })),
+            });
+          }
         }
       } catch {}
     }
@@ -753,8 +775,8 @@ const tableRows =
                           collectionLabel: ref.collectionLabel,
                         })),
                       );
-                      const visible = allDocs.slice(0, 10);
-                      const hidden = allDocs.slice(10);
+                      const visible = allDocs.slice(0, 30);
+                      const hidden = allDocs.slice(30);
                       return (
                         <AdminCard title="Referenced by">
                           <ul class="grid gap-1">
