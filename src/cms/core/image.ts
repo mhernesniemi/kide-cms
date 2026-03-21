@@ -54,7 +54,8 @@ export async function transformImage(
   const { existsSync, mkdirSync, readFileSync } = await import("node:fs");
   const { writeFile } = await import("node:fs/promises");
   const path = await import("node:path");
-  const sharp = (await import("sharp")).default;
+  const sharpModule = "sharp";
+  const sharp = (await import(/* @vite-ignore */ sharpModule)).default;
 
   const PUBLIC_DIR = path.join(process.cwd(), "public");
   const CACHE_DIR = path.join(process.cwd(), ".cms-cache", "img");
