@@ -37,57 +37,34 @@ function hasLocalD1Database(): boolean {
   }
 }
 
-function waitForD1Database(timeoutMs = 10000): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (hasLocalD1Database()) return resolve(true);
-    const interval = 500;
-    let waited = 0;
-    const timer = setInterval(() => {
-      waited += interval;
-      if (hasLocalD1Database()) {
-        clearInterval(timer);
-        resolve(true);
-      } else if (waited >= timeoutMs) {
-        clearInterval(timer);
-        resolve(false);
-      }
-    }, interval);
+function getD1DatabaseName(): string | null {
+  const wranglerPath = path.join(process.cwd(), "wrangler.toml");
+  try {
+    const content = readFileSync(wranglerPath, "utf-8");
+    const match = content.match(/database_name\s*=\s*"([^"]+)"/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+function initLocalD1() {
+  const dbName = getD1DatabaseName();
+  if (!dbName) throw new Error("No database_name found in wrangler.toml");
+  execSync(`npx wrangler d1 execute "${dbName}" --local --command="SELECT 1"`, {
+    stdio: "pipe",
+    cwd: process.cwd(),
   });
 }
 
 export default function cmsIntegration(): AstroIntegration {
-  let needsDeferredPush = false;
-
   return {
     name: "kide-cms",
     hooks: {
-      "astro:server:start": async ({ address }) => {
+      "astro:server:start": ({ address }) => {
         const host = address.family === "IPv6" ? `[${address.address}]` : address.address;
         const base = `http://${host === "[::1]" || host === "127.0.0.1" || host === "[::]" ? "localhost" : host}:${address.port}`;
         console.log(`  \x1b[36m[cms]\x1b[0m Admin panel: \x1b[36m${base}/admin\x1b[0m`);
-
-        if (needsDeferredPush) {
-          console.log("  \x1b[36m[cms]\x1b[0m First run — setting up database...");
-          // Trigger miniflare to create the D1 database file
-          try {
-            await fetch(`${base}/admin`);
-          } catch {
-            // Expected to fail — tables don't exist yet
-          }
-          const ready = await waitForD1Database(5000);
-          if (ready) {
-            try {
-              pushSchema();
-              console.log("  \x1b[36m[cms]\x1b[0m Database ready. Open /admin to create your admin account.");
-            } catch (e) {
-              console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (e as Error).message);
-              console.error("  \x1b[31m[cms]\x1b[0m Try running: npx drizzle-kit push --force");
-            }
-          } else {
-            console.error("  \x1b[31m[cms]\x1b[0m D1 database not ready. Restart the dev server to retry.");
-          }
-          needsDeferredPush = false;
-        }
       },
       "astro:config:setup": ({ command }) => {
         console.log("  [cms] Generating schema, types, validators, and API...");
@@ -101,17 +78,24 @@ export default function cmsIntegration(): AstroIntegration {
           const useD1 = isCloudflareD1();
 
           if (useD1) {
-            if (hasLocalD1Database()) {
-              // Subsequent run — D1 file exists, push schema now
+            const isFirstRun = !hasLocalD1Database();
+            if (isFirstRun) {
+              console.log("  \x1b[36m[cms]\x1b[0m First run — setting up database...");
               try {
-                pushSchema();
+                initLocalD1();
               } catch (e) {
-                console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (e as Error).message);
-                console.error("  \x1b[31m[cms]\x1b[0m Try running: npx drizzle-kit push --force");
+                console.error("  \x1b[31m[cms]\x1b[0m Failed to initialize D1:", (e as Error).message);
               }
-            } else {
-              // First run — D1 file doesn't exist yet, defer until server starts
-              needsDeferredPush = true;
+            }
+
+            try {
+              pushSchema();
+              if (isFirstRun) {
+                console.log("  \x1b[36m[cms]\x1b[0m Database ready. Open /admin to create your admin account.");
+              }
+            } catch (e) {
+              console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (e as Error).message);
+              console.error("  \x1b[31m[cms]\x1b[0m Try running: npx drizzle-kit push --force");
             }
           } else {
             // Local SQLite
