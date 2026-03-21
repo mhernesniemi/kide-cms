@@ -11,7 +11,7 @@ Supports Astro 6's route caching with tag-based invalidation for static-speed co
 ## Quick Start
 
 ```bash
-pnpx create-kide-app my-site
+pnpx create-kide-app
 ```
 
 Or just manually clone this repo and run `pnpm i && pnpm dev`.
