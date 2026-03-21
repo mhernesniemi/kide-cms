@@ -6,14 +6,9 @@ function clampWidth(w: number): number {
   return ALLOWED_WIDTHS.reduce((prev, curr) => (Math.abs(curr - w) < Math.abs(prev - w) ? curr : prev));
 }
 
-// Detect adapter: check for Cloudflare env binding
+// Detect Cloudflare Workers runtime
 function isCloudflare(): boolean {
-  try {
-    const env = (globalThis as any).__env__;
-    return !!env?.CMS_ASSETS;
-  } catch {
-    return false;
-  }
+  return typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
 }
 
 /**
