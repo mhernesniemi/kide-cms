@@ -1,20 +1,17 @@
 ---
 import PublicLayout from "@/layouts/PublicLayout.astro";
+import type { Doc } from "@/cms/core/content";
 import { cms } from "@/cms/.generated/api";
 import { cmsImage } from "@/cms/core/image";
 
 export const prerender = false;
 
-type AnyRecord = Record<string, any>;
-
 const posts = (await cms.posts.find({
   status: "published",
   sort: { field: "sortOrder", direction: "desc" },
-})) as AnyRecord[];
+})) as Doc[];
 
 Astro.cache.set({ tags: ["posts", "home"] });
-
-const rendered = new Date().toISOString();
 ---
 
 <PublicLayout title="Kide CMS">
@@ -32,8 +29,8 @@ const rendered = new Date().toISOString();
             {post.image && (
               <a href={`/blog/${post.slug}`} class="shrink-0">
                 <img
-                  src={cmsImage(String(post.image), 320)}
-                  alt={String(post.title)}
+                  src={cmsImage(post.image, 320)}
+                  alt={post.title}
                   loading="lazy"
                   class="size-20 rounded-md object-cover"
                 />
@@ -41,9 +38,9 @@ const rendered = new Date().toISOString();
             )}
             <div>
               <a href={`/blog/${post.slug}`} class="text-teal-700 hover:underline">
-                {String(post.title)}
+                {post.title}
               </a>
-              {post.excerpt && <p class="mt-1 text-sm text-gray-500">{String(post.excerpt)}</p>}
+              {post.excerpt && <p class="mt-1 text-sm text-gray-500">{post.excerpt}</p>}
             </div>
           </li>
         ))
@@ -51,7 +48,5 @@ const rendered = new Date().toISOString();
     </ul>
 
     {posts.length === 0 && <p class="text-gray-500">No published posts yet.</p>}
-
-    <p class="mt-8 text-xs text-gray-300">Rendered: {rendered}</p>
   </main>
 </PublicLayout>

@@ -1,6 +1,6 @@
 import type { AstroIntegration } from "astro";
 import { execSync } from "node:child_process";
-import { mkdirSync, watch } from "node:fs";
+import { existsSync, mkdirSync, watch } from "node:fs";
 import path from "node:path";
 
 function runGenerator() {
@@ -37,11 +37,20 @@ export default function cmsIntegration(): AstroIntegration {
         }
 
         if (command === "dev") {
-          // Push schema changes directly to DB in dev (no migration files needed)
+          const dbPath = path.join(process.cwd(), "data", "cms.db");
+          const isFirstRun = !existsSync(dbPath);
+          if (isFirstRun) {
+            console.log("  \x1b[36m[cms]\x1b[0m First run — setting up database...");
+          }
+
           try {
             pushSchema();
+            if (isFirstRun) {
+              console.log("  \x1b[36m[cms]\x1b[0m Database ready. Open /admin to create your admin account.");
+            }
           } catch (e) {
-            console.error("  [cms] Schema push failed:", (e as Error).message);
+            console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (e as Error).message);
+            console.error("  \x1b[31m[cms]\x1b[0m Try running: npx drizzle-kit push --force");
           }
           const configPath = path.join(process.cwd(), "src/cms/cms.config.ts");
           let debounceTimer: ReturnType<typeof setTimeout> | null = null;

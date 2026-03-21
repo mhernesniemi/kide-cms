@@ -47,7 +47,10 @@ const isJsonField = (field: FieldConfig) =>
 
 const ensureCollection = (config: CMSConfig, slug: string) => {
   const collection = getCollectionMap(config)[slug];
-  if (!collection) throw new Error(`Unknown collection "${slug}".`);
+  if (!collection) {
+    const available = config.collections.map((c) => c.slug).join(", ");
+    throw new Error(`Unknown collection "${slug}". Available collections: ${available}`);
+  }
   return collection;
 };
 

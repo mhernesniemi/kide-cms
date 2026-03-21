@@ -1,9 +1,12 @@
 import { cms } from "../.generated/api";
 
+/** Document type — all field values are accessible without casting */
+export type Doc = Record<string, any>;
+
 type ContentResult = {
-  doc: Record<string, unknown> | null;
+  doc: Doc | null;
   isPreview: boolean;
-  blocks: Array<Record<string, unknown>>;
+  blocks: Array<Record<string, any>>;
 };
 
 export async function findContent(collection: string, slug: string, url: URL): Promise<ContentResult> {
@@ -21,7 +24,7 @@ export async function findContent(collection: string, slug: string, url: URL): P
   return { doc, isPreview, blocks };
 }
 
-export function parseBlocks(value: unknown): Array<Record<string, unknown>> {
+export function parseBlocks(value: unknown): Array<Record<string, any>> {
   if (!value) return [];
   try {
     const parsed = typeof value === "string" ? JSON.parse(value) : value;
@@ -31,7 +34,7 @@ export function parseBlocks(value: unknown): Array<Record<string, unknown>> {
   }
 }
 
-export function parseList<T = Record<string, unknown>>(value: unknown): T[] {
+export function parseList<T = Record<string, any>>(value: unknown): T[] {
   if (Array.isArray(value)) return value as T[];
   if (typeof value === "string") {
     try {
