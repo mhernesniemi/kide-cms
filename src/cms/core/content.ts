@@ -31,6 +31,19 @@ export function parseBlocks(value: unknown): Array<Record<string, unknown>> {
   }
 }
 
+export function parseList<T = Record<string, unknown>>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 export function cacheTags(collection: string, docId: string): string[] {
   const singular = collection.endsWith("s") ? collection.slice(0, -1) : collection;
   return [collection, `${singular}:${docId}`];

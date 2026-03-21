@@ -1,18 +1,8 @@
 ---
-const { heading, items: rawItems } = Astro.props;
+import { parseList } from "@/cms/core/content";
 
-const items: Array<Record<string, string>> = (() => {
-  if (Array.isArray(rawItems)) return rawItems;
-  if (typeof rawItems === "string") {
-    try {
-      const parsed = JSON.parse(rawItems);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
-  return [];
-})();
+const { heading, items: rawItems } = Astro.props;
+const items = parseList<{ title?: string; description?: string }>(rawItems);
 ---
 
 <section class="py-8">

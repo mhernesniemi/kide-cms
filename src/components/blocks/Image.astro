@@ -1,20 +1,9 @@
 ---
+import { parseList } from "@/cms/core/content";
 import { cmsImage, cmsSrcset } from "@/cms/core/image";
 
 const { images: rawImages } = Astro.props;
-
-const images: string[] = (() => {
-  if (Array.isArray(rawImages)) return rawImages.map(String);
-  if (typeof rawImages === "string") {
-    try {
-      const parsed = JSON.parse(rawImages);
-      return Array.isArray(parsed) ? parsed.map(String) : [];
-    } catch {
-      return [];
-    }
-  }
-  return [];
-})();
+const images = parseList<string>(rawImages);
 ---
 
 {
