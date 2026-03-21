@@ -29,18 +29,11 @@ export default defineCollection({
     blocks: fields.blocks({
       translatable: true,
       types: {
-        hero: {
-          eyebrow: fields.text(),
-          heading: fields.text({ required: true }),
-          body: fields.text(),
-          ctaLabel: fields.text(),
-          ctaHref: fields.text(),
-        },
         text: {
           heading: fields.text(),
           content: fields.richText(),
         },
-        gallery: {
+        image: {
           images: fields.array({ of: fields.image(), defaultValue: [] }),
         },
         faq: {

@@ -348,14 +348,8 @@ const seeds: Record<string, SeedDocument[]> = {
       layout: "default",
       blocks: [
         {
-          type: "hero",
-          eyebrow: "About",
-          heading: "Built for developers who ship content sites",
-          body: "Kide CMS started as a question: what if the CMS was just part of your app, not a separate service?",
-        },
-        {
           type: "text",
-          heading: "Philosophy",
+          heading: "Built for developers who ship content sites",
           content: {
             type: "root",
             children: [

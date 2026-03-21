@@ -51,7 +51,7 @@ function renderBlock(block: Record<string, any>): string {
     return html;
   }
 
-  if (block.type === "gallery") {
+  if (block.type === "gallery" || block.type === "image") {
     const images = parseArray(block.images);
     if (!images.length) return "";
     let html = `<section class="py-8"><div class="grid gap-4">`;
