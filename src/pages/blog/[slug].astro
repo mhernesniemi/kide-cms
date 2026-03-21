@@ -1,0 +1,35 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import RichTextContent from "../../components/RichTextContent.astro";
+import { findContent, cacheTags } from "../../cms/core/content";
+import { cmsImage, cmsSrcset } from "../../cms/core/image";
+
+export const prerender = false;
+
+const { doc, isPreview } = await findContent("posts", Astro.params.slug!, Astro.url);
+if (!doc) return Astro.redirect("/");
+if (!isPreview) Astro.cache.set({ tags: cacheTags("posts", String(doc._id)) });
+---
+
+<PublicLayout title={String(doc.title)}>
+  <article class="mx-auto max-w-2xl px-4 py-8">
+    <a href="/" class="text-sm text-teal-700">&larr; Back</a>
+    <h1 class="mt-4 mb-2 text-2xl font-semibold">{String(doc.title)}</h1>
+    {
+      doc.image && (
+        <img
+          src={cmsImage(String(doc.image), 1024)}
+          srcset={cmsSrcset(String(doc.image))}
+          sizes="(max-width: 640px) 100vw, 640px"
+          alt={String(doc.title)}
+          loading="eager"
+          class="mb-6 h-auto w-full rounded-lg"
+        />
+      )
+    }
+    {doc.excerpt && <p class="mb-6 text-gray-500">{String(doc.excerpt)}</p>}
+    <div class="prose">
+      <RichTextContent content={doc.body} />
+    </div>
+  </article>
+</PublicLayout>

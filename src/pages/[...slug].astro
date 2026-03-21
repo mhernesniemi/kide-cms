@@ -1,86 +1,23 @@
 ---
 import PublicLayout from "../layouts/PublicLayout.astro";
-import RichTextContent from "../components/RichTextContent.astro";
 import BlockRenderer from "../components/BlockRenderer.astro";
-import { cms } from "../cms/.generated/api";
-import { cmsImage, cmsSrcset } from "../cms/core/image";
+import { findContent, cacheTags } from "../cms/core/content";
 
 export const prerender = false;
 
-type AnyRecord = Record<string, any>;
+const slug = (Astro.params.slug ?? "").split("/").filter(Boolean).join("/");
+if (!slug) return Astro.redirect("/");
 
-const segments = (Astro.params.slug ?? "").split("/").filter(Boolean);
-const isPreview = Astro.url.searchParams.get("preview") === "true";
-
-let document: AnyRecord | null = null;
-let kind: "post" | "page" | null = null;
-
-if (segments[0] === "blog" && segments[1]) {
-  document = await cms.posts.findOne({
-    slug: segments[1],
-    status: isPreview ? "any" : "published",
-  });
-  kind = "post";
-}
-
-if (!document && segments.length >= 1) {
-  document = await cms.pages.findOne({
-    slug: segments.join("/"),
-    status: isPreview ? "any" : "published",
-  });
-  kind = "page";
-}
-
-if (!document) {
-  return Astro.redirect("/");
-}
-
-if (!isPreview) {
-  const tag = kind === "post" ? "posts" : "pages";
-  Astro.cache.set({ tags: [tag, `${tag.slice(0, -1)}:${document._id}`] });
-}
-
-const blocks = (() => {
-  if (!document.blocks) return [];
-  try {
-    return typeof document.blocks === "string" ? JSON.parse(document.blocks) : document.blocks;
-  } catch {
-    return [];
-  }
-})();
+const { doc, isPreview, blocks } = await findContent("pages", slug, Astro.url);
+if (!doc) return Astro.redirect("/");
+if (!isPreview) Astro.cache.set({ tags: cacheTags("pages", String(doc._id)) });
 ---
 
-<PublicLayout title={String(document.title)}>
+<PublicLayout title={String(doc.title)}>
   <article class="mx-auto max-w-2xl px-4 py-8">
     <a href="/" class="text-sm text-teal-700">&larr; Back</a>
-    <h1 class="mt-4 mb-2 text-2xl font-semibold">{String(document.title)}</h1>
-    {
-      kind === "post" && document.image && (
-        <img
-          src={cmsImage(String(document.image), 1024)}
-          srcset={cmsSrcset(String(document.image))}
-          sizes="(max-width: 640px) 100vw, 640px"
-          alt={String(document.title)}
-          loading="eager"
-          class="mb-6 h-auto w-full rounded-lg"
-        />
-      )
-    }
-    {kind === "post" && document.excerpt && <p class="mb-6 text-gray-500">{String(document.excerpt)}</p>}
-    {
-      kind === "post" && (
-        <div class="prose">
-          <RichTextContent content={document.body} />
-        </div>
-      )
-    }
-    {
-      kind === "page" && (
-        <>
-          {document.summary && <p class="mb-6 text-gray-500">{String(document.summary)}</p>}
-          <BlockRenderer blocks={blocks} />
-        </>
-      )
-    }
+    <h1 class="mt-4 mb-2 text-2xl font-semibold">{String(doc.title)}</h1>
+    {doc.summary && <p class="mb-6 text-gray-500">{String(doc.summary)}</p>}
+    <BlockRenderer blocks={blocks} />
   </article>
 </PublicLayout>
