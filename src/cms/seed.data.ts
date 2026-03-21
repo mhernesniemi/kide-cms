@@ -319,83 +319,6 @@ const seeds: Record<string, SeedDocument[]> = {
       ]),
     },
   ],
-  "front-page": [
-    {
-      blocks: [
-        {
-          type: "hero",
-          eyebrow: "Astro-native CMS",
-          heading: "Your content, your code, one app",
-          body: "Define collections in TypeScript. Get a full admin UI, typed API, and optimized delivery — all inside your Astro project.",
-          ctaLabel: "Open admin",
-          ctaHref: "/admin",
-        },
-        {
-          type: "text",
-          heading: "How it works",
-          content: {
-            type: "root",
-            children: [
-              {
-                type: "paragraph",
-                children: [
-                  {
-                    type: "text",
-                    value:
-                      "Define your collections in code. The generator produces Drizzle tables, TypeScript types, Zod validators, and a typed local API. The admin UI renders from your schema at runtime — add a field and it appears immediately.",
-                  },
-                ],
-              },
-            ],
-          },
-        },
-        {
-          type: "faq",
-          heading: "Common questions",
-          items: [
-            {
-              title: "Do I need a separate database server?",
-              description:
-                "No. Development uses SQLite with zero configuration. For production, you can switch to PostgreSQL.",
-            },
-            {
-              title: "Can I use this with an existing Astro project?",
-              description:
-                "Yes. The CMS lives in src/cms/ and does not interfere with your existing pages, components, or integrations.",
-            },
-            {
-              title: "How does caching work?",
-              description:
-                "Content pages are server-rendered and cached using Astro's route caching. When content changes, lifecycle hooks invalidate the relevant cache tags automatically.",
-            },
-            {
-              title: "Is there vendor lock-in?",
-              description:
-                "No. The CMS runtime is editable project code, not an npm dependency. The database layer uses Drizzle ORM which works with any standard database.",
-            },
-          ],
-        },
-      ],
-      _status: "published",
-      _translations: [
-        {
-          locale: "fi",
-          values: {
-            blocks: [
-              {
-                type: "hero",
-                eyebrow: "Astro-natiivi CMS",
-                heading: "Sisältösi, koodisi, yksi sovellus",
-                body: "Määrittele kokoelmat TypeScriptillä. Saat täyden hallintapaneelin, tyypitetyn rajapinnan ja optimoidun julkaisun — kaikki Astro-projektisi sisällä.",
-                ctaLabel: "Avaa hallinta",
-                ctaHref: "/admin",
-              },
-            ],
-          },
-        },
-      ],
-    },
-  ],
   menus: [
     {
       name: "Main Navigation",
@@ -489,6 +412,83 @@ const seeds: Record<string, SeedDocument[]> = {
             title: "Tietoa",
             slug: "tietoa",
             summary: "Lue lisää Kide CMS:stä ja sen taustalla olevista ideoista.",
+          },
+        },
+      ],
+    },
+  ],
+  "front-page": [
+    {
+      blocks: [
+        {
+          type: "hero",
+          eyebrow: "Astro-native CMS",
+          heading: "Your content, your code, one app",
+          body: "Define collections in TypeScript. Get a full admin UI, typed API, and optimized delivery — all inside your Astro project.",
+          ctaLabel: "Open admin",
+          ctaHref: "/admin",
+        },
+        {
+          type: "text",
+          heading: "How it works",
+          content: {
+            type: "root",
+            children: [
+              {
+                type: "paragraph",
+                children: [
+                  {
+                    type: "text",
+                    value:
+                      "Define your collections in code. The generator produces Drizzle tables, TypeScript types, Zod validators, and a typed local API. The admin UI renders from your schema at runtime — add a field and it appears immediately.",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          type: "faq",
+          heading: "Common questions",
+          items: [
+            {
+              title: "Do I need a separate database server?",
+              description:
+                "No. Development uses SQLite with zero configuration. For production, you can switch to PostgreSQL.",
+            },
+            {
+              title: "Can I use this with an existing Astro project?",
+              description:
+                "Yes. The CMS lives in src/cms/ and does not interfere with your existing pages, components, or integrations.",
+            },
+            {
+              title: "How does caching work?",
+              description:
+                "Content pages are server-rendered and cached using Astro's route caching. When content changes, lifecycle hooks invalidate the relevant cache tags automatically.",
+            },
+            {
+              title: "Is there vendor lock-in?",
+              description:
+                "No. The CMS runtime is editable project code, not an npm dependency. The database layer uses Drizzle ORM which works with any standard database.",
+            },
+          ],
+        },
+      ],
+      _status: "published",
+      _translations: [
+        {
+          locale: "fi",
+          values: {
+            blocks: [
+              {
+                type: "hero",
+                eyebrow: "Astro-natiivi CMS",
+                heading: "Sisältösi, koodisi, yksi sovellus",
+                body: "Määrittele kokoelmat TypeScriptillä. Saat täyden hallintapaneelin, tyypitetyn rajapinnan ja optimoidun julkaisun — kaikki Astro-projektisi sisällä.",
+                ctaLabel: "Avaa hallinta",
+                ctaHref: "/admin",
+              },
+            ],
           },
         },
       ],
