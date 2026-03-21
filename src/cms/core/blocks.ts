@@ -104,7 +104,7 @@ function renderFieldValue(key: string, val: unknown): string {
   return `<p class="text-gray-500">${esc(val)}</p>`;
 }
 
-function renderBlock(block: Record<string, any>): string {
+export function renderBlock(block: Record<string, any>): string {
   const { type: _type, _key, ...fields } = block;
 
   let html = `<section class="py-8">`;

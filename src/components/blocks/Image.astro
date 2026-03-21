@@ -1,0 +1,37 @@
+---
+import { cmsImage, cmsSrcset } from "@/cms/core/image";
+
+const { images: rawImages } = Astro.props;
+
+const images: string[] = (() => {
+  if (Array.isArray(rawImages)) return rawImages.map(String);
+  if (typeof rawImages === "string") {
+    try {
+      const parsed = JSON.parse(rawImages);
+      return Array.isArray(parsed) ? parsed.map(String) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+})();
+---
+
+{
+  images.length > 0 && (
+    <section class="py-8">
+      <div class="grid gap-4">
+        {images.map((src) => (
+          <img
+            src={src.startsWith("/uploads/") ? cmsImage(src, 1024) : src}
+            srcset={src.startsWith("/uploads/") ? cmsSrcset(src) : undefined}
+            sizes={src.startsWith("/uploads/") ? "(max-width: 768px) 100vw, 768px" : undefined}
+            alt=""
+            loading="lazy"
+            class="h-auto w-full rounded-lg object-cover"
+          />
+        ))}
+      </div>
+    </section>
+  )
+}
