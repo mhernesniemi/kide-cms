@@ -151,6 +151,37 @@ export default function DocumentsDataTable({
   const [rowSelection, setRowSelection] = React.useState({});
   const [isPending, startTransition] = React.useTransition();
   const [deleteConfirm, setDeleteConfirm] = React.useState<DataTableRow[] | null>(null);
+  const [deleteRefWarning, setDeleteRefWarning] = React.useState<string | null>(null);
+
+  // Check for references when delete is triggered
+  React.useEffect(() => {
+    if (!deleteConfirm || deleteConfirm.length === 0) {
+      setDeleteRefWarning(null);
+      return;
+    }
+    (async () => {
+      let totalRefs = 0;
+      const parts: string[] = [];
+      for (const row of deleteConfirm) {
+        try {
+          const res = await fetch(`/api/cms/references/${collectionSlug}/${row.id}`);
+          if (res.ok) {
+            const { refs, total } = await res.json();
+            totalRefs += total;
+            for (const r of refs) {
+              const existing = parts.find((p) => p.includes(r.collection.toLowerCase()));
+              if (!existing) parts.push(`${r.count} ${r.collection.toLowerCase()}`);
+            }
+          }
+        } catch {}
+      }
+      if (totalRefs > 0) {
+        setDeleteRefWarning(`Referenced by ${parts.join(", ")}. Deleting will leave broken references.`);
+      } else {
+        setDeleteRefWarning(null);
+      }
+    })();
+  }, [deleteConfirm, collectionSlug]);
 
   // Server-side pagination state
   const [serverData, setServerData] = React.useState<DataTableRow[]>(data);
@@ -713,6 +744,9 @@ export default function DocumentsDataTable({
               {deleteConfirm && deleteConfirm.length === 1 ? "Delete document" : "Delete documents"}
             </AlertDialogTitle>
             <AlertDialogDescription>
+              {deleteRefWarning && (
+                <span className="mb-2 block font-medium text-amber-600 dark:text-amber-400">{deleteRefWarning}</span>
+              )}
               {deleteConfirm && deleteConfirm.length === 1
                 ? "This action cannot be undone. This will permanently delete this document."
                 : `This action cannot be undone. This will permanently delete ${deleteConfirm?.length ?? 0} documents.`}

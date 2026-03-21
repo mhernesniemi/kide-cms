@@ -345,7 +345,6 @@ const seeds: Record<string, SeedDocument[]> = {
       title: "About",
       slug: "about",
       summary: "Learn more about Kide CMS and the ideas behind it.",
-      layout: "default",
       blocks: [
         {
           type: "text",
