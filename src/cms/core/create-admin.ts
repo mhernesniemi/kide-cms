@@ -4,8 +4,7 @@ import { getDb, closeDb } from "./db";
 import { hashPassword } from "./auth";
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
-const ask = (q: string): Promise<string> =>
-  new Promise((resolve) => rl.question(q, (a) => resolve(a.trim())));
+const ask = (q: string): Promise<string> => new Promise((resolve) => rl.question(q, (a) => resolve(a.trim())));
 
 async function main() {
   const name = await ask("Name: ");
