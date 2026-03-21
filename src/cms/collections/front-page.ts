@@ -4,6 +4,7 @@ export default defineCollection({
   slug: "front-page",
   labels: { singular: "Front Page", plural: "Front Page" },
   singleton: true,
+  preview: "/",
   timestamps: true,
   drafts: true,
   fields: {

@@ -348,13 +348,12 @@ const mainFieldSets = primaryFieldSets.length > 0 ? primaryFieldSets : fieldSets
 const effectiveSidebarFieldSets =
   sidebarFieldSets.length > 0 ? sidebarFieldSets : fieldSets.slice(mainFieldSets.length);
 const listColumns = collection ? getListColumns(collection, viewConfig.list) : [];
-const hasPreview = !!(
-  collection &&
-  route.kind === "edit" &&
-  doc?.slug &&
-  (collection.pathPrefix || collection.slug === "pages")
-);
-const previewUrl = hasPreview ? `${cms.meta.getRouteForDocument(collection.slug, doc)}?preview=true` : null;
+const hasPreview = !!(collection && route.kind === "edit" && collection.preview);
+const previewUrl = hasPreview
+  ? typeof collection.preview === "string"
+    ? `${collection.preview}?preview=true`
+    : `${cms.meta.getRouteForDocument(collection.slug, doc)}?preview=true`
+  : null;
 const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
 const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
 const getBlockRelationOptions = (fieldName: string): Record<string, Array<{ value: string; label: string }>> => {
@@ -561,8 +560,8 @@ const tableRows =
                   : ""
               }
             >
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <div class="flex flex-wrap items-center gap-2">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
                   {locales.length > 1 &&
                     route.kind === "edit" &&
                     translatableFields.length > 0 &&
@@ -583,7 +582,7 @@ const tableRows =
                       );
                     })}
                 </div>
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="flex shrink-0 items-center gap-2">
                   {translationMode ? (
                     <button
                       class={buttonVariants({ variant: "outline" })}
