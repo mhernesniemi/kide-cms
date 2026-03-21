@@ -783,7 +783,7 @@ const tableRows =
                         <AdminCard title="Referenced by">
                           <ul class="grid gap-1">
                             {visible.map((d) => (
-                              <li class="flex items-baseline justify-between gap-2">
+                              <li class="flex min-w-0 items-baseline justify-between gap-2">
                                 <a
                                   href={`/admin/${d.collectionSlug}/${d._id}`}
                                   class="text-foreground/70 hover:text-foreground truncate text-sm transition-colors hover:underline"
@@ -801,7 +801,7 @@ const tableRows =
                               </summary>
                               <ul class="mt-1 grid gap-1">
                                 {hidden.map((d) => (
-                                  <li class="flex items-baseline justify-between gap-2">
+                                  <li class="flex min-w-0 items-baseline justify-between gap-2">
                                     <a
                                       href={`/admin/${d.collectionSlug}/${d._id}`}
                                       class="text-foreground/70 hover:text-foreground truncate text-sm transition-colors hover:underline"
