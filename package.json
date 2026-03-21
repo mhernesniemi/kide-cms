@@ -18,6 +18,7 @@
     "format:check": "prettier --check .",
     "cms:generate": "tsx src/cms/core/generator.ts",
     "cms:seed": "tsx -e \"import('./src/cms/core/seed.ts').then(m => import('./src/cms/cms.config.ts').then(c => m.seedDatabase(c.default)))\"",
+    "cms:admin": "tsx src/cms/core/create-admin.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"

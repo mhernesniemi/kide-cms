@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 
 import { getDb } from "./db";
 
-const ITERATIONS = 600_000;
+const ITERATIONS = 100_000;
 const HASH_LENGTH = 32;
 const SALT_LENGTH = 16;
 
