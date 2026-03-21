@@ -1,5 +1,5 @@
 ---
-import { ArrowUpRight, Dot, Languages, Plus } from "lucide-react";
+import { ArrowUpRight, Dot, Plus } from "lucide-react";
 
 import AdminCard from "@/components/admin/AdminCard.astro";
 import AiGenerateButton from "@/components/admin/AiGenerateButton";
@@ -333,13 +333,6 @@ const translatableFields = collection
   : [];
 const translationMode =
   !!collection && route.kind === "edit" && selectedLocale !== defaultLocale && translatableFields.length > 0;
-const sharedFieldSkipTypes = new Set(["relation", "image", "array", "blocks", "json"]);
-const sharedFields = collection
-  ? Object.keys(collection.fields).filter(
-      (fieldName) =>
-        !translatableFields.includes(fieldName) && !sharedFieldSkipTypes.has(collection.fields[fieldName].type),
-    )
-  : [];
 const fieldSets = collection ? getFieldSets(collection) : [];
 const primaryFieldSets = fieldSets.filter((set: { position?: string }) => set.position !== "sidebar");
 const sidebarFieldSets = fieldSets.filter((set: { position?: string }) => set.position === "sidebar");

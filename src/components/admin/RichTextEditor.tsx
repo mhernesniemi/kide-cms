@@ -428,13 +428,13 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
         style: `min-height: ${rows * 1.5}rem; padding: 0.625rem 0.75rem`,
       },
       handleDOMEvents: {
-        mousedown(view, event) {
+        mousedown(_view, event) {
           const target = event.target as HTMLElement;
           if (target.tagName === "A" || target.closest("a")) {
             event.preventDefault();
           }
         },
-        click(view, event) {
+        click(_view, event) {
           const target = event.target as HTMLElement;
           if (target.tagName === "A" || target.closest("a")) {
             event.preventDefault();
