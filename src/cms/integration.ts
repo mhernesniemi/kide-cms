@@ -37,25 +37,48 @@ function hasLocalD1Database(): boolean {
   }
 }
 
+function waitForD1Database(timeoutMs = 10000): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (hasLocalD1Database()) return resolve(true);
+    const interval = 500;
+    let waited = 0;
+    const timer = setInterval(() => {
+      waited += interval;
+      if (hasLocalD1Database()) {
+        clearInterval(timer);
+        resolve(true);
+      } else if (waited >= timeoutMs) {
+        clearInterval(timer);
+        resolve(false);
+      }
+    }, interval);
+  });
+}
+
 export default function cmsIntegration(): AstroIntegration {
   let needsDeferredPush = false;
 
   return {
     name: "kide-cms",
     hooks: {
-      "astro:server:start": ({ address }) => {
+      "astro:server:start": async ({ address }) => {
         const host = address.family === "IPv6" ? `[${address.address}]` : address.address;
         const base = `http://${host === "[::1]" || host === "127.0.0.1" || host === "[::]" ? "localhost" : host}:${address.port}`;
         console.log(`  \x1b[36m[cms]\x1b[0m Admin panel: \x1b[36m${base}/admin\x1b[0m`);
 
         if (needsDeferredPush) {
-          console.log("  \x1b[36m[cms]\x1b[0m First run — setting up database...");
-          try {
-            pushSchema();
-            console.log("  \x1b[36m[cms]\x1b[0m Database ready. Open /admin to create your admin account.");
-          } catch (e) {
-            console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (e as Error).message);
-            console.error("  \x1b[31m[cms]\x1b[0m Try running: npx drizzle-kit push --force");
+          console.log("  \x1b[36m[cms]\x1b[0m First run — waiting for D1 database...");
+          const ready = await waitForD1Database();
+          if (ready) {
+            try {
+              pushSchema();
+              console.log("  \x1b[36m[cms]\x1b[0m Database ready. Open /admin to create your admin account.");
+            } catch (e) {
+              console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (e as Error).message);
+              console.error("  \x1b[31m[cms]\x1b[0m Try running: npx drizzle-kit push --force");
+            }
+          } else {
+            console.error("  \x1b[31m[cms]\x1b[0m D1 database not ready. Restart the dev server to retry.");
           }
           needsDeferredPush = false;
         }
