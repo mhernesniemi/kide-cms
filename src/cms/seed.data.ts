@@ -90,7 +90,7 @@ const seeds: Record<string, SeedDocument[]> = {
                   {
                     type: "paragraph",
                     children: [
-                      { type: "text", value: "A runtime admin UI with field editors, data tables, and live preview" },
+                      { type: "text", value: "A runtime admin UI with field editors, data tables, and preview" },
                     ],
                   },
                 ],
