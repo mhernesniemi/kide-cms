@@ -684,6 +684,8 @@ const tableRows =
                     <DocumentActions
                       client:load
                       formId="document-form"
+                      collectionSlug={collection.slug}
+                      documentId={route.documentId}
                       showUnpublish={collection.drafts && doc?._status === "published"}
                       showDelete={!isSingleton}
                       showSchedule={!!collection.drafts}

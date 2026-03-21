@@ -39,6 +39,8 @@ type Version = {
 
 type Props = {
   formId: string;
+  collectionSlug?: string;
+  documentId?: string;
   showUnpublish?: boolean;
   showDelete?: boolean;
   showSchedule?: boolean;
@@ -52,6 +54,8 @@ type Props = {
 
 export default function DocumentActions({
   formId,
+  collectionSlug,
+  documentId,
   showUnpublish,
   showDelete,
   showSchedule,
@@ -64,6 +68,7 @@ export default function DocumentActions({
 }: Props) {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [refWarning, setRefWarning] = useState<string | null>(null);
   const [publishAt, setPublishAt] = useState(currentPublishAt ? toLocalDatetime(currentPublishAt) : "");
   const [unpublishAt, setUnpublishAt] = useState(currentUnpublishAt ? toLocalDatetime(currentUnpublishAt) : "");
 
@@ -180,7 +185,29 @@ export default function DocumentActions({
             <DropdownMenuSeparator />
           )}
           {showDelete && (
-            <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={async () => {
+                setRefWarning(null);
+                if (collectionSlug && documentId) {
+                  try {
+                    const res = await fetch(`/api/cms/references/${collectionSlug}/${documentId}`);
+                    if (res.ok) {
+                      const { refs, total } = await res.json();
+                      if (total > 0) {
+                        const parts = refs.map(
+                          (r: { collection: string; count: number }) => `${r.count} ${r.collection.toLowerCase()}`,
+                        );
+                        setRefWarning(
+                          `This document is referenced by ${parts.join(", ")}. Deleting it will leave broken references.`,
+                        );
+                      }
+                    }
+                  } catch {}
+                }
+                setDeleteOpen(true);
+              }}
+            >
               Delete
             </DropdownMenuItem>
           )}
@@ -236,6 +263,9 @@ export default function DocumentActions({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete document</AlertDialogTitle>
             <AlertDialogDescription>
+              {refWarning && (
+                <span className="mb-2 block font-medium text-amber-600 dark:text-amber-400">{refWarning}</span>
+              )}
               This action cannot be undone. This will permanently delete this document.
             </AlertDialogDescription>
           </AlertDialogHeader>
