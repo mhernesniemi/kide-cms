@@ -24,14 +24,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Check if any users exist (cached after first check)
   if (hasUsers === null || !hasUsers) {
-    const db = await getDb();
-    const schema = await import("./cms/.generated/schema");
-    const tables = schema.cmsTables as Record<string, { main: any }>;
-    if (tables.users) {
-      const rows = await db.select().from(tables.users.main).limit(1);
-      hasUsers = rows.length > 0;
-    } else {
-      hasUsers = true;
+    try {
+      const db = await getDb();
+      const schema = await import("./cms/.generated/schema");
+      const tables = schema.cmsTables as Record<string, { main: any }>;
+      if (tables.users) {
+        const rows = await db.select().from(tables.users.main).limit(1);
+        hasUsers = rows.length > 0;
+      } else {
+        hasUsers = true;
+      }
+    } catch {
+      // Tables may not exist yet (first run, schema not pushed)
+      hasUsers = false;
     }
   }
 
