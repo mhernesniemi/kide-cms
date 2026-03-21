@@ -4,7 +4,6 @@ export default defineCollection({
   slug: "posts",
   labels: { singular: "Post", plural: "Posts" },
   pathPrefix: "blog",
-  preview: true,
   timestamps: true,
   drafts: true,
   versions: { max: 20 },

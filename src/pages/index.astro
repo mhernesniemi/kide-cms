@@ -1,7 +1,5 @@
 ---
 import PublicLayout from "../layouts/PublicLayout.astro";
-import BlockRenderer from "../components/BlockRenderer.astro";
-import PreviewReceiver from "../components/PreviewReceiver.astro";
 import { cms } from "../cms/.generated/api";
 import { cmsImage } from "../cms/core/image";
 
@@ -9,29 +7,14 @@ export const prerender = false;
 
 type AnyRecord = Record<string, any>;
 
-const isPreview = Astro.url.searchParams.get("preview") === "true";
-
 const posts = (await cms.posts.find({
   status: "published",
   sort: { field: "sortOrder", direction: "desc" },
 })) as AnyRecord[];
 
-const frontPage = await cms["front-page"].findOne({
-  status: isPreview ? "any" : "published",
-});
+Astro.cache.set({ tags: ["posts", "home"] });
 
-const blocks = (() => {
-  if (!frontPage?.blocks) return [];
-  try {
-    return typeof frontPage.blocks === "string" ? JSON.parse(frontPage.blocks) : frontPage.blocks;
-  } catch {
-    return [];
-  }
-})();
-
-if (!isPreview) {
-  Astro.cache.set({ tags: ["posts", "front-page", "home"] });
-}
+const rendered = new Date().toISOString();
 ---
 
 <PublicLayout title="Kide CMS">
@@ -69,13 +52,6 @@ if (!isPreview) {
 
     {posts.length === 0 && <p class="text-gray-500">No published posts yet.</p>}
 
-    {
-      blocks.length > 0 && (
-        <div data-preview-field="blocks" data-preview-type="blocks" class="mt-12">
-          <BlockRenderer blocks={blocks} />
-        </div>
-      )
-    }
+    <p class="mt-8 text-xs text-gray-300">Rendered: {rendered}</p>
   </main>
-  {isPreview && <PreviewReceiver />}
 </PublicLayout>

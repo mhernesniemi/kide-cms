@@ -140,7 +140,6 @@ export type CollectionConfig = {
   labels: CollectionLabels;
   labelField?: string;
   pathPrefix?: string;
-  preview?: boolean | string;
   timestamps?: boolean;
   drafts?: boolean;
   versions?: { max: number };
