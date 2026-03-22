@@ -358,6 +358,14 @@ const generateTypesFile = (): string => {
     parts.push("");
   }
 
+  // Slug → Document type map for generic helpers like findContent
+  const mapEntries = config.collections.map((c) => {
+    const key = JSON.stringify(c.slug);
+    return `  ${key}: ${pascalCase(c.slug)}Document;`;
+  });
+  parts.push(`export type CMSDocumentMap = {\n${mapEntries.join("\n")}\n};`);
+  parts.push("");
+
   parts.push(`export type StoredVersion = {
   version: number;
   createdAt: string;

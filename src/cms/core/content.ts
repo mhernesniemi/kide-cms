@@ -1,15 +1,17 @@
 import { cms } from "../.generated/api";
+import type { CMSDocumentMap } from "../.generated/types";
 
-/** Document type — all field values are accessible without casting */
-export type Doc = Record<string, any>;
-
-type ContentResult = {
-  doc: Doc | null;
+type ContentResult<T> = {
+  doc: T | null;
   isPreview: boolean;
   blocks: Array<Record<string, any>>;
 };
 
-export async function findContent(collection: string, slug: string, url: URL): Promise<ContentResult> {
+export async function findContent<S extends keyof CMSDocumentMap>(
+  collection: S,
+  slug: string,
+  url: URL,
+): Promise<ContentResult<CMSDocumentMap[S]>> {
   const isPreview = url.searchParams.get("preview") === "true";
   const api = (cms as Record<string, any>)[collection];
   if (!api) return { doc: null, isPreview, blocks: [] };
