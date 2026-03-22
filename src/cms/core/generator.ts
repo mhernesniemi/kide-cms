@@ -171,6 +171,17 @@ const generateSchemaFile = (): string => {
 
   parts.push("");
 
+  parts.push(`export const cmsLocks = sqliteTable("cms_locks", {
+  _id: text("_id").primaryKey(),
+  collection: text("collection").notNull(),
+  documentId: text("document_id").notNull(),
+  userId: text("user_id").notNull(),
+  userEmail: text("user_email").notNull(),
+  lockedAt: text("locked_at").notNull(),
+});`);
+
+  parts.push("");
+
   // Export a lookup of table variables for the API layer
   const tableExports: string[] = [];
   for (const collection of config.collections) {

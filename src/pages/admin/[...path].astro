@@ -4,6 +4,7 @@ import { ArrowUpRight, Dot, Plus } from "lucide-react";
 import AdminCard from "@/components/admin/AdminCard.astro";
 import AiGenerateButton from "@/components/admin/AiGenerateButton";
 import DocumentActions from "@/components/admin/DocumentActions";
+import DocumentLock from "@/components/admin/DocumentLock";
 import DocumentsDataTable from "@/components/admin/DocumentsDataTable";
 import LiveHeading from "@/components/admin/LiveHeading";
 import UnsavedGuard from "@/components/admin/UnsavedGuard";
@@ -597,6 +598,9 @@ const tableRows =
 
         {(route.kind === "new" || route.kind === "edit") && (
           <>
+            {route.kind === "edit" && (
+              <DocumentLock client:load collection={route.collectionSlug} documentId={route.documentId} />
+            )}
             <UnsavedGuard
               client:load
               formId={translationMode ? "translation-form" : "document-form"}
