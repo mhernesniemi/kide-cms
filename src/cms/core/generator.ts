@@ -358,14 +358,6 @@ const generateTypesFile = (): string => {
     parts.push("");
   }
 
-  // Slug → Document type map for generic helpers like findContent
-  const mapEntries = config.collections.map((c) => {
-    const key = JSON.stringify(c.slug);
-    return `  ${key}: ${pascalCase(c.slug)}Document;`;
-  });
-  parts.push(`export type CMSDocumentMap = {\n${mapEntries.join("\n")}\n};`);
-  parts.push("");
-
   parts.push(`export type StoredVersion = {
   version: number;
   createdAt: string;
@@ -420,8 +412,10 @@ import type {
   ${imports.map((i) => `${i},`).join("\n  ")}
 } from "./types";
 
-export const cms = createCms(config, access, hooks) as ReturnType<typeof createCms> & {
+export const cms = createCms(config, access, hooks) as {
 ${apiTypes}
+  meta: ReturnType<typeof createCms>["meta"];
+  scheduled: ReturnType<typeof createCms>["scheduled"];
 };
 `;
 };

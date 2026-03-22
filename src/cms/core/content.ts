@@ -1,31 +1,3 @@
-import { cms } from "../.generated/api";
-import type { CMSDocumentMap } from "../.generated/types";
-
-type ContentResult<T> = {
-  doc: T | null;
-  isPreview: boolean;
-  blocks: Array<Record<string, any>>;
-};
-
-export async function findContent<S extends keyof CMSDocumentMap>(
-  collection: S,
-  slug: string,
-  url: URL,
-): Promise<ContentResult<CMSDocumentMap[S]>> {
-  const isPreview = url.searchParams.get("preview") === "true";
-  const api = (cms as Record<string, any>)[collection];
-  if (!api) return { doc: null, isPreview, blocks: [] };
-
-  const doc = await api.findOne({
-    slug,
-    status: isPreview ? "any" : "published",
-  });
-
-  const blocks = parseBlocks(doc?.blocks);
-
-  return { doc, isPreview, blocks };
-}
-
 export function parseBlocks(value: unknown): Array<Record<string, any>> {
   if (!value) return [];
   try {
