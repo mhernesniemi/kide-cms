@@ -1,15 +1,15 @@
 ---
 import PublicLayout from "@/layouts/PublicLayout.astro";
-import type { Doc } from "@/cms/core/content";
+import type { PostsDocument } from "@/cms/.generated/types";
 import { cms } from "@/cms/.generated/api";
 import { cmsImage } from "@/cms/core/image";
 
 export const prerender = false;
 
-const posts = (await cms.posts.find({
+const posts = await cms.posts.find({
   status: "published",
   sort: { field: "sortOrder", direction: "desc" },
-})) as Doc[];
+});
 
 Astro.cache.set({ tags: ["posts", "home"] });
 ---
@@ -24,7 +24,7 @@ Astro.cache.set({ tags: ["posts", "home"] });
     <h2 class="mb-4 text-lg font-medium text-gray-700">Posts</h2>
     <ul class="grid list-none gap-2 p-0">
       {
-        posts.map((post) => (
+        posts.map((post: PostsDocument) => (
           <li class="flex items-start gap-4">
             {post.image && (
               <a href={`/blog/${post.slug}`} class="shrink-0">
