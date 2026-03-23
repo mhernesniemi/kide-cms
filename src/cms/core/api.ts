@@ -29,6 +29,7 @@ type RuntimeContext = {
   cache?: {
     invalidate: (opts: { tags: string[] }) => void | Promise<void>;
   };
+  _system?: boolean;
 };
 
 type CMSOperation = "read" | "create" | "update" | "delete" | "publish" | "schedule";
@@ -216,6 +217,7 @@ const canAccess = async (
   context: RuntimeContext,
   doc?: Record<string, unknown> | null,
 ) => {
+  if (context._system) return true;
   const rule = access?.[collection.slug]?.[operation];
   if (!rule) return true;
   return rule({ user: context.user ?? null, doc: doc ?? null, operation, collection: collection.slug });
@@ -888,7 +890,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
 
           const tables = await getTableRefs(collection.slug);
           const collectionApiInstance = createCollectionApi(collection.slug);
-          const ctx: RuntimeContext = { cache };
+          const ctx: RuntimeContext = { cache, _system: true };
 
           // Publish scheduled docs whose _publishAt <= now
           const toPublish = await db
