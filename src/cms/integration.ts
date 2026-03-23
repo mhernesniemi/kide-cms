@@ -159,7 +159,7 @@ export default function cmsIntegration(): AstroIntegration {
         content = content.replace(
           /export\s*\{\s*(\w+)\s+as\s+default\s*\}/,
           (_, name) =>
-            `const _astroWorker = ${name};\nexport default {\n  fetch: (...args) => _astroWorker.fetch(...args),\n  async scheduled(event, env, ctx) {\n    const headers = env.CRON_SECRET ? { Authorization: "Bearer " + env.CRON_SECRET } : {};\n    await _astroWorker.fetch(new Request("https://dummy/api/cms/cron/publish", { headers }), env, ctx);\n  }\n};`,
+            `const _astroWorker = ${name};\nexport default {\n  fetch: (...args) => _astroWorker.fetch(...args),\n  async scheduled(event, env, ctx) {\n    const headers = env.CRON_SECRET ? { Authorization: "Bearer " + env.CRON_SECRET } : {};\n    const res = await _astroWorker.fetch(new Request("https://dummy/api/cms/cron/publish", { headers }), env, ctx);\n    if (!res.ok) console.error("Cron publish failed:", res.status, await res.text());\n    else console.log("Cron publish:", await res.text());\n  }\n};`,
         );
         writeFileSync(entryPath, content);
       },

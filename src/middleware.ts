@@ -54,8 +54,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return context.redirect("/admin/login");
   }
 
-  // Always allow login page and login API
-  if (isLoginPage || isLoginApi || isSetupApi) {
+  // Always allow login page, login API, and cron endpoint (has its own auth)
+  const isCronApi = pathname === "/api/cms/cron/publish";
+  if (isLoginPage || isLoginApi || isSetupApi || isCronApi) {
     return next();
   }
 
