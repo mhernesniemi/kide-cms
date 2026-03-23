@@ -33,7 +33,7 @@ const formatSize = (bytes: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const folderItems = [{ value: "", label: "None" }, ...allFolders.map((f) => ({ value: f._id, label: f.name }))];
+const folderItems = allFolders.map((f) => ({ value: f._id, label: f.name }));
 ---
 
 <AdminLayout title={`${asset.filename} | Assets | Kide CMS`} collections={config.collections} activeCollection="assets">
