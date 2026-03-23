@@ -112,6 +112,10 @@ navItems.push({
     <link rel="icon" href="/favicon.ico" />
     <title>{title}</title>
     <script is:inline>
+      if (!document.cookie.includes("tz="))
+        document.cookie = "tz=" + Intl.DateTimeFormat().resolvedOptions().timeZone + ";path=/;max-age=31536000";
+    </script>
+    <script is:inline>
       (function () {
         var t = localStorage.getItem("admin-theme") || "system";
         var dark = t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);

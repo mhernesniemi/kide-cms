@@ -4,9 +4,11 @@ import { richTextToPlainText } from "./values";
 const DEFAULT_DATE_FORMAT = "en-US";
 
 let _dateLocale: string = DEFAULT_DATE_FORMAT;
+let _timeZone: string | undefined;
 
-export const initDateFormat = (config: CMSConfig) => {
+export const initDateFormat = (config: CMSConfig, timeZone?: string) => {
   _dateLocale = config.admin?.dateFormat ?? DEFAULT_DATE_FORMAT;
+  _timeZone = timeZone;
 };
 
 export const formatDate = (value: unknown): string => {
@@ -19,6 +21,7 @@ export const formatDate = (value: unknown): string => {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: _timeZone,
   });
 };
 

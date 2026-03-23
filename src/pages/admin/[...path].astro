@@ -27,7 +27,7 @@ import {
 import AdminLayout from "@/layouts/AdminLayout.astro";
 export const prerender = false;
 
-initDateFormat(config);
+initDateFormat(config, Astro.cookies.get("tz")?.value);
 const cmsRuntime = cms as Record<string, any> & { meta: typeof cms.meta };
 const route = resolveAdminRoute(Astro.params.path);
 const user = Astro.locals.user;

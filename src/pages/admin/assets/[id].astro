@@ -12,10 +12,12 @@ import { Textarea } from "@/components/admin/ui/textarea";
 import config from "@/cms/cms.config";
 import { assets, folders } from "@/cms/core/assets";
 import { isAiEnabled } from "@/cms/core/ai";
+import { formatDate, initDateFormat } from "@/cms/core/admin";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 
 export const prerender = false;
 
+initDateFormat(config, Astro.cookies.get("tz")?.value);
 const { id } = Astro.params;
 if (!id) return Astro.redirect("/admin/assets");
 
@@ -120,7 +122,7 @@ const folderItems = flattenByParent(
               </div>
               <div>
                 <dt class="text-muted-foreground text-xs">Created</dt>
-                <dd class="mt-0.5">{new Date(asset._createdAt).toLocaleString()}</dd>
+                <dd class="mt-0.5">{formatDate(asset._createdAt)}</dd>
               </div>
             </dl>
           </AdminCard>
