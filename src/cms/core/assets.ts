@@ -1,18 +1,8 @@
-import { existsSync, mkdirSync } from "node:fs";
-import { unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { eq, desc, sql, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { getDb } from "./db";
-
-const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
-
-const ensureUploadsDir = () => {
-  if (!existsSync(UPLOADS_DIR)) {
-    mkdirSync(UPLOADS_DIR, { recursive: true });
-  }
-};
+import { putFile, deleteFile } from "./storage";
 
 export type AssetRecord = {
   _id: string;
@@ -39,18 +29,14 @@ export type FolderRecord = {
 
 export const assets = {
   async upload(file: File, options?: { alt?: string; folder?: string }): Promise<AssetRecord> {
-    ensureUploadsDir();
-
     const db = await getDb();
     const schema = await import("../.generated/schema");
 
-    const ext = path.extname(file.name) || "";
+    const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
     const safeName = `${nanoid(12)}${ext}`;
     const storagePath = `/uploads/${safeName}`;
-    const diskPath = path.join(UPLOADS_DIR, safeName);
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(diskPath, buffer);
+    await putFile(storagePath, new Uint8Array(await file.arrayBuffer()));
 
     const id = nanoid();
     const now = new Date().toISOString();
@@ -140,13 +126,7 @@ export const assets = {
     if (rows.length === 0) return;
 
     const asset = rows[0] as any;
-    const diskPath = path.join(process.cwd(), "public", asset.storagePath);
-
-    try {
-      await unlink(diskPath);
-    } catch {
-      // File may already be deleted
-    }
+    await deleteFile(asset.storagePath);
 
     await db.delete(schema.cmsAssets).where(eq(schema.cmsAssets._id, id));
   },
