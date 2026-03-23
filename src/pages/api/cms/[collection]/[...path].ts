@@ -173,9 +173,12 @@ const handleHtmlMutation = async (
     return redirect(redirectTo);
   } catch (error) {
     let msg = error instanceof Error ? error.message : `Failed to ${action}`;
-    if (msg.includes("UNIQUE constraint failed")) {
-      const field = msg.split(".").pop() ?? "field";
+    if (msg.toLowerCase().includes("unique constraint failed")) {
+      const match = msg.match(/unique constraint failed:\s*\S+\.(\w+)/i);
+      const field = match ? match[1] : "field";
       msg = `A document with this ${field} already exists`;
+    } else if (msg.startsWith("Failed query:")) {
+      msg = `Failed to ${action} ${collection.labels.singular.toLowerCase()}`;
     }
     const fallback = documentId ? redirectTo : redirectTo || `/admin/${collectionSlug}/new`;
     return redirect(fallback, { status: "error", msg });
