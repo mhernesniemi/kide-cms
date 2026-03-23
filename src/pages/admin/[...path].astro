@@ -168,6 +168,7 @@ let relationMetaByField: Record<
     collectionSlug: string;
     collectionLabel: string;
     hasMany: boolean;
+    labelField?: string;
   }
 > = {};
 let versions: Array<{ version: number; createdAt: string }> = [];
@@ -191,8 +192,7 @@ if (collection && collectionSlug) {
     if (singleDocs.length > 0) {
       return Astro.redirect(`/admin/${collectionSlug}/${singleDocs[0]._id}`);
     }
-    const newDoc = await collectionApi.create({}, runtimeContext);
-    return Astro.redirect(`/admin/${collectionSlug}/${newDoc._id}`);
+    return Astro.redirect(`/admin/${collectionSlug}/${(await collectionApi.create({}, runtimeContext))._id}`);
   }
 
   for (const [fieldName, field] of Object.entries(collection.fields) as [
@@ -409,7 +409,7 @@ const previewUrl = hasPreview
   : null;
 const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
 const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
-const getBlockRelationOptions = (fieldName: string): Record<string, Array<{ value: string; label: string }>> => {
+const getBlockRelationOptions = (_fieldName: string): Record<string, Array<{ value: string; label: string }>> => {
   const result: Record<string, Array<{ value: string; label: string }>> = {};
   for (const [key, opts] of Object.entries(relationOptionsByField)) {
     if (key.startsWith("block:")) result[key] = opts;
