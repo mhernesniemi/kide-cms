@@ -5,9 +5,10 @@ import { cms } from "@/cms/.generated/api";
 import { cacheTags } from "@/cms/core/content";
 import { cmsImage, cmsSrcset } from "@/cms/core/image";
 
-const isPreview = Astro.url.searchParams.get("preview") === "true";
+const isPreview = Astro.url.searchParams.has("preview");
 const doc = await cms.posts.findOne({ slug: Astro.params.slug!, status: isPreview ? "any" : "published" });
 if (!doc) return Astro.redirect("/");
+
 if (!isPreview) Astro.cache.set({ tags: cacheTags("posts", doc._id) });
 ---
 
