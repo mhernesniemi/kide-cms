@@ -1,7 +1,27 @@
 import { defineMiddleware } from "astro:middleware";
 import { getSessionUser } from "./cms/core/auth";
 import { getDb } from "./cms/core/db";
+
 let hasUsers: boolean | null = null;
+
+// Scheduled publishing — runs at most once per 60s, triggered by any request
+let lastScheduledRun = 0;
+const SCHEDULED_INTERVAL = 60_000;
+
+function maybeRunScheduledPublishing() {
+  const now = Date.now();
+  if (now - lastScheduledRun < SCHEDULED_INTERVAL) return;
+  lastScheduledRun = now;
+
+  import("./cms/.generated/api")
+    .then(({ cms }) => (cms as any).scheduled.processPublishing())
+    .then((result: { published: number; unpublished: number }) => {
+      if (result.published > 0 || result.unpublished > 0) {
+        console.log(`  [cms] Scheduled: ${result.published} published, ${result.unpublished} unpublished`);
+      }
+    })
+    .catch(() => {});
+}
 
 export const resetUserCache = () => {
   hasUsers = null;
@@ -9,6 +29,9 @@ export const resetUserCache = () => {
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
+
+  // Fire-and-forget scheduled publishing check (non-blocking)
+  maybeRunScheduledPublishing();
 
   // Skip auth for public pages and static assets
   const isAdminRoute = pathname.startsWith("/admin");

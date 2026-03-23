@@ -1,6 +1,6 @@
 import type { AstroIntegration } from "astro";
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, watch, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, watch } from "node:fs";
 import path from "node:path";
 
 function runGenerator() {
@@ -122,20 +122,6 @@ export default function cmsIntegration(): AstroIntegration {
           const configPath = path.join(process.cwd(), "src/cms/cms.config.ts");
           let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-          // Run scheduled publishing every 60s in dev
-          const CRON_INTERVAL = 60_000;
-          setInterval(async () => {
-            try {
-              const { cms } = await import("./.generated/api");
-              const result = await (cms as any).scheduled.processPublishing();
-              if (result.published > 0 || result.unpublished > 0) {
-                console.log(`  [cms] Scheduled: ${result.published} published, ${result.unpublished} unpublished`);
-              }
-            } catch {
-              // Silently ignore — DB may not be ready yet
-            }
-          }, CRON_INTERVAL);
-
           watch(configPath, () => {
             if (debounceTimer) clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
@@ -150,18 +136,6 @@ export default function cmsIntegration(): AstroIntegration {
             }, 500);
           });
         }
-      },
-      "astro:build:done": () => {
-        const entryPath = path.join(process.cwd(), "dist/server/entry.mjs");
-        if (!existsSync(entryPath)) return;
-
-        let content = readFileSync(entryPath, "utf-8");
-        content = content.replace(
-          /export\s*\{\s*(\w+)\s+as\s+default\s*\}/,
-          (_, name) =>
-            `const _astroWorker = ${name};\nexport default {\n  fetch: (...args) => _astroWorker.fetch(...args),\n  async scheduled(event, env, ctx) {\n    const headers = env.CRON_SECRET ? { Authorization: "Bearer " + env.CRON_SECRET } : {};\n    const res = await _astroWorker.fetch(new Request("https://dummy/api/cms/cron/publish", { headers }), env, ctx);\n    if (!res.ok) console.error("Cron publish failed:", res.status, await res.text());\n    else console.log("Cron publish:", await res.text());\n  }\n};`,
-        );
-        writeFileSync(entryPath, content);
       },
     },
   };
