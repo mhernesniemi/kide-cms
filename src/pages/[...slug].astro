@@ -4,8 +4,6 @@ import BlockRenderer from "@/components/BlockRenderer.astro";
 import { cms } from "@/cms/.generated/api";
 import { cacheTags, parseBlocks } from "@/cms/core/content";
 
-export const prerender = false;
-
 const slug = (Astro.params.slug ?? "").split("/").filter(Boolean).join("/");
 if (!slug) return Astro.redirect("/");
 

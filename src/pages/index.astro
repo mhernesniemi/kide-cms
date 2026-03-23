@@ -4,8 +4,6 @@ import type { PostsDocument } from "@/cms/.generated/types";
 import { cms } from "@/cms/.generated/api";
 import { cmsImage } from "@/cms/core/image";
 
-export const prerender = false;
-
 const posts = await cms.posts.find({
   status: "published",
   sort: { field: "sortOrder", direction: "desc" },
