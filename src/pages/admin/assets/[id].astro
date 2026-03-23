@@ -5,7 +5,7 @@ import AdminCard from "@/components/admin/AdminCard.astro";
 import AiGenerateButton from "@/components/admin/AiGenerateButton";
 import FocalPointSelector from "@/components/admin/FocalPointSelector";
 import UnsavedGuard from "@/components/admin/UnsavedGuard";
-import SelectField from "@/components/admin/SelectField";
+import TreeSelect, { flattenByParent } from "@/components/admin/TreeSelect";
 import { buttonVariants } from "@/components/admin/ui/button";
 import { Label } from "@/components/admin/ui/label";
 import { Textarea } from "@/components/admin/ui/textarea";
@@ -33,7 +33,12 @@ const formatSize = (bytes: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const folderItems = allFolders.map((f) => ({ value: f._id, label: f.name }));
+const folderItems = flattenByParent(
+  allFolders,
+  (f) => f._id,
+  (f) => f.name,
+  (f) => f.parent,
+);
 ---
 
 <AdminLayout title={`${asset.filename} | Assets | Kide CMS`} collections={config.collections} activeCollection="assets">
@@ -122,11 +127,13 @@ const folderItems = allFolders.map((f) => ({ value: f._id, label: f.name }));
             <div class="grid gap-5">
               <div class="grid gap-2">
                 <Label htmlFor="folder">Folder</Label>
-                <SelectField
+                <TreeSelect
                   client:load
                   name="folder"
                   value={asset.folder ?? ""}
-                  placeholder="None"
+                  placeholder="Select folder..."
+                  searchPlaceholder="Search folders..."
+                  emptyMessage="No folders found."
                   items={folderItems}
                 />
               </div>
