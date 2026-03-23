@@ -57,7 +57,7 @@ const folderItems = flattenByParent(
     </div>
 
     <div class="flex flex-wrap items-center justify-end gap-2">
-      <button type="submit" form="asset-form" value="save" class={buttonVariants({ variant: "outline" })}>
+      <button type="submit" form="asset-form" value="save" disabled class={buttonVariants({ variant: "outline" })}>
         Save
       </button>
       <form method="post" action={`/api/cms/assets/${asset._id}`}>

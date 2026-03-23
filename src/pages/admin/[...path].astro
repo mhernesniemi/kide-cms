@@ -608,7 +608,9 @@ const tableRows =
               isDraft={
                 !translationMode &&
                 collection.drafts &&
-                (doc?._status === "draft" || (doc && getVisualStatus(doc) === "changed"))
+                (doc?._status === "draft" ||
+                  doc?._status === "scheduled" ||
+                  (doc && getVisualStatus(doc) === "changed"))
               }
             />
             <div
@@ -659,7 +661,7 @@ const tableRows =
                         form="document-form"
                         name="_intent"
                         value="save"
-                        disabled={route.kind === "edit" && collection?.drafts}
+                        disabled={route.kind === "edit"}
                       >
                         {collection?.drafts ? "Save draft" : "Save"}
                       </button>
