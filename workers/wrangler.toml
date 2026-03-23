@@ -1,3 +1,15 @@
+# Scheduled Publishing Cron Worker
+#
+# A separate Cloudflare Worker that calls the CMS cron endpoint
+# to process scheduled publishes/unpublishes.
+#
+# Setup:
+#   1. Set SITE_URL below to your deployed site URL
+#   2. Set CRON_SECRET as a secret: pnpm dlx wrangler secret put CRON_SECRET
+#   3. Set the same CRON_SECRET on your main Astro app
+#      (Cloudflare dashboard → your Worker/Pages → Settings → Environment Variables)
+#   4. Deploy: pnpm dlx wrangler deploy
+
 name = "cms-cron-publish"
 main = "cron-publish.js"
 compatibility_date = "2024-01-01"
@@ -7,4 +19,4 @@ crons = ["* * * * *"]  # every minute
 
 [vars]
 # SITE_URL = "https://your-site.com"
-# CRON_SECRET — set via `wrangler secret put CRON_SECRET`
+# CRON_SECRET — set as a secret, not here. Run: pnpm dlx wrangler secret put CRON_SECRET
