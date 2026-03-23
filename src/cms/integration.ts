@@ -1,6 +1,6 @@
 import type { AstroIntegration } from "astro";
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, watch } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, watch, writeFileSync } from "node:fs";
 import path from "node:path";
 
 function runGenerator() {
@@ -150,6 +150,18 @@ export default function cmsIntegration(): AstroIntegration {
             }, 500);
           });
         }
+      },
+      "astro:build:done": () => {
+        const entryPath = path.join(process.cwd(), "dist/server/entry.mjs");
+        if (!existsSync(entryPath)) return;
+
+        let content = readFileSync(entryPath, "utf-8");
+        content = content.replace(
+          /export\s*\{\s*(\w+)\s+as\s+default\s*\}/,
+          (_, name) =>
+            `const _astroWorker = ${name};\nexport default {\n  fetch: (...args) => _astroWorker.fetch(...args),\n  async scheduled(event, env, ctx) {\n    const headers = env.CRON_SECRET ? { Authorization: "Bearer " + env.CRON_SECRET } : {};\n    await _astroWorker.fetch(new Request("https://dummy/api/cms/cron/publish", { headers }), env, ctx);\n  }\n};`,
+        );
+        writeFileSync(entryPath, content);
       },
     },
   };
