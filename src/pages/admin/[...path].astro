@@ -823,7 +823,7 @@ const tableRows =
                                   relationMeta={relationMetaByField[fieldName]}
                                   menuLinkOptions={menuLinkOptions}
                                 />
-                                {aiEnabled && fieldName === "seoDescription" && (
+                                {aiEnabled && fieldName === "seoDescription" && !isFieldReadOnly(fieldName) && (
                                   <div class="mt-1.5">
                                     <AiGenerateButton
                                       client:load
