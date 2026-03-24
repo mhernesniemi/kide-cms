@@ -1,7 +1,19 @@
 ---
 import "@/styles/admin.css";
 
-import { Clock, FileText, FolderTree, Image, Layers, LayoutGrid, Menu, PencilRuler, Plus, Users } from "lucide-react";
+import {
+  ExternalLink,
+  Clock,
+  FileText,
+  FolderTree,
+  Image,
+  Layers,
+  LayoutGrid,
+  Menu,
+  PencilRuler,
+  Plus,
+  Users,
+} from "lucide-react";
 
 import MobileSidebar from "@/components/admin/MobileSidebar";
 import SidebarUserMenu from "@/components/admin/SidebarUserMenu";
@@ -178,6 +190,16 @@ navItems.push({
                 </div>
               ))}
             </nav>
+            <div class="border-t px-3 py-3">
+              <a
+                href="/"
+                target="_blank"
+                class="text-foreground/70 hover:text-foreground hover:bg-foreground/5 dark:hover:bg-accent/60 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm"
+              >
+                <ExternalLink className="size-4 shrink-0 stroke-1" />
+                <span>View site</span>
+              </a>
+            </div>
           </aside>
 
           <div class="min-w-0">
@@ -229,6 +251,16 @@ navItems.push({
                     </div>
                   ))}
                 </nav>
+                <div class="border-t px-3 py-3">
+                  <a
+                    href="/"
+                    target="_blank"
+                    class="text-foreground/70 hover:text-foreground hover:bg-foreground/5 dark:hover:bg-accent/60 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm"
+                  >
+                    <ExternalLink className="size-4 shrink-0 stroke-1" />
+                    <span>View site</span>
+                  </a>
+                </div>
               </MobileSidebar>
             </header>
 
