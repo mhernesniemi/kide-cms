@@ -648,89 +648,163 @@ function SubFieldControl({
 // Array of images sub-component
 // -----------------------------------------------
 
+function SortableRepeaterItem({
+  item,
+  fieldKeys,
+  index,
+  isNew,
+  onNewMounted,
+  onRemove,
+  onUpdate,
+}: {
+  item: Record<string, string>;
+  fieldKeys: string[];
+  index: number;
+  isNew: boolean;
+  onNewMounted: () => void;
+  onRemove: () => void;
+  onUpdate: (key: string, val: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id: item._key,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={(el) => {
+        setNodeRef(el);
+        if (isNew && el) {
+          const input = el.querySelector<HTMLElement>("input, textarea");
+          if (input) {
+            input.focus();
+            onNewMounted();
+          }
+        }
+      }}
+      style={style}
+      className={cn("bg-muted/30 space-y-2 rounded-lg border p-3", isDragging && "z-10 opacity-90 shadow-lg")}
+    >
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          className="text-muted-foreground/50 hover:text-muted-foreground -ml-1 cursor-grab touch-none rounded p-1 transition-colors active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="size-4" />
+        </button>
+        <span className="text-muted-foreground text-xs font-medium">#{index + 1}</span>
+        <div className="ml-auto">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            title="Remove item"
+            className="text-muted-foreground hover:text-destructive"
+            onClick={onRemove}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
+      </div>
+      {fieldKeys.map((key) => (
+        <div key={key} className="grid gap-1">
+          <Label className="text-xs">{humanize(key)}</Label>
+          {key.includes("description") || key.includes("body") || key.includes("content") || key.includes("answer") ? (
+            <Textarea rows={3} value={item[key] ?? ""} onChange={(e) => onUpdate(key, e.target.value)} />
+          ) : (
+            <Input value={item[key] ?? ""} onChange={(e) => onUpdate(key, e.target.value)} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; onChange: (value: unknown) => void }) {
   const [newItemKey, setNewItemKey] = useState<string | null>(null);
-  const items: Array<Record<string, string>> = Array.isArray(value)
-    ? value
-    : typeof value === "string"
-      ? (() => {
-          try {
-            const p = JSON.parse(value);
-            return Array.isArray(p) ? p : [];
-          } catch {
-            return [];
-          }
-        })()
-      : [];
+  const [items, setItems] = useState<Array<Record<string, string>>>(() => {
+    const raw: unknown[] = Array.isArray(value)
+      ? value
+      : typeof value === "string"
+        ? (() => {
+            try {
+              const p = JSON.parse(value);
+              return Array.isArray(p) ? p : [];
+            } catch {
+              return [];
+            }
+          })()
+        : [];
+    return raw.map((item: unknown) => {
+      const obj = item as Record<string, string>;
+      return obj._key ? obj : { ...obj, _key: generateKey() };
+    });
+  });
+
+  useEffect(() => {
+    onChange(items);
+  }, [items]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Detect fields from first item or default to title + description
   const fieldKeys = items.length > 0 ? Object.keys(items[0]).filter((k) => k !== "_key") : ["title", "description"];
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
 
   const addItem = () => {
     const key = generateKey();
     const blank: Record<string, string> = { _key: key };
     for (const k of fieldKeys) blank[k] = "";
     setNewItemKey(key);
-    onChange([...items, blank]);
+    setItems((prev) => [...prev, blank]);
   };
 
   const removeItem = (index: number) => {
-    onChange(items.filter((_, i) => i !== index));
+    setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   const updateItem = (index: number, key: string, val: string) => {
-    const next = items.map((item, i) => (i === index ? { ...item, [key]: val } : item));
-    onChange(next);
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [key]: val } : item)));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setItems((prev) => {
+      const oldIndex = prev.findIndex((item) => item._key === active.id);
+      const newIndex = prev.findIndex((item) => item._key === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
   };
 
   return (
     <div className="space-y-3">
-      {items.map((item, index) => (
-        // When a new item is added, use a ref callback to focus its first input on mount
-        <div
-          key={item._key ?? index}
-          className="bg-muted/30 space-y-2 rounded-lg border p-3"
-          ref={
-            item._key === newItemKey
-              ? (el) => {
-                  if (el) {
-                    const input = el.querySelector<HTMLElement>("input, textarea");
-                    if (input) {
-                      input.focus();
-                      setNewItemKey(null);
-                    }
-                  }
-                }
-              : undefined
-          }
-        >
-          {fieldKeys.map((key) => (
-            <div key={key} className="grid gap-1">
-              <Label className="text-xs">{humanize(key)}</Label>
-              {key.includes("description") ||
-              key.includes("body") ||
-              key.includes("content") ||
-              key.includes("answer") ? (
-                <Textarea rows={3} value={item[key] ?? ""} onChange={(e) => updateItem(index, key, e.target.value)} />
-              ) : (
-                <Input value={item[key] ?? ""} onChange={(e) => updateItem(index, key, e.target.value)} />
-              )}
-            </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={items.map((item) => item._key)} strategy={verticalListSortingStrategy}>
+          {items.map((item, index) => (
+            <SortableRepeaterItem
+              key={item._key ?? index}
+              item={item}
+              fieldKeys={fieldKeys}
+              index={index}
+              isNew={item._key === newItemKey}
+              onNewMounted={() => setNewItemKey(null)}
+              onRemove={() => removeItem(index)}
+              onUpdate={(key, val) => updateItem(index, key, val)}
+            />
           ))}
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              title="Remove item"
-              className="text-muted-foreground hover:text-destructive"
-              onClick={() => removeItem(index)}
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
-          </div>
-        </div>
-      ))}
+        </SortableContext>
+      </DndContext>
       <Button type="button" variant="outline" size="sm" className="text-foreground/70" onClick={addItem}>
         <Plus className="size-3.5" />
         Add item
