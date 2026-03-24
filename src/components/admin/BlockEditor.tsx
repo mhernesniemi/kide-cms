@@ -648,58 +648,84 @@ function SubFieldControl({
 // Array of images sub-component
 // -----------------------------------------------
 
+function getRepeaterPreview(item: Record<string, string>, fieldKeys: string[]): string {
+  for (const key of fieldKeys) {
+    if (item[key]) {
+      const text = String(item[key]);
+      return text.length > 60 ? text.slice(0, 60) + "..." : text;
+    }
+  }
+  return "";
+}
+
 function SortableRepeaterItem({
   item,
   fieldKeys,
   index,
-  isNew,
-  onNewMounted,
+  isExpanded,
+  autoFocus,
+  onAutoFocused,
+  onToggle,
   onRemove,
   onUpdate,
 }: {
   item: Record<string, string>;
   fieldKeys: string[];
   index: number;
-  isNew: boolean;
-  onNewMounted: () => void;
+  isExpanded: boolean;
+  autoFocus?: boolean;
+  onAutoFocused?: () => void;
+  onToggle: () => void;
   onRemove: () => void;
   onUpdate: (key: string, val: string) => void;
 }) {
+  const contentRef = useRef<HTMLDivElement>(null);
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: item._key,
   });
+
+  useEffect(() => {
+    if (autoFocus && isExpanded && contentRef.current) {
+      const input = contentRef.current.querySelector<HTMLElement>("input, textarea");
+      if (input) {
+        input.focus();
+        onAutoFocused?.();
+      }
+    }
+  }, [autoFocus, isExpanded, onAutoFocused]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   };
 
+  const preview = getRepeaterPreview(item, fieldKeys);
+
   return (
-    <div
-      ref={(el) => {
-        setNodeRef(el);
-        if (isNew && el) {
-          const input = el.querySelector<HTMLElement>("input, textarea");
-          if (input) {
-            input.focus();
-            onNewMounted();
-          }
-        }
-      }}
-      style={style}
-      className={cn("bg-muted/30 space-y-2 rounded-lg border p-3", isDragging && "z-10 opacity-90 shadow-lg")}
-    >
-      <div className="flex items-center gap-2">
+    <div ref={setNodeRef} style={style} className={cn("rounded-lg border", isDragging && "z-10 opacity-90 shadow-lg")}>
+      <div
+        className="hover:bg-muted/50 flex items-center gap-2 px-3 py-2 transition-colors select-none"
+        onClick={onToggle}
+      >
         <button
           type="button"
           ref={setActivatorNodeRef}
           className="text-muted-foreground/50 hover:text-muted-foreground -ml-1 cursor-grab touch-none rounded p-1 transition-colors active:cursor-grabbing"
           {...attributes}
           {...listeners}
+          onClick={(e) => e.stopPropagation()}
         >
           <GripVertical className="size-4" />
         </button>
+
+        <ChevronRight
+          className={cn("text-muted-foreground size-4 shrink-0 transition-transform", isExpanded && "rotate-90")}
+        />
+
         <span className="text-muted-foreground text-xs font-medium">#{index + 1}</span>
+
+        {!isExpanded && preview && <span className="text-muted-foreground min-w-0 truncate text-sm">{preview}</span>}
+
         <div className="ml-auto">
           <Button
             type="button"
@@ -707,28 +733,41 @@ function SortableRepeaterItem({
             size="icon-xs"
             title="Remove item"
             className="text-muted-foreground hover:text-destructive"
-            onClick={onRemove}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
           >
             <Trash2 className="size-3.5" />
           </Button>
         </div>
       </div>
-      {fieldKeys.map((key) => (
-        <div key={key} className="grid gap-1">
-          <Label className="text-xs">{humanize(key)}</Label>
-          {key.includes("description") || key.includes("body") || key.includes("content") || key.includes("answer") ? (
-            <Textarea rows={3} value={item[key] ?? ""} onChange={(e) => onUpdate(key, e.target.value)} />
-          ) : (
-            <Input value={item[key] ?? ""} onChange={(e) => onUpdate(key, e.target.value)} />
-          )}
+
+      {isExpanded && (
+        <div ref={contentRef} className="space-y-2 border-t px-4 py-3">
+          {fieldKeys.map((key) => (
+            <div key={key} className="grid gap-1">
+              <Label className="text-xs">{humanize(key)}</Label>
+              {key.includes("description") ||
+              key.includes("body") ||
+              key.includes("content") ||
+              key.includes("answer") ? (
+                <Textarea rows={3} value={item[key] ?? ""} onChange={(e) => onUpdate(key, e.target.value)} />
+              ) : (
+                <Input value={item[key] ?? ""} onChange={(e) => onUpdate(key, e.target.value)} />
+              )}
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
 
 function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; onChange: (value: unknown) => void }) {
   const [newItemKey, setNewItemKey] = useState<string | null>(null);
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
+  const savedExpandedRef = useRef<Set<string> | null>(null);
   const [items, setItems] = useState<Array<Record<string, string>>>(() => {
     const raw: unknown[] = Array.isArray(value)
       ? value
@@ -766,6 +805,7 @@ function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; o
     for (const k of fieldKeys) blank[k] = "";
     setNewItemKey(key);
     setItems((prev) => [...prev, blank]);
+    setExpandedKeys((prev) => new Set(prev).add(key));
   };
 
   const removeItem = (index: number) => {
@@ -776,7 +816,25 @@ function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; o
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [key]: val } : item)));
   };
 
+  const toggleExpanded = (key: string) => {
+    setExpandedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const handleDragStart = () => {
+    savedExpandedRef.current = new Set(expandedKeys);
+    setExpandedKeys(new Set());
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
+    if (savedExpandedRef.current) {
+      setExpandedKeys(savedExpandedRef.current);
+      savedExpandedRef.current = null;
+    }
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     setItems((prev) => {
@@ -789,7 +847,12 @@ function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; o
 
   return (
     <div className="space-y-3">
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
         <SortableContext items={items.map((item) => item._key)} strategy={verticalListSortingStrategy}>
           {items.map((item, index) => (
             <SortableRepeaterItem
@@ -797,8 +860,10 @@ function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; o
               item={item}
               fieldKeys={fieldKeys}
               index={index}
-              isNew={item._key === newItemKey}
-              onNewMounted={() => setNewItemKey(null)}
+              isExpanded={expandedKeys.has(item._key)}
+              autoFocus={newItemKey === item._key}
+              onAutoFocused={() => setNewItemKey(null)}
+              onToggle={() => toggleExpanded(item._key)}
               onRemove={() => removeItem(index)}
               onUpdate={(key, val) => updateItem(index, key, val)}
             />
