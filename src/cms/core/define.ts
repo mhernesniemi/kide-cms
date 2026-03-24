@@ -39,6 +39,12 @@ type BaseFieldConfig<TType extends string, TValue = unknown> = {
   condition?: FieldCondition;
   admin?: AdminFieldComponent;
   access?: {
+    read?: (context: {
+      user?: { id: string; role?: string; email?: string } | null;
+      doc?: Record<string, unknown> | null;
+      operation: string;
+      collection: string;
+    }) => boolean | Promise<boolean>;
     update?: (context: {
       user?: { id: string; role?: string; email?: string } | null;
       doc?: Record<string, unknown> | null;
