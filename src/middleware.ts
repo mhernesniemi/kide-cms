@@ -18,6 +18,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isLoginApi = pathname === "/api/cms/auth/login";
   const isSetupPage = pathname === "/admin/setup";
   const isSetupApi = pathname === "/api/cms/auth/setup";
+  const isInvitePage = pathname === "/admin/invite";
+  const isInviteApi = pathname === "/api/cms/auth/invite";
 
   if (!isAdminRoute && !isAdminApiRoute) {
     return next();
@@ -57,7 +59,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Always allow login page, login API, and cron endpoint (has its own auth)
   const isCronApi = pathname === "/api/cms/cron/publish";
-  if (isLoginPage || isLoginApi || isSetupApi || isCronApi) {
+  if (isLoginPage || isLoginApi || isSetupApi || isCronApi || isInvitePage || isInviteApi) {
     return next();
   }
 

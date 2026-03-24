@@ -15,6 +15,6 @@ export default defineCollection({
       options: ["admin", "editor", "viewer"],
       defaultValue: "editor",
     }),
-    password: fields.text({ required: true, admin: { hidden: true } }),
+    password: fields.text({ admin: { hidden: true } }),
   },
 });

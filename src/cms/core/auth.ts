@@ -123,6 +123,49 @@ export const getSessionUser = async (request: Request): Promise<SessionUser | nu
   };
 };
 
+// --- Invitations ---
+
+const INVITE_EXPIRY_DAYS = 7;
+
+export const createInvite = async (userId: string): Promise<{ token: string; expiresAt: string }> => {
+  const db = await getDb();
+  const schema = await import("../.generated/schema");
+  const token = nanoid(32);
+  const expiresAt = new Date(Date.now() + INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  await db.insert(schema.cmsInvites).values({
+    _id: nanoid(),
+    userId,
+    token,
+    expiresAt,
+  });
+
+  return { token, expiresAt };
+};
+
+export const validateInvite = async (token: string): Promise<{ userId: string; expiresAt: string } | null> => {
+  const db = await getDb();
+  const schema = await import("../.generated/schema");
+
+  const rows = await db.select().from(schema.cmsInvites).where(eq(schema.cmsInvites.token, token)).limit(1);
+  if (rows.length === 0) return null;
+
+  const invite = rows[0] as { userId: string; expiresAt: string; usedAt: string | null };
+  if (invite.usedAt) return null;
+  if (new Date(invite.expiresAt) < new Date()) return null;
+
+  return { userId: invite.userId, expiresAt: invite.expiresAt };
+};
+
+export const consumeInvite = async (token: string): Promise<void> => {
+  const db = await getDb();
+  const schema = await import("../.generated/schema");
+  await db
+    .update(schema.cmsInvites)
+    .set({ usedAt: new Date().toISOString() })
+    .where(eq(schema.cmsInvites.token, token));
+};
+
 export const SESSION_COOKIE_NAME = "cms_session";
 
 export const setSessionCookie = (token: string, expiresAt: string) => {

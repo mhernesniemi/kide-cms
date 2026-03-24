@@ -183,6 +183,16 @@ const generateSchemaFile = (): string => {
 
   parts.push("");
 
+  parts.push(`export const cmsInvites = sqliteTable("cms_invites", {
+  _id: text("_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: text("expires_at").notNull(),
+  usedAt: text("used_at"),
+});`);
+
+  parts.push("");
+
   // Export a lookup of table variables for the API layer
   const tableExports: string[] = [];
   for (const collection of config.collections) {

@@ -1,0 +1,116 @@
+---
+import "@/styles/admin.css";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/admin/ui/card";
+import { Input } from "@/components/admin/ui/input";
+import { Label } from "@/components/admin/ui/label";
+import { buttonVariants } from "@/components/admin/ui/button";
+import { validateInvite } from "@/cms/core/auth";
+import { getDb } from "@/cms/core/db";
+import { eq } from "drizzle-orm";
+
+export const prerender = false;
+
+const token = Astro.url.searchParams.get("token") ?? "";
+const error = Astro.url.searchParams.get("error");
+
+let userEmail = "";
+let valid = false;
+
+if (token) {
+  const invite = await validateInvite(token);
+  if (invite) {
+    valid = true;
+    const db = await getDb();
+    const schema = await import("@/cms/.generated/schema");
+    const tables = schema.cmsTables as Record<string, { main: any }>;
+    if (tables.users) {
+      const rows = await db.select().from(tables.users.main).where(eq(tables.users.main._id, invite.userId)).limit(1);
+      if (rows.length > 0) userEmail = String((rows[0] as any).email);
+    }
+  }
+}
+
+const errorMessage =
+  error === "missing"
+    ? "Name and password are required."
+    : error === "password"
+      ? "Passwords do not match."
+      : error === "short"
+        ? "Password must be at least 8 characters."
+        : error === "expired" || error === "invalid"
+          ? "This invite link has expired or already been used."
+          : null;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>Accept Invitation | Kide CMS</title>
+    <script is:inline>
+      (function () {
+        var t = localStorage.getItem("admin-theme") || "system";
+        var dark = t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+        if (dark) document.documentElement.classList.add("dark");
+      })();
+    </script>
+  </head>
+  <body class="bg-background text-foreground min-h-screen antialiased">
+    <div class="flex min-h-screen items-center justify-center px-4">
+      <div class="w-full max-w-sm space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Set up your account</CardTitle>
+            <CardDescription>
+              {valid ? `Complete your account for ${userEmail}` : "Accept your invitation to Kide CMS"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {
+              errorMessage && (
+                <div class="border-destructive/50 bg-destructive/10 text-destructive mb-4 rounded-lg border px-3 py-2 text-sm">
+                  {errorMessage}
+                </div>
+              )
+            }
+            {
+              valid ? (
+                <form method="post" action="/api/cms/auth/invite" class="grid gap-4">
+                  <input type="hidden" name="_action" value="accept" />
+                  <input type="hidden" name="token" value={token} />
+                  <div class="grid gap-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input id="name" name="name" type="text" placeholder="Your name" required autoFocus />
+                  </div>
+                  <div class="grid gap-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input id="password" name="password" type="password" placeholder="Min 8 characters" required />
+                  </div>
+                  <div class="grid gap-2">
+                    <Label htmlFor="confirmPassword">Confirm password</Label>
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      placeholder="Repeat password"
+                      required
+                    />
+                  </div>
+                  <button class={buttonVariants({ size: "lg", className: "w-full" })} type="submit">
+                    Create account
+                  </button>
+                </form>
+              ) : (
+                !errorMessage && <p class="text-muted-foreground text-sm">No valid invitation token provided.</p>
+              )
+            }
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  </body>
+</html>

@@ -146,8 +146,10 @@ const getCollectionView = (slug: string) => {
   const c = config.collections.find((col) => col.slug === slug);
   return c?.views ?? {};
 };
-const getFormAction = (collectionSlug: string, documentId?: string) =>
-  documentId ? `/api/cms/${collectionSlug}/${documentId}` : `/api/cms/${collectionSlug}`;
+const getFormAction = (collectionSlug: string, documentId?: string) => {
+  if (collectionSlug === "users" && !documentId) return "/api/cms/auth/invite";
+  return documentId ? `/api/cms/${collectionSlug}/${documentId}` : `/api/cms/${collectionSlug}`;
+};
 
 const getFieldSetTitle = (position: string, index: number) => {
   if (position === "sidebar") return "Details";
@@ -565,7 +567,7 @@ const tableRows =
             {route.kind === "list" && (
               <a href={`/admin/${collection.slug}/new`} class={buttonVariants({})}>
                 <Plus className="size-4" />
-                New {collection.labels.singular}
+                {collection.slug === "users" ? "Invite user" : `New ${collection.labels.singular}`}
               </a>
             )}
           </div>
@@ -611,141 +613,140 @@ const tableRows =
                   (doc && getVisualStatus(doc) === "changed"))
               }
             />
-            <div
-              class={
-                effectiveSidebarFieldSets.length === 0 || translationMode
-                  ? "grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
-                  : ""
-              }
-            >
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <div class="flex flex-wrap items-center gap-2">
-                  {locales.length > 1 &&
-                    route.kind === "edit" &&
-                    translatableFields.length > 0 &&
-                    locales.map((locale) => {
-                      const isActive = selectedLocale === locale;
-                      return (
-                        <a
-                          href={`/admin/${collection.slug}/${route.documentId}?locale=${locale}`}
-                          class:list={[
-                            buttonVariants({ variant: "outline", size: "sm" }),
-                            isActive
-                              ? "border-primary/50 bg-background ring-ring/30 font-medium ring-2"
-                              : "text-muted-foreground border-border/60",
-                          ]}
-                        >
-                          {locale.toUpperCase()}
-                        </a>
-                      );
-                    })}
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                  {translationMode ? (
-                    <button
-                      class={buttonVariants({ variant: "outline" })}
-                      type="submit"
-                      form="translation-form"
-                      value="save"
-                      disabled
-                    >
-                      Save translation
-                    </button>
+            {collection.slug === "users" && route.kind === "edit" && Astro.url.searchParams.get("inviteToken") && (
+                <AdminCard
+                  title={Astro.url.searchParams.get("emailSent") === "true" ? "Invitation sent" : "Invite link"}
+                >
+                  {Astro.url.searchParams.get("emailSent") === "true" ? (
+                    <p class="text-muted-foreground text-sm">
+                      An invitation email has been sent. The user can also use this link:
+                    </p>
                   ) : (
-                    <>
+                    <p class="text-muted-foreground text-sm">
+                      Email is not configured. Share this link with the user to complete their registration:
+                    </p>
+                  )}
+                  <code class="bg-muted mt-2 block rounded-md px-3 py-2 text-sm break-all select-all">
+                    {Astro.url.origin}/admin/invite?token={Astro.url.searchParams.get("inviteToken")}
+                  </code>
+                </AdminCard>
+              )}
+              <div
+                class={
+                  effectiveSidebarFieldSets.length === 0 || translationMode
+                    ? "grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
+                    : ""
+                }
+              >
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
+                    {locales.length > 1 &&
+                      route.kind === "edit" &&
+                      translatableFields.length > 0 &&
+                      locales.map((locale) => {
+                        const isActive = selectedLocale === locale;
+                        return (
+                          <a
+                            href={`/admin/${collection.slug}/${route.documentId}?locale=${locale}`}
+                            class:list={[
+                              buttonVariants({ variant: "outline", size: "sm" }),
+                              isActive
+                                ? "border-primary/50 bg-background ring-ring/30 font-medium ring-2"
+                                : "text-muted-foreground border-border/60",
+                            ]}
+                          >
+                            {locale.toUpperCase()}
+                          </a>
+                        );
+                      })}
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    {translationMode ? (
                       <button
                         class={buttonVariants({ variant: "outline" })}
                         type="submit"
-                        form="document-form"
-                        name="_intent"
+                        form="translation-form"
                         value="save"
-                        disabled={route.kind === "edit"}
+                        disabled
                       >
-                        {collection?.drafts ? "Save draft" : "Save"}
+                        Save translation
                       </button>
-                      {collection.drafts && (
+                    ) : (
+                      <>
                         <button
-                          class={buttonVariants({ variant: "publish" })}
+                          class={buttonVariants({ variant: "outline" })}
                           type="submit"
                           form="document-form"
                           name="_intent"
-                          value="publish"
-                          disabled={
-                            route.kind === "edit" &&
-                            !(
-                              doc?._status === "draft" ||
-                              doc?._status === "scheduled" ||
-                              (doc && getVisualStatus(doc) === "changed")
-                            )
-                          }
+                          value="save"
+                          disabled={route.kind === "edit"}
                         >
-                          Publish
+                          {collection.slug === "users" && route.kind === "new"
+                            ? "Send invite"
+                            : collection?.drafts
+                              ? "Save draft"
+                              : "Save"}
                         </button>
-                      )}
-                    </>
-                  )}
-                  {route.kind === "edit" && !translationMode && (
-                    <DocumentActions
-                      client:load
-                      formId="document-form"
-                      collectionSlug={collection.slug}
-                      documentId={route.documentId}
-                      showUnpublish={collection.drafts && doc?._status === "published"}
-                      showDiscardDraft={collection.drafts && doc?._status === "published" && !!doc?._published}
-                      showDelete={!isSingleton}
-                      showSchedule={!!collection.drafts}
-                      showCancelSchedule={collection.drafts && doc?._status === "scheduled"}
-                      currentPublishAt={doc?._publishAt ? String(doc._publishAt) : undefined}
-                      currentUnpublishAt={doc?._unpublishAt ? String(doc._unpublishAt) : undefined}
-                      versions={versions}
-                      restoreEndpoint={getFormAction(collection.slug, route.documentId)}
-                      redirectTo={Astro.url.pathname + Astro.url.search}
-                    />
-                  )}
+                        {collection.drafts && (
+                          <button
+                            class={buttonVariants({ variant: "publish" })}
+                            type="submit"
+                            form="document-form"
+                            name="_intent"
+                            value="publish"
+                            disabled={
+                              route.kind === "edit" &&
+                              !(
+                                doc?._status === "draft" ||
+                                doc?._status === "scheduled" ||
+                                (doc && getVisualStatus(doc) === "changed")
+                              )
+                            }
+                          >
+                            Publish
+                          </button>
+                        )}
+                      </>
+                    )}
+                    {route.kind === "edit" && !translationMode && (
+                      <DocumentActions
+                        client:load
+                        formId="document-form"
+                        collectionSlug={collection.slug}
+                        documentId={route.documentId}
+                        showUnpublish={collection.drafts && doc?._status === "published"}
+                        showDiscardDraft={collection.drafts && doc?._status === "published" && !!doc?._published}
+                        showDelete={!isSingleton}
+                        showSchedule={!!collection.drafts}
+                        showCancelSchedule={collection.drafts && doc?._status === "scheduled"}
+                        currentPublishAt={doc?._publishAt ? String(doc._publishAt) : undefined}
+                        currentUnpublishAt={doc?._unpublishAt ? String(doc._unpublishAt) : undefined}
+                        versions={versions}
+                        restoreEndpoint={getFormAction(collection.slug, route.documentId)}
+                        redirectTo={Astro.url.pathname + Astro.url.search}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {!translationMode && (
-              <form
-                id="document-form"
-                method="post"
-                action={getFormAction(collection.slug, route.kind === "edit" ? route.documentId : undefined)}
-                class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
-              >
-                <input type="hidden" name="_action" value={route.kind === "new" ? "create" : "update"} />
-                <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
+              {!translationMode && (
+                <form
+                  id="document-form"
+                  method="post"
+                  action={getFormAction(collection.slug, route.kind === "edit" ? route.documentId : undefined)}
+                  class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
+                >
+                  <input type="hidden" name="_action" value={route.kind === "new" ? "create" : "update"} />
+                  <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
 
-                <div class="space-y-6">
-                  {mainFieldSets.map((set, index) => (
-                    <AdminCard title={getFieldSetTitle("content", index)}>
-                      <div class="grid gap-5">
-                        {set.fields
-                          .filter((fieldName) => collection.fields[fieldName])
-                          .map((fieldName) => (
-                            <FieldControl
-                              name={fieldName}
-                              field={collection.fields[fieldName]}
-                              value={getCurrentValue(fieldName)}
-                              relationOptions={relationOptionsByField[fieldName] ?? []}
-                              relationMeta={relationMetaByField[fieldName]}
-                              menuLinkOptions={menuLinkOptions}
-                              blockRelationOptions={getBlockRelationOptions(fieldName)}
-                            />
-                          ))}
-                      </div>
-                    </AdminCard>
-                  ))}
-                </div>
-
-                <div class="space-y-6 text-sm [&_button]:text-sm [&_input]:text-sm [&_select]:text-sm [&_textarea]:text-sm">
-                  {effectiveSidebarFieldSets.map((set, index) => (
-                    <AdminCard title={getFieldSetTitle("sidebar", index)}>
-                      <div class="grid gap-5">
-                        {set.fields
-                          .filter((fieldName) => collection.fields[fieldName])
-                          .map((fieldName) => (
-                            <div>
+                  <div class="space-y-6">
+                    {mainFieldSets.map((set, index) => (
+                      <AdminCard title={getFieldSetTitle("content", index)}>
+                        <div class="grid gap-5">
+                          {set.fields
+                            .filter((fieldName) => collection.fields[fieldName])
+                            .map((fieldName) => (
                               <FieldControl
                                 name={fieldName}
                                 field={collection.fields[fieldName]}
@@ -753,138 +754,161 @@ const tableRows =
                                 relationOptions={relationOptionsByField[fieldName] ?? []}
                                 relationMeta={relationMetaByField[fieldName]}
                                 menuLinkOptions={menuLinkOptions}
+                                blockRelationOptions={getBlockRelationOptions(fieldName)}
                               />
-                              {aiEnabled && fieldName === "seoDescription" && (
+                            ))}
+                        </div>
+                      </AdminCard>
+                    ))}
+                  </div>
+
+                  <div class="space-y-6 text-sm [&_button]:text-sm [&_input]:text-sm [&_select]:text-sm [&_textarea]:text-sm">
+                    {effectiveSidebarFieldSets.map((set, index) => (
+                      <AdminCard title={getFieldSetTitle("sidebar", index)}>
+                        <div class="grid gap-5">
+                          {set.fields
+                            .filter((fieldName) => collection.fields[fieldName])
+                            .map((fieldName) => (
+                              <div>
+                                <FieldControl
+                                  name={fieldName}
+                                  field={collection.fields[fieldName]}
+                                  value={getCurrentValue(fieldName)}
+                                  relationOptions={relationOptionsByField[fieldName] ?? []}
+                                  relationMeta={relationMetaByField[fieldName]}
+                                  menuLinkOptions={menuLinkOptions}
+                                />
+                                {aiEnabled && fieldName === "seoDescription" && (
+                                  <div class="mt-1.5">
+                                    <AiGenerateButton
+                                      client:load
+                                      endpoint="/api/cms/ai/seo"
+                                      payload={{
+                                        title: getCurrentValue("title") ?? "",
+                                        excerpt: getCurrentValue("excerpt") ?? "",
+                                      }}
+                                      targetField={fieldName}
+                                      label="Generate description"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                        </div>
+                      </AdminCard>
+                    ))}
+                    {reverseRefs.length > 0 &&
+                      (() => {
+                        const allDocs = reverseRefs.flatMap((ref) =>
+                          ref.docs.map((d) => ({
+                            ...d,
+                            collectionSlug: ref.collectionSlug,
+                            collectionLabel: ref.collectionLabel,
+                          })),
+                        );
+                        const visible = allDocs.slice(0, 30);
+                        const hidden = allDocs.slice(30);
+                        return (
+                          <AdminCard title="Referenced by">
+                            <ul class="grid gap-1">
+                              {visible.map((d) => (
+                                <li class="flex min-w-0 items-baseline justify-between gap-2">
+                                  <a
+                                    href={`/admin/${d.collectionSlug}/${d._id}`}
+                                    target="_blank"
+                                    class="text-foreground/70 hover:text-foreground truncate text-sm transition-colors hover:underline"
+                                  >
+                                    {d.label}
+                                  </a>
+                                  <span class="text-muted-foreground shrink-0 text-xs">{d.collectionLabel}</span>
+                                </li>
+                              ))}
+                            </ul>
+                            {hidden.length > 0 && (
+                              <details class="mt-2">
+                                <summary class="text-muted-foreground hover:text-foreground cursor-pointer text-xs transition-colors">
+                                  Show {hidden.length} more
+                                </summary>
+                                <ul class="mt-1 grid gap-1">
+                                  {hidden.map((d) => (
+                                    <li class="flex min-w-0 items-baseline justify-between gap-2">
+                                      <a
+                                        href={`/admin/${d.collectionSlug}/${d._id}`}
+                                        class="text-foreground/70 hover:text-foreground truncate text-sm transition-colors hover:underline"
+                                      >
+                                        {d.label}
+                                      </a>
+                                      <span class="text-muted-foreground shrink-0 text-xs">{d.collectionLabel}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </details>
+                            )}
+                          </AdminCard>
+                        );
+                      })()}
+                  </div>
+                </form>
+              )}
+
+              {translationMode && (
+                <div class="space-y-6">
+                  <form
+                    id="translation-form"
+                    method="post"
+                    action={getFormAction(collection.slug, route.documentId)}
+                    class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
+                  >
+                    <input type="hidden" name="_action" value="save-translation" />
+                    <input type="hidden" name="locale" value={selectedLocale} />
+                    <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
+
+                    <AdminCard title="Localized content">
+                      <div class="grid gap-5">
+                        {translatableFields.map((fieldName) => {
+                          const fieldDef = collection.fields[fieldName];
+                          const fieldType =
+                            fieldDef.type === "richText" ? "richText" : fieldDef.type === "slug" ? "slug" : "text";
+                          const sourceValue = getSharedValue(fieldName);
+                          const sourceText =
+                            typeof sourceValue === "object" && sourceValue !== null
+                              ? JSON.stringify(sourceValue)
+                              : String(sourceValue ?? "");
+                          return (
+                            <div>
+                              <FieldControl
+                                name={fieldName}
+                                field={fieldDef}
+                                value={getCurrentValue(fieldName)}
+                                relationOptions={relationOptionsByField[fieldName] ?? []}
+                                relationMeta={relationMetaByField[fieldName]}
+                                menuLinkOptions={menuLinkOptions}
+                              />
+                              {aiEnabled && sourceText && fieldDef.type !== "slug" && fieldDef.type !== "blocks" && (
                                 <div class="mt-1.5">
                                   <AiGenerateButton
                                     client:load
-                                    endpoint="/api/cms/ai/seo"
+                                    endpoint="/api/cms/ai/translate"
                                     payload={{
-                                      title: getCurrentValue("title") ?? "",
-                                      excerpt: getCurrentValue("excerpt") ?? "",
+                                      text: sourceText,
+                                      sourceLocale: defaultLocale,
+                                      targetLocale: selectedLocale,
+                                      fieldName,
+                                      fieldType,
                                     }}
                                     targetField={fieldName}
-                                    label="Generate description"
+                                    label={`Translate from ${defaultLocale.toUpperCase()}`}
                                   />
                                 </div>
                               )}
                             </div>
-                          ))}
+                          );
+                        })}
                       </div>
                     </AdminCard>
-                  ))}
-                  {reverseRefs.length > 0 &&
-                    (() => {
-                      const allDocs = reverseRefs.flatMap((ref) =>
-                        ref.docs.map((d) => ({
-                          ...d,
-                          collectionSlug: ref.collectionSlug,
-                          collectionLabel: ref.collectionLabel,
-                        })),
-                      );
-                      const visible = allDocs.slice(0, 30);
-                      const hidden = allDocs.slice(30);
-                      return (
-                        <AdminCard title="Referenced by">
-                          <ul class="grid gap-1">
-                            {visible.map((d) => (
-                              <li class="flex min-w-0 items-baseline justify-between gap-2">
-                                <a
-                                  href={`/admin/${d.collectionSlug}/${d._id}`}
-                                  target="_blank"
-                                  class="text-foreground/70 hover:text-foreground truncate text-sm transition-colors hover:underline"
-                                >
-                                  {d.label}
-                                </a>
-                                <span class="text-muted-foreground shrink-0 text-xs">{d.collectionLabel}</span>
-                              </li>
-                            ))}
-                          </ul>
-                          {hidden.length > 0 && (
-                            <details class="mt-2">
-                              <summary class="text-muted-foreground hover:text-foreground cursor-pointer text-xs transition-colors">
-                                Show {hidden.length} more
-                              </summary>
-                              <ul class="mt-1 grid gap-1">
-                                {hidden.map((d) => (
-                                  <li class="flex min-w-0 items-baseline justify-between gap-2">
-                                    <a
-                                      href={`/admin/${d.collectionSlug}/${d._id}`}
-                                      class="text-foreground/70 hover:text-foreground truncate text-sm transition-colors hover:underline"
-                                    >
-                                      {d.label}
-                                    </a>
-                                    <span class="text-muted-foreground shrink-0 text-xs">{d.collectionLabel}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </details>
-                          )}
-                        </AdminCard>
-                      );
-                    })()}
+                  </form>
                 </div>
-              </form>
-            )}
-
-            {translationMode && (
-              <div class="space-y-6">
-                <form
-                  id="translation-form"
-                  method="post"
-                  action={getFormAction(collection.slug, route.documentId)}
-                  class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
-                >
-                  <input type="hidden" name="_action" value="save-translation" />
-                  <input type="hidden" name="locale" value={selectedLocale} />
-                  <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
-
-                  <AdminCard title="Localized content">
-                    <div class="grid gap-5">
-                      {translatableFields.map((fieldName) => {
-                        const fieldDef = collection.fields[fieldName];
-                        const fieldType =
-                          fieldDef.type === "richText" ? "richText" : fieldDef.type === "slug" ? "slug" : "text";
-                        const sourceValue = getSharedValue(fieldName);
-                        const sourceText =
-                          typeof sourceValue === "object" && sourceValue !== null
-                            ? JSON.stringify(sourceValue)
-                            : String(sourceValue ?? "");
-                        return (
-                          <div>
-                            <FieldControl
-                              name={fieldName}
-                              field={fieldDef}
-                              value={getCurrentValue(fieldName)}
-                              relationOptions={relationOptionsByField[fieldName] ?? []}
-                              relationMeta={relationMetaByField[fieldName]}
-                              menuLinkOptions={menuLinkOptions}
-                            />
-                            {aiEnabled && sourceText && fieldDef.type !== "slug" && fieldDef.type !== "blocks" && (
-                              <div class="mt-1.5">
-                                <AiGenerateButton
-                                  client:load
-                                  endpoint="/api/cms/ai/translate"
-                                  payload={{
-                                    text: sourceText,
-                                    sourceLocale: defaultLocale,
-                                    targetLocale: selectedLocale,
-                                    fieldName,
-                                    fieldType,
-                                  }}
-                                  targetField={fieldName}
-                                  label={`Translate from ${defaultLocale.toUpperCase()}`}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </AdminCard>
-                </form>
-              </div>
-            )}
+              )}
           </>
         )}
       </section>
