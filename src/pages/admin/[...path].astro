@@ -533,7 +533,7 @@ const tableRows =
           title="Singles"
           columns={[
             { key: "name", label: "Name" },
-            { key: "_status", label: "Status" },
+            ...(singletonCollections.some((c) => c.drafts) ? [{ key: "_status", label: "Status" }] : []),
             { key: "updatedAt", label: "Last updated" },
           ]}
           data={singletonsData.map((s) => ({

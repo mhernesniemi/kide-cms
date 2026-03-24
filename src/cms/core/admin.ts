@@ -113,10 +113,13 @@ export const formatFieldValue = (
   return String(value);
 };
 
-export const getListColumns = (collection: CollectionConfig, viewConfig?: { columns?: string[] }) =>
-  viewConfig?.columns?.length
-    ? viewConfig.columns
-    : ["title" in collection.fields ? "title" : Object.keys(collection.fields)[0], "_status", "_updatedAt"];
+export const getListColumns = (collection: CollectionConfig, viewConfig?: { columns?: string[] }) => {
+  if (viewConfig?.columns?.length) {
+    return collection.drafts ? viewConfig.columns : viewConfig.columns.filter((c) => c !== "_status");
+  }
+  const firstField = "title" in collection.fields ? "title" : Object.keys(collection.fields)[0];
+  return collection.drafts ? [firstField, "_status", "_updatedAt"] : [firstField, "_updatedAt"];
+};
 
 export const getFieldSets = (collection: CollectionConfig) => {
   const allFields = Object.keys(collection.fields).filter((f) => !collection.fields[f].admin?.hidden);
