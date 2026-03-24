@@ -60,6 +60,13 @@ const canAccessCurrent = (() => {
   return !slug || canRead(slug);
 })();
 
+const isFieldReadOnly = (fieldName: string) => {
+  if (!collection) return false;
+  const field = collection.fields[fieldName];
+  if (!field?.access?.update) return false;
+  return !field.access.update({ user: user ?? null, doc: null, operation: "update", collection: collection.slug });
+};
+
 // Redirect /admin to recent
 if (route.kind === "dashboard") {
   return Astro.redirect("/admin/recent");
@@ -787,6 +794,7 @@ const tableRows =
                                 name={fieldName}
                                 field={collection.fields[fieldName]}
                                 value={getCurrentValue(fieldName)}
+                                readOnly={isFieldReadOnly(fieldName)}
                                 relationOptions={relationOptionsByField[fieldName] ?? []}
                                 relationMeta={relationMetaByField[fieldName]}
                                 menuLinkOptions={menuLinkOptions}
@@ -810,6 +818,7 @@ const tableRows =
                                   name={fieldName}
                                   field={collection.fields[fieldName]}
                                   value={getCurrentValue(fieldName)}
+                                  readOnly={isFieldReadOnly(fieldName)}
                                   relationOptions={relationOptionsByField[fieldName] ?? []}
                                   relationMeta={relationMetaByField[fieldName]}
                                   menuLinkOptions={menuLinkOptions}
@@ -916,6 +925,7 @@ const tableRows =
                                 name={fieldName}
                                 field={fieldDef}
                                 value={getCurrentValue(fieldName)}
+                                readOnly={isFieldReadOnly(fieldName)}
                                 relationOptions={relationOptionsByField[fieldName] ?? []}
                                 relationMeta={relationMetaByField[fieldName]}
                                 menuLinkOptions={menuLinkOptions}
