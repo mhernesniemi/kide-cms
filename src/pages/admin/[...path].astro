@@ -24,7 +24,6 @@ import {
   initDateFormat,
   resolveAdminRoute,
 } from "@/cms/core/admin";
-import access from "@/cms/access";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 export const prerender = false;
 
@@ -40,14 +39,15 @@ const requestedLocale = Astro.url.searchParams.get("locale") ?? defaultLocale;
 const isEmbed = Astro.url.searchParams.get("_embed") === "1";
 
 // Filter collections the user can access
-const accessRules = access as Record<string, Record<string, Function>> | undefined;
 const canRead = (slug: string) => {
-  const rule = accessRules?.[slug]?.read;
+  const c = config.collections.find((col) => col.slug === slug);
+  const rule = c?.access?.read;
   if (!rule) return true;
   return rule({ user: user ?? null, doc: null, operation: "read", collection: slug });
 };
 const canWrite = (slug: string) => {
-  const rule = accessRules?.[slug]?.create;
+  const c = config.collections.find((col) => col.slug === slug);
+  const rule = c?.access?.create;
   if (!rule) return true;
   return rule({ user: user ?? null, doc: null, operation: "create", collection: slug });
 };

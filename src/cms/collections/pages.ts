@@ -13,13 +13,22 @@ export default defineCollection({
   fields: {
     title: fields.text({ required: true, translatable: true }),
     slug: fields.slug({ from: "title", unique: true, translatable: true, admin: { position: "sidebar" } }),
-    summary: fields.text({ translatable: true, admin: { rows: 3 } }),
+    summary: fields.text({
+      translatable: true,
+      admin: { rows: 3 },
+      access: {
+        read: ({ user }) => user?.role === "admin",
+      },
+    }),
     image: fields.image(),
     relatedPosts: fields.relation({ collection: "posts", hasMany: true, admin: { position: "sidebar" } }),
     seoDescription: fields.text({
       maxLength: 160,
       translatable: true,
       admin: { rows: 3, help: "Meta description for search engines. Max 160 characters.", position: "sidebar" },
+      access: {
+        update: ({ user }) => user?.role === "admin",
+      },
     }),
     blocks: fields.blocks({
       translatable: true,

@@ -1,5 +1,7 @@
 import { defineCollection, fields } from "../core/define";
 
+const isAdmin = ({ user }: { user?: { role?: string } | null }) => user?.role === "admin";
+
 export default defineCollection({
   slug: "front-page",
   labels: { singular: "Front Page", plural: "Front Page" },
@@ -7,6 +9,13 @@ export default defineCollection({
   preview: "/",
   timestamps: true,
   drafts: true,
+  access: {
+    read: isAdmin,
+    create: isAdmin,
+    update: isAdmin,
+    delete: isAdmin,
+    publish: isAdmin,
+  },
   fields: {
     blocks: fields.blocks({
       translatable: true,

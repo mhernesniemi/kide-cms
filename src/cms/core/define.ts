@@ -152,6 +152,7 @@ export type CollectionConfig = {
   versions?: { max: number };
   auth?: boolean;
   singleton?: boolean;
+  access?: CollectionAccess;
   fields: CollectionFieldMap;
   views?: CollectionViewConfig;
   seed?: SeedDocument[];

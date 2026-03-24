@@ -1,51 +1,11 @@
-import { defineAccess } from "./core/define";
+import type { AccessConfig } from "./core/define";
+import config from "./cms.config";
 
-const isAdmin = ({ user }: { user?: { role?: string } | null }) => user?.role === "admin";
-const isEditor = ({ user }: { user?: { role?: string } | null }) => user?.role === "admin" || user?.role === "editor";
-export default defineAccess({
-  users: {
-    read: isAdmin,
-    create: isAdmin,
-    update: isAdmin,
-    delete: isAdmin,
-  },
-  authors: {
-    read: () => true,
-    create: isEditor,
-    update: isEditor,
-    delete: isAdmin,
-  },
-  taxonomies: {
-    read: () => true,
-    create: isEditor,
-    update: isEditor,
-    delete: isAdmin,
-  },
-  menus: {
-    read: () => true,
-    create: isEditor,
-    update: isEditor,
-    delete: isAdmin,
-  },
-  "front-page": {
-    read: () => true,
-    create: isEditor,
-    update: isEditor,
-    delete: isAdmin,
-    publish: isEditor,
-  },
-  posts: {
-    read: () => true,
-    create: isEditor,
-    update: isEditor,
-    delete: isAdmin,
-    publish: isEditor,
-  },
-  pages: {
-    read: () => true,
-    create: isEditor,
-    update: isEditor,
-    delete: isAdmin,
-    publish: isEditor,
-  },
-});
+const access: AccessConfig = {};
+for (const collection of config.collections) {
+  if (collection.access) {
+    access[collection.slug] = collection.access;
+  }
+}
+
+export default access;

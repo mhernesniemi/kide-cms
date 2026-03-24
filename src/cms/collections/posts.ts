@@ -1,5 +1,8 @@
 import { defineCollection, fields } from "../core/define";
 
+const isAdmin = ({ user }: { user?: { role?: string } | null }) => user?.role === "admin";
+const isEditor = ({ user }: { user?: { role?: string } | null }) => user?.role === "admin" || user?.role === "editor";
+
 export default defineCollection({
   slug: "posts",
   labels: { singular: "Post", plural: "Posts" },
@@ -7,6 +10,13 @@ export default defineCollection({
   timestamps: true,
   drafts: true,
   versions: { max: 20 },
+  access: {
+    read: () => true,
+    create: isEditor,
+    update: isEditor,
+    delete: isAdmin,
+    publish: isEditor,
+  },
   views: {
     list: { columns: ["title", "category", "_status", "_updatedAt"] },
   },
