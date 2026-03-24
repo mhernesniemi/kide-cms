@@ -48,6 +48,7 @@ CREATE TABLE `cms_front_page` (
 	`_published_at` text,
 	`_publish_at` text,
 	`_unpublish_at` text,
+	`_published` text,
 	`_created_at` text NOT NULL,
 	`_updated_at` text NOT NULL
 );
@@ -61,6 +62,24 @@ CREATE TABLE `cms_front_page_translations` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `cms_front_page_translations__entity_id__language_code_unique` ON `cms_front_page_translations` (`_entity_id`,`_language_code`);--> statement-breakpoint
+CREATE TABLE `cms_invites` (
+	`_id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`token` text NOT NULL,
+	`expires_at` text NOT NULL,
+	`used_at` text
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `cms_invites_token_unique` ON `cms_invites` (`token`);--> statement-breakpoint
+CREATE TABLE `cms_locks` (
+	`_id` text PRIMARY KEY NOT NULL,
+	`collection` text NOT NULL,
+	`document_id` text NOT NULL,
+	`user_id` text NOT NULL,
+	`user_email` text NOT NULL,
+	`locked_at` text NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE `cms_menus` (
 	`_id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -86,7 +105,6 @@ CREATE TABLE `cms_pages` (
 	`slug` text,
 	`summary` text,
 	`image` text,
-	`layout` text DEFAULT 'landing',
 	`related_posts` text,
 	`seo_description` text,
 	`blocks` text,
@@ -94,6 +112,7 @@ CREATE TABLE `cms_pages` (
 	`_published_at` text,
 	`_publish_at` text,
 	`_unpublish_at` text,
+	`_published` text,
 	`_created_at` text NOT NULL,
 	`_updated_at` text NOT NULL
 );
@@ -131,15 +150,12 @@ CREATE TABLE `cms_posts` (
 	`body` text,
 	`category` text,
 	`author` text,
-	`tags` text,
-	`post_type` text DEFAULT 'article',
-	`video_url` text,
-	`podcast_url` text,
 	`seo_description` text,
 	`_status` text DEFAULT 'draft' NOT NULL,
 	`_published_at` text,
 	`_publish_at` text,
 	`_unpublish_at` text,
+	`_published` text,
 	`_created_at` text NOT NULL,
 	`_updated_at` text NOT NULL
 );
@@ -195,10 +211,10 @@ CREATE TABLE `cms_taxonomies_translations` (
 CREATE UNIQUE INDEX `cms_taxonomies_translations__entity_id__language_code_unique` ON `cms_taxonomies_translations` (`_entity_id`,`_language_code`);--> statement-breakpoint
 CREATE TABLE `cms_users` (
 	`_id` text PRIMARY KEY NOT NULL,
-	`email` text NOT NULL,
 	`name` text NOT NULL,
+	`email` text NOT NULL,
 	`role` text DEFAULT 'editor',
-	`password` text NOT NULL,
+	`password` text,
 	`_created_at` text NOT NULL,
 	`_updated_at` text NOT NULL
 );

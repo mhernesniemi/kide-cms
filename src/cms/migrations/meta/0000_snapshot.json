@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9dbf1cee-e8df-4833-bce4-0c19436e0c68",
+  "id": "4d523cff-e24e-4beb-a33b-753a0b2293e6",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "cms_asset_folders": {
@@ -199,7 +199,9 @@
       "indexes": {
         "cms_authors_slug_unique": {
           "name": "cms_authors_slug_unique",
-          "columns": ["slug"],
+          "columns": [
+            "slug"
+          ],
           "isUnique": true
         }
       },
@@ -243,7 +245,10 @@
       "indexes": {
         "cms_authors_translations__entity_id__language_code_unique": {
           "name": "cms_authors_translations__entity_id__language_code_unique",
-          "columns": ["_entity_id", "_language_code"],
+          "columns": [
+            "_entity_id",
+            "_language_code"
+          ],
           "isUnique": true
         }
       },
@@ -252,8 +257,12 @@
           "name": "cms_authors_translations__entity_id_cms_authors__id_fk",
           "tableFrom": "cms_authors_translations",
           "tableTo": "cms_authors",
-          "columnsFrom": ["_entity_id"],
-          "columnsTo": ["_id"],
+          "columnsFrom": [
+            "_entity_id"
+          ],
+          "columnsTo": [
+            "_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -303,6 +312,13 @@
         },
         "_unpublish_at": {
           "name": "_unpublish_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "_published": {
+          "name": "_published",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -364,7 +380,10 @@
       "indexes": {
         "cms_front_page_translations__entity_id__language_code_unique": {
           "name": "cms_front_page_translations__entity_id__language_code_unique",
-          "columns": ["_entity_id", "_language_code"],
+          "columns": [
+            "_entity_id",
+            "_language_code"
+          ],
           "isUnique": true
         }
       },
@@ -373,12 +392,121 @@
           "name": "cms_front_page_translations__entity_id_cms_front_page__id_fk",
           "tableFrom": "cms_front_page_translations",
           "tableTo": "cms_front_page",
-          "columnsFrom": ["_entity_id"],
-          "columnsTo": ["_id"],
+          "columnsFrom": [
+            "_entity_id"
+          ],
+          "columnsTo": [
+            "_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "cms_invites": {
+      "name": "cms_invites",
+      "columns": {
+        "_id": {
+          "name": "_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "cms_invites_token_unique": {
+          "name": "cms_invites_token_unique",
+          "columns": [
+            "token"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "cms_locks": {
+      "name": "cms_locks",
+      "columns": {
+        "_id": {
+          "name": "_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "collection": {
+          "name": "collection",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_email": {
+          "name": "user_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "locked_at": {
+          "name": "locked_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
@@ -432,7 +560,9 @@
       "indexes": {
         "cms_menus_slug_unique": {
           "name": "cms_menus_slug_unique",
-          "columns": ["slug"],
+          "columns": [
+            "slug"
+          ],
           "isUnique": true
         }
       },
@@ -476,7 +606,10 @@
       "indexes": {
         "cms_menus_translations__entity_id__language_code_unique": {
           "name": "cms_menus_translations__entity_id__language_code_unique",
-          "columns": ["_entity_id", "_language_code"],
+          "columns": [
+            "_entity_id",
+            "_language_code"
+          ],
           "isUnique": true
         }
       },
@@ -485,8 +618,12 @@
           "name": "cms_menus_translations__entity_id_cms_menus__id_fk",
           "tableFrom": "cms_menus_translations",
           "tableTo": "cms_menus",
-          "columnsFrom": ["_entity_id"],
-          "columnsTo": ["_id"],
+          "columnsFrom": [
+            "_entity_id"
+          ],
+          "columnsTo": [
+            "_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -532,14 +669,6 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
-        },
-        "layout": {
-          "name": "layout",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": "'landing'"
         },
         "related_posts": {
           "name": "related_posts",
@@ -591,6 +720,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "_published": {
+          "name": "_published",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "_created_at": {
           "name": "_created_at",
           "type": "text",
@@ -609,7 +745,9 @@
       "indexes": {
         "cms_pages_slug_unique": {
           "name": "cms_pages_slug_unique",
-          "columns": ["slug"],
+          "columns": [
+            "slug"
+          ],
           "isUnique": true
         }
       },
@@ -681,12 +819,17 @@
       "indexes": {
         "cms_pages_translations_slug_unique": {
           "name": "cms_pages_translations_slug_unique",
-          "columns": ["slug"],
+          "columns": [
+            "slug"
+          ],
           "isUnique": true
         },
         "cms_pages_translations__entity_id__language_code_unique": {
           "name": "cms_pages_translations__entity_id__language_code_unique",
-          "columns": ["_entity_id", "_language_code"],
+          "columns": [
+            "_entity_id",
+            "_language_code"
+          ],
           "isUnique": true
         }
       },
@@ -695,8 +838,12 @@
           "name": "cms_pages_translations__entity_id_cms_pages__id_fk",
           "tableFrom": "cms_pages_translations",
           "tableTo": "cms_pages",
-          "columnsFrom": ["_entity_id"],
-          "columnsTo": ["_id"],
+          "columnsFrom": [
+            "_entity_id"
+          ],
+          "columnsTo": [
+            "_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -750,8 +897,12 @@
           "name": "cms_pages_versions__doc_id_cms_pages__id_fk",
           "tableFrom": "cms_pages_versions",
           "tableTo": "cms_pages",
-          "columnsFrom": ["_doc_id"],
-          "columnsTo": ["_id"],
+          "columnsFrom": [
+            "_doc_id"
+          ],
+          "columnsTo": [
+            "_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -819,35 +970,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "tags": {
-          "name": "tags",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "post_type": {
-          "name": "post_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": "'article'"
-        },
-        "video_url": {
-          "name": "video_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "podcast_url": {
-          "name": "podcast_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "seo_description": {
           "name": "seo_description",
           "type": "text",
@@ -884,6 +1006,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "_published": {
+          "name": "_published",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "_created_at": {
           "name": "_created_at",
           "type": "text",
@@ -902,7 +1031,9 @@
       "indexes": {
         "cms_posts_slug_unique": {
           "name": "cms_posts_slug_unique",
-          "columns": ["slug"],
+          "columns": [
+            "slug"
+          ],
           "isUnique": true
         }
       },
@@ -974,12 +1105,17 @@
       "indexes": {
         "cms_posts_translations_slug_unique": {
           "name": "cms_posts_translations_slug_unique",
-          "columns": ["slug"],
+          "columns": [
+            "slug"
+          ],
           "isUnique": true
         },
         "cms_posts_translations__entity_id__language_code_unique": {
           "name": "cms_posts_translations__entity_id__language_code_unique",
-          "columns": ["_entity_id", "_language_code"],
+          "columns": [
+            "_entity_id",
+            "_language_code"
+          ],
           "isUnique": true
         }
       },
@@ -988,8 +1124,12 @@
           "name": "cms_posts_translations__entity_id_cms_posts__id_fk",
           "tableFrom": "cms_posts_translations",
           "tableTo": "cms_posts",
-          "columnsFrom": ["_entity_id"],
-          "columnsTo": ["_id"],
+          "columnsFrom": [
+            "_entity_id"
+          ],
+          "columnsTo": [
+            "_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1043,8 +1183,12 @@
           "name": "cms_posts_versions__doc_id_cms_posts__id_fk",
           "tableFrom": "cms_posts_versions",
           "tableTo": "cms_posts",
-          "columnsFrom": ["_doc_id"],
-          "columnsTo": ["_id"],
+          "columnsFrom": [
+            "_doc_id"
+          ],
+          "columnsTo": [
+            "_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1133,7 +1277,9 @@
       "indexes": {
         "cms_taxonomies_slug_unique": {
           "name": "cms_taxonomies_slug_unique",
-          "columns": ["slug"],
+          "columns": [
+            "slug"
+          ],
           "isUnique": true
         }
       },
@@ -1177,7 +1323,10 @@
       "indexes": {
         "cms_taxonomies_translations__entity_id__language_code_unique": {
           "name": "cms_taxonomies_translations__entity_id__language_code_unique",
-          "columns": ["_entity_id", "_language_code"],
+          "columns": [
+            "_entity_id",
+            "_language_code"
+          ],
           "isUnique": true
         }
       },
@@ -1186,8 +1335,12 @@
           "name": "cms_taxonomies_translations__entity_id_cms_taxonomies__id_fk",
           "tableFrom": "cms_taxonomies_translations",
           "tableTo": "cms_taxonomies",
-          "columnsFrom": ["_entity_id"],
-          "columnsTo": ["_id"],
+          "columnsFrom": [
+            "_entity_id"
+          ],
+          "columnsTo": [
+            "_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1206,15 +1359,15 @@
           "notNull": true,
           "autoincrement": false
         },
-        "email": {
-          "name": "email",
+        "name": {
+          "name": "name",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "name": {
-          "name": "name",
+        "email": {
+          "name": "email",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -1232,7 +1385,7 @@
           "name": "password",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "_created_at": {
@@ -1253,7 +1406,9 @@
       "indexes": {
         "cms_users_email_unique": {
           "name": "cms_users_email_unique",
-          "columns": ["email"],
+          "columns": [
+            "email"
+          ],
           "isUnique": true
         }
       },
