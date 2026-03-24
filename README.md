@@ -6,7 +6,7 @@ Collections config generates everything: Drizzle tables, TypeScript types, and a
 
 Supports Astro 6's route caching with tag-based invalidation for static-speed content delivery.
 
-[Try live demo](https://kide-cms.vercel.app/admin)
+[Try live demo](https://demo.kide.dev/)
 
 ## Quick Start
 
@@ -69,7 +69,7 @@ posts: {
 - Tag-based cache invalidation
 - AI assistant (alt text, SEO, translations)
 
-[Full documentation](https://kide-cms.vercel.app/docs)
+[Full documentation](https://docs.kide.dev/)
 
 ## Stack
 
