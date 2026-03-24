@@ -204,7 +204,7 @@ const collectionSlug = "collectionSlug" in route ? route.collectionSlug : null;
 const collection = collectionSlug ? (cms.meta.getCollection(collectionSlug) as any) : null;
 const isSingleton = collection?.singleton === true;
 
-if (collection && collectionSlug) {
+if (collection && collectionSlug && canAccessCurrent) {
   collectionApi = cmsRuntime[collectionSlug];
   viewConfig = getCollectionView(collectionSlug);
 
@@ -310,7 +310,7 @@ let currentPage = 1;
 let currentSort = viewConfig.list?.defaultSort ?? { field: "_updatedAt", direction: "desc" };
 const searchParam = Astro.url.searchParams.get("q") ?? "";
 
-if (route.kind === "list") {
+if (route.kind === "list" && canAccessCurrent) {
   const sortParam = Astro.url.searchParams.get("sort");
   const sortDirParam = Astro.url.searchParams.get("dir");
   if (sortParam) {
