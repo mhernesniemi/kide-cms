@@ -101,9 +101,7 @@ const formatDateClient = (value: unknown): string => {
 const getVisualStatus = (d: Record<string, unknown>): string => {
   const status = String(d._status ?? "draft");
   if (status === "scheduled") return "scheduled";
-  if (status === "published" && d._publishedAt && d._updatedAt) {
-    return String(d._updatedAt) > String(d._publishedAt) ? "changed" : "published";
-  }
+  if (status === "published" && d._published) return "changed";
   return status;
 };
 

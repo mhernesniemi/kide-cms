@@ -335,8 +335,21 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
 
         const rows = await query;
 
-        // Fetch translations for locale overlay
-        const docs = rows.map((row: Record<string, unknown>) => deserializeFromDb(collection, row));
+        // Deserialize and overlay _published snapshot for public queries
+        const docs = rows.map((row: Record<string, unknown>) => {
+          const doc = deserializeFromDb(collection, row);
+          if (status === "published" && typeof row._published === "string") {
+            try {
+              const snapshot = JSON.parse(row._published);
+              for (const key of Object.keys(collection.fields)) {
+                if (key in snapshot) doc[key] = snapshot[key];
+              }
+            } catch {
+              /* ignore malformed snapshot */
+            }
+          }
+          return doc;
+        });
 
         if (tables.translations && (options.locale || config.locales)) {
           const docIds = docs.map((d) => String(d._id));
@@ -413,6 +426,19 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
 
         if (options.status && options.status !== "any" && doc._status !== options.status) return null;
+
+        // Overlay _published snapshot for public queries
+        const effectiveStatus = options.status ?? (collection.drafts ? "published" : "any");
+        if (effectiveStatus === "published" && typeof (rows[0] as any)._published === "string") {
+          try {
+            const snapshot = JSON.parse((rows[0] as any)._published);
+            for (const key of Object.keys(collection.fields)) {
+              if (key in snapshot) doc[key] = snapshot[key];
+            }
+          } catch {
+            /* ignore */
+          }
+        }
 
         // Fetch translations
         let translations: Array<Record<string, unknown>> = [];
@@ -527,6 +553,18 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
           ? await hooks[collection.slug].beforeUpdate!(preparedInput, existing, hookContext)
           : preparedInput;
 
+        // On first edit of a published doc, snapshot current content to _published
+        if (collection.drafts && existing._status === "published" && !(existingRows[0] as any)._published) {
+          const snapshot: Record<string, unknown> = {};
+          for (const fieldName of Object.keys(collection.fields)) {
+            if (existing[fieldName] !== undefined) snapshot[fieldName] = existing[fieldName];
+          }
+          await db
+            .update(tables.main)
+            .set({ _published: JSON.stringify(snapshot) })
+            .where(eq(tables.main._id, id));
+        }
+
         const updateValues: Record<string, unknown> = {
           ...serializeForDb(collection, transformedInput),
         };
@@ -567,7 +605,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
           }
         }
 
-        const result = await this.findById(id, {}, context);
+        const result = await this.findById(id, { status: "any" }, context);
         await hooks?.[collection.slug]?.afterUpdate?.(result!, hookContext);
         return result!;
       },
@@ -618,6 +656,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
           _publishedAt: timestamp,
           _publishAt: null,
           _unpublishAt: null,
+          _published: null,
         };
         if (collection.timestamps !== false) updateValues._updatedAt = timestamp;
         await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
@@ -648,6 +687,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
           _publishedAt: null,
           _publishAt: null,
           _unpublishAt: null,
+          _published: null,
         };
         if (collection.timestamps !== false) updateValues._updatedAt = now();
         await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
@@ -691,6 +731,39 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         const result = (await this.findById(id, { status: "any" }, context))!;
         await hooks?.[collection.slug]?.afterSchedule?.(result, hookContext);
         return result;
+      },
+
+      async discardDraft(id: string, context: RuntimeContext = {}) {
+        if (!collection.drafts) throw new Error(`${collection.labels.singular} does not support draft status.`);
+
+        const db = await getDb();
+        const tables = await getTableRefs(slug);
+
+        const existingRows = await db.select().from(tables.main).where(eq(tables.main._id, id)).limit(1);
+        if (existingRows.length === 0) throw new Error(`${collection.labels.singular} not found.`);
+
+        const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
+        const allowed = await canAccess(access, collection, "update", context, existing);
+        if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
+
+        const rawPublished = (existingRows[0] as any)._published;
+        if (!rawPublished) return (await this.findById(id, { status: "any" }, context))!;
+
+        // Restore content fields from _published snapshot
+        const snapshot = JSON.parse(rawPublished);
+        const restoreValues: Record<string, unknown> = { _published: null };
+        for (const [fieldName, field] of Object.entries(collection.fields)) {
+          if (fieldName in snapshot) {
+            restoreValues[fieldName] =
+              isJsonField(field) && snapshot[fieldName] !== null
+                ? JSON.stringify(snapshot[fieldName])
+                : snapshot[fieldName];
+          }
+        }
+
+        await db.update(tables.main).set(restoreValues).where(eq(tables.main._id, id));
+
+        return (await this.findById(id, { status: "any" }, context))!;
       },
 
       async count(filter: Omit<FindOptions, "limit" | "offset" | "sort"> = {}, context: RuntimeContext = {}) {

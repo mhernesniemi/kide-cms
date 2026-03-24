@@ -160,6 +160,11 @@ const handleHtmlMutation = async (
       return redirect(redirectTo, { status: "success", msg: `${name} unpublished` });
     }
 
+    if (action === "discard-draft") {
+      await collectionApi.discardDraft(documentId, ctx);
+      return redirect(redirectTo, { status: "success", msg: `Changes discarded` });
+    }
+
     if (action === "restore" && version) {
       await collectionApi.restore(documentId, version, ctx);
       return redirect(redirectTo, { status: "success", msg: `Version ${version} restored` });

@@ -71,6 +71,7 @@ const generateMainTable = (collection: CollectionConfig): string => {
     columns.push(`  _publishedAt: text("_published_at"),`);
     columns.push(`  _publishAt: text("_publish_at"),`);
     columns.push(`  _unpublishAt: text("_unpublish_at"),`);
+    columns.push(`  _published: text("_published"),`);
   }
 
   if (collection.timestamps !== false) {

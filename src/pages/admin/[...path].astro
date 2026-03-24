@@ -47,9 +47,7 @@ if (route.kind === "dashboard") {
 const getVisualStatus = (d: Record<string, unknown>): string => {
   const status = String(d._status ?? "draft");
   if (status === "scheduled") return "scheduled";
-  if (status === "published" && d._publishedAt && d._updatedAt) {
-    return String(d._updatedAt) > String(d._publishedAt) ? "changed" : "published";
-  }
+  if (status === "published" && d._published) return "changed";
   return status;
 };
 
@@ -693,6 +691,7 @@ const tableRows =
                       collectionSlug={collection.slug}
                       documentId={route.documentId}
                       showUnpublish={collection.drafts && doc?._status === "published"}
+                      showDiscardDraft={collection.drafts && doc?._status === "published" && !!doc?._published}
                       showDelete={!isSingleton}
                       showSchedule={!!collection.drafts}
                       showCancelSchedule={collection.drafts && doc?._status === "scheduled"}

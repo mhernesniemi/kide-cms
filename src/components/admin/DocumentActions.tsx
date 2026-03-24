@@ -42,6 +42,7 @@ type Props = {
   collectionSlug?: string;
   documentId?: string;
   showUnpublish?: boolean;
+  showDiscardDraft?: boolean;
   showDelete?: boolean;
   showSchedule?: boolean;
   showCancelSchedule?: boolean;
@@ -57,6 +58,7 @@ export default function DocumentActions({
   collectionSlug,
   documentId,
   showUnpublish,
+  showDiscardDraft,
   showDelete,
   showSchedule,
   showCancelSchedule,
@@ -72,7 +74,8 @@ export default function DocumentActions({
   const [publishAt, setPublishAt] = useState(currentPublishAt ? toLocalDatetime(currentPublishAt) : "");
   const [unpublishAt, setUnpublishAt] = useState(currentUnpublishAt ? toLocalDatetime(currentUnpublishAt) : "");
 
-  const hasActions = showUnpublish || showDelete || showSchedule || showCancelSchedule || versions.length > 0;
+  const hasActions =
+    showUnpublish || showDiscardDraft || showDelete || showSchedule || showCancelSchedule || versions.length > 0;
   if (!hasActions) return null;
 
   const submitAction = (action: string) => {
@@ -152,6 +155,9 @@ export default function DocumentActions({
           {showSchedule && <DropdownMenuItem onClick={() => setScheduleOpen(true)}>Schedule publish</DropdownMenuItem>}
           {showCancelSchedule && (
             <DropdownMenuItem onClick={() => submitAction("unpublish")}>Cancel schedule</DropdownMenuItem>
+          )}
+          {showDiscardDraft && (
+            <DropdownMenuItem onClick={() => submitAction("discard-draft")}>Discard changes</DropdownMenuItem>
           )}
           {showUnpublish && (
             <DropdownMenuItem onClick={() => submitAction("unpublish")}>Move to draft</DropdownMenuItem>
