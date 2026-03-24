@@ -11,7 +11,7 @@ export default defineConfig({
   database: { dialect: "sqlite" },
   locales: {
     default: "en",
-    supported: ["en", "fi"],
+    supported: ["en"],
   },
   collections: [users, authors, posts, taxonomies, menus, frontPage, pages],
 });
