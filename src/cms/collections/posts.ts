@@ -1,4 +1,4 @@
-import { defineCollection, fields, hasRole, everyone } from "../core/define";
+import { defineCollection, fields } from "../core/define";
 
 export default defineCollection({
   slug: "posts",
@@ -7,13 +7,6 @@ export default defineCollection({
   timestamps: true,
   drafts: true,
   versions: { max: 20 },
-  access: {
-    read: everyone,
-    create: hasRole("admin", "editor"),
-    update: hasRole("admin", "editor"),
-    delete: hasRole("admin"),
-    publish: hasRole("admin", "editor"),
-  },
   views: {
     list: { columns: ["title", "category", "_status", "_updatedAt"] },
   },

@@ -8,10 +8,6 @@ export default defineCollection({
   timestamps: true,
   drafts: true,
   access: {
-    read: hasRole("admin"),
-    create: hasRole("admin"),
-    update: hasRole("admin"),
-    delete: hasRole("admin"),
     publish: hasRole("admin"),
   },
   fields: {
