@@ -22,7 +22,6 @@ const seeds: Record<string, SeedDocument[]> = {
       slug: "maya-chen",
       title: "Editor in Chief",
       description: "Leads the editorial direction across product, design, and growth.",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
     },
     {
       _id: "author_leo",
@@ -30,7 +29,6 @@ const seeds: Record<string, SeedDocument[]> = {
       slug: "leo-marshall",
       title: "Lead Developer",
       description: "Full-stack engineer with a focus on developer experience and content infrastructure.",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80",
     },
     {
       _id: "author_anna",
@@ -38,7 +36,6 @@ const seeds: Record<string, SeedDocument[]> = {
       slug: "anna-brooks",
       title: "Design Lead",
       description: "Brings clarity to complex interfaces through systems thinking and user research.",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=800&q=80",
     },
     {
       _id: "author_eero",
@@ -46,7 +43,6 @@ const seeds: Record<string, SeedDocument[]> = {
       slug: "james-webb",
       title: "DevOps Engineer",
       description: "Infrastructure and deployment automation. Keeps things running smoothly.",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=800&q=80",
     },
   ],
   posts: [
