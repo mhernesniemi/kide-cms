@@ -31,15 +31,14 @@ export default function DocumentLock({ collection, documentId }: { collection: s
     };
   }, [endpoint, lockedBy]);
 
-  // Disable form fields when locked
+  // Hide edit area and buttons when locked
   useEffect(() => {
     if (!lockedBy) return;
-    const form = document.getElementById("document-form") as HTMLFormElement | null;
-    if (form) {
-      for (const el of form.elements) {
-        (el as HTMLInputElement).disabled = true;
-      }
-    }
+    const editArea = document.getElementById("document-edit-area");
+    if (editArea) editArea.style.display = "none";
+    document.querySelectorAll<HTMLElement>('[form="document-form"], [form="translation-form"]').forEach((el) => {
+      el.style.display = "none";
+    });
   }, [lockedBy]);
 
   if (!lockedBy) return null;
@@ -48,7 +47,7 @@ export default function DocumentLock({ collection, documentId }: { collection: s
     <div className="bg-destructive/10 text-destructive border-destructive/20 flex items-center gap-2 rounded-md border px-4 py-3 text-sm">
       <Lock className="size-4 shrink-0" />
       <span>
-        This document is currently being edited by <strong>{lockedBy}</strong>.
+        This document is currently being edited by <strong>{lockedBy}</strong>. You cannot edit it until they are done.
       </span>
     </div>
   );

@@ -613,7 +613,8 @@ const tableRows =
                   (doc && getVisualStatus(doc) === "changed"))
               }
             />
-            {collection.slug === "users" && route.kind === "edit" && Astro.url.searchParams.get("inviteToken") && (
+            <div id="document-edit-area" class="space-y-6">
+              {collection.slug === "users" && route.kind === "edit" && Astro.url.searchParams.get("inviteToken") && (
                 <AdminCard
                   title={Astro.url.searchParams.get("emailSent") === "true" ? "Invitation sent" : "Invite link"}
                 >
@@ -909,6 +910,7 @@ const tableRows =
                   </form>
                 </div>
               )}
+            </div>
           </>
         )}
       </section>
