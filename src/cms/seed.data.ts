@@ -277,7 +277,7 @@ const seeds: Record<string, SeedDocument[]> = {
     {
       name: "Categories",
       slug: "categories",
-      terms: JSON.stringify([
+      terms: [
         {
           id: "t1",
           name: "Technology",
@@ -298,12 +298,12 @@ const seeds: Record<string, SeedDocument[]> = {
           ],
         },
         { id: "t5", name: "Business", slug: "business", children: [] },
-      ]),
+      ],
     },
     {
       name: "Tags",
       slug: "tags",
-      terms: JSON.stringify([
+      terms: [
         { id: "t6", name: "Astro", slug: "astro", children: [] },
         { id: "t7", name: "CMS", slug: "cms", children: [] },
         { id: "t8", name: "Open Source", slug: "open-source", children: [] },
@@ -311,23 +311,28 @@ const seeds: Record<string, SeedDocument[]> = {
         { id: "t13", name: "Tutorial", slug: "tutorial", children: [] },
         { id: "t14", name: "Cloudflare", slug: "cloudflare", children: [] },
         { id: "t15", name: "Deployment", slug: "deployment", children: [] },
-      ]),
+      ],
     },
   ],
   menus: [
     {
       name: "Main Navigation",
       slug: "main",
-      items: JSON.stringify([
+      items: [
         { id: "m1", label: "Home", href: "/", children: [] },
-        { id: "m2", label: "Blog", href: "/blog", children: [] },
+        { id: "m2", label: "Blog", href: "/blog", children: [
+          { id: "m5", label: "Getting Started", href: "/blog/getting-started-with-kide-cms", children: [] },
+          { id: "m6", label: "Deploying to Cloudflare", href: "/blog/deploying-to-cloudflare", children: [] },
+          { id: "m7", label: "Building Block Types", href: "/blog/building-custom-block-types", children: [] },
+        ] },
         { id: "m3", label: "About", href: "/about", children: [] },
-      ]),
+        { id: "m4", label: "Features", href: "/features", children: [] },
+      ],
     },
     {
       name: "Footer",
       slug: "footer",
-      items: JSON.stringify([
+      items: [
         { id: "f1", label: "Home", href: "/", children: [] },
         { id: "f2", label: "Blog", href: "/blog", children: [] },
         { id: "f3", label: "About", href: "/about", children: [] },
@@ -338,7 +343,7 @@ const seeds: Record<string, SeedDocument[]> = {
           target: "_blank",
           children: [],
         },
-      ]),
+      ],
     },
   ],
   pages: [
