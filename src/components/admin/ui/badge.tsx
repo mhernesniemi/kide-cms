@@ -41,6 +41,7 @@ const statusBadgeBg: Record<StatusColor, string> = {
 };
 
 function StatusBadge({ status, styled, className }: { status: string; styled?: boolean; className?: string }) {
+  if (!status) return null;
   const color: StatusColor =
     status === "published" ? "green" : status === "changed" ? "yellow" : status === "scheduled" ? "purple" : "blue";
   return (
