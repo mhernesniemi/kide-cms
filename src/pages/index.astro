@@ -9,6 +9,14 @@ const isPreview = Astro.url.searchParams.has("preview");
 const page = await cms["front-page"].findOne({ status: isPreview ? "any" : "published" });
 const blocks = parseBlocks(page?.blocks);
 
+// Resolve hero ctaHref relation (page ID → slug URL)
+for (const block of blocks) {
+  if (block.type === "hero" && block.ctaHref) {
+    const linked = await cms.pages.findOne({ where: { _id: String(block.ctaHref) } });
+    if (linked) block.ctaHref = `/${linked.slug}`;
+  }
+}
+
 const posts = await cms.posts.find({
   status: "published",
   sort: { field: "sortOrder", direction: "desc" },

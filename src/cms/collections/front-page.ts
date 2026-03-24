@@ -19,7 +19,7 @@ export default defineCollection({
           heading: fields.text({ required: true }),
           body: fields.text(),
           ctaLabel: fields.text(),
-          ctaHref: fields.text(),
+          ctaHref: fields.relation({ collection: "pages" }),
         },
         text: {
           heading: fields.text(),
