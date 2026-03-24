@@ -1,6 +1,4 @@
-import { defineCollection, fields } from "../core/define";
-
-const isAdmin = ({ user }: { user?: { role?: string } | null }) => user?.role === "admin";
+import { defineCollection, fields, hasRole } from "../core/define";
 
 export default defineCollection({
   slug: "front-page",
@@ -10,11 +8,11 @@ export default defineCollection({
   timestamps: true,
   drafts: true,
   access: {
-    read: isAdmin,
-    create: isAdmin,
-    update: isAdmin,
-    delete: isAdmin,
-    publish: isAdmin,
+    read: hasRole("admin"),
+    create: hasRole("admin"),
+    update: hasRole("admin"),
+    delete: hasRole("admin"),
+    publish: hasRole("admin"),
   },
   fields: {
     blocks: fields.blocks({

@@ -1,17 +1,14 @@
-import { defineCollection, fields } from "../core/define";
-
-const isAdmin = ({ user }: { user?: { role?: string } | null }) => user?.role === "admin";
-const isEditor = ({ user }: { user?: { role?: string } | null }) => user?.role === "admin" || user?.role === "editor";
+import { defineCollection, fields, hasRole, everyone } from "../core/define";
 
 export default defineCollection({
   slug: "taxonomies",
   labels: { singular: "Taxonomy", plural: "Taxonomies" },
   timestamps: true,
   access: {
-    read: () => true,
-    create: isEditor,
-    update: isEditor,
-    delete: isAdmin,
+    read: everyone,
+    create: hasRole("admin", "editor"),
+    update: hasRole("admin", "editor"),
+    delete: hasRole("admin"),
   },
   views: {
     list: { columns: ["name", "slug", "_updatedAt"] },

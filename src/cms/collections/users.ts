@@ -1,6 +1,4 @@
-import { defineCollection, fields } from "../core/define";
-
-const isAdmin = ({ user }: { user?: { role?: string } | null }) => user?.role === "admin";
+import { defineCollection, fields, hasRole } from "../core/define";
 
 export default defineCollection({
   slug: "users",
@@ -8,10 +6,10 @@ export default defineCollection({
   auth: true,
   timestamps: true,
   access: {
-    read: isAdmin,
-    create: isAdmin,
-    update: isAdmin,
-    delete: isAdmin,
+    read: hasRole("admin"),
+    create: hasRole("admin"),
+    update: hasRole("admin"),
+    delete: hasRole("admin"),
   },
   views: {
     list: { columns: ["name", "email", "role", "_updatedAt"] },

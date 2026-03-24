@@ -188,6 +188,13 @@ export type CollectionAccess = Partial<
 
 export type AccessConfig = Record<string, CollectionAccess>;
 
+export const hasRole =
+  (...roles: string[]): AccessRule =>
+  ({ user }) =>
+    !!user?.role && roles.includes(user.role);
+
+export const everyone: AccessRule = () => true;
+
 export type HookContext = {
   user?: AccessContext["user"];
   operation: string;
