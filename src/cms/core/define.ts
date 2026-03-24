@@ -193,8 +193,6 @@ export const hasRole =
   ({ user }) =>
     !!user?.role && roles.includes(user.role);
 
-export const everyone: AccessRule = () => true;
-
 export type HookContext = {
   user?: AccessContext["user"];
   operation: string;
