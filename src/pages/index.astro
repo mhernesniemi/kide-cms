@@ -1,20 +1,25 @@
 ---
 import PublicLayout from "@/layouts/PublicLayout.astro";
+import BlockRenderer from "@/components/BlockRenderer.astro";
 import type { PostsDocument } from "@/cms/.generated/types";
 import { cms } from "@/cms/.generated/api";
 import { cmsImage } from "@/cms/core/image";
+import { parseBlocks } from "@/cms/core/content";
+
+const page = await cms["front-page"].findOne({ status: "published" });
+const blocks = parseBlocks(page?.blocks);
 
 const posts = await cms.posts.find({
   status: "published",
   sort: { field: "sortOrder", direction: "desc" },
 });
 
-Astro.cache.set({ tags: ["posts", "home"] });
+Astro.cache.set({ tags: ["front-page", "posts", "home"] });
 ---
 
 <PublicLayout title="Kide CMS">
   <main class="mx-auto max-w-2xl px-4 py-8">
-    <h2 class="mb-4 text-lg font-medium text-gray-700">Demo content</h2>
+    <h2 class="mb-3 text-xl font-semibold">Recent posts</h2>
     <ul class="grid list-none gap-2 p-0">
       {
         posts.map((post: PostsDocument) => (
@@ -40,10 +45,7 @@ Astro.cache.set({ tags: ["posts", "home"] });
       }
     </ul>
 
-    {posts.length === 0 && <p class="text-gray-500">No published posts yet.</p>}
-
-    <p class="mt-8 text-gray-500">
-      <a href="/admin" class="rounded-md bg-teal-700 px-4 py-2 text-white hover:underline">Open admin panel</a>
-    </p>
+    {posts.length === 0 && <p class="mb-10 text-gray-500">No published posts yet.</p>}
+    {blocks.length > 0 && <BlockRenderer blocks={blocks} />}
   </main>
 </PublicLayout>
