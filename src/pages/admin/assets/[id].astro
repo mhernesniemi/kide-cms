@@ -17,6 +17,13 @@ import AdminLayout from "@/layouts/AdminLayout.astro";
 
 export const prerender = false;
 
+const user = Astro.locals.user;
+const accessibleCollections = config.collections.filter((c) => {
+  const rule = c.access?.read;
+  if (!rule) return true;
+  return rule({ user: user ?? null, doc: null, operation: "read", collection: c.slug });
+});
+
 initDateFormat(config, Astro.cookies.get("tz")?.value);
 const { id } = Astro.params;
 if (!id) return Astro.redirect("/admin/assets");
@@ -43,7 +50,11 @@ const folderItems = flattenByParent(
 );
 ---
 
-<AdminLayout title={`${asset.filename} | Assets | Kide CMS`} collections={config.collections} activeCollection="assets">
+<AdminLayout
+  title={`${asset.filename} | Assets | Kide CMS`}
+  collections={accessibleCollections}
+  activeCollection="assets"
+>
   <section class="space-y-6">
     <div class="flex items-start justify-between gap-4">
       <div>
