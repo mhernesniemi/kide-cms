@@ -24,6 +24,7 @@ import {
   initDateFormat,
   resolveAdminRoute,
 } from "@/cms/core/admin";
+import access from "@/cms/access";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 export const prerender = false;
 
@@ -37,6 +38,27 @@ const locales = localeConfig?.supported ?? [];
 const defaultLocale = localeConfig?.default ?? "en";
 const requestedLocale = Astro.url.searchParams.get("locale") ?? defaultLocale;
 const isEmbed = Astro.url.searchParams.get("_embed") === "1";
+
+// Filter collections the user can access
+const accessRules = access as Record<string, Record<string, Function>> | undefined;
+const canRead = (slug: string) => {
+  const rule = accessRules?.[slug]?.read;
+  if (!rule) return true;
+  return rule({ user: user ?? null, doc: null, operation: "read", collection: slug });
+};
+const canWrite = (slug: string) => {
+  const rule = accessRules?.[slug]?.create;
+  if (!rule) return true;
+  return rule({ user: user ?? null, doc: null, operation: "create", collection: slug });
+};
+const accessibleCollections = config.collections.filter((c) => canRead(c.slug));
+
+// Check if user can access the current collection
+const canAccessCurrent = (() => {
+  if (route.kind === "dashboard" || route.kind === "recent" || route.kind === "singles") return true;
+  const slug = "collectionSlug" in route ? route.collectionSlug : null;
+  return !slug || canRead(slug);
+})();
 
 // Redirect /admin to recent
 if (route.kind === "dashboard") {
@@ -53,7 +75,7 @@ const getVisualStatus = (d: Record<string, unknown>): string => {
 
 // Recent entries page — all content collections (non-utility) sorted by updatedAt
 const pinnedSlugs = new Set(["taxonomies", "menus", "authors", "users"]);
-const contentCollections = config.collections.filter((c) => !c.auth && !pinnedSlugs.has(c.slug));
+const contentCollections = config.collections.filter((c) => !c.auth && !pinnedSlugs.has(c.slug) && canRead(c.slug));
 let recentRows: Array<{
   id: string;
   editHref: string;
@@ -108,7 +130,7 @@ if (route.kind === "recent") {
 }
 
 // Singles listing page
-const singletonCollections = config.collections.filter((c) => c.singleton);
+const singletonCollections = config.collections.filter((c) => c.singleton && canRead(c.slug));
 let singletonsData: Array<{
   id: string;
   collectionSlug: string;
@@ -199,7 +221,7 @@ if (collection && collectionSlug) {
     string,
     import("@/cms/core/define").FieldConfig,
   ][]) {
-    if (field.type === "relation") {
+    if (field.type === "relation" && canRead(field.collection)) {
       const relatedDocs = await cmsRuntime[field.collection].find(
         {
           status: "any",
@@ -233,7 +255,7 @@ if (collection && collectionSlug) {
           string,
           import("@/cms/core/define").FieldConfig,
         ][]) {
-          if (subField.type === "relation") {
+          if (subField.type === "relation" && canRead(subField.collection)) {
             const key = `block:${typeName}:${subFieldName}`;
             if (!relationOptionsByField[key]) {
               const relatedDocs = await cmsRuntime[subField.collection].find(
@@ -256,7 +278,11 @@ if (collection && collectionSlug) {
   // Build link options for menu editors: fetch linkable documents from content collections
   if (collectionSlug === "menus" && (route.kind === "edit" || route.kind === "new")) {
     const linkableCollections = config.collections.filter(
-      (c) => !c.singleton && !["users", "menus", "taxonomies", "authors"].includes(c.slug) && c.fields.slug,
+      (c) =>
+        !c.singleton &&
+        !["users", "menus", "taxonomies", "authors"].includes(c.slug) &&
+        c.fields.slug &&
+        canRead(c.slug),
     );
     for (const lc of linkableCollections) {
       const lcApi = cmsRuntime[lc.slug];
@@ -331,7 +357,7 @@ type ReverseRef = { collectionLabel: string; collectionSlug: string; docs: Array
 const reverseRefs: ReverseRef[] = [];
 if (route.kind === "edit" && collection && route.documentId) {
   for (const otherCollection of config.collections) {
-    if (otherCollection.slug === collection.slug) continue;
+    if (otherCollection.slug === collection.slug || !canRead(otherCollection.slug)) continue;
     const relationFields = Object.entries(otherCollection.fields).filter(
       ([, f]) => f.type === "relation" && (f as any).collection === collection.slug,
     );
@@ -453,7 +479,7 @@ const tableRows =
     : route.kind === "singles"
       ? "Singles | Kide CMS"
       : `${collection?.labels?.plural ?? "Admin"} | Kide CMS`}
-  collections={config.collections}
+  collections={accessibleCollections}
   activeCollection={route.kind === "recent" ? "recent" : (collectionSlug ?? "singles")}
   embed={isEmbed}
 >
@@ -512,7 +538,16 @@ const tableRows =
   }
 
   {
-    route.kind !== "singles" && (
+    route.kind !== "singles" && !canAccessCurrent && (
+      <section class="space-y-6">
+        <h1 class="text-2xl font-semibold tracking-tight">Access denied</h1>
+        <p class="text-muted-foreground">You do not have permission to view this collection.</p>
+      </section>
+    )
+  }
+
+  {
+    route.kind !== "singles" && canAccessCurrent && (
       <section class="space-y-6">
         <div class="flex items-start justify-between gap-4">
           <div>
@@ -564,7 +599,7 @@ const tableRows =
                 <ArrowUpRight className="size-4" />
               </a>
             )}
-            {route.kind === "list" && (
+            {route.kind === "list" && canWrite(collectionSlug!) && (
               <a href={`/admin/${collection.slug}/new`} class={buttonVariants({})}>
                 <Plus className="size-4" />
                 {collection.slug === "users" ? "Invite user" : `New ${collection.labels.singular}`}
