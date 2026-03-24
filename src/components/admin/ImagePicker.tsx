@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { ImagePlus, Loader2, Upload, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/admin/ui/button";
 import ImageBrowseDialog from "@/components/admin/ImageBrowseDialog";
 
@@ -85,7 +86,10 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
             <a
               href={assetId ? `/admin/assets/${assetId}` : undefined}
               target="_blank"
-              className={`block size-40 overflow-hidden rounded-lg border ${assetId ? "hover:border-foreground/50 cursor-pointer" : ""}`}
+              className={cn(
+                "block size-40 overflow-hidden rounded-lg border",
+                assetId && "hover:border-foreground/50 cursor-pointer",
+              )}
             >
               <img src={imgSrc} alt="" className="size-full object-cover" />
             </a>

@@ -316,11 +316,16 @@ const seeds: Record<string, SeedDocument[]> = {
       slug: "main",
       items: [
         { id: "m1", label: "Home", href: "/", children: [] },
-        { id: "m2", label: "Blog", href: "/blog", children: [
-          { id: "m5", label: "Getting Started", href: "/blog/getting-started-with-kide-cms", children: [] },
-          { id: "m6", label: "Deploying to Cloudflare", href: "/blog/deploying-to-cloudflare", children: [] },
-          { id: "m7", label: "Building Block Types", href: "/blog/building-custom-block-types", children: [] },
-        ] },
+        {
+          id: "m2",
+          label: "Blog",
+          href: "/blog",
+          children: [
+            { id: "m5", label: "Getting Started", href: "/blog/getting-started-with-kide-cms", children: [] },
+            { id: "m6", label: "Deploying to Cloudflare", href: "/blog/deploying-to-cloudflare", children: [] },
+            { id: "m7", label: "Building Block Types", href: "/blog/building-custom-block-types", children: [] },
+          ],
+        },
         { id: "m3", label: "About", href: "/about", children: [] },
         { id: "m4", label: "Features", href: "/features", children: [] },
       ],

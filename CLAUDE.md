@@ -41,6 +41,7 @@ After code changes, ALWAYS run:
 - Admin styles use shadcn CSS variables. Public site uses plain Tailwind colors — no shared styles.
 - `labelField` on collections controls display name (fallback: title → name → first text field).
 - Always query content through the typed local API (`cms.posts.findOne()`, `cms.pages.find()`, etc.) — never bypass it with raw DB queries or untyped wrappers.
+- Use the `cn()` utility from `@/lib/utils` for conditional class names — never use template literal interpolation for className.
 
 ## Stack
 

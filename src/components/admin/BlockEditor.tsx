@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { GripVertical, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   DndContext,
   closestCenter,
@@ -142,11 +143,7 @@ function SortableBlock({
   const preview = getPreviewText(block, fieldsMeta);
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`rounded-lg border ${isDragging ? "z-10 opacity-90 shadow-lg" : ""}`}
-    >
+    <div ref={setNodeRef} style={style} className={cn("rounded-lg border", isDragging && "z-10 opacity-90 shadow-lg")}>
       {/* Header — entire row is clickable to expand/collapse */}
       <div
         className="hover:bg-muted/50 flex items-center gap-2 px-3 py-2 transition-colors select-none"
@@ -165,7 +162,7 @@ function SortableBlock({
         </button>
 
         <ChevronRight
-          className={`text-muted-foreground size-4 shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+          className={cn("text-muted-foreground size-4 shrink-0 transition-transform", isExpanded && "rotate-90")}
         />
 
         <span className="bg-secondary text-secondary-foreground rounded px-2 py-0.5 text-xs font-medium">

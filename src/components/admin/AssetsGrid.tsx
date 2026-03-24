@@ -24,6 +24,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/admin/ui/badge";
 import { Button, buttonVariants } from "@/components/admin/ui/button";
 import { Card, CardContent } from "@/components/admin/ui/card";
@@ -85,7 +86,7 @@ function DraggableAssetCard({
   });
 
   return (
-    <div ref={setNodeRef} className={`group relative ${isDragging ? "opacity-40" : ""}`}>
+    <div ref={setNodeRef} className={cn("group relative", isDragging && "opacity-40")}>
       <a href={`/admin/assets/${asset._id}`} className="block">
         <Card className="hover:border-foreground/50 overflow-hidden pt-0 transition-colors">
           <div className="relative">
@@ -109,7 +110,10 @@ function DraggableAssetCard({
       </a>
       {/* Checkbox */}
       <label
-        className={`border-foreground/40 hover:border-foreground/80 bg-background/80 absolute top-2.5 right-2.5 z-10 flex size-5 cursor-default items-center justify-center rounded border backdrop-blur-sm transition-[opacity,border-color] ${selected ? "border-foreground! opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+        className={cn(
+          "border-foreground/40 hover:border-foreground/80 bg-background/80 absolute top-2.5 right-2.5 z-10 flex size-5 cursor-default items-center justify-center rounded border backdrop-blur-sm transition-[opacity,border-color]",
+          selected ? "border-foreground! opacity-100" : "opacity-0 group-hover:opacity-100",
+        )}
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -122,7 +126,7 @@ function DraggableAssetCard({
           }}
         />
         <svg
-          className={`text-foreground size-3 ${selected ? "block" : "hidden"}`}
+          className={cn("text-foreground size-3", selected ? "block" : "hidden")}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -168,7 +172,10 @@ function DroppableFolder({
     <div ref={setNodeRef} className="group relative">
       <a href={`/admin/assets?folder=${folder._id}`}>
         <Card
-          className={`transition-shadow ${isOver ? "ring-foreground/40 bg-primary/8 ring-1" : "hover:ring-foreground/20 hover:ring-1"}`}
+          className={cn(
+            "transition-shadow",
+            isOver ? "ring-foreground/40 bg-primary/8 ring-1" : "hover:ring-foreground/20 hover:ring-1",
+          )}
         >
           <CardContent className="flex items-center gap-3 py-3">
             <Folder className="text-muted-foreground size-5" />
@@ -177,7 +184,10 @@ function DroppableFolder({
         </Card>
       </a>
       <div
-        className={`absolute top-1/2 right-3 -translate-y-1/2 transition-opacity ${menuActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+        className={cn(
+          "absolute top-1/2 right-3 -translate-y-1/2 transition-opacity",
+          menuActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+        )}
       >
         <button
           type="button"
@@ -211,7 +221,10 @@ function DroppableBreadcrumb({ href, folderId, label }: { href: string; folderId
     <a
       ref={setNodeRef}
       href={href}
-      className={`bg-muted/50 border-border hover:border-foreground/20 hover:text-foreground rounded-md border px-2.5 py-1 transition-colors ${isOver ? "border-primary! bg-primary/12! text-foreground" : ""}`}
+      className={cn(
+        "bg-muted/50 border-border hover:border-foreground/20 hover:text-foreground rounded-md border px-2.5 py-1 transition-colors",
+        isOver && "border-primary! bg-primary/12! text-foreground",
+      )}
     >
       {label}
     </a>
