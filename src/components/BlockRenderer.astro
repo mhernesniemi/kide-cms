@@ -16,16 +16,18 @@ for (const [path, mod] of Object.entries(customComponents)) {
 }
 ---
 
-{
-  blocks.map((block) => {
-    const type = String(block.type ?? "");
-    const Component = componentMap[type];
+<div class="flex flex-col gap-16">
+  {
+    blocks.map((block) => {
+      const type = String(block.type ?? "");
+      const Component = componentMap[type];
 
-    if (Component) {
-      return <Component {...block} />;
-    }
+      if (Component) {
+        return <Component {...block} />;
+      }
 
-    // Fall back to generic renderer
-    return <Fragment set:html={renderBlock(block)} />;
-  })
-}
+      // Fall back to generic renderer
+      return <Fragment set:html={renderBlock(block)} />;
+    })
+  }
+</div>

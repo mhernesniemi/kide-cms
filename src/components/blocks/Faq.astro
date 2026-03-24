@@ -5,7 +5,7 @@ const { heading, items: rawItems } = Astro.props;
 const items = parseList<{ title?: string; description?: string }>(rawItems);
 ---
 
-<section class="py-8">
+<section>
   {heading && <h2 class="mb-4 text-xl font-semibold">{heading}</h2>}
   {
     items.length > 0 && (

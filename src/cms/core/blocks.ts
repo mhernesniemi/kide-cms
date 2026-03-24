@@ -107,7 +107,7 @@ function renderFieldValue(key: string, val: unknown): string {
 export function renderBlock(block: Record<string, any>): string {
   const { type: _type, _key, ...fields } = block;
 
-  let html = `<section class="py-8">`;
+  let html = `<section>`;
 
   // Render eyebrow first if present
   if (fields.eyebrow) {
