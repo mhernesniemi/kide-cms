@@ -82,16 +82,6 @@ const seeds: Record<string, SeedDocument[]> = {
       author: "author_leo",
       sortOrder: 50,
       _status: "published",
-      _translations: [
-        {
-          locale: "fi",
-          values: {
-            title: "Kide CMS:n käyttöönotto",
-            slug: "kide-cmsin-kayttoonotto",
-            excerpt: "Kaikki mitä tarvitset ensimmäisen Kide CMS -projektisi pystyttämiseen.",
-          },
-        },
-      ],
     },
     {
       title: "Designing Content Models That Scale",
@@ -120,17 +110,6 @@ const seeds: Record<string, SeedDocument[]> = {
       author: "author_anna",
       sortOrder: 40,
       _status: "published",
-      _translations: [
-        {
-          locale: "fi",
-          values: {
-            title: "Sisältömallien suunnittelu skaalautuvasti",
-            slug: "sisaltomallien-suunnittelu-skaalautuvasti",
-            excerpt:
-              "Kuinka rakentaa kokoelmat, kentät ja relaatiot niin, että sisältöarkkitehtuuri kasvaa projektisi mukana.",
-          },
-        },
-      ],
     },
     {
       title: "The Local API Pattern",
@@ -405,16 +384,6 @@ const seeds: Record<string, SeedDocument[]> = {
         },
       ],
       _status: "published",
-      _translations: [
-        {
-          locale: "fi",
-          values: {
-            title: "Tietoa",
-            slug: "tietoa",
-            summary: "Lue lisää Kide CMS:stä ja sen taustalla olevista ideoista.",
-          },
-        },
-      ],
     },
     {
       title: "Features",
@@ -530,23 +499,6 @@ const seeds: Record<string, SeedDocument[]> = {
         },
       ],
       _status: "published",
-      _translations: [
-        {
-          locale: "fi",
-          values: {
-            blocks: [
-              {
-                type: "hero",
-                eyebrow: "Astro-natiivi CMS",
-                heading: "Sisältösi, koodisi, yksi sovellus",
-                body: "Määrittele kokoelmat TypeScriptillä. Saat täyden hallintapaneelin, tyypitetyn rajapinnan ja optimoidun julkaisun.kaikki Astro-projektisi sisällä.",
-                ctaLabel: "Avaa hallinta",
-                ctaHref: "/admin",
-              },
-            ],
-          },
-        },
-      ],
     },
   ],
 };

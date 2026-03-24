@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import type { CMSConfig, CollectionConfig, FieldConfig } from "./define";
-import { getTranslatableFieldNames } from "./define";
 import { getDb } from "./db";
 import { hashPassword } from "./auth";
 import { cloneValue, slugify } from "./values";
@@ -53,11 +52,7 @@ export const seedDatabase = async (config: CMSConfig) => {
       const now = new Date().toISOString();
       const docId = typeof seedDoc._id === "string" ? String(seedDoc._id) : nanoid();
 
-      // Separate translations from the seed data
-      const translations = seedDoc._translations as
-        | Array<{ locale: string; values: Record<string, unknown> }>
-        | undefined;
-      const { _id, _translations, _status, ...fieldData } = seedDoc as Record<string, unknown>;
+      const { _id, _status, ...fieldData } = seedDoc as Record<string, unknown>;
 
       // Auto-generate slugs
       for (const [fieldName, field] of Object.entries(collection.fields)) {
@@ -99,28 +94,6 @@ export const seedDatabase = async (config: CMSConfig) => {
       }
 
       await db.insert(tables.main).values(docValues);
-
-      // Insert translations
-      if (translations && tables.translations) {
-        const translatableFields = getTranslatableFieldNames(collection);
-
-        for (const { locale, values } of translations) {
-          const translationData: Record<string, unknown> = {};
-          for (const fn of translatableFields) {
-            if (values[fn] !== undefined) {
-              const field = collection.fields[fn];
-              translationData[fn] = field && isJsonField(field) ? JSON.stringify(values[fn]) : values[fn];
-            }
-          }
-
-          await db.insert(tables.translations).values({
-            _id: nanoid(),
-            _entityId: docId,
-            _languageCode: locale,
-            ...translationData,
-          });
-        }
-      }
 
       // Create initial version
       if (collection.versions && tables.versions) {

@@ -125,14 +125,7 @@ export type FieldConfig =
 
 export type CollectionFieldMap = Record<string, FieldConfig>;
 
-export type SeedTranslation = {
-  locale: string;
-  values: Record<string, unknown>;
-};
-
-export type SeedDocument = Record<string, unknown> & {
-  _translations?: SeedTranslation[];
-};
+export type SeedDocument = Record<string, unknown>;
 
 export type CollectionViewConfig = {
   list?: {
