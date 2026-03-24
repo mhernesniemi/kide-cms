@@ -3,8 +3,6 @@ import "@/styles/public.css";
 import { cms } from "@/cms/.generated/api";
 
 const { title = "Kide CMS", description = "A code-first CMS built inside Astro." } = Astro.props;
-const cfBeaconToken = import.meta.env.CF_BEACON_TOKEN;
-
 type MenuItem = { id: string; label?: string; href?: string; target?: string; children: MenuItem[] };
 
 const menu = await cms.menus.findOne({ slug: "main" });
@@ -45,14 +43,5 @@ const menuItems: MenuItem[] = menu?.items ? (Array.isArray(menu.items) ? menu.it
       }
     </header>
     <slot />
-    {
-      cfBeaconToken && (
-        <script
-          defer
-          src="https://static.cloudflareinsights.com/beacon.min.js"
-          data-cf-beacon={`{"token":"${cfBeaconToken}"}`}
-        />
-      )
-    }
   </body>
 </html>
