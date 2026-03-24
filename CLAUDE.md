@@ -34,6 +34,7 @@ After code changes, ALWAYS run:
 
 ## Rules
 
+- Use **pnpm** for all package management and scripts (`pnpm install`, `pnpm add`, `pnpm exec`, etc.). Do not use npm or yarn.
 - Never edit `.generated/` files — they're overwritten on every generation.
 - DB columns use `snake_case`, TS fields use `camelCase`. System fields prefixed with `_`.
 - Rich text is JSON AST, never HTML or Markdown in storage.
