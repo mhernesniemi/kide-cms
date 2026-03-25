@@ -180,8 +180,6 @@ export type CollectionAccess = Partial<
   Record<"read" | "create" | "update" | "delete" | "publish" | "schedule", AccessRule>
 >;
 
-export type AccessConfig = Record<string, CollectionAccess>;
-
 export const hasRole =
   (...roles: string[]): AccessRule =>
   ({ user }) =>
@@ -228,8 +226,6 @@ export type CollectionHooks = {
   afterSchedule?: (doc: Record<string, unknown>, context: HookContext) => void | Promise<void>;
 };
 
-export type HooksConfig = Record<string, CollectionHooks>;
-
 const createField = <T extends FieldConfig>(type: T["type"], options?: Omit<T, "type">): T =>
   ({ type, ...(options ?? {}) }) as T;
 
@@ -252,10 +248,6 @@ export const fields = {
 export const defineCollection = (collection: CollectionConfig): CollectionConfig => collection;
 
 export const defineConfig = (config: CMSConfig): CMSConfig => config;
-
-export const defineAccess = <T extends AccessConfig>(config: T): T => config;
-
-export const defineHooks = <T extends HooksConfig>(config: T): T => config;
 
 export const getCollectionMap = (config: CMSConfig) =>
   Object.fromEntries(config.collections.map((collection) => [collection.slug, collection]));

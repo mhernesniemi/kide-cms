@@ -1,7 +1,7 @@
 import { eq, sql, and, or, desc, asc, lte, like } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-import type { AccessConfig, CMSConfig, CollectionConfig, FieldConfig, HooksConfig, RichTextDocument } from "./define";
+import type { CMSConfig, CollectionConfig, FieldConfig, RichTextDocument } from "./define";
 import { getCollectionMap, getTranslatableFieldNames, isStructuralField } from "./define";
 import { getDb } from "./db";
 import { hashPassword } from "./auth";
@@ -211,14 +211,13 @@ const deserializeFromDb = (collection: CollectionConfig, row: Record<string, unk
 };
 
 const canAccess = async (
-  access: AccessConfig | undefined,
   collection: CollectionConfig,
   operation: CMSOperation,
   context: RuntimeContext,
   doc?: Record<string, unknown> | null,
 ) => {
   if (context._system) return true;
-  const rule = access?.[collection.slug]?.[operation];
+  const rule = collection.access?.[operation];
   if (!rule) return true;
   return rule({ user: context.user ?? null, doc: doc ?? null, operation, collection: collection.slug });
 };
@@ -242,7 +241,7 @@ const getTableRefs = async (collectionSlug: string) => {
   return tables;
 };
 
-export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: HooksConfig) => {
+export const createCms = (config: CMSConfig) => {
   const collectionMap = getCollectionMap(config);
 
   const createCollectionApi = (slug: string) => {
@@ -283,7 +282,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
 
     return {
       async find(options: FindOptions = {}, context: RuntimeContext = {}) {
-        const allowed = await canAccess(access, collection, "read", context);
+        const allowed = await canAccess(collection, "read", context);
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
 
         const db = await getDb();
@@ -422,7 +421,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
 
         const doc = deserializeFromDb(collection, rows[0] as Record<string, unknown>);
 
-        const allowed = await canAccess(access, collection, "read", context, doc);
+        const allowed = await canAccess(collection, "read", context, doc);
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
 
         if (options.status && options.status !== "any" && doc._status !== options.status) return null;
@@ -467,7 +466,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
       },
 
       async create(data: Record<string, unknown>, context: RuntimeContext = {}) {
-        const allowed = await canAccess(access, collection, "create", context);
+        const allowed = await canAccess(collection, "create", context);
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
 
         const db = await getDb();
@@ -481,8 +480,8 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
           preparedInput.password = await hashPassword(preparedInput.password);
         }
 
-        const transformedInput = hooks?.[collection.slug]?.beforeCreate
-          ? await hooks[collection.slug].beforeCreate!(preparedInput, hookContext)
+        const transformedInput = collection.hooks?.beforeCreate
+          ? await collection.hooks!.beforeCreate!(preparedInput, hookContext)
           : preparedInput;
 
         const createdAt = now();
@@ -517,7 +516,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         }
 
         const result = await this.findById(docId, {}, context);
-        await hooks?.[collection.slug]?.afterCreate?.(result!, hookContext);
+        await collection.hooks?.afterCreate?.(result!, hookContext);
         return result!;
       },
 
@@ -529,7 +528,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         if (existingRows.length === 0) throw new Error(`${collection.labels.singular} not found.`);
 
         const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
-        const allowed = await canAccess(access, collection, "update", context, existing);
+        const allowed = await canAccess(collection, "update", context, existing);
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
 
         // Field-level access: strip fields the user cannot update
@@ -549,8 +548,8 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
           preparedInput.password = await hashPassword(preparedInput.password);
         }
 
-        const transformedInput = hooks?.[collection.slug]?.beforeUpdate
-          ? await hooks[collection.slug].beforeUpdate!(preparedInput, existing, hookContext)
+        const transformedInput = collection.hooks?.beforeUpdate
+          ? await collection.hooks!.beforeUpdate!(preparedInput, existing, hookContext)
           : preparedInput;
 
         // On first edit of a published doc, snapshot current content to _published
@@ -606,7 +605,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         }
 
         const result = await this.findById(id, { status: "any" }, context);
-        await hooks?.[collection.slug]?.afterUpdate?.(result!, hookContext);
+        await collection.hooks?.afterUpdate?.(result!, hookContext);
         return result!;
       },
 
@@ -618,18 +617,18 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         if (existingRows.length === 0) return;
 
         const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
-        const allowed = await canAccess(access, collection, "delete", context, existing);
+        const allowed = await canAccess(collection, "delete", context, existing);
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
 
         const hookContext = getHookContext(collection, "delete", context);
-        await hooks?.[collection.slug]?.beforeDelete?.(existing, hookContext);
+        await collection.hooks?.beforeDelete?.(existing, hookContext);
 
         // Cascade via FK, but also explicitly for safety
         if (tables.translations) await db.delete(tables.translations).where(eq(tables.translations._entityId, id));
         if (tables.versions) await db.delete(tables.versions).where(eq(tables.versions._docId, id));
         await db.delete(tables.main).where(eq(tables.main._id, id));
 
-        await hooks?.[collection.slug]?.afterDelete?.(existing, hookContext);
+        await collection.hooks?.afterDelete?.(existing, hookContext);
       },
 
       async publish(id: string, context: RuntimeContext = {}) {
@@ -642,12 +641,12 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         if (existingRows.length === 0) throw new Error(`${collection.labels.singular} not found.`);
 
         const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
-        const allowed = await canAccess(access, collection, "publish", context, existing);
+        const allowed = await canAccess(collection, "publish", context, existing);
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
 
         const hookContext = getHookContext(collection, "publish", context);
-        if (hooks?.[collection.slug]?.beforePublish) {
-          await hooks[collection.slug].beforePublish!(existing, hookContext);
+        if (collection.hooks?.beforePublish) {
+          await collection.hooks!.beforePublish!(existing, hookContext);
         }
 
         const timestamp = now();
@@ -662,7 +661,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
 
         const result = await this.findById(id, { status: "any" }, context);
-        await hooks?.[collection.slug]?.afterPublish?.(result!, hookContext);
+        await collection.hooks?.afterPublish?.(result!, hookContext);
         return result!;
       },
 
@@ -678,8 +677,8 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
 
         const hookContext = getHookContext(collection, "unpublish", context);
-        if (hooks?.[collection.slug]?.beforeUnpublish) {
-          await hooks[collection.slug].beforeUnpublish!(existing, hookContext);
+        if (collection.hooks?.beforeUnpublish) {
+          await collection.hooks!.beforeUnpublish!(existing, hookContext);
         }
 
         const updateValues: Record<string, unknown> = {
@@ -693,7 +692,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
 
         const result = (await this.findById(id, { status: "any" }, context))!;
-        await hooks?.[collection.slug]?.afterUnpublish?.(result, hookContext);
+        await collection.hooks?.afterUnpublish?.(result, hookContext);
         return result;
       },
 
@@ -709,15 +708,15 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
 
         // Check access: use "schedule" rule, fall back to "publish"
-        const scheduleAllowed = await canAccess(access, collection, "schedule", context, existing);
-        const publishAllowed = access?.[collection.slug]?.schedule
+        const scheduleAllowed = await canAccess(collection, "schedule", context, existing);
+        const publishAllowed = collection.access?.schedule
           ? scheduleAllowed
-          : await canAccess(access, collection, "publish", context, existing);
+          : await canAccess(collection, "publish", context, existing);
         if (!scheduleAllowed && !publishAllowed) throw new Error(`Access denied for ${collection.slug}.`);
 
         const hookContext = getHookContext(collection, "schedule", context);
-        if (hooks?.[collection.slug]?.beforeSchedule) {
-          await hooks[collection.slug].beforeSchedule!(existing, hookContext);
+        if (collection.hooks?.beforeSchedule) {
+          await collection.hooks!.beforeSchedule!(existing, hookContext);
         }
 
         const updateValues: Record<string, unknown> = {
@@ -729,7 +728,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
 
         const result = (await this.findById(id, { status: "any" }, context))!;
-        await hooks?.[collection.slug]?.afterSchedule?.(result, hookContext);
+        await collection.hooks?.afterSchedule?.(result, hookContext);
         return result;
       },
 
@@ -743,7 +742,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         if (existingRows.length === 0) throw new Error(`${collection.labels.singular} not found.`);
 
         const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
-        const allowed = await canAccess(access, collection, "update", context, existing);
+        const allowed = await canAccess(collection, "update", context, existing);
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
 
         const rawPublished = (existingRows[0] as any)._published;
@@ -767,7 +766,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
       },
 
       async count(filter: Omit<FindOptions, "limit" | "offset" | "sort"> = {}, context: RuntimeContext = {}) {
-        const allowed = await canAccess(access, collection, "read", context);
+        const allowed = await canAccess(collection, "read", context);
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
 
         const db = await getDb();
@@ -866,7 +865,7 @@ export const createCms = (config: CMSConfig, access?: AccessConfig, hooks?: Hook
         if (existingRows.length === 0) throw new Error(`${collection.labels.singular} not found.`);
 
         const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
-        const allowed = await canAccess(access, collection, "update", context, existing);
+        const allowed = await canAccess(collection, "update", context, existing);
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
 
         const translatableFields = getTranslatableFieldNames(collection);

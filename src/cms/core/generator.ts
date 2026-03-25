@@ -415,15 +415,13 @@ const generateApiFile = (): string => {
     .join("\n");
 
   return `// auto-generated — do not edit
-import access from "../access";
 import config from "../cms.config";
 import { createCms } from "../core/api";
-import hooks from "../hooks";
 import type {
   ${imports.map((i) => `${i},`).join("\n  ")}
 } from "./types";
 
-export const cms = createCms(config, access, hooks) as {
+export const cms = createCms(config) as {
 ${apiTypes}
   meta: ReturnType<typeof createCms>["meta"];
   scheduled: ReturnType<typeof createCms>["scheduled"];

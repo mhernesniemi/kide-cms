@@ -25,8 +25,7 @@ After code changes, ALWAYS run:
 | File                                          | Purpose                                            |
 | --------------------------------------------- | -------------------------------------------------- |
 | `src/cms/cms.config.ts`                       | Single source of truth — defines all collections   |
-| `src/cms/access.ts`                           | Access control rules                               |
-| `src/cms/hooks.ts`                            | Lifecycle hooks (beforeCreate, afterPublish, etc.) |
+| `src/cms/collections/`                        | Collection definitions (fields, access, hooks)     |
 | `src/cms/core/`                               | CMS runtime (editable, not an npm package)         |
 | `src/cms/.generated/`                         | Auto-generated — DO NOT EDIT                       |
 | `src/pages/admin/[...path].astro`             | Single catch-all route for all admin views         |
