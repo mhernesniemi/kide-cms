@@ -8,6 +8,8 @@ Supports Astro 6's route caching with tag-based invalidation for static-speed co
 
 [Try live demo](https://demo.kide.dev/)
 
+[Docs](https://docs.kide.dev/)
+
 ## Quick Start
 
 ```bash
