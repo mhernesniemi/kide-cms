@@ -6,7 +6,7 @@ Collections config generates everything: Drizzle tables, TypeScript types, and a
 
 Supports Astro 6's route caching with tag-based invalidation for static-speed content delivery.
 
-[Try live demo](https://demo.kide.dev/)
+[Try live demo](https://demo.kide.dev/admin)
 
 [Docs](https://docs.kide.dev/)
 
