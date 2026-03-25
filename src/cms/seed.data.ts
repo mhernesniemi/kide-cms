@@ -451,8 +451,8 @@ const seeds: Record<string, SeedDocument[]> = {
           eyebrow: "Astro-native CMS",
           heading: "Your content, your code, one app",
           body: "Define collections in TypeScript. Get a full admin UI, typed API, and optimized delivery, all inside your Astro project.",
-          ctaLabel: "Open admin",
-          ctaHref: "/admin",
+          ctaLabel: "About us",
+          ctaHref: "/about",
         },
         {
           type: "text",

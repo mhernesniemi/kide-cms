@@ -22,14 +22,14 @@ After code changes, ALWAYS run:
 
 ## Key Files
 
-| File                                          | Purpose                                            |
-| --------------------------------------------- | -------------------------------------------------- |
-| `src/cms/cms.config.ts`                       | Single source of truth — defines all collections   |
-| `src/cms/collections/`                        | Collection definitions (fields, access, hooks)     |
-| `src/cms/core/`                               | CMS runtime (editable, not an npm package)         |
-| `src/cms/.generated/`                         | Auto-generated — DO NOT EDIT                       |
-| `src/pages/admin/[...path].astro`             | Single catch-all route for all admin views         |
-| `src/pages/api/cms/[collection]/[...path].ts` | HTTP API (thin transport for admin islands)        |
+| File                                          | Purpose                                          |
+| --------------------------------------------- | ------------------------------------------------ |
+| `src/cms/cms.config.ts`                       | Single source of truth — defines all collections |
+| `src/cms/collections/`                        | Collection definitions (fields, access, hooks)   |
+| `src/cms/core/`                               | CMS runtime (editable, not an npm package)       |
+| `src/cms/.generated/`                         | Auto-generated — DO NOT EDIT                     |
+| `src/pages/admin/[...path].astro`             | Single catch-all route for all admin views       |
+| `src/pages/api/cms/[collection]/[...path].ts` | HTTP API (thin transport for admin islands)      |
 
 ## Rules
 
