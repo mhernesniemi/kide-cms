@@ -146,6 +146,7 @@ export type CollectionConfig = {
   auth?: boolean;
   singleton?: boolean;
   access?: CollectionAccess;
+  hooks?: CollectionHooks;
   fields: CollectionFieldMap;
   views?: CollectionViewConfig;
   seed?: SeedDocument[];

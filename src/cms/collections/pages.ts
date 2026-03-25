@@ -45,4 +45,15 @@ export default defineCollection({
       },
     }),
   },
+  hooks: {
+    afterPublish(doc, context) {
+      context.cache?.invalidate({ tags: ["pages", "home", `page:${doc._id}`] });
+    },
+    afterUpdate(doc, context) {
+      context.cache?.invalidate({ tags: ["pages", `page:${doc._id}`] });
+    },
+    afterDelete(doc, context) {
+      context.cache?.invalidate({ tags: ["pages", "home", `page:${doc._id}`] });
+    },
+  },
 });

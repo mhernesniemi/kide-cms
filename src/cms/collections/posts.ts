@@ -1,4 +1,5 @@
 import { defineCollection, fields } from "../core/define";
+import { richTextToPlainText } from "../core/values";
 
 export default defineCollection({
   slug: "posts",
@@ -33,5 +34,23 @@ export default defineCollection({
       translatable: true,
       admin: { rows: 3, help: "Meta description for search engines. Max 160 characters.", position: "sidebar" },
     }),
+  },
+  hooks: {
+    beforeCreate(data) {
+      if (!data.excerpt && typeof data.body === "object" && data.body) {
+        const text = richTextToPlainText(data.body as never);
+        if (text) data.excerpt = text.slice(0, 180);
+      }
+      return data;
+    },
+    afterPublish(doc, context) {
+      context.cache?.invalidate({ tags: ["posts", "home", `post:${doc._id}`] });
+    },
+    afterUpdate(doc, context) {
+      context.cache?.invalidate({ tags: ["posts", `post:${doc._id}`] });
+    },
+    afterDelete(doc, context) {
+      context.cache?.invalidate({ tags: ["posts", "home", `post:${doc._id}`] });
+    },
   },
 });
