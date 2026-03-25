@@ -150,7 +150,7 @@ function SortableBlock({
     >
       {/* Header — entire row is clickable to expand/collapse */}
       <div
-        className="hover:bg-muted/80 flex items-center gap-2 px-3 py-2 transition-colors select-none"
+        className="group/row hover:bg-muted/80 flex items-center gap-2 px-3 py-2 transition-colors select-none"
         onClick={onToggle}
       >
         {/* Drag handle */}
@@ -166,14 +166,21 @@ function SortableBlock({
         </button>
 
         <ChevronRight
-          className={cn("text-muted-foreground size-4 shrink-0 transition-transform", isExpanded && "rotate-90")}
+          className={cn(
+            "text-muted-foreground group-hover/row:text-foreground/70 size-4 shrink-0 transition-colors transition-transform",
+            isExpanded && "rotate-90",
+          )}
         />
 
         <span className="bg-secondary text-secondary-foreground rounded px-2 py-0.5 text-xs font-medium">
           {humanize(block.type)}
         </span>
 
-        {!isExpanded && preview && <span className="text-muted-foreground min-w-0 truncate text-sm">{preview}</span>}
+        {!isExpanded && preview && (
+          <span className="text-muted-foreground group-hover/row:text-foreground/70 min-w-0 truncate text-sm transition-colors">
+            {preview}
+          </span>
+        )}
 
         <div className="ml-auto flex shrink-0 items-center">
           <Button
@@ -712,7 +719,7 @@ function SortableRepeaterItem({
       className={cn("overflow-hidden rounded-lg border", isDragging && "z-10 opacity-90 shadow-lg")}
     >
       <div
-        className="hover:bg-muted/80 flex items-center gap-2 px-3 py-2 transition-colors select-none"
+        className="group/row hover:bg-muted/80 flex items-center gap-2 px-3 py-2 transition-colors select-none"
         onClick={onToggle}
       >
         <button
@@ -727,12 +734,21 @@ function SortableRepeaterItem({
         </button>
 
         <ChevronRight
-          className={cn("text-muted-foreground size-4 shrink-0 transition-transform", isExpanded && "rotate-90")}
+          className={cn(
+            "text-muted-foreground group-hover/row:text-foreground/70 size-4 shrink-0 transition-colors transition-transform",
+            isExpanded && "rotate-90",
+          )}
         />
 
-        <span className="text-muted-foreground text-xs font-medium">#{index + 1}</span>
+        <span className="text-muted-foreground group-hover/row:text-foreground/70 text-xs font-medium transition-colors">
+          #{index + 1}
+        </span>
 
-        {!isExpanded && preview && <span className="text-muted-foreground min-w-0 truncate text-sm">{preview}</span>}
+        {!isExpanded && preview && (
+          <span className="text-muted-foreground group-hover/row:text-foreground/70 min-w-0 truncate text-sm transition-colors">
+            {preview}
+          </span>
+        )}
 
         <div className="ml-auto">
           <Button
