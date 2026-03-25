@@ -1,6 +1,6 @@
 # Kide CMS for Astro 6
 
-Code-first, single-schema CMS built inside an Astro app. ~2k lines of core engine.
+Code-first, single-schema CMS built inside an Astro app. ~3k lines of core engine.
 
 Collections config generates everything: Drizzle tables, TypeScript types, and a runtime admin UI.
 
