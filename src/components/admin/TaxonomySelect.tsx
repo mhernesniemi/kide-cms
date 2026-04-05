@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import TreeSelect, { flattenTree, type TreeItem } from "@/components/admin/TreeSelect";
+import TreeSelect, { flattenTree, type TreeSelectItem } from "@/components/admin/TreeSelect";
 
 type Props = {
   name: string;
@@ -17,7 +17,7 @@ type Term = {
 };
 
 export default function TaxonomySelect({ name, value, taxonomySlug }: Props) {
-  const [items, setItems] = useState<TreeItem[]>([]);
+  const [items, setItems] = useState<TreeSelectItem[]>([]);
 
   useEffect(() => {
     fetch(`/api/cms/taxonomies?where=${encodeURIComponent(JSON.stringify({ slug: taxonomySlug }))}&status=any`)

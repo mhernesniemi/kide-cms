@@ -7,7 +7,7 @@ import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/admin/ui/popover";
 import { cn } from "@/lib/utils";
 
-export type TreeItem = {
+export type TreeSelectItem = {
   value: string;
   label: string;
   depth: number;
@@ -20,7 +20,7 @@ type Props = {
   placeholder?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
-  items: TreeItem[];
+  items: TreeSelectItem[];
   onChange?: (value: string) => void;
 };
 
@@ -30,8 +30,8 @@ export function flattenTree<T extends { children?: T[] }>(
   getLabel: (node: T) => string,
   depth = 0,
   path: string[] = [],
-): TreeItem[] {
-  const result: TreeItem[] = [];
+): TreeSelectItem[] {
+  const result: TreeSelectItem[] = [];
   for (const node of nodes) {
     const currentPath = [...path, getLabel(node)];
     result.push({ value: getValue(node), label: getLabel(node), depth, path: currentPath });
@@ -47,7 +47,7 @@ export function flattenByParent<T>(
   getValue: (item: T) => string,
   getLabel: (item: T) => string,
   getParent: (item: T) => string | null,
-): TreeItem[] {
+): TreeSelectItem[] {
   const childrenMap = new Map<string | null, T[]>();
   for (const item of items) {
     const parent = getParent(item);
@@ -55,7 +55,7 @@ export function flattenByParent<T>(
     childrenMap.get(parent)!.push(item);
   }
 
-  const result: TreeItem[] = [];
+  const result: TreeSelectItem[] = [];
   const walk = (parentId: string | null, depth: number, path: string[]) => {
     for (const item of childrenMap.get(parentId) ?? []) {
       const currentPath = [...path, getLabel(item)];

@@ -214,9 +214,9 @@ const blockTypesMeta =
 
   {
     field.type === "select" && field.admin?.component === "radio" && (
-      <div class="flex flex-wrap gap-x-5 gap-y-2 has-[:disabled]:opacity-50">
+      <div class="flex flex-wrap gap-x-5 gap-y-2 has-disabled:opacity-50">
         {field.options.map((option) => (
-          <label class="hover:text-foreground flex items-center gap-2 text-sm transition-colors has-[:disabled]:cursor-not-allowed has-[:disabled]:hover:text-current">
+          <label class="hover:text-foreground flex items-center gap-2 text-sm transition-colors has-disabled:cursor-not-allowed has-disabled:hover:text-current">
             <input
               class="border-input hover:border-primary/60 checked:border-primary checked:hover:border-primary focus-visible:ring-ring/50 disabled:hover:border-input size-4 shrink-0 appearance-none rounded-full border transition-all checked:border-[5px] focus-visible:ring-3 focus-visible:outline-none disabled:cursor-not-allowed"
               type="radio"

@@ -167,7 +167,7 @@ function SortableBlock({
 
         <ChevronRight
           className={cn(
-            "text-muted-foreground group-hover/row:text-foreground/70 size-4 shrink-0 transition-colors transition-transform",
+            "text-muted-foreground group-hover/row:text-foreground/70 size-4 shrink-0 transition-[color,transform]",
             isExpanded && "rotate-90",
           )}
         />
@@ -425,6 +425,146 @@ function SubField({
   );
 }
 
+function JsonTextarea({
+  fieldId,
+  rows,
+  value,
+  fallback,
+  onChange,
+}: {
+  fieldId: string;
+  rows: number;
+  value: unknown;
+  fallback: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const strValue = value == null ? "" : String(value);
+  return (
+    <Textarea
+      id={fieldId}
+      rows={rows}
+      value={typeof value === "string" ? strValue : JSON.stringify(value ?? fallback, null, 2)}
+      onChange={(e) => {
+        try {
+          onChange(JSON.parse(e.target.value));
+        } catch {
+          onChange(e.target.value);
+        }
+      }}
+    />
+  );
+}
+
+function parseSelected(meta: SubFieldMeta, value: unknown): string[] {
+  if (!meta.hasMany) return value ? [String(value)] : [];
+  if (Array.isArray(value)) return value as string[];
+  if (typeof value === "string" && value) {
+    try {
+      return JSON.parse(value) as string[];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function RelationControl({
+  fieldId,
+  meta,
+  value,
+  onChange,
+  relationOptions,
+}: {
+  fieldId: string;
+  meta: SubFieldMeta;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  relationOptions: RelationOption[];
+}) {
+  const selected = parseSelected(meta, value);
+  const getLabel = (id: string) => relationOptions?.find((o) => o.value === id)?.label ?? id;
+  const toggle = (id: string) => {
+    if (meta.hasMany) {
+      const next = selected.includes(id) ? selected.filter((v) => v !== id) : [...selected, id];
+      onChange(next);
+    } else {
+      onChange(selected[0] === id ? "" : id);
+    }
+  };
+  return (
+    <div className="space-y-2">
+      {meta.hasMany && selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((id) => (
+            <span
+              key={id}
+              className="bg-secondary text-secondary-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-sm"
+            >
+              {getLabel(id)}
+              <button
+                type="button"
+                onClick={() => toggle(id)}
+                className="text-muted-foreground hover:text-foreground -mr-0.5 rounded p-0.5"
+              >
+                <Trash2 className="size-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <SelectField
+        name={fieldId}
+        value={meta.hasMany ? "" : (selected[0] ?? "")}
+        placeholder={`Select ${meta.label?.toLowerCase() ?? "item"}...`}
+        items={(relationOptions ?? []).map((o) => ({ value: o.value, label: o.label }))}
+        onChange={(v) => {
+          if (meta.hasMany && v) {
+            if (!selected.includes(v)) onChange([...selected, v]);
+          } else {
+            onChange(v);
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+function ArrayControl({
+  fieldId,
+  meta,
+  value,
+  onChange,
+}: {
+  fieldId: string;
+  meta: SubFieldMeta;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  if (meta.of?.type === "image") {
+    return <ArrayImageField fieldId={fieldId} value={value} onChange={onChange} />;
+  }
+  if (meta.of?.type === "text") {
+    const items = Array.isArray(value) ? value : [];
+    return (
+      <Input
+        id={fieldId}
+        value={items.join(", ")}
+        placeholder={meta.admin?.placeholder ?? "item1, item2, item3"}
+        onChange={(e) => {
+          const parts = e.target.value
+            .split(",")
+            .map((s: string) => s.trim())
+            .filter(Boolean);
+          onChange(parts);
+        }}
+      />
+    );
+  }
+  return (
+    <JsonTextarea fieldId={fieldId} rows={meta.admin?.rows ?? 5} value={value} fallback={[]} onChange={onChange} />
+  );
+}
+
 function SubFieldControl({
   fieldId,
   meta,
@@ -517,140 +657,31 @@ function SubFieldControl({
         />
       );
 
-    case "relation": {
-      const selected = meta.hasMany
-        ? Array.isArray(value)
-          ? (value as string[])
-          : typeof value === "string" && value
-            ? (() => {
-                try {
-                  return JSON.parse(value) as string[];
-                } catch {
-                  return [];
-                }
-              })()
-            : []
-        : value
-          ? [String(value)]
-          : [];
-      const getLabel = (id: string) => relationOptions?.find((o) => o.value === id)?.label ?? id;
-      const toggle = (id: string) => {
-        if (meta.hasMany) {
-          const next = selected.includes(id) ? selected.filter((v) => v !== id) : [...selected, id];
-          onChange(next);
-        } else {
-          onChange(selected[0] === id ? "" : id);
-        }
-      };
+    case "relation":
       return (
-        <div className="space-y-2">
-          {meta.hasMany && selected.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {selected.map((id) => (
-                <span
-                  key={id}
-                  className="bg-secondary text-secondary-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-sm"
-                >
-                  {getLabel(id)}
-                  <button
-                    type="button"
-                    onClick={() => toggle(id)}
-                    className="text-muted-foreground hover:text-foreground -mr-0.5 rounded p-0.5"
-                  >
-                    <Trash2 className="size-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          <SelectField
-            name={fieldId}
-            value={meta.hasMany ? "" : (selected[0] ?? "")}
-            placeholder={`Select ${meta.label?.toLowerCase() ?? "item"}...`}
-            items={(relationOptions ?? []).map((o) => ({ value: o.value, label: o.label }))}
-            onChange={(v) => {
-              if (meta.hasMany && v) {
-                if (!selected.includes(v)) onChange([...selected, v]);
-              } else {
-                onChange(v);
-              }
-            }}
-          />
-        </div>
-      );
-    }
-
-    case "array":
-      if (meta.of?.type === "image") {
-        return <ArrayImageField fieldId={fieldId} value={value} onChange={onChange} />;
-      }
-      if (meta.of?.type === "text") {
-        const items = Array.isArray(value) ? value : [];
-        return (
-          <Input
-            id={fieldId}
-            value={items.join(", ")}
-            placeholder={meta.admin?.placeholder ?? "item1, item2, item3"}
-            onChange={(e) => {
-              const parts = e.target.value
-                .split(",")
-                .map((s: string) => s.trim())
-                .filter(Boolean);
-              onChange(parts);
-            }}
-          />
-        );
-      }
-      // Fallback: JSON textarea
-      return (
-        <Textarea
-          id={fieldId}
-          rows={meta.admin?.rows ?? 5}
-          value={typeof value === "string" ? strValue : JSON.stringify(value ?? [], null, 2)}
-          onChange={(e) => {
-            try {
-              onChange(JSON.parse(e.target.value));
-            } catch {
-              onChange(e.target.value);
-            }
-          }}
+        <RelationControl
+          fieldId={fieldId}
+          meta={meta}
+          value={value}
+          onChange={onChange}
+          relationOptions={relationOptions}
         />
       );
+
+    case "array":
+      return <ArrayControl fieldId={fieldId} meta={meta} value={value} onChange={onChange} />;
 
     case "json":
       if (meta.admin?.component === "repeater") {
         return <RepeaterField fieldId={fieldId} value={value} onChange={onChange} />;
       }
       return (
-        <Textarea
-          id={fieldId}
-          rows={meta.admin?.rows ?? 5}
-          value={typeof value === "string" ? strValue : JSON.stringify(value ?? {}, null, 2)}
-          onChange={(e) => {
-            try {
-              onChange(JSON.parse(e.target.value));
-            } catch {
-              onChange(e.target.value);
-            }
-          }}
-        />
+        <JsonTextarea fieldId={fieldId} rows={meta.admin?.rows ?? 5} value={value} fallback={{}} onChange={onChange} />
       );
 
     default:
-      // Fallback: JSON textarea
       return (
-        <Textarea
-          id={fieldId}
-          rows={meta.admin?.rows ?? 5}
-          value={typeof value === "string" ? strValue : JSON.stringify(value ?? "", null, 2)}
-          onChange={(e) => {
-            try {
-              onChange(JSON.parse(e.target.value));
-            } catch {
-              onChange(e.target.value);
-            }
-          }}
-        />
+        <JsonTextarea fieldId={fieldId} rows={meta.admin?.rows ?? 5} value={value} fallback="" onChange={onChange} />
       );
   }
 }
@@ -735,7 +766,7 @@ function SortableRepeaterItem({
 
         <ChevronRight
           className={cn(
-            "text-muted-foreground group-hover/row:text-foreground/70 size-4 shrink-0 transition-colors transition-transform",
+            "text-muted-foreground group-hover/row:text-foreground/70 size-4 shrink-0 transition-[color,transform]",
             isExpanded && "rotate-90",
           )}
         />
@@ -788,23 +819,23 @@ function SortableRepeaterItem({
   );
 }
 
+function parseArray(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const p = JSON.parse(value);
+      if (Array.isArray(p)) return p;
+    } catch {}
+  }
+  return [];
+}
+
 function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; onChange: (value: unknown) => void }) {
   const [newItemKey, setNewItemKey] = useState<string | null>(null);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
   const savedExpandedRef = useRef<Set<string> | null>(null);
   const [items, setItems] = useState<Array<Record<string, string>>>(() => {
-    const raw: unknown[] = Array.isArray(value)
-      ? value
-      : typeof value === "string"
-        ? (() => {
-            try {
-              const p = JSON.parse(value);
-              return Array.isArray(p) ? p : [];
-            } catch {
-              return [];
-            }
-          })()
-        : [];
+    const raw = parseArray(value);
     return raw.map((item: unknown) => {
       const obj = item as Record<string, string>;
       return obj._key ? obj : { ...obj, _key: generateKey() };

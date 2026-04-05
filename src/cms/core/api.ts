@@ -60,78 +60,92 @@ const getDefaultStatus = (collection: CollectionConfig) => (collection.drafts ? 
 const isEmptyValue = (value: unknown) =>
   value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
 
+const coerceString = (value: unknown) => (value === null ? "" : String(value).trim());
+
+const coerceNumber = (value: unknown) => (value === "" || value === null ? undefined : Number(value));
+
+const coerceBoolean = (value: unknown) =>
+  value === true || value === "true" || value === "on" || value === 1 || value === "1";
+
+const coerceRelation = (field: FieldConfig, value: unknown) => {
+  if (!("hasMany" in field && field.hasMany)) return value ? String(value) : "";
+  if (Array.isArray(value)) return value.map((item) => String(item));
+  const str = String(value).trim();
+  if (str.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(str);
+      if (Array.isArray(parsed)) return parsed.map((item: unknown) => String(item)).filter(Boolean);
+    } catch {
+      // fall through to comma split
+    }
+  }
+  return str
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const coerceArray = (value: unknown) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string")
+    return value
+      .split(/\n|,/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  return [];
+};
+
+const coerceJsonOrBlocks = (field: FieldConfig, value: unknown) => {
+  const fallback = field.defaultValue ?? (field.type === "blocks" ? [] : {});
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? JSON.parse(trimmed) : fallback;
+  }
+  return value ?? fallback;
+};
+
+const coerceRichText = (value: unknown) => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed?.type === "root") return parsed;
+      } catch {}
+    }
+    return createRichTextFromPlainText(value);
+  }
+  return (value as RichTextDocument | undefined) ?? createRichTextFromPlainText("");
+};
+
 const coerceFieldValue = (field: FieldConfig, value: unknown): unknown => {
   if (value === undefined) return undefined;
 
-  if (
-    field.type === "text" ||
-    field.type === "slug" ||
-    field.type === "email" ||
-    field.type === "image" ||
-    field.type === "date"
-  ) {
-    return value === null ? "" : String(value).trim();
+  switch (field.type) {
+    case "text":
+    case "slug":
+    case "email":
+    case "image":
+    case "date":
+      return coerceString(value);
+    case "number":
+      return coerceNumber(value);
+    case "boolean":
+      return coerceBoolean(value);
+    case "select":
+      return value === "" || value === null ? "" : String(value);
+    case "relation":
+      return coerceRelation(field, value);
+    case "array":
+      return coerceArray(value);
+    case "json":
+    case "blocks":
+      return coerceJsonOrBlocks(field, value);
+    case "richText":
+      return coerceRichText(value);
+    default:
+      return value;
   }
-  if (field.type === "number") {
-    if (value === "" || value === null) return undefined;
-    return Number(value);
-  }
-  if (field.type === "boolean") {
-    return value === true || value === "true" || value === "on" || value === 1 || value === "1";
-  }
-  if (field.type === "select") {
-    return value === "" || value === null ? "" : String(value);
-  }
-  if (field.type === "relation") {
-    if (field.hasMany) {
-      if (Array.isArray(value)) return value.map((item) => String(item));
-      const str = String(value).trim();
-      if (str.startsWith("[")) {
-        try {
-          const parsed = JSON.parse(str);
-          if (Array.isArray(parsed)) return parsed.map((item: unknown) => String(item)).filter(Boolean);
-        } catch {
-          // fall through to comma split
-        }
-      }
-      return str
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
-    }
-    return value ? String(value) : "";
-  }
-  if (field.type === "array") {
-    if (Array.isArray(value)) return value;
-    if (typeof value === "string")
-      return value
-        .split(/\n|,/)
-        .map((item) => item.trim())
-        .filter(Boolean);
-    return [];
-  }
-  if (field.type === "json" || field.type === "blocks") {
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      if (!trimmed) return field.defaultValue ?? (field.type === "blocks" ? [] : {});
-      return JSON.parse(trimmed);
-    }
-    return value ?? field.defaultValue ?? (field.type === "blocks" ? [] : {});
-  }
-  if (field.type === "richText") {
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      if (trimmed.startsWith("{")) {
-        try {
-          const parsed = JSON.parse(trimmed);
-          if (parsed?.type === "root") return parsed;
-        } catch {}
-      }
-      return createRichTextFromPlainText(value);
-    }
-    return (value as RichTextDocument | undefined) ?? createRichTextFromPlainText("");
-  }
-  return value;
 };
 
 const prepareIncomingData = (
