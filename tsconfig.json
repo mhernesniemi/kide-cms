@@ -4,7 +4,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@kide/core": ["./packages/kide-core/src/index.ts"]
+      "@kide/core": ["./packages/kide-core/src/index.ts"],
+      "@kide/core/*": ["./packages/kide-core/*"]
     }
   },
   "include": [".astro/types.d.ts", "**/*"],

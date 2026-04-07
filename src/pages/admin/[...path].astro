@@ -1,16 +1,16 @@
 ---
 import { ArrowUpRight, Dot, Plus } from "lucide-react";
 
-import AdminCard from "@/components/admin/AdminCard.astro";
-import AiGenerateButton from "@/components/admin/AiGenerateButton";
-import DocumentActions from "@/components/admin/DocumentActions";
-import DocumentLock from "@/components/admin/DocumentLock";
-import DocumentsDataTable from "@/components/admin/DocumentsDataTable";
-import LiveHeading from "@/components/admin/LiveHeading";
-import UnsavedGuard from "@/components/admin/UnsavedGuard";
-import FieldControl from "@/components/admin/FieldControl.astro";
-import { StatusBadge } from "@/components/admin/ui/badge";
-import { buttonVariants } from "@/components/admin/ui/button";
+import AdminCard from "@kide/core/admin/components/AdminCard.astro";
+import AiGenerateButton from "@kide/core/admin/components/AiGenerateButton";
+import DocumentActions from "@kide/core/admin/components/DocumentActions";
+import DocumentLock from "@kide/core/admin/components/DocumentLock";
+import DocumentsDataTable from "@kide/core/admin/components/DocumentsDataTable";
+import LiveHeading from "@kide/core/admin/components/LiveHeading";
+import UnsavedGuard from "@kide/core/admin/components/UnsavedGuard";
+import FieldControl from "@kide/core/admin/components/FieldControl.astro";
+import { StatusBadge } from "@kide/core/admin/components/ui/badge";
+import { buttonVariants } from "@kide/core/admin/components/ui/button";
 import config from "@/cms/cms.config";
 import { cms } from "@/cms/.generated/api";
 import { isAiEnabled } from "@/cms/runtime";
@@ -24,7 +24,7 @@ import {
   initDateFormat,
   resolveAdminRoute,
 } from "@kide/core";
-import AdminLayout from "@/layouts/AdminLayout.astro";
+import AdminLayout from "@kide/core/admin/layouts/AdminLayout.astro";
 export const prerender = false;
 
 initDateFormat(config, Astro.cookies.get("tz")?.value);

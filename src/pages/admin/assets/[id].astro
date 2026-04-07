@@ -1,18 +1,18 @@
 ---
 import { ArrowLeft, Trash2 } from "lucide-react";
 
-import AdminCard from "@/components/admin/AdminCard.astro";
-import AiGenerateButton from "@/components/admin/AiGenerateButton";
-import FocalPointSelector from "@/components/admin/FocalPointSelector";
-import UnsavedGuard from "@/components/admin/UnsavedGuard";
-import TreeSelect, { flattenByParent } from "@/components/admin/TreeSelect";
-import { buttonVariants } from "@/components/admin/ui/button";
-import { Label } from "@/components/admin/ui/label";
-import { Textarea } from "@/components/admin/ui/textarea";
+import AdminCard from "@kide/core/admin/components/AdminCard.astro";
+import AiGenerateButton from "@kide/core/admin/components/AiGenerateButton";
+import FocalPointSelector from "@kide/core/admin/components/FocalPointSelector";
+import UnsavedGuard from "@kide/core/admin/components/UnsavedGuard";
+import TreeSelect, { flattenByParent } from "@kide/core/admin/components/TreeSelect";
+import { buttonVariants } from "@kide/core/admin/components/ui/button";
+import { Label } from "@kide/core/admin/components/ui/label";
+import { Textarea } from "@kide/core/admin/components/ui/textarea";
 import config from "@/cms/cms.config";
 import { assets, folders, isAiEnabled } from "@/cms/runtime";
 import { formatDate, initDateFormat } from "@kide/core";
-import AdminLayout from "@/layouts/AdminLayout.astro";
+import AdminLayout from "@kide/core/admin/layouts/AdminLayout.astro";
 
 export const prerender = false;
 
