@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@source "../../node_modules/@kide/core/admin";
-@source "../../node_modules/@kide/core/routes";
 @custom-variant dark (&:is(.dark *));
 
 /* ── Light: cool blue-gray, neutral surfaces ─────────────────────── */

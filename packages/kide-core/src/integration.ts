@@ -2,6 +2,7 @@ import type { AstroIntegration } from "astro";
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, watch, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 export interface CmsIntegrationOptions {
   /** Path to the CMS config file (default: "src/cms/cms.config") */
@@ -83,6 +84,19 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
       "astro:config:setup": ({ command, updateConfig, injectRoute, addMiddleware }) => {
         const root = process.cwd();
 
+        // Generate a wrapper CSS that adds @source directives and imports user's admin CSS
+        const corePkgDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+        const adminDir = path.join(corePkgDir, "admin");
+        const routesDir = path.join(corePkgDir, "routes");
+        const userAdminCss = path.resolve(root, "src/styles/admin.css");
+        const generatedDir = path.join(root, "node_modules", ".kide");
+        mkdirSync(generatedDir, { recursive: true });
+        const wrapperCss = path.join(generatedDir, "admin.css");
+        writeFileSync(
+          wrapperCss,
+          `@source "${adminDir}";\n@source "${routesDir}";\n@import "${userAdminCss}";\n`,
+        );
+
         // Virtual module aliases — resolve route imports to the user's app files
         updateConfig({
           vite: {
@@ -95,7 +109,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
                 "virtual:kide/db": path.resolve(root, adaptersPath, "db"),
                 "virtual:kide/email": path.resolve(root, adaptersPath, "email"),
                 "virtual:kide/blocks": path.resolve(root, "src/cms/blocks"),
-                "virtual:kide/admin-css": path.resolve(root, "src/styles/admin.css"),
+                "virtual:kide/admin-css": wrapperCss,
               },
             },
           },
