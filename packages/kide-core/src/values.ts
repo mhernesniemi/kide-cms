@@ -86,23 +86,17 @@ const renderNode = (node: RichTextNode): string => {
 };
 
 export const renderRichText = (document?: RichTextDocument | null) => {
-  if (!document || document.type !== "root") {
-    return "";
-  }
-
+  if (!document || document.type !== "root") return "";
   return document.children.map(renderNode).join("");
 };
 
 export const richTextToPlainText = (document?: RichTextDocument | null): string => {
-  if (!document?.children) {
-    return "";
-  }
+  if (!document?.children) return "";
 
   const flatten = (node: RichTextNode): string => {
     if (node.type === "text") {
       return String(node.value ?? "");
     }
-
     return (node.children ?? []).map(flatten).join("");
   };
 
@@ -110,25 +104,10 @@ export const richTextToPlainText = (document?: RichTextDocument | null): string 
 };
 
 export const serializeFieldValue = (field: FieldConfig, value: unknown): string => {
-  if (value === null || value === undefined) {
-    return "";
-  }
-
-  if (field.type === "richText") {
-    return richTextToPlainText(value as RichTextDocument);
-  }
-
-  if (field.type === "array") {
-    return Array.isArray(value) ? value.map((item) => String(item ?? "")).join(", ") : "";
-  }
-
-  if (field.type === "json" || field.type === "blocks") {
-    return JSON.stringify(value, null, 2);
-  }
-
-  if (field.type === "boolean") {
-    return value ? "true" : "false";
-  }
-
+  if (value === null || value === undefined) return "";
+  if (field.type === "richText") return richTextToPlainText(value as RichTextDocument);
+  if (field.type === "array") return Array.isArray(value) ? value.map((item) => String(item ?? "")).join(", ") : "";
+  if (field.type === "json" || field.type === "blocks") return JSON.stringify(value, null, 2);
+  if (field.type === "boolean") return value ? "true" : "false";
   return String(value);
 };

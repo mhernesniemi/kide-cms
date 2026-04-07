@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 
-import { acquireLock, releaseLock } from "../../../../cms/core/locks";
+import { acquireLock, releaseLock } from "@/cms/runtime";
 
 export const prerender = false;
 

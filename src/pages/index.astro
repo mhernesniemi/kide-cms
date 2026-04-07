@@ -3,7 +3,7 @@ import PublicLayout from "@/layouts/PublicLayout.astro";
 import BlockRenderer from "@/components/BlockRenderer.astro";
 import type { PostsDocument } from "@/cms/.generated/types";
 import { cms } from "@/cms/.generated/api";
-import { parseBlocks } from "@/cms/core/content";
+import { parseBlocks } from "@kide/core";
 
 const isPreview = Astro.url.searchParams.has("preview");
 const page = await cms["front-page"].findOne({ status: isPreview ? "any" : "published" });

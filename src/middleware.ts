@@ -1,6 +1,6 @@
 import { defineMiddleware } from "astro:middleware";
-import { getSessionUser } from "./cms/core/auth";
-import { getDb } from "./cms/core/db";
+import { getSessionUser } from "./cms/runtime";
+import { getDb } from "./cms/adapters/db";
 
 let hasUsers: boolean | null = null;
 

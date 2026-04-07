@@ -1,20 +1,21 @@
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-import { getDb } from "./db";
+import { getDb } from "./runtime";
+import { getSchema } from "./schema";
 
 const ITERATIONS = 100_000;
 const HASH_LENGTH = 32;
 const SALT_LENGTH = 16;
 
 const encode = (buffer: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(buffer)));
-
-const decode = (base64: string) => Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+const decode = (base64: string) => Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
 
 const deriveKey = async (plain: string, salt: Uint8Array) => {
   const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(plain), "PBKDF2", false, [
     "deriveBits",
   ]);
+
   return crypto.subtle.deriveBits(
     { name: "PBKDF2", salt: salt.buffer as ArrayBuffer, iterations: ITERATIONS, hash: "SHA-256" },
     keyMaterial,
@@ -31,6 +32,7 @@ export const hashPassword = async (plain: string): Promise<string> => {
 export const verifyPassword = async (hash: string, plain: string): Promise<boolean> => {
   const [, iterStr, saltB64, hashB64] = hash.split(":");
   if (!iterStr || !saltB64 || !hashB64) return false;
+
   const salt = decode(saltB64);
   const expected = decode(hashB64);
   const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(plain), "PBKDF2", false, [
@@ -43,6 +45,7 @@ export const verifyPassword = async (hash: string, plain: string): Promise<boole
       expected.length * 8,
     ),
   );
+
   if (derived.length !== expected.length) return false;
   let diff = 0;
   for (let i = 0; i < derived.length; i++) diff |= derived[i] ^ expected[i];
@@ -51,9 +54,9 @@ export const verifyPassword = async (hash: string, plain: string): Promise<boole
 
 export const createSession = async (userId: string): Promise<{ token: string; expiresAt: string }> => {
   const db = await getDb();
-  const schema = await import("../.generated/schema");
+  const schema = getSchema();
   const token = nanoid(32);
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   await db.insert(schema.cmsSessions).values({
     _id: token,
@@ -66,15 +69,13 @@ export const createSession = async (userId: string): Promise<{ token: string; ex
 
 export const validateSession = async (token: string): Promise<{ userId: string; expiresAt: string } | null> => {
   const db = await getDb();
-  const schema = await import("../.generated/schema");
-
+  const schema = getSchema();
   const rows = await db.select().from(schema.cmsSessions).where(eq(schema.cmsSessions._id, token)).limit(1);
 
   if (rows.length === 0) return null;
 
   const session = rows[0] as { _id: string; userId: string; expiresAt: string };
   if (new Date(session.expiresAt) < new Date()) {
-    // Expired — clean up
     await db.delete(schema.cmsSessions).where(eq(schema.cmsSessions._id, token));
     return null;
   }
@@ -84,7 +85,7 @@ export const validateSession = async (token: string): Promise<{ userId: string; 
 
 export const destroySession = async (token: string) => {
   const db = await getDb();
-  const schema = await import("../.generated/schema");
+  const schema = getSchema();
   await db.delete(schema.cmsSessions).where(eq(schema.cmsSessions._id, token));
 };
 
@@ -100,18 +101,16 @@ export const getSessionUser = async (request: Request): Promise<SessionUser | nu
   const match = cookieHeader.match(/cms_session=([^;]+)/);
   if (!match) return null;
 
-  const token = match[1];
-  const session = await validateSession(token);
+  const session = await validateSession(match[1]);
   if (!session) return null;
 
   const db = await getDb();
-  const schema = await import("../.generated/schema");
+  const schema = getSchema();
   const tables = schema.cmsTables as Record<string, { main: any }>;
 
   if (!tables.users) return null;
 
   const userRows = await db.select().from(tables.users.main).where(eq(tables.users.main._id, session.userId)).limit(1);
-
   if (userRows.length === 0) return null;
 
   const user = userRows[0] as Record<string, unknown>;
@@ -123,13 +122,11 @@ export const getSessionUser = async (request: Request): Promise<SessionUser | nu
   };
 };
 
-// --- Invitations ---
-
 const INVITE_EXPIRY_DAYS = 7;
 
 export const createInvite = async (userId: string): Promise<{ token: string; expiresAt: string }> => {
   const db = await getDb();
-  const schema = await import("../.generated/schema");
+  const schema = getSchema();
   const token = nanoid(32);
   const expiresAt = new Date(Date.now() + INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
@@ -145,9 +142,9 @@ export const createInvite = async (userId: string): Promise<{ token: string; exp
 
 export const validateInvite = async (token: string): Promise<{ userId: string; expiresAt: string } | null> => {
   const db = await getDb();
-  const schema = await import("../.generated/schema");
-
+  const schema = getSchema();
   const rows = await db.select().from(schema.cmsInvites).where(eq(schema.cmsInvites.token, token)).limit(1);
+
   if (rows.length === 0) return null;
 
   const invite = rows[0] as { userId: string; expiresAt: string; usedAt: string | null };
@@ -159,7 +156,7 @@ export const validateInvite = async (token: string): Promise<{ userId: string; e
 
 export const consumeInvite = async (token: string): Promise<void> => {
   const db = await getDb();
-  const schema = await import("../.generated/schema");
+  const schema = getSchema();
   await db
     .update(schema.cmsInvites)
     .set({ usedAt: new Date().toISOString() })

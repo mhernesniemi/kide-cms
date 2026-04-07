@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import config from "@/cms/cms.config";
 import { cms } from "@/cms/.generated/api";
-import { getLabelField } from "@/cms/core/define";
+import { getLabelField } from "@kide/core";
 
 export const prerender = false;
 

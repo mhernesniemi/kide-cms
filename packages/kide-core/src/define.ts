@@ -63,11 +63,8 @@ export type SlugFieldConfig = BaseFieldConfig<"slug", string> & {
 };
 
 export type EmailFieldConfig = BaseFieldConfig<"email", string>;
-
 export type NumberFieldConfig = BaseFieldConfig<"number", number>;
-
 export type BooleanFieldConfig = BaseFieldConfig<"boolean", boolean>;
-
 export type DateFieldConfig = BaseFieldConfig<"date", string>;
 
 export type SelectFieldConfig = BaseFieldConfig<"select", string> & {
@@ -88,7 +85,6 @@ export type RichTextDocument = {
 };
 
 export type RichTextFieldConfig = BaseFieldConfig<"richText", RichTextDocument>;
-
 export type ImageFieldConfig = BaseFieldConfig<"image", string>;
 
 export type RelationFieldConfig = BaseFieldConfig<"relation", string | string[]> & {
@@ -124,7 +120,6 @@ export type FieldConfig =
   | BlocksFieldConfig;
 
 export type CollectionFieldMap = Record<string, FieldConfig>;
-
 export type SeedDocument = Record<string, unknown>;
 
 export type CollectionViewConfig = {
@@ -246,7 +241,6 @@ export const fields = {
 };
 
 export const defineCollection = (collection: CollectionConfig): CollectionConfig => collection;
-
 export const defineConfig = (config: CMSConfig): CMSConfig => config;
 
 export const getCollectionMap = (config: CMSConfig) =>
@@ -268,6 +262,6 @@ export const getLabelField = (collection: CollectionConfig): string => {
   if (collection.labelField && collection.labelField in collection.fields) return collection.labelField;
   if ("title" in collection.fields) return "title";
   if ("name" in collection.fields) return "name";
-  const firstTextField = Object.entries(collection.fields).find(([, f]) => f.type === "text");
+  const firstTextField = Object.entries(collection.fields).find(([, field]) => field.type === "text");
   return firstTextField ? firstTextField[0] : Object.keys(collection.fields)[0];
 };

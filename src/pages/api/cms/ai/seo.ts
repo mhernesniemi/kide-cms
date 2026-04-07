@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { isAiEnabled, streamSeoDescription } from "@/cms/core/ai";
+import { isAiEnabled, streamSeoDescription } from "@/cms/runtime";
 
 export const prerender = false;
 

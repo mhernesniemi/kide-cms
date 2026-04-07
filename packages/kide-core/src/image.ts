@@ -1,22 +1,16 @@
 const ALLOWED_WIDTHS = [320, 480, 640, 768, 960, 1024, 1280, 1536, 1920];
 const ALLOWED_FORMATS = ["webp", "avif", "jpeg", "png"] as const;
+
 type Format = (typeof ALLOWED_FORMATS)[number];
 
-function clampWidth(w: number): number {
-  return ALLOWED_WIDTHS.reduce((prev, curr) => (Math.abs(curr - w) < Math.abs(prev - w) ? curr : prev));
+function clampWidth(width: number): number {
+  return ALLOWED_WIDTHS.reduce((prev, curr) => (Math.abs(curr - width) < Math.abs(prev - width) ? curr : prev));
 }
 
-// Detect Cloudflare Workers runtime
 function isCloudflare(): boolean {
   return typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
 }
 
-/**
- * Generate an optimized image URL.
- *
- * Local:      /api/cms/img/uploads/photo.jpg?w=800
- * Cloudflare: /cdn-cgi/image/width=800,format=webp,quality=80/uploads/photo.jpg
- */
 export function cmsImage(src: string, width?: number, format: Format = "webp"): string {
   if (!src) return "";
 
@@ -35,15 +29,10 @@ export function cmsImage(src: string, width?: number, format: Format = "webp"): 
   return `/api/cms/img${src}${qs ? `?${qs}` : ""}`;
 }
 
-/**
- * Generate a srcset string for responsive images.
- */
 export function cmsSrcset(src: string, widths: number[] = [480, 768, 1024, 1280], format: Format = "webp"): string {
   if (!src) return "";
-  return widths.map((w) => `${cmsImage(src, w, format)} ${w}w`).join(", ");
+  return widths.map((width) => `${cmsImage(src, width, format)} ${width}w`).join(", ");
 }
-
-// --- Local-only Sharp transformation (not used on Cloudflare) ---
 
 export async function transformImage(
   src: string,
@@ -57,39 +46,39 @@ export async function transformImage(
   const sharpModule = "sharp";
   const sharp = (await import(/* @vite-ignore */ sharpModule)).default;
 
-  const PUBLIC_DIR = path.join(process.cwd(), "public");
-  const CACHE_DIR = path.join(process.cwd(), ".cms-cache", "img");
+  const publicDir = path.join(process.cwd(), "public");
+  const cacheDir = path.join(process.cwd(), ".cms-cache", "img");
+  const filePath = path.join(publicDir, src);
 
-  const filePath = path.join(PUBLIC_DIR, src);
   if (!existsSync(filePath)) return null;
 
-  const fmt: Format = ALLOWED_FORMATS.includes(format as Format) ? (format as Format) : "webp";
-  const w = width ? clampWidth(width) : undefined;
-  const q = quality ?? 80;
+  const resolvedFormat: Format = ALLOWED_FORMATS.includes(format as Format) ? (format as Format) : "webp";
+  const resolvedWidth = width ? clampWidth(width) : undefined;
+  const resolvedQuality = quality ?? 80;
 
-  // Check cache
-  if (!existsSync(CACHE_DIR)) mkdirSync(CACHE_DIR, { recursive: true });
-  const name = src.replace(/[^a-zA-Z0-9.-]/g, "_");
-  const key = `${name}_${w ?? 0}.${fmt}`;
-  const cachePath = path.join(CACHE_DIR, key);
+  if (!existsSync(cacheDir)) mkdirSync(cacheDir, { recursive: true });
+  const safeName = src.replace(/[^a-zA-Z0-9.-]/g, "_");
+  const cacheKey = `${safeName}_${resolvedWidth ?? 0}.${resolvedFormat}`;
+  const cachePath = path.join(cacheDir, cacheKey);
 
   if (existsSync(cachePath)) {
     return {
       buffer: readFileSync(cachePath),
-      contentType: `image/${fmt === "jpeg" ? "jpeg" : fmt}`,
+      contentType: `image/${resolvedFormat === "jpeg" ? "jpeg" : resolvedFormat}`,
     };
   }
 
   let pipeline = sharp(readFileSync(filePath));
-  if (w) pipeline = pipeline.resize(w, undefined, { withoutEnlargement: true });
-  pipeline = pipeline.toFormat(fmt, { quality: q });
+  if (resolvedWidth) {
+    pipeline = pipeline.resize(resolvedWidth, undefined, { withoutEnlargement: true });
+  }
+  pipeline = pipeline.toFormat(resolvedFormat, { quality: resolvedQuality });
 
   const buffer = await pipeline.toBuffer();
-
   writeFile(cachePath, buffer).catch(() => {});
 
   return {
     buffer,
-    contentType: `image/${fmt === "jpeg" ? "jpeg" : fmt}`,
+    contentType: `image/${resolvedFormat === "jpeg" ? "jpeg" : resolvedFormat}`,
   };
 }

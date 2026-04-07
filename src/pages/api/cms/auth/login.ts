@@ -1,8 +1,8 @@
 import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 
-import { getDb } from "@/cms/core/db";
-import { verifyPassword, createSession, setSessionCookie } from "@/cms/core/auth";
+import { getDb } from "@/cms/adapters/db";
+import { verifyPassword, createSession, setSessionCookie } from "@/cms/runtime";
 
 export const prerender = false;
 

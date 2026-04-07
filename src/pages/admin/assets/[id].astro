@@ -10,9 +10,8 @@ import { buttonVariants } from "@/components/admin/ui/button";
 import { Label } from "@/components/admin/ui/label";
 import { Textarea } from "@/components/admin/ui/textarea";
 import config from "@/cms/cms.config";
-import { assets, folders } from "@/cms/core/assets";
-import { isAiEnabled } from "@/cms/core/ai";
-import { formatDate, initDateFormat } from "@/cms/core/admin";
+import { assets, folders, isAiEnabled } from "@/cms/runtime";
+import { formatDate, initDateFormat } from "@kide/core";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 
 export const prerender = false;

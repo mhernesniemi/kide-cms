@@ -1,5 +1,4 @@
-import { defineCollection, fields } from "../core/define";
-import { richTextToPlainText } from "../core/values";
+import { defineCollection, fields, richTextToPlainText } from "@kide/core";
 
 export default defineCollection({
   slug: "posts",

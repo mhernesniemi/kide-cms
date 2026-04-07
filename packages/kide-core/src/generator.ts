@@ -1,10 +1,15 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import config from "../cms.config";
-import { getTranslatableFieldNames, type CollectionConfig, type FieldConfig } from "./define";
+import type { CMSConfig, CollectionConfig, FieldConfig } from "./define";
+import { getTranslatableFieldNames } from "./define";
 
-const generatedDir = path.join(process.cwd(), "src/cms/.generated");
+type GeneratorOptions = {
+  outputDir: string;
+  coreImportPath?: string;
+  runtimeImportPath?: string;
+  configImportPath?: string;
+};
 
 const pascalCase = (value: string) =>
   value
@@ -26,10 +31,6 @@ const isJsonField = (field: FieldConfig) =>
   field.type === "blocks" ||
   (field.type === "relation" && field.hasMany);
 
-// ---------------------
-// schema.ts generation
-// ---------------------
-
 const generateColumnDef = (fieldName: string, field: FieldConfig): string => {
   const colName = snakeCase(fieldName);
   let col: string;
@@ -45,9 +46,7 @@ const generateColumnDef = (fieldName: string, field: FieldConfig): string => {
   if (field.required && !field.condition) col += ".notNull()";
   if (field.unique) col += ".unique()";
   if (field.defaultValue !== undefined && !isJsonField(field)) {
-    if (field.type === "number") {
-      col += `.default(${field.defaultValue})`;
-    } else if (field.type === "boolean") {
+    if (field.type === "number" || field.type === "boolean") {
       col += `.default(${field.defaultValue})`;
     } else {
       col += `.default(${JSON.stringify(field.defaultValue)})`;
@@ -82,7 +81,7 @@ const generateMainTable = (collection: CollectionConfig): string => {
   return `export const ${varName} = sqliteTable("${tableName}", {\n${columns.join("\n")}\n});`;
 };
 
-const generateTranslationsTable = (collection: CollectionConfig): string | null => {
+const generateTranslationsTable = (config: CMSConfig, collection: CollectionConfig): string | null => {
   if (!config.locales) return null;
   const translatableFields = getTranslatableFieldNames(collection);
   if (translatableFields.length === 0) return null;
@@ -98,8 +97,7 @@ const generateTranslationsTable = (collection: CollectionConfig): string | null 
   ];
 
   for (const fieldName of translatableFields) {
-    const field = collection.fields[fieldName];
-    columns.push(generateColumnDef(fieldName, field));
+    columns.push(generateColumnDef(fieldName, collection.fields[fieldName]));
   }
 
   return `export const ${varName} = sqliteTable("${tableName}", {\n${columns.join("\n")}\n}, (table) => ({\n  uniqueLocale: unique().on(table._entityId, table._languageCode),\n}));`;
@@ -121,7 +119,7 @@ const generateVersionsTable = (collection: CollectionConfig): string | null => {
 });`;
 };
 
-const generateSchemaFile = (): string => {
+const generateSchemaFile = (config: CMSConfig): string => {
   const parts: string[] = [
     `// auto-generated — do not edit`,
     `import { sqliteTable, text, integer, real, unique } from "drizzle-orm/sqlite-core";`,
@@ -130,14 +128,13 @@ const generateSchemaFile = (): string => {
 
   for (const collection of config.collections) {
     parts.push(generateMainTable(collection));
-    const translationsTable = generateTranslationsTable(collection);
+    const translationsTable = generateTranslationsTable(config, collection);
     if (translationsTable) parts.push("", translationsTable);
     const versionsTable = generateVersionsTable(collection);
     if (versionsTable) parts.push("", versionsTable);
     parts.push("");
   }
 
-  // System tables
   parts.push(`export const cmsAssets = sqliteTable("cms_assets", {
   _id: text("_id").primaryKey(),
   filename: text("filename").notNull(),
@@ -152,26 +149,20 @@ const generateSchemaFile = (): string => {
   storagePath: text("storage_path").notNull(),
   _createdAt: text("_created_at").notNull(),
 });`);
-
   parts.push("");
-
   parts.push(`export const cmsAssetFolders = sqliteTable("cms_asset_folders", {
   _id: text("_id").primaryKey(),
   name: text("name").notNull(),
   parent: text("parent"),
   _createdAt: text("_created_at").notNull(),
 });`);
-
   parts.push("");
-
   parts.push(`export const cmsSessions = sqliteTable("cms_sessions", {
   _id: text("_id").primaryKey(),
   userId: text("user_id").notNull(),
   expiresAt: text("expires_at").notNull(),
 });`);
-
   parts.push("");
-
   parts.push(`export const cmsLocks = sqliteTable("cms_locks", {
   _id: text("_id").primaryKey(),
   collection: text("collection").notNull(),
@@ -180,9 +171,7 @@ const generateSchemaFile = (): string => {
   userEmail: text("user_email").notNull(),
   lockedAt: text("locked_at").notNull(),
 });`);
-
   parts.push("");
-
   parts.push(`export const cmsInvites = sqliteTable("cms_invites", {
   _id: text("_id").primaryKey(),
   userId: text("user_id").notNull(),
@@ -190,10 +179,8 @@ const generateSchemaFile = (): string => {
   expiresAt: text("expires_at").notNull(),
   usedAt: text("used_at"),
 });`);
-
   parts.push("");
 
-  // Export a lookup of table variables for the API layer
   const tableExports: string[] = [];
   for (const collection of config.collections) {
     const varName = `cms${pascalCase(collection.slug)}`;
@@ -213,44 +200,24 @@ const generateSchemaFile = (): string => {
   return parts.join("\n");
 };
 
-// -----------------------
-// validators.ts generation
-// -----------------------
-
 const zodTypeForField = (field: FieldConfig): string => {
-  if (
-    field.type === "text" ||
-    field.type === "slug" ||
-    field.type === "email" ||
-    field.type === "image" ||
-    field.type === "date"
-  ) {
-    let z = "z.string()";
-    if (field.type === "email") z = `z.string().email()`;
-    if (field.type === "text" && field.maxLength) z = `z.string().max(${field.maxLength})`;
-    return z;
+  if (["text", "slug", "email", "image", "date"].includes(field.type)) {
+    let zodType = "z.string()";
+    if (field.type === "email") zodType = "z.string().email()";
+    if (field.type === "text" && field.maxLength) zodType = `z.string().max(${field.maxLength})`;
+    return zodType;
   }
   if (field.type === "number") return "z.number()";
   if (field.type === "boolean") return "z.boolean()";
-  if (field.type === "select") {
-    return `z.enum([${field.options.map((o) => JSON.stringify(o)).join(", ")}])`;
-  }
-  if (field.type === "relation") {
-    return field.hasMany ? "z.array(z.string())" : "z.string()";
-  }
-  if (field.type === "array") {
-    return `z.array(${zodTypeForField(field.of)})`;
-  }
-  if (field.type === "richText") {
-    return "z.object({ type: z.literal('root'), children: z.array(z.any()) })";
-  }
-  if (field.type === "json") {
-    return "z.record(z.unknown())";
-  }
+  if (field.type === "select") return `z.enum([${field.options.map((option) => JSON.stringify(option)).join(", ")}])`;
+  if (field.type === "relation") return field.hasMany ? "z.array(z.string())" : "z.string()";
+  if (field.type === "array") return `z.array(${zodTypeForField(field.of)})`;
+  if (field.type === "richText") return "z.object({ type: z.literal('root'), children: z.array(z.any()) })";
+  if (field.type === "json") return "z.record(z.unknown())";
   if (field.type === "blocks") {
     const variants = Object.entries(field.types).map(([blockType, fields]) => {
       const members = Object.entries(fields)
-        .map(([fn, f]) => `${fn}: ${zodTypeForField(f)}${f.required ? "" : ".optional()"}`)
+        .map(([fieldName, nestedField]) => `${fieldName}: ${zodTypeForField(nestedField)}${nestedField.required ? "" : ".optional()"}`)
         .join(", ");
       return `z.object({ type: z.literal(${JSON.stringify(blockType)}), ${members} })`;
     });
@@ -261,7 +228,7 @@ const zodTypeForField = (field: FieldConfig): string => {
   return "z.unknown()";
 };
 
-const generateValidatorsFile = (): string => {
+const generateValidatorsFile = (config: CMSConfig): string => {
   const parts: string[] = [`// auto-generated — do not edit`, `import { z } from "zod";`, ``];
 
   for (const collection of config.collections) {
@@ -283,32 +250,20 @@ const generateValidatorsFile = (): string => {
     parts.push("");
   }
 
-  // Export map for runtime access
-  const mapEntries = config.collections.map((c) => {
-    const name = pascalCase(c.slug);
-    return `  ${c.slug}: { create: ${name}CreateSchema, update: ${name}UpdateSchema },`;
+  const mapEntries = config.collections.map((collection) => {
+    const name = pascalCase(collection.slug);
+    return `  ${collection.slug}: { create: ${name}CreateSchema, update: ${name}UpdateSchema },`;
   });
   parts.push(`export const validators = {\n${mapEntries.join("\n")}\n};`);
 
   return parts.join("\n");
 };
 
-// ---------------------
-// types.ts generation
-// ---------------------
-
 const typeForField = (field: FieldConfig): string => {
-  if (
-    field.type === "text" ||
-    field.type === "slug" ||
-    field.type === "email" ||
-    field.type === "image" ||
-    field.type === "date"
-  )
-    return "string";
+  if (["text", "slug", "email", "image", "date"].includes(field.type)) return "string";
   if (field.type === "number") return "number";
   if (field.type === "boolean") return "boolean";
-  if (field.type === "select") return field.options.map((o) => JSON.stringify(o)).join(" | ");
+  if (field.type === "select") return field.options.map((option) => JSON.stringify(option)).join(" | ");
   if (field.type === "relation") return field.hasMany ? "string[]" : "string";
   if (field.type === "array") return `${typeForField(field.of)}[]`;
   if (field.type === "richText") return "RichTextDocument";
@@ -316,7 +271,7 @@ const typeForField = (field: FieldConfig): string => {
   if (field.type === "blocks") {
     const variants = Object.entries(field.types).map(([blockType, fields]) => {
       const members = Object.entries(fields)
-        .map(([fn, f]) => `${fn}${f.required ? "" : "?"}: ${typeForField(f)};`)
+        .map(([fieldName, nestedField]) => `${fieldName}${nestedField.required ? "" : "?"}: ${typeForField(nestedField)};`)
         .join(" ");
       return `{ type: ${JSON.stringify(blockType)}; ${members} }`;
     });
@@ -325,12 +280,12 @@ const typeForField = (field: FieldConfig): string => {
   return "unknown";
 };
 
-const generateTypesFile = (): string => {
+const generateTypesFile = (config: CMSConfig, coreImportPath: string): string => {
   const parts: string[] = [
     `// auto-generated — do not edit`,
-    `import type { RichTextDocument } from "../core/define";`,
+    `import type { RichTextDocument } from "${coreImportPath}";`,
     ``,
-    `export type CMSCollectionSlug = ${config.collections.map((c) => JSON.stringify(c.slug)).join(" | ")};`,
+    `export type CMSCollectionSlug = ${config.collections.map((collection) => JSON.stringify(collection.slug)).join(" | ")};`,
     ``,
   ];
 
@@ -348,7 +303,7 @@ const generateTypesFile = (): string => {
       .join("\n");
 
     const translationEntries = translatableFields.length
-      ? translatableFields.map((fn) => `  ${fn}?: ${typeForField(collection.fields[fn])};`).join("\n")
+      ? translatableFields.map((fieldName) => `  ${fieldName}?: ${typeForField(collection.fields[fieldName])};`).join("\n")
       : "  [key: string]: never;";
 
     parts.push(`export type ${inputName} = {\n${fieldEntries}\n};`);
@@ -378,14 +333,10 @@ const generateTypesFile = (): string => {
   return parts.join("\n");
 };
 
-// --------------------
-// api.ts generation
-// --------------------
-
-const generateApiFile = (): string => {
+const generateApiFile = (config: CMSConfig, coreImportPath: string, runtimeImportPath: string, configImportPath: string) => {
   const imports = config.collections
-    .map((c) => {
-      const name = pascalCase(c.slug);
+    .map((collection) => {
+      const name = pascalCase(collection.slug);
       return [`${name}Document`, `${name}Input`, `${name}TranslationInput`];
     })
     .flat();
@@ -396,13 +347,13 @@ const generateApiFile = (): string => {
       const ctx = `context?: { user?: { id: string; role?: string; email?: string } | null }`;
       const apiKey = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(collection.slug) ? collection.slug : `"${collection.slug}"`;
       return `  ${apiKey}: {
-    find(options?: import("../core/api").FindOptions, ${ctx}): Promise<${baseName}Document[]>;
+    find(options?: import("${coreImportPath}").FindOptions, ${ctx}): Promise<${baseName}Document[]>;
     findOne(filter: Record<string, unknown> & { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, ${ctx}): Promise<${baseName}Document | null>;
     findById(id: string, options?: { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, ${ctx}): Promise<${baseName}Document | null>;
     create(data: ${baseName}Input, ${ctx}): Promise<${baseName}Document>;
     update(id: string, data: Partial<${baseName}Input>, ${ctx}): Promise<${baseName}Document>;
     delete(id: string, ${ctx}): Promise<void>;
-    count(filter?: Omit<import("../core/api").FindOptions, "limit" | "offset" | "sort">, ${ctx}): Promise<number>;
+    count(filter?: Omit<import("${coreImportPath}").FindOptions, "limit" | "offset" | "sort">, ${ctx}): Promise<number>;
     versions(id: string): Promise<import("./types").StoredVersion[]>;
     restore(id: string, versionNumber: number, ${ctx}): Promise<${baseName}Document>;
     publish(id: string, ${ctx}): Promise<${baseName}Document>;
@@ -415,10 +366,10 @@ const generateApiFile = (): string => {
     .join("\n");
 
   return `// auto-generated — do not edit
-import config from "../cms.config";
-import { createCms } from "../core/api";
+import config from "${configImportPath}";
+import { createCms } from "${runtimeImportPath}";
 import type {
-  ${imports.map((i) => `${i},`).join("\n  ")}
+  ${imports.map((entry) => `${entry},`).join("\n  ")}
 } from "./types";
 
 export const cms = createCms(config) as {
@@ -429,18 +380,21 @@ ${apiTypes}
 `;
 };
 
-// --------------------
-// Run
-// --------------------
+export const generate = async (config: CMSConfig, options: GeneratorOptions) => {
+  const outputDir = options.outputDir;
+  const coreImportPath = options.coreImportPath ?? "@kide/core";
+  const runtimeImportPath = options.runtimeImportPath ?? "../runtime";
+  const configImportPath = options.configImportPath ?? "../cms.config";
 
-const run = async () => {
-  await mkdir(generatedDir, { recursive: true });
+  await mkdir(outputDir, { recursive: true });
   await Promise.all([
-    writeFile(path.join(generatedDir, "schema.ts"), generateSchemaFile(), "utf-8"),
-    writeFile(path.join(generatedDir, "types.ts"), generateTypesFile(), "utf-8"),
-    writeFile(path.join(generatedDir, "validators.ts"), generateValidatorsFile(), "utf-8"),
-    writeFile(path.join(generatedDir, "api.ts"), generateApiFile(), "utf-8"),
+    writeFile(path.join(outputDir, "schema.ts"), generateSchemaFile(config), "utf-8"),
+    writeFile(path.join(outputDir, "types.ts"), generateTypesFile(config, coreImportPath), "utf-8"),
+    writeFile(path.join(outputDir, "validators.ts"), generateValidatorsFile(config), "utf-8"),
+    writeFile(
+      path.join(outputDir, "api.ts"),
+      generateApiFile(config, coreImportPath, runtimeImportPath, configImportPath),
+      "utf-8",
+    ),
   ]);
 };
-
-await run();

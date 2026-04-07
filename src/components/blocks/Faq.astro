@@ -1,5 +1,5 @@
 ---
-import { parseList } from "@/cms/core/content";
+import { parseList } from "@kide/core";
 
 const { heading, items: rawItems } = Astro.props;
 const items = parseList<{ title?: string; description?: string }>(rawItems);

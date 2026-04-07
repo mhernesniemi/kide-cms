@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 
-import { getDb } from "@/cms/core/db";
+import { getDb } from "@/cms/adapters/db";
 import {
   createInvite,
   validateInvite,
@@ -10,12 +10,12 @@ import {
   createSession,
   setSessionCookie,
   getSessionUser,
-} from "@/cms/core/auth";
-import { sendInviteEmail, isEmailConfigured } from "@/cms/core/email";
+} from "@/cms/runtime";
+import { sendInviteEmail, isEmailConfigured } from "@/cms/adapters/email";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, url, locals }) => {
+export const POST: APIRoute = async ({ request, url }) => {
   const formData = await request.formData();
   const action = String(formData.get("_action") ?? "create");
 

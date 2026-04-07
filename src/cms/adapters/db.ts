@@ -1,8 +1,8 @@
+import { mkdirSync } from "node:fs";
+import path from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { mkdirSync } from "node:fs";
-import path from "node:path";
 
 let dbInstance: ReturnType<typeof drizzle> | null = null;
 let sqliteInstance: InstanceType<typeof Database> | null = null;
@@ -26,13 +26,12 @@ export const getDb = async () => {
 
   dbInstance = drizzle(sqliteInstance);
 
-  // Auto-run pending migrations on first connection (production only — dev uses drizzle-kit push)
   if (!migrated) {
     const migrationsFolder = path.join(process.cwd(), "src/cms/migrations");
     try {
       migrate(dbInstance, { migrationsFolder });
     } catch {
-      // Ignore migration errors — tables may already exist via drizzle-kit push in dev
+      // Ignore migration errors. In dev, tables may already exist via drizzle-kit push.
     }
     migrated = true;
   }

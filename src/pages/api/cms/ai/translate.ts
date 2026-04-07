@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { isAiEnabled, streamTranslation } from "@/cms/core/ai";
+import { isAiEnabled, streamTranslation } from "@/cms/runtime";
 
 export const prerender = false;
 

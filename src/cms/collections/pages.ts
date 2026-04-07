@@ -1,4 +1,4 @@
-import { defineCollection, fields, hasRole } from "../core/define";
+import { defineCollection, fields, hasRole } from "@kide/core";
 
 export default defineCollection({
   slug: "pages",

@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { assets } from "@/cms/core/assets";
+import { assets } from "@/cms/runtime";
 
 export const prerender = false;
 

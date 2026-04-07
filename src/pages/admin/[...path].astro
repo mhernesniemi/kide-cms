@@ -13,8 +13,8 @@ import { StatusBadge } from "@/components/admin/ui/badge";
 import { buttonVariants } from "@/components/admin/ui/button";
 import config from "@/cms/cms.config";
 import { cms } from "@/cms/.generated/api";
-import { isAiEnabled } from "@/cms/core/ai";
-import { getLabelField } from "@/cms/core/define";
+import { isAiEnabled } from "@/cms/runtime";
+import { getLabelField } from "@kide/core";
 import {
   formatDate,
   formatFieldValue,
@@ -23,7 +23,7 @@ import {
   humanize,
   initDateFormat,
   resolveAdminRoute,
-} from "@/cms/core/admin";
+} from "@kide/core";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 export const prerender = false;
 
@@ -232,7 +232,7 @@ if (collection && collectionSlug && canAccessCurrent) {
 
   for (const [fieldName, field] of Object.entries(collection.fields) as [
     string,
-    import("@/cms/core/define").FieldConfig,
+    import("@kide/core").FieldConfig,
   ][]) {
     if (field.type === "relation" && canRead(field.collection)) {
       const relatedDocs = await cmsRuntime[field.collection].find(
@@ -266,7 +266,7 @@ if (collection && collectionSlug && canAccessCurrent) {
       for (const [typeName, typeFields] of Object.entries(field.types)) {
         for (const [subFieldName, subField] of Object.entries(typeFields) as [
           string,
-          import("@/cms/core/define").FieldConfig,
+          import("@kide/core").FieldConfig,
         ][]) {
           if (subField.type === "relation" && canRead(subField.collection)) {
             const key = `block:${typeName}:${subFieldName}`;

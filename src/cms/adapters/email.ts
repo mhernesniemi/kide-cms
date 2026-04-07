@@ -5,7 +5,7 @@ export const sendInviteEmail = async (to: string, inviteUrl: string): Promise<bo
   const from = import.meta.env.RESEND_FROM_EMAIL ?? "Kide CMS <noreply@example.com>";
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
+    const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -25,7 +25,7 @@ export const sendInviteEmail = async (to: string, inviteUrl: string): Promise<bo
         `,
       }),
     });
-    return res.ok;
+    return response.ok;
   } catch {
     return false;
   }

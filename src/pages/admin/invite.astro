@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/admin/ui/input";
 import { Label } from "@/components/admin/ui/label";
 import { buttonVariants } from "@/components/admin/ui/button";
-import { validateInvite } from "@/cms/core/auth";
-import { getDb } from "@/cms/core/db";
+import { validateInvite } from "@/cms/runtime";
+import { getDb } from "@/cms/adapters/db";
 import { eq } from "drizzle-orm";
 
 export const prerender = false;

@@ -1,11 +1,11 @@
 import { sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-import type { CMSConfig, CollectionConfig, FieldConfig } from "./define";
-import { getDb } from "./db";
 import { hashPassword } from "./auth";
+import type { CMSConfig, CollectionConfig, FieldConfig, SeedDocument } from "./define";
+import { getDb } from "./runtime";
+import { getSchema } from "./schema";
 import { cloneValue, slugify } from "./values";
-import seedData from "../seed.data";
 
 const isJsonField = (field: FieldConfig) =>
   field.type === "richText" ||
@@ -18,30 +18,26 @@ const serializeForDb = (collection: CollectionConfig, data: Record<string, unkno
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     const field = collection.fields[key];
-    if (field && isJsonField(field) && value !== undefined && value !== null) {
-      result[key] = JSON.stringify(value);
-    } else {
-      result[key] = value;
-    }
+    result[key] = field && isJsonField(field) && value !== undefined && value !== null ? JSON.stringify(value) : value;
   }
   return result;
 };
 
-export const seedDatabase = async (config: CMSConfig) => {
+export const seedDatabase = async (config: CMSConfig, seedData: Record<string, SeedDocument[]>) => {
   const db = await getDb();
-  const schema = await import("../.generated/schema");
+  const schema = getSchema();
+
   for (const collection of config.collections) {
     const collectionSeed = seedData[collection.slug];
     if (!collectionSeed || collectionSeed.length === 0) continue;
 
-    const tables = schema.cmsTables[collection.slug as keyof typeof schema.cmsTables] as {
+    const tables = schema.cmsTables[collection.slug] as {
       main: any;
       translations?: any;
       versions?: any;
     };
     if (!tables) continue;
 
-    // Idempotent: only seed if table has zero rows
     const countResult = await db.select({ count: sql<number>`count(*)` }).from(tables.main);
     const rowCount = Number(countResult[0]?.count ?? 0);
     if (rowCount > 0) continue;
@@ -49,12 +45,10 @@ export const seedDatabase = async (config: CMSConfig) => {
     console.log(`  Seeding ${collection.labels.plural}...`);
 
     for (const seedDoc of collectionSeed) {
-      const now = new Date().toISOString();
+      const timestamp = new Date().toISOString();
       const docId = typeof seedDoc._id === "string" ? String(seedDoc._id) : nanoid();
-
       const { _id, _status, ...fieldData } = seedDoc as Record<string, unknown>;
 
-      // Auto-generate slugs
       for (const [fieldName, field] of Object.entries(collection.fields)) {
         if (field.type !== "slug") continue;
         if (fieldData[fieldName]) {
@@ -64,20 +58,17 @@ export const seedDatabase = async (config: CMSConfig) => {
         }
       }
 
-      // Apply defaults for missing fields
       for (const [fieldName, field] of Object.entries(collection.fields)) {
         if (fieldData[fieldName] === undefined && field.defaultValue !== undefined) {
           fieldData[fieldName] = cloneValue(field.defaultValue);
         }
       }
 
-      // Hash passwords for auth collections
       if (collection.auth && typeof fieldData.password === "string") {
         fieldData.password = await hashPassword(fieldData.password);
       }
 
       const serialized = serializeForDb(collection, fieldData);
-
       const docValues: Record<string, unknown> = {
         _id: docId,
         ...serialized,
@@ -86,23 +77,22 @@ export const seedDatabase = async (config: CMSConfig) => {
       if (collection.drafts) {
         const status = _status === "published" ? "published" : "draft";
         docValues._status = status;
-        if (status === "published") docValues._publishedAt = now;
+        if (status === "published") docValues._publishedAt = timestamp;
       }
       if (collection.timestamps !== false) {
-        docValues._createdAt = now;
-        docValues._updatedAt = now;
+        docValues._createdAt = timestamp;
+        docValues._updatedAt = timestamp;
       }
 
       await db.insert(tables.main).values(docValues);
 
-      // Create initial version
       if (collection.versions && tables.versions) {
         await db.insert(tables.versions).values({
           _id: nanoid(),
           _docId: docId,
           _version: 1,
           _snapshot: JSON.stringify({ ...fieldData, _status: docValues._status }),
-          _createdAt: now,
+          _createdAt: timestamp,
         });
       }
     }

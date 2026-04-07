@@ -1,20 +1,18 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { streamText } from "ai";
 
-const env = (key: string) => import.meta.env[key];
+import { getStorage, readEnv } from "./runtime";
 
 export function isAiEnabled(): boolean {
-  return !!(env("AI_PROVIDER") && env("AI_API_KEY"));
+  return !!(readEnv("AI_PROVIDER") && readEnv("AI_API_KEY"));
 }
 
 export async function getAiModel() {
-  const provider = env("AI_PROVIDER") || "openai";
-  const modelName = env("AI_MODEL") || "gpt-4o-mini";
+  const provider = readEnv("AI_PROVIDER") || "openai";
+  const modelName = readEnv("AI_MODEL") || "gpt-4o-mini";
 
   if (provider === "openai") {
     const { createOpenAI } = await import("@ai-sdk/openai");
-    const openai = createOpenAI({ apiKey: env("AI_API_KEY") });
+    const openai = createOpenAI({ apiKey: readEnv("AI_API_KEY") });
     return openai(modelName);
   }
 
@@ -23,10 +21,11 @@ export async function getAiModel() {
 
 export async function streamAltText(imageUrl: string, filename: string) {
   const model = await getAiModel();
+  const image = await getStorage().getFile(imageUrl);
+  if (!image) {
+    throw new Error(`Image not found: ${imageUrl}`);
+  }
 
-  // Read image from disk since the server can't fetch its own URLs reliably
-  const diskPath = path.join(process.cwd(), "public", imageUrl);
-  const buffer = await readFile(diskPath);
   return streamText({
     model,
     messages: [
@@ -35,7 +34,7 @@ export async function streamAltText(imageUrl: string, filename: string) {
         content: [
           {
             type: "image",
-            image: buffer,
+            image: new Uint8Array(image),
           },
           {
             type: "text",
@@ -49,7 +48,6 @@ export async function streamAltText(imageUrl: string, filename: string) {
 
 export async function streamSeoDescription(content: { title: string; excerpt?: string; body?: string }) {
   const model = await getAiModel();
-
   const prompt = `Generate an SEO-optimized meta description (max 155 characters) for a page with the following content. Return only the description, no quotes or extra formatting.
 
 Title: ${content.title}

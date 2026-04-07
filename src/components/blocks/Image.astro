@@ -1,6 +1,5 @@
 ---
-import { parseList } from "@/cms/core/content";
-import { cmsImage, cmsSrcset } from "@/cms/core/image";
+import { parseList, cmsImage, cmsSrcset } from "@kide/core";
 
 const { images: rawImages } = Astro.props;
 const images = parseList<string>(rawImages);

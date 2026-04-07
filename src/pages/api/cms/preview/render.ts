@@ -1,8 +1,6 @@
 import type { APIRoute } from "astro";
 
-import { renderBlock } from "../../../../cms/core/blocks";
-import { renderRichText } from "../../../../cms/core/richtext";
-import { parseBlocks } from "../../../../cms/core/content";
+import { renderBlock, renderRichText, parseBlocks } from "@kide/core";
 
 export const prerender = false;
 

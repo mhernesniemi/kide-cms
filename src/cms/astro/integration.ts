@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, watch, writeFileSync 
 import path from "node:path";
 
 function runGenerator() {
-  execSync("npx tsx src/cms/core/generator.ts", {
+  execSync("node --import tsx src/cms/generator.ts", {
     stdio: "inherit",
     cwd: process.cwd(),
   });
@@ -31,7 +31,7 @@ function isCloudflareD1(): boolean {
 function hasLocalD1Database(): boolean {
   const dir = path.join(process.cwd(), ".wrangler/state/v3/d1/miniflare-D1DatabaseObject");
   try {
-    return readdirSync(dir).some((f) => f.endsWith(".sqlite") && f !== "*.sqlite");
+    return readdirSync(dir).some((file) => file.endsWith(".sqlite") && file !== "*.sqlite");
   } catch {
     return false;
   }
@@ -70,8 +70,8 @@ export default function cmsIntegration(): AstroIntegration {
         console.log("  [cms] Generating schema, types, validators, and API...");
         try {
           runGenerator();
-        } catch (e) {
-          console.error("  [cms] Generator failed:", (e as Error).message);
+        } catch (error) {
+          console.error("  [cms] Generator failed:", (error as Error).message);
         }
 
         if (command === "dev") {
@@ -83,8 +83,8 @@ export default function cmsIntegration(): AstroIntegration {
               console.log("  \x1b[36m[cms]\x1b[0m First run — setting up database...");
               try {
                 initLocalD1();
-              } catch (e) {
-                console.error("  \x1b[31m[cms]\x1b[0m Failed to initialize D1:", (e as Error).message);
+              } catch (error) {
+                console.error("  \x1b[31m[cms]\x1b[0m Failed to initialize D1:", (error as Error).message);
               }
             }
 
@@ -93,12 +93,11 @@ export default function cmsIntegration(): AstroIntegration {
               if (isFirstRun) {
                 console.log("  \x1b[36m[cms]\x1b[0m Database ready. Open /admin to create your admin account.");
               }
-            } catch (e) {
-              console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (e as Error).message);
+            } catch (error) {
+              console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (error as Error).message);
               console.error("  \x1b[31m[cms]\x1b[0m Try running: npx drizzle-kit push --force");
             }
           } else {
-            // Local SQLite
             const dbPath = path.join(process.cwd(), "data", "cms.db");
             const isFirstRun = !existsSync(dbPath);
             if (isFirstRun) {
@@ -106,15 +105,13 @@ export default function cmsIntegration(): AstroIntegration {
             }
 
             try {
-              mkdirSync(path.join(process.cwd(), "data"), {
-                recursive: true,
-              });
+              mkdirSync(path.join(process.cwd(), "data"), { recursive: true });
               pushSchema();
               if (isFirstRun) {
                 console.log("  \x1b[36m[cms]\x1b[0m Database ready. Open /admin to create your admin account.");
               }
-            } catch (e) {
-              console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (e as Error).message);
+            } catch (error) {
+              console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (error as Error).message);
               console.error("  \x1b[31m[cms]\x1b[0m Try running: npx drizzle-kit push --force");
             }
           }
@@ -130,8 +127,8 @@ export default function cmsIntegration(): AstroIntegration {
                 runGenerator();
                 pushSchema();
                 console.log("  [cms] Schema updated.");
-              } catch (e) {
-                console.error("  [cms] Regeneration failed:", (e as Error).message);
+              } catch (error) {
+                console.error("  [cms] Regeneration failed:", (error as Error).message);
               }
             }, 500);
           });

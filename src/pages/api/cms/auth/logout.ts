@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 
-import { destroySession, clearSessionCookie } from "@/cms/core/auth";
+import { destroySession, clearSessionCookie } from "@/cms/runtime";
 
 export const prerender = false;
 

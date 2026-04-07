@@ -1,4 +1,4 @@
-import { defineConfig } from "./core/define";
+import { defineConfig } from "@kide/core";
 import users from "./collections/users";
 import authors from "./collections/authors";
 import posts from "./collections/posts";
