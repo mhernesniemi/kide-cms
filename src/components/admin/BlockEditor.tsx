@@ -229,6 +229,7 @@ export default function BlockEditor({ name, value, types, blockRelationOptions =
   const [newBlockKey, setNewBlockKey] = useState<string | null>(null);
   const savedExpandedRef = useRef<Set<string> | null>(null);
   const hiddenRef = useRef<HTMLInputElement>(null);
+  const previewChannelRef = useRef<BroadcastChannel | null>(null);
 
   const typeNames = Object.keys(types);
 
@@ -242,6 +243,12 @@ export default function BlockEditor({ name, value, types, blockRelationOptions =
       hiddenRef.current.dispatchEvent(new Event("change", { bubbles: true }));
     }
   }, []);
+
+  // Live preview: broadcast block data for server-side rendering
+  useEffect(() => {
+    if (!previewChannelRef.current) previewChannelRef.current = new BroadcastChannel("cms-preview");
+    previewChannelRef.current.postMessage({ field: name, value: serializeBlocks(blocks), render: "blocks" });
+  }, [blocks, name]);
 
   const updateBlocks = useCallback(
     (updater: (prev: Block[]) => Block[]) => {

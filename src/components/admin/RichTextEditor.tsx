@@ -363,6 +363,7 @@ type Props = {
 
 export default function RichTextEditor({ name, initialValue, rows = 10, onChange }: Props) {
   const hiddenRef = useRef<HTMLInputElement>(null);
+  const previewChannelRef = useRef<BroadcastChannel | null>(null);
   const [imageBrowseOpen, setImageBrowseOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkType, setLinkType] = useState<"internal" | "external">("internal");
@@ -420,6 +421,9 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
       const json = JSON.stringify(cmsDoc);
       setCmsJson(json);
       onChange?.(json);
+      // Live preview: broadcast for server-side rendering
+      if (!previewChannelRef.current) previewChannelRef.current = new BroadcastChannel("cms-preview");
+      previewChannelRef.current.postMessage({ field: name, value: json, render: "richText" });
     },
     onSelectionUpdate: forceTick,
     onTransaction: forceTick,

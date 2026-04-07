@@ -67,14 +67,29 @@ export default function UnsavedGuard({
       dirtyRef.current = false;
     };
 
+    // Live preview: broadcast field changes to any open preview tab
+    const previewChannel = new BroadcastChannel("cms-preview");
+    const broadcastField = (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      if (!target.name || target.name.startsWith("_") || target.name === "redirectTo") return;
+      // Skip hidden inputs — complex fields (rich text, blocks) handle their own broadcasting
+      if (target.type === "hidden") return;
+      previewChannel.postMessage({ field: target.name, value: target.value });
+    };
+
     form.addEventListener("input", checkDirty);
+    form.addEventListener("input", broadcastField);
     form.addEventListener("change", checkDirty);
+    form.addEventListener("change", broadcastField);
     form.addEventListener("submit", handleSubmit);
 
     return () => {
       form.removeEventListener("input", checkDirty);
+      form.removeEventListener("input", broadcastField);
       form.removeEventListener("change", checkDirty);
+      form.removeEventListener("change", broadcastField);
       form.removeEventListener("submit", handleSubmit);
+      previewChannel.close();
     };
   }, [formId, isNew, isDraft]);
 

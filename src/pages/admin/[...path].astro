@@ -1078,6 +1078,12 @@ const tableRows =
             }, 5200);
             return;
           }
+          // Live preview: reload preview tab after successful save
+          if (u.searchParams.get("_toast") === "success") {
+            try {
+              new BroadcastChannel("cms-preview").postMessage({ type: "reload" });
+            } catch (e) {}
+          }
           // If embedded in a relation field drawer, notify parent instead of navigating
           if (window.parent !== window && u.searchParams.get("_toast") === "success") {
             var idMatch = u.pathname.match(/\/admin\/[^/]+\/([^/]+)/);

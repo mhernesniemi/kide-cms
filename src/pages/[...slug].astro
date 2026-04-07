@@ -16,8 +16,16 @@ const blocks = parseBlocks(doc.blocks);
 <PublicLayout title={doc.title}>
   <article class="mx-auto max-w-2xl px-4 py-8">
     <a href="/" class="text-sm text-teal-700">&larr; Back</a>
-    <h1 class="mt-4 mb-2 text-2xl font-semibold">{doc.title}</h1>
-    {doc.summary && <p class="mb-6 text-gray-500">{doc.summary}</p>}
-    <BlockRenderer blocks={blocks} />
+    <h1 data-cms="title" class="mt-4 mb-2 text-2xl font-semibold">{doc.title}</h1>
+    {
+      doc.summary && (
+        <p data-cms="summary" class="mb-6 text-gray-500">
+          {doc.summary}
+        </p>
+      )
+    }
+    <div data-cms="blocks">
+      <BlockRenderer blocks={blocks} />
+    </div>
   </article>
 </PublicLayout>
