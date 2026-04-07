@@ -1,7 +1,7 @@
 {
   "name": "@kide/core",
   "version": "0.1.0",
-  "description": "Core runtime for Kide CMS.",
+  "description": "Code-first CMS framework built for Astro.",
   "author": "Matti Hernesniemi",
   "license": "MIT",
   "type": "module",
