@@ -1,13 +1,12 @@
 {
-  "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"],
-      "@kide/core": ["./packages/kide-core/src/index.ts"],
-      "@kide/core/*": ["./packages/kide-core/*"]
-    }
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "skipLibCheck": true,
+    "esModuleInterop": true
   },
-  "include": [".astro/types.d.ts", "**/*"],
+  "files": [],
+  "references": [{ "path": "packages/kide-core" }, { "path": "examples/basic" }],
   "exclude": ["dist", "packages/create-kide-app/templates"]
 }

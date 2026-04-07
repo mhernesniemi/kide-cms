@@ -3,12 +3,7 @@
 import { ChevronsUpDown, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "./ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "./ui/dropdown-menu";
 import { DropdownMenuTrigger } from "./ui/dropdown-menu";
 
 type Theme = "light" | "dark" | "system";

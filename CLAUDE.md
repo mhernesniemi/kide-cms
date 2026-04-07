@@ -1,14 +1,29 @@
 # Kide CMS
 
-Code-first, single-schema CMS built inside Astro 6. Monolith — no separate API server.
+Code-first, single-schema CMS built inside Astro 6. Monorepo with core package and example app.
+
+## Repo Structure
+
+```
+packages/kide-core/         # Core runtime, admin UI, routes, integration (@kide/core)
+packages/create-kide-app/   # CLI scaffolding tool
+examples/basic/              # Full working example app
+docs/                        # Documentation
+```
 
 ## Commands
 
 ```bash
-pnpm dev              # start dev server (auto-generates schema + pushes DB)
-pnpm build            # production build
+pnpm dev              # start example dev server (auto-generates schema + pushes DB)
+pnpm build            # production build of example
 pnpm check            # astro check (types) + eslint (lint)
 pnpm format           # prettier --write .
+pnpm core:build       # build @kide/core package
+```
+
+Example-specific commands (run from `examples/basic/` or use `pnpm --filter basic`):
+
+```bash
 pnpm cms:generate     # regenerate .generated/ from cms.config.ts
 pnpm cms:seed         # seed database with demo content
 ```
@@ -22,14 +37,17 @@ After code changes, ALWAYS run:
 
 ## Key Files
 
-| File                                          | Purpose                                          |
-| --------------------------------------------- | ------------------------------------------------ |
-| `src/cms/cms.config.ts`                       | Single source of truth — defines all collections |
-| `src/cms/collections/`                        | Collection definitions (fields, access, hooks)   |
-| `src/cms/core/`                               | CMS runtime (editable, not an npm package)       |
-| `src/cms/.generated/`                         | Auto-generated — DO NOT EDIT                     |
-| `src/pages/admin/[...path].astro`             | Single catch-all route for all admin views       |
-| `src/pages/api/cms/[collection]/[...path].ts` | HTTP API (thin transport for admin islands)      |
+| File                                    | Purpose                                              |
+| --------------------------------------- | ---------------------------------------------------- |
+| `packages/kide-core/src/`               | Core TypeScript runtime (compiled by tsc)            |
+| `packages/kide-core/admin/`             | Admin UI components, layouts, styles (raw source)    |
+| `packages/kide-core/routes/`            | Admin pages + API routes (injected via integration)  |
+| `packages/kide-core/middleware/`        | Auth middleware (injected via integration)           |
+| `packages/kide-core/src/integration.ts` | Astro integration (route injection, virtual modules) |
+| `examples/basic/src/cms/cms.config.ts`  | Example app — collection definitions                 |
+| `examples/basic/src/cms/collections/`   | Example app — collection fields, access, hooks       |
+| `examples/basic/src/cms/adapters/`      | Example app — db, storage, email adapters            |
+| `examples/basic/src/cms/.generated/`    | Auto-generated — DO NOT EDIT                         |
 
 ## Rules
 
@@ -40,7 +58,8 @@ After code changes, ALWAYS run:
 - Admin styles use shadcn CSS variables. Public site uses plain Tailwind colors — no shared styles.
 - `labelField` on collections controls display name (fallback: title → name → first text field).
 - Always query content through the typed local API (`cms.posts.findOne()`, `cms.pages.find()`, etc.) — never bypass it with raw DB queries or untyped wrappers.
-- Use the `cn()` utility from `@/lib/utils` for conditional class names — never use template literal interpolation for className.
+- Routes in `packages/kide-core/routes/` import app-specific code via `virtual:kide/*` modules (resolved by the integration's Vite aliases).
+- Use the `cn()` utility from `@kide/core/admin/lib/utils` for conditional class names — never use template literal interpolation for className.
 
 ## Stack
 

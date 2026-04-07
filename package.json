@@ -1,70 +1,33 @@
 {
-  "name": "kide-cms",
-  "author": "Matti Hernesniemi",
-  "description": "Code-first, single-schema CMS built inside an Astro app.",
-  "license": "MIT",
+  "name": "kide-cms-monorepo",
+  "private": true,
   "type": "module",
-  "version": "0.0.1",
   "engines": {
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro",
-    "check": "astro check && eslint .",
+    "dev": "pnpm --filter basic dev",
+    "build": "pnpm --filter basic build",
+    "check": "pnpm --filter basic check && eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "cms:generate": "node --import tsx src/cms/generator.ts",
-    "cms:seed": "node --import tsx src/cms/seed.ts",
-    "cms:admin": "node --import tsx src/cms/create-admin.ts",
-    "core:build": "pnpm --dir packages/kide-core build",
-    "db:generate": "pnpm cms:generate && drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
-  },
-  "dependencies": {
-    "@kide/core": "workspace:*",
-    "@ai-sdk/openai": "^3.0.41",
-    "@astrojs/node": "^10.0.1",
-    "@astrojs/react": "^5.0.0",
-    "@tailwindcss/typography": "^0.5.19",
-    "@tailwindcss/vite": "^4.2.1",
-    "ai": "^6.0.116",
-    "astro": "^6.0.4",
-    "better-sqlite3": "^12.6.2",
-    "drizzle-orm": "^0.45.1",
-    "lucide-react": "^0.577.0",
-    "nanoid": "^5.1.6",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "sharp": "^0.34.5",
-    "tailwindcss": "^4.2.1",
-    "zod": "^4.3.6"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "argon2",
-      "better-sqlite3"
-    ]
+    "core:build": "pnpm --filter @kide/core build"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.7",
     "@eslint/js": "^10.0.1",
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
     "@typescript-eslint/parser": "^8.57.1",
-    "drizzle-kit": "^0.31.9",
     "eslint": "^10.0.3",
     "eslint-plugin-astro": "^1.6.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "prettier": "^3.8.1",
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "argon2",
+      "better-sqlite3"
+    ]
   }
 }

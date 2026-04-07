@@ -12,11 +12,19 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./admin/*": "./admin/*"
+    "./integration": {
+      "import": "./dist/integration.js"
+    },
+    "./admin/*": "./admin/*",
+    "./routes/*": "./routes/*",
+    "./middleware/*": "./middleware/*"
   },
   "files": [
     "dist",
-    "admin"
+    "admin",
+    "routes",
+    "middleware",
+    "virtual.d.ts"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json"
@@ -51,6 +59,8 @@
     "zod": "^4.3.6"
   },
   "peerDependencies": {
+    "astro": "^6.0.0",
+    "tailwindcss": "^4.0.0",
     "@ai-sdk/openai": "^3.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -67,6 +77,12 @@
       "optional": true
     },
     "sharp": {
+      "optional": true
+    },
+    "astro": {
+      "optional": true
+    },
+    "tailwindcss": {
       "optional": true
     }
   },

@@ -1,0 +1,58 @@
+---
+import AssetsGrid from "@kide/core/admin/components/AssetsGrid";
+import config from "virtual:kide/config";
+import { assets, folders } from "virtual:kide/runtime";
+import AdminLayout from "@kide/core/admin/layouts/AdminLayout.astro";
+
+export const prerender = false;
+
+const user = Astro.locals.user;
+const accessibleCollections = config.collections.filter((c) => {
+  const rule = c.access?.read;
+  if (!rule) return true;
+  return rule({ user: user ?? null, doc: null, operation: "read", collection: c.slug });
+});
+
+const currentFolderId = Astro.url.searchParams.get("folder") || null;
+
+// Get current folder details if we're inside one
+const currentFolder = currentFolderId ? await folders.findById(currentFolderId) : null;
+if (currentFolderId && !currentFolder) return Astro.redirect("/admin/assets");
+
+// Get subfolders and assets for current location
+const subfolders = await folders.findByParent(currentFolderId);
+const folderAssets = await assets.find({ limit: 100, folder: currentFolderId });
+
+// Build breadcrumb trail
+const breadcrumbs: Array<{ label: string; href: string; id: string }> = [];
+if (currentFolder) {
+  let folder: typeof currentFolder | null = currentFolder;
+  const chain: typeof breadcrumbs = [];
+  while (folder) {
+    chain.unshift({ label: folder.name, href: `/admin/assets?folder=${folder._id}`, id: folder._id });
+    folder = folder.parent ? await folders.findById(folder.parent) : null;
+  }
+  breadcrumbs.push(...chain);
+}
+
+// Serialize data for the React island
+const folderData = subfolders.map((f) => ({ _id: f._id, name: f.name }));
+const assetData = folderAssets.map((a) => ({
+  _id: a._id,
+  filename: a.filename,
+  mimeType: a.mimeType,
+  url: a.url,
+  alt: a.alt,
+  _createdAt: a._createdAt,
+}));
+---
+
+<AdminLayout title="Assets | Kide CMS" collections={accessibleCollections} activeCollection="assets">
+  <AssetsGrid
+    client:load
+    folders={folderData}
+    assets={assetData}
+    breadcrumbs={breadcrumbs}
+    currentFolderId={currentFolderId}
+  />
+</AdminLayout>

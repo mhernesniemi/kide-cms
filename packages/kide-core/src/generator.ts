@@ -217,7 +217,10 @@ const zodTypeForField = (field: FieldConfig): string => {
   if (field.type === "blocks") {
     const variants = Object.entries(field.types).map(([blockType, fields]) => {
       const members = Object.entries(fields)
-        .map(([fieldName, nestedField]) => `${fieldName}: ${zodTypeForField(nestedField)}${nestedField.required ? "" : ".optional()"}`)
+        .map(
+          ([fieldName, nestedField]) =>
+            `${fieldName}: ${zodTypeForField(nestedField)}${nestedField.required ? "" : ".optional()"}`,
+        )
         .join(", ");
       return `z.object({ type: z.literal(${JSON.stringify(blockType)}), ${members} })`;
     });
@@ -271,7 +274,9 @@ const typeForField = (field: FieldConfig): string => {
   if (field.type === "blocks") {
     const variants = Object.entries(field.types).map(([blockType, fields]) => {
       const members = Object.entries(fields)
-        .map(([fieldName, nestedField]) => `${fieldName}${nestedField.required ? "" : "?"}: ${typeForField(nestedField)};`)
+        .map(
+          ([fieldName, nestedField]) => `${fieldName}${nestedField.required ? "" : "?"}: ${typeForField(nestedField)};`,
+        )
         .join(" ");
       return `{ type: ${JSON.stringify(blockType)}; ${members} }`;
     });
@@ -303,7 +308,9 @@ const generateTypesFile = (config: CMSConfig, coreImportPath: string): string =>
       .join("\n");
 
     const translationEntries = translatableFields.length
-      ? translatableFields.map((fieldName) => `  ${fieldName}?: ${typeForField(collection.fields[fieldName])};`).join("\n")
+      ? translatableFields
+          .map((fieldName) => `  ${fieldName}?: ${typeForField(collection.fields[fieldName])};`)
+          .join("\n")
       : "  [key: string]: never;";
 
     parts.push(`export type ${inputName} = {\n${fieldEntries}\n};`);
@@ -333,7 +340,12 @@ const generateTypesFile = (config: CMSConfig, coreImportPath: string): string =>
   return parts.join("\n");
 };
 
-const generateApiFile = (config: CMSConfig, coreImportPath: string, runtimeImportPath: string, configImportPath: string) => {
+const generateApiFile = (
+  config: CMSConfig,
+  coreImportPath: string,
+  runtimeImportPath: string,
+  configImportPath: string,
+) => {
   const imports = config.collections
     .map((collection) => {
       const name = pascalCase(collection.slug);

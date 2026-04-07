@@ -433,7 +433,10 @@ export const createCms = (config: CMSConfig) => {
 
         let translations: Array<Record<string, unknown>> = [];
         if (tables.translations) {
-          const rawTranslations = await db.select().from(tables.translations).where(eq(tables.translations._entityId, id));
+          const rawTranslations = await db
+            .select()
+            .from(tables.translations)
+            .where(eq(tables.translations._entityId, id));
           translations = rawTranslations.map((translation: Record<string, unknown>) => {
             const parsed = { ...translation };
             for (const fieldName of getTranslatableFieldNames(collection)) {
@@ -536,7 +539,10 @@ export const createCms = (config: CMSConfig) => {
           for (const fieldName of Object.keys(collection.fields)) {
             if (existing[fieldName] !== undefined) snapshot[fieldName] = existing[fieldName];
           }
-          await db.update(tables.main).set({ _published: JSON.stringify(snapshot) }).where(eq(tables.main._id, id));
+          await db
+            .update(tables.main)
+            .set({ _published: JSON.stringify(snapshot) })
+            .where(eq(tables.main._id, id));
         }
 
         const updateValues: Record<string, unknown> = {
@@ -898,7 +904,9 @@ export const createCms = (config: CMSConfig) => {
       getRouteForDocument: (slug: string, doc: Record<string, unknown>) => {
         const collection = ensureCollection(config, slug);
         const slugValue = String(doc.slug ?? "");
-        return collection.pathPrefix ? `/${collection.pathPrefix}/${slugValue}` : `/${slugValue === "home" ? "" : slugValue}`;
+        return collection.pathPrefix
+          ? `/${collection.pathPrefix}/${slugValue}`
+          : `/${slugValue === "home" ? "" : slugValue}`;
       },
       getConfig: () => config,
       getLocales: () => config.locales,

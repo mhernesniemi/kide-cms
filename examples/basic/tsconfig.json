@@ -1,0 +1,13 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@kide/core": ["../../packages/kide-core/src/index.ts"],
+      "@kide/core/*": ["../../packages/kide-core/*"]
+    }
+  },
+  "include": [".astro/types.d.ts", "**/*", "../../packages/kide-core/virtual.d.ts"],
+  "exclude": ["dist"]
+}

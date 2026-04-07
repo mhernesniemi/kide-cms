@@ -1,0 +1,33 @@
+{
+  "name": "create-kide-app",
+  "version": "0.0.8",
+  "description": "Scaffold a new Kide CMS project",
+  "author": "Matti Hernesniemi",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "create-kide-app": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "templates"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mhernesniemi/create-kide-app"
+  },
+  "homepage": "https://github.com/mhernesniemi/kide-cms",
+  "keywords": [
+    "astro",
+    "cms",
+    "kide",
+    "create-app",
+    "scaffold"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.1.0"
+  }
+}

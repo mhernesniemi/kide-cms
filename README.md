@@ -16,8 +16,6 @@ Supports Astro 6's route caching with tag-based invalidation for static-speed co
 pnpx create-kide-app
 ```
 
-Or just manually clone this repo and run `pnpm i && pnpm dev`.
-
 ## How It Works
 
 Define collections in `src/cms/collections/`:

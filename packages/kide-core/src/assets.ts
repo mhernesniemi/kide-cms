@@ -172,7 +172,8 @@ export const folders = {
   async findByParent(parent: string | null): Promise<FolderRecord[]> {
     const db = await getDb();
     const schema = getSchema();
-    const condition = parent === null ? isNull(schema.cmsAssetFolders.parent) : eq(schema.cmsAssetFolders.parent, parent);
+    const condition =
+      parent === null ? isNull(schema.cmsAssetFolders.parent) : eq(schema.cmsAssetFolders.parent, parent);
     const rows = await db.select().from(schema.cmsAssetFolders).where(condition).orderBy(schema.cmsAssetFolders.name);
     return rows as FolderRecord[];
   },

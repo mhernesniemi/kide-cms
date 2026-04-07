@@ -1,0 +1,27 @@
+---
+import { cms } from "@/cms/.generated/api";
+const posts = await cms.posts.find({ status: "published", limit: 10 });
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>My Site</title>
+  </head>
+  <body>
+    <h1>Welcome</h1>
+    <p><a href="/admin">Open Admin</a></p>
+    {
+      posts.length > 0 && (
+        <ul>
+          {posts.map((post) => (
+            <li>
+              <a href={`/blog/${post.slug}`}>{post.title}</a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </body>
+</html>
