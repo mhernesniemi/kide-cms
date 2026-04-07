@@ -5,7 +5,7 @@
     "moduleResolution": "Bundler",
     "declaration": false,
     "declarationMap": false,
-    "sourceMap": true,
+    "sourceMap": false,
     "strict": false,
     "skipLibCheck": true,
     "esModuleInterop": true,
