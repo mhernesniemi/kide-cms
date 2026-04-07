@@ -1,5 +1,4 @@
-import { cmsImage, cmsSrcset } from "./image";
-import { renderRichText } from "./richtext";
+import { cmsImage, cmsSrcset, renderRichText } from "@kide/core";
 
 function esc(value: unknown): string {
   return String(value ?? "")

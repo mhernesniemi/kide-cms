@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 
-import { renderBlock, renderRichText, parseBlocks } from "@kide/core";
+import { renderBlock } from "virtual:kide/blocks";
+import { renderRichText, parseBlocks } from "@kide/core";
 
 export const prerender = false;
 

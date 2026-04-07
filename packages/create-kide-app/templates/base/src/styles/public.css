@@ -1,4 +1,2 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
-@source "@kide/core/src";
-@source "@kide/core/admin";

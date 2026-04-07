@@ -82,7 +82,6 @@ export { assets, folders } from "./assets";
 export type { AssetRecord, FolderRecord } from "./assets";
 
 export { parseBlocks, parseList, cacheTags } from "./content";
-export { renderBlock, renderBlocks } from "./blocks";
 export { renderRichText, createRichTextFromPlainText, richTextToPlainText } from "./richtext";
 export { cloneValue, slugify, escapeHtml, serializeFieldValue } from "./values";
 export { cmsImage, cmsSrcset, transformImage } from "./image";
