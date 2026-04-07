@@ -94,6 +94,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
                 "virtual:kide/runtime": path.resolve(root, runtimePath),
                 "virtual:kide/db": path.resolve(root, adaptersPath, "db"),
                 "virtual:kide/email": path.resolve(root, adaptersPath, "email"),
+                "virtual:kide/admin-css": path.resolve(root, "src/styles/admin.css"),
               },
             },
           },
