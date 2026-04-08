@@ -2,7 +2,7 @@ import { createInterface } from "node:readline";
 import { createAdminUser } from "@kide/core";
 
 import "./runtime";
-import { closeDb } from "./adapters/db";
+import { closeDb } from "../adapters/db";
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
 const ask = (question: string): Promise<string> =>

@@ -73,10 +73,10 @@ function initLocalD1(cwd: string) {
 
 export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIntegration {
   const configPath = options?.configPath ?? "src/cms/cms.config";
-  const runtimePath = options?.runtimePath ?? "src/cms/runtime";
+  const runtimePath = options?.runtimePath ?? "src/cms/internals/runtime";
   const generatedPath = options?.generatedPath ?? "src/cms/.generated";
   const adaptersPath = options?.adaptersPath ?? "src/cms/adapters";
-  const generatorPath = options?.generatorPath ?? "src/cms/generator.ts";
+  const generatorPath = options?.generatorPath ?? "src/cms/internals/generator.ts";
 
   return {
     name: "kide-cms",

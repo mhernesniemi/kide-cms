@@ -107,7 +107,7 @@ async function main() {
   pkg.name = projectName;
 
   if (seedDemo) {
-    pkg.scripts["cms:seed"] = "node --import tsx src/cms/seed.ts";
+    pkg.scripts["cms:seed"] = "node --import tsx src/cms/internals/seed.ts";
   }
 
   if (target === "cloudflare") {

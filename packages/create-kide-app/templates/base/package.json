@@ -11,8 +11,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
-    "cms:generate": "node --import tsx src/cms/generator.ts",
-    "cms:admin": "node --import tsx src/cms/create-admin.ts"
+    "cms:generate": "node --import tsx src/cms/internals/generator.ts",
+    "cms:admin": "node --import tsx src/cms/internals/create-admin.ts"
   },
   "dependencies": {
     "@kide/core": "latest",

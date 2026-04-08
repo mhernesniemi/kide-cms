@@ -25,10 +25,10 @@ import {
   streamTranslation,
 } from "@kide/core";
 
-import * as schema from "./.generated/schema";
-import { closeDb, getDb } from "./adapters/db";
-import { deleteFile, getFile, putFile } from "./adapters/storage";
-import { isEmailConfigured, sendInviteEmail } from "./adapters/email";
+import * as schema from "../.generated/schema";
+import { closeDb, getDb } from "../adapters/db";
+import { deleteFile, getFile, putFile } from "../adapters/storage";
+import { isEmailConfigured, sendInviteEmail } from "../adapters/email";
 
 let initialized = false;
 
