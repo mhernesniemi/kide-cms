@@ -12,7 +12,6 @@
     "preview": "astro preview",
     "check": "astro check",
     "cms:generate": "node --import tsx src/cms/generator.ts",
-    "cms:seed": "node --import tsx src/cms/seed.ts",
     "cms:admin": "node --import tsx src/cms/create-admin.ts"
   },
   "dependencies": {

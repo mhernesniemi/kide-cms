@@ -77,6 +77,11 @@ async function main() {
 
   cpSync(path.join(TEMPLATES_DIR, "base"), projectDir, { recursive: true });
 
+  // Apply demo schema and seed data if selected
+  if (seedDemo) {
+    cpSync(path.join(TEMPLATES_DIR, "demo"), projectDir, { recursive: true });
+  }
+
   s.stop("Project scaffolded");
 
   // --- Apply target-specific files ---
@@ -100,6 +105,10 @@ async function main() {
   const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
 
   pkg.name = projectName;
+
+  if (seedDemo) {
+    pkg.scripts["cms:seed"] = "node --import tsx src/cms/seed.ts";
+  }
 
   if (target === "cloudflare") {
     delete pkg.dependencies["@astrojs/node"];
