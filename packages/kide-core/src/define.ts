@@ -155,9 +155,27 @@ export type AdminNavItem = {
   weight?: number;
 };
 
+export type AdminUploadConfig = {
+  /** Allowed MIME types (default: images, PDF, video) */
+  allowedTypes?: string[];
+  /** Max file size in bytes (default: 50 MB) */
+  maxFileSize?: number;
+};
+
+export type AdminRateLimitConfig = {
+  /** Max login attempts before blocking (default: 5) */
+  maxAttempts?: number;
+  /** Time window in milliseconds (default: 15 minutes) */
+  windowMs?: number;
+};
+
 export type AdminConfig = {
   dateFormat?: string;
   nav?: AdminNavItem[];
+  uploads?: AdminUploadConfig;
+  rateLimit?: AdminRateLimitConfig;
+  /** Admin list page size (default: 20) */
+  pageSize?: number;
 };
 
 export type CMSConfig = {

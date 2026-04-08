@@ -3,13 +3,14 @@ import { eq } from "drizzle-orm";
 
 import { getDb } from "virtual:kide/db";
 import { verifyPassword, createSession, setSessionCookie } from "virtual:kide/runtime";
+import config from "virtual:kide/config";
 
 export const prerender = false;
 
-// Simple in-memory rate limiter: max 5 attempts per 15 minutes per IP
+// Simple in-memory rate limiter
 const attempts = new Map<string, { count: number; resetAt: number }>();
-const MAX_ATTEMPTS = 5;
-const WINDOW_MS = 15 * 60 * 1000;
+const MAX_ATTEMPTS = config.admin?.rateLimit?.maxAttempts ?? 5;
+const WINDOW_MS = config.admin?.rateLimit?.windowMs ?? 15 * 60 * 1000;
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();

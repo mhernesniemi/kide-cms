@@ -1,9 +1,10 @@
 import type { APIRoute } from "astro";
 import { assets } from "virtual:kide/runtime";
+import config from "virtual:kide/config";
 
 export const prerender = false;
 
-const ALLOWED_TYPES = new Set([
+const DEFAULT_ALLOWED_TYPES = [
   "image/jpeg",
   "image/png",
   "image/gif",
@@ -13,9 +14,10 @@ const ALLOWED_TYPES = new Set([
   "application/pdf",
   "video/mp4",
   "video/webm",
-]);
+];
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+const ALLOWED_TYPES = new Set(config.admin?.uploads?.allowedTypes ?? DEFAULT_ALLOWED_TYPES);
+const MAX_FILE_SIZE = config.admin?.uploads?.maxFileSize ?? 50 * 1024 * 1024; // 50 MB
 
 // Magic number signatures for binary file type verification
 const MAGIC_SIGNATURES: Array<{ type: string; bytes: number[]; offset?: number }> = [

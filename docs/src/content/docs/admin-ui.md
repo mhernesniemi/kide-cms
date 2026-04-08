@@ -159,3 +159,48 @@ import AdminLayout from "@kide/core/admin/layouts/AdminLayout.astro";
 ```
 
 Available icons: `BarChart`, `Bell`, `Bookmark`, `Calendar`, `Clock`, `Database`, `FileText`, `FolderTree`, `Globe`, `Home`, `Image`, `Key`, `Layers`, `LayoutGrid`, `Link`, `Lock`, `Mail`, `Menu`, `MessageSquare`, `Package`, `Palette`, `PencilRuler`, `Search`, `Settings`, `Shield`, `Star`, `Tag`, `Terminal`, `Users`, `Zap`.
+
+## Admin Config
+
+Configure admin behavior in your CMS config:
+
+```typescript
+export default defineConfig({
+  admin: {
+    pageSize: 50,
+    uploads: {
+      allowedTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf", "application/zip"],
+      maxFileSize: 100 * 1024 * 1024, // 100 MB
+    },
+    rateLimit: {
+      maxAttempts: 10,
+      windowMs: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+  collections: [...],
+});
+```
+
+### Uploads
+
+| Option         | Type       | Default                                                    | Description              |
+| -------------- | ---------- | ---------------------------------------------------------- | ------------------------ |
+| `allowedTypes` | `string[]` | Images, PDF, MP4, WebM                                     | Allowed MIME types       |
+| `maxFileSize`  | `number`   | `52428800` (50 MB)                                         | Max file size in bytes   |
+
+Default allowed types: `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `image/avif`, `image/svg+xml`, `application/pdf`, `video/mp4`, `video/webm`.
+
+### Rate Limiting
+
+| Option        | Type     | Default    | Description                          |
+| ------------- | -------- | ---------- | ------------------------------------ |
+| `maxAttempts` | `number` | `5`        | Login attempts before blocking       |
+| `windowMs`    | `number` | `900000`   | Time window in ms (default 15 min)   |
+
+### Page Size
+
+| Option     | Type     | Default | Description                        |
+| ---------- | -------- | ------- | ---------------------------------- |
+| `pageSize` | `number` | `20`    | Number of items per page in lists  |
+
+All settings are optional — defaults apply when omitted.

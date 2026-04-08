@@ -87,7 +87,7 @@ bucket_name = "my-site-assets"
 
 ## Storage
 
-On Cloudflare, assets are stored in R2 instead of the local filesystem. The CMS uses a storage abstraction (`src/cms/core/storage.ts`) that the setup script configures:
+On Cloudflare, assets are stored in R2 instead of the local filesystem. The CMS uses a storage abstraction (`src/cms/adapters/storage.ts`) that the setup script configures:
 
 - **Local/Node.js**: Files go to `public/uploads/`, served by Astro's static file handling
 - **Cloudflare**: Files go to R2 via the `CMS_ASSETS` binding, served by a dynamic route at `/uploads/[...path].ts`
@@ -130,10 +130,23 @@ In dev mode, the middleware handles scheduled publishing on every request (no ex
 
 ## Image Optimization
 
-- **Local/Node.js**: Sharp-based on-demand transformation via `/api/cms/img/`
-- **Cloudflare**: Cloudflare Image Resizing via `/cdn-cgi/image/`. Sharp is not used.
+- **Local/Node.js**: Sharp-based on-demand transformation via `/api/cms/img/`. Images are resized, converted to WebP, and cached in `.cms-cache/`. The admin UI uses thumbnails automatically.
+- **Cloudflare**: Cloudflare Image Transformations via `/cdn-cgi/image/`. Sharp is not used.
 
-The `cmsImage()` and `cmsSrcset()` helpers detect the runtime and generate the correct URLs automatically.
+The `cmsImage()` and `cmsSrcset()` helpers detect the runtime and generate the correct URLs automatically. The admin UI uses 480px thumbnails for asset grids and image pickers.
+
+### Cloudflare Image Transformations
+
+Cloudflare Image Transformations must be enabled on your zone for image resizing to work in production:
+
+1. Go to your Cloudflare dashboard → **Images** → **Transformations**
+2. Enable **Resize images from any origin**
+
+Once enabled, URLs like `/cdn-cgi/image/width=480,format=webp,quality=80/uploads/photo.jpg` are handled automatically by Cloudflare's edge network.
+
+In local development with `pnpm dev`, images are served from R2 without transformation (wrangler doesn't emulate `/cdn-cgi/image/`). This is fine for development — transformations only apply in production.
+
+If Image Transformations are not available on your Cloudflare plan, images will be served at full size. The admin UI and public site will still work — just without resizing.
 
 ## Environment Variables
 

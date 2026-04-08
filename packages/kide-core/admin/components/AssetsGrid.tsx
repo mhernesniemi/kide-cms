@@ -24,7 +24,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { cn } from "../lib/utils";
+import { cn, thumbnail } from "../lib/utils";
 import { Badge } from "./ui/badge";
 import { Button, buttonVariants } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
@@ -92,7 +92,7 @@ function DraggableAssetCard({
           <div className="relative">
             {asset.mimeType.startsWith("image/") ? (
               <div className="bg-muted/30 aspect-square w-full overflow-hidden">
-                <img src={asset.url} alt={asset.alt ?? asset.filename} className="size-full object-cover" />
+                <img src={thumbnail(asset.url)} alt={asset.alt ?? asset.filename} className="size-full object-cover" />
               </div>
             ) : (
               <div className="bg-muted/30 flex aspect-square items-center justify-center">

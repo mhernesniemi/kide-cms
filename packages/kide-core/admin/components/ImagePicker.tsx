@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { ImagePlus, Loader2, Upload, X } from "lucide-react";
-import { cn } from "../lib/utils";
+import { cn, thumbnail } from "../lib/utils";
 import { Button } from "./ui/button";
 import ImageBrowseDialog from "./ImageBrowseDialog";
 
@@ -72,7 +72,7 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
     [handleUpload],
   );
 
-  const imgSrc = localPreview ?? value;
+  const imgSrc = localPreview ?? thumbnail(value);
   const isImage =
     value && (value.match(/\.(jpg|jpeg|png|gif|webp|avif|svg)$/i) || value.startsWith("http") || localPreview);
 

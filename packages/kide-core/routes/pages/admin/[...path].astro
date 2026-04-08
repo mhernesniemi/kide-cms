@@ -313,7 +313,7 @@ if (collection && collectionSlug && canAccessCurrent) {
   }
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = config.admin?.pageSize ?? 20;
 let totalDocs = 0;
 let totalPages = 1;
 let currentPage = 1;
