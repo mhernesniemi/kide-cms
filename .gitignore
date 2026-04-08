@@ -2,7 +2,9 @@
 dist/
 # generated types
 .astro/
-src/cms/.generated/
+.generated/
+# generated wrapper CSS
+.kide/
 
 # dependencies
 node_modules/
@@ -32,3 +34,5 @@ public/uploads/
 .idea/
 .cms-cache/
 .claude/
+.wrangler/
+*.tgz
