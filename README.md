@@ -57,17 +57,18 @@ posts: {
 ## Features
 
 - Custom collections with 13 field types, blocks, and repeaters
-- Runtime admin UI with field editors, DataTable, live preview
+- Runtime admin UI with field editors and DataTables
 - Drafts, publishing, scheduling, versioning
 - i18n with per-field translation tables
 - Asset management with folders and focal points
 - On-demand image optimization
 - Rich text editor (Tiptap)
 - Block editor with repeater fields
+- Real-time live preview across tabs
 - Hierarchical taxonomies and menus
 - Role-based access control
 - Tag-based cache invalidation
-- AI assistant (alt text, SEO, translations)
+- Optional AI assistant (alt text, SEO, translations)
 
 [Full documentation](https://docs.kide.dev/)
 

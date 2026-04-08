@@ -57,7 +57,47 @@ defineCollection({ slug: "pages", preview: true, ... });
 defineCollection({ slug: "front-page", singleton: true, preview: "/", ... });
 ```
 
-The Preview link opens the public page in a new tab with `?preview=true`, which shows draft content. Save your changes in the admin, then refresh the preview tab to see them.
+The Preview link opens the public page in a new tab with `?preview=true`, which shows draft content.
+
+### Live preview
+
+When the preview tab is open, changes in the admin form update the preview in real time — no saving required. This works via `BroadcastChannel` (same-origin messaging between tabs):
+
+- **Text fields** (title, excerpt, etc.) update instantly via `textContent`
+- **Rich text** and **blocks** are rendered server-side via `/api/cms/preview/render` and injected as HTML
+
+To enable live preview on a field, add the `data-cms` attribute to the element that renders it:
+
+```astro
+<h1 data-cms="title">{doc.title}</h1>
+<p data-cms="excerpt">{doc.excerpt}</p>
+<div data-cms="body">
+  <RichTextContent content={doc.body} />
+</div>
+<div data-cms="blocks">
+  <BlockRenderer blocks={blocks} />
+</div>
+```
+
+The attribute value matches the field name from your collection definition. Only fields with `data-cms` attributes are live-updated — the rest update on save (the preview tab auto-reloads after saving).
+
+Add the preview script to your public layout:
+
+```astro
+<script src="@/scripts/preview.ts"></script>
+```
+
+This script activates only when `?preview` is in the URL — zero overhead on public pages.
+
+### Block rendering for preview
+
+The live preview endpoint imports your block renderer from `src/cms/blocks.ts` via a virtual module. This file is in your app (not in core), so you control the markup and styling. It must export a `renderBlock` function:
+
+```typescript
+export function renderBlock(block: Record<string, any>): string {
+  // Return HTML string for the block
+}
+```
 
 ### Public page setup
 
@@ -74,7 +114,7 @@ if (!doc) return Astro.redirect("/");
 if (!isPreview) Astro.cache.set({ tags: cacheTags("posts", doc._id) });
 ---
 
-<h1>{doc.title}</h1>
+<h1 data-cms="title">{doc.title}</h1>
 ```
 
 ## Custom Field Components
