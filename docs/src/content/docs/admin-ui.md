@@ -61,7 +61,11 @@ The Preview link opens the public page in a new tab with `?preview=true`, which 
 
 ### Live preview
 
-When the preview tab is open, changes in the admin form update the preview in real time — no saving required. This works via `BroadcastChannel` (same-origin messaging between tabs):
+When the preview tab is open, changes in the admin form update the preview in real time — no saving required. This works via `BroadcastChannel` (same-origin messaging between tabs).
+
+:::tip
+Use your browser's split screen view (e.g., snap the admin to one half and the preview tab to the other) for a side-by-side editing experience.
+:::
 
 - **Text fields** (title, excerpt, etc.) update instantly via `textContent`
 - **Rich text** and **blocks** are rendered server-side via `/api/cms/preview/render` and injected as HTML
