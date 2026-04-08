@@ -1,0 +1,18 @@
+---
+import { renderRichText } from "@kide/core";
+
+const { content, className } = Astro.props;
+const parsed =
+  typeof content === "string"
+    ? (() => {
+        try {
+          return JSON.parse(content);
+        } catch {
+          return null;
+        }
+      })()
+    : content;
+const html = renderRichText(parsed);
+---
+
+{html && <div class:list={["prose", className]} set:html={html} />}

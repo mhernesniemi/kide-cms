@@ -1,0 +1,16 @@
+---
+import RichTextContent from "@/components/RichTextContent.astro";
+
+const { heading, content } = Astro.props;
+---
+
+<section>
+  {heading && <h2 class="mb-3 text-xl font-semibold">{heading}</h2>}
+  {
+    content && (
+      <div class="prose">
+        <RichTextContent content={content} />
+      </div>
+    )
+  }
+</section>

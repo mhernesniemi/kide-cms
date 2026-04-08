@@ -1,15 +1,29 @@
 # Kide CMS
 
-Code-first, single-schema CMS built inside Astro 6. Monorepo with core package and example app.
+Code-first, single-schema CMS built inside Astro 6. Monorepo with core package and scaffolding tool.
 
 ## Repo Structure
 
 ```
 packages/kide-core/         # Core runtime, admin UI, routes, integration (@kide/core)
-packages/create-kide-app/   # CLI scaffolding tool
-examples/basic/              # Full working example app
-docs/                        # Documentation
+packages/create-kide-app/   # CLI scaffolding tool + app templates
+  templates/base/            # Minimal starter (users collection only)
+  templates/demo/            # Demo overlay (full schema, seed data, public pages)
+  templates/local/           # Node.js/SQLite adapter overrides
+  templates/cloudflare/      # D1/R2 adapter overrides
+examples/basic/              # Working example app (output of create-kide-app with demo)
+docs/                        # Documentation (Starlight)
 ```
+
+## Templates are the source of truth
+
+The `create-kide-app` templates define what users get. `examples/basic/` should be reproducible by running `create-kide-app` with demo content selected. If you change app-level code (adapters, runtime, collections, public pages, styles), change it in the templates — not just in `examples/basic/`.
+
+Files that belong in templates:
+- `templates/base/` — adapters, runtime, generator, create-admin, admin.css, public.css, minimal config
+- `templates/demo/` — full collections, seed data, blocks renderer, public pages, components, layouts
+
+`examples/basic/` exists for development convenience (running `pnpm dev` from the monorepo root). It should match what `base/ + demo/ + local/` produces.
 
 ## Commands
 
@@ -37,17 +51,14 @@ After code changes, ALWAYS run:
 
 ## Key Files
 
-| File                                    | Purpose                                              |
-| --------------------------------------- | ---------------------------------------------------- |
-| `packages/kide-core/src/`               | Core TypeScript runtime (compiled by tsc)            |
-| `packages/kide-core/admin/`             | Admin UI components, layouts, styles (raw source)    |
-| `packages/kide-core/routes/`            | Admin pages + API routes (injected via integration)  |
-| `packages/kide-core/middleware/`        | Auth middleware (injected via integration)           |
+| File | Purpose |
+| --- | --- |
+| `packages/kide-core/src/` | Core TypeScript runtime (compiled by tsc) |
+| `packages/kide-core/admin/` | Admin UI components, layouts, styles (raw source) |
+| `packages/kide-core/routes/` | Admin pages + API routes (injected via integration) |
+| `packages/kide-core/middleware/` | Auth middleware (injected via integration) |
 | `packages/kide-core/src/integration.ts` | Astro integration (route injection, virtual modules) |
-| `examples/basic/src/cms/cms.config.ts`  | Example app — collection definitions                 |
-| `examples/basic/src/cms/collections/`   | Example app — collection fields, access, hooks       |
-| `examples/basic/src/cms/adapters/`      | Example app — db, storage, email adapters            |
-| `examples/basic/src/cms/.generated/`    | Auto-generated — DO NOT EDIT                         |
+| `packages/create-kide-app/templates/` | App templates — source of truth for user-facing code |
 
 ## Rules
 
@@ -60,6 +71,7 @@ After code changes, ALWAYS run:
 - Always query content through the typed local API (`cms.posts.findOne()`, `cms.pages.find()`, etc.) — never bypass it with raw DB queries or untyped wrappers.
 - Routes in `packages/kide-core/routes/` import app-specific code via `virtual:kide/*` modules (resolved by the integration's Vite aliases).
 - Use the `cn()` utility from `@kide/core/admin/lib/utils` for conditional class names — never use template literal interpolation for className.
+- When changing app-level code, update the templates first — `examples/basic/` should match the scaffolded output.
 
 ## Stack
 
