@@ -88,6 +88,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         const corePkgDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
         const adminDir = path.join(corePkgDir, "admin");
         const routesDir = path.join(corePkgDir, "routes");
+        const twAnimateCssPath = path.join(corePkgDir, "node_modules", "tw-animate-css", "dist", "tw-animate.css");
         const userAdminCss = path.resolve(root, "src/styles/admin.css");
         const generatedDir = path.join(root, "node_modules", ".kide");
         mkdirSync(generatedDir, { recursive: true });
@@ -97,6 +98,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           [
             `@source "${adminDir}";`,
             `@source "${routesDir}";`,
+            `@import "${twAnimateCssPath}";`,
             `@import "${userAdminCss}";`,
             "",
             "/* shadcn component styles (accordion, state variants) */",
