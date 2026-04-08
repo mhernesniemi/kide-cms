@@ -13,7 +13,35 @@ import {
   PencilRuler,
   Plus,
   Users,
+  BarChart,
+  Bell,
+  Bookmark,
+  Calendar,
+  Database,
+  Globe,
+  Home,
+  Key,
+  Link,
+  Lock,
+  Mail,
+  MessageSquare,
+  Package,
+  Palette,
+  Search,
+  Settings,
+  Shield,
+  Star,
+  Tag,
+  Terminal,
+  Zap,
 } from "lucide-react";
+
+const navIconMap: Record<string, any> = {
+  BarChart, Bell, Bookmark, Calendar, Clock, Database, FileText, FolderTree,
+  Globe, Home, Image, Key, Layers, LayoutGrid, Link, Lock, Mail,
+  Menu, MessageSquare, Package, Palette, PencilRuler, Search, Settings,
+  Shield, Star, Tag, Terminal, Users, Zap,
+};
 
 import MobileSidebar from "../components/MobileSidebar";
 import SidebarUserMenu from "../components/SidebarUserMenu";
@@ -26,11 +54,13 @@ const {
   collections = [],
   activeCollection = null,
   embed = false,
+  customNav = [],
 } = Astro.props as {
   title?: string;
   collections?: Array<{ slug: string; labels: { singular: string; plural: string }; singleton?: boolean }>;
   activeCollection?: string | null;
   embed?: boolean;
+  customNav?: Array<{ label: string; href: string; icon?: string }>;
 };
 
 const user = Astro.locals.user;
@@ -60,18 +90,18 @@ const singletonSlugs = new Set(collections.filter((c) => c.singleton).map((c) =>
 const isActiveSingles =
   activeCollection === "singles" || (activeCollection !== null && singletonSlugs.has(activeCollection));
 
-type NavItem = { href: string; label: string; singularLabel?: string; Icon: any; active: boolean; newHref?: string };
+type NavItem = { href: string; label: string; singularLabel?: string; Icon: any; active: boolean; newHref?: string; weight: number };
 const navItems: NavItem[] = [];
 
-// 0. Recent — cross-collection recent entries
+// Built-in nav items with default weights (spaced by 10 for easy interleaving)
 navItems.push({
   href: "/admin/recent",
   label: "Recent",
   Icon: Clock,
   active: activeCollection === "recent",
+  weight: 0,
 });
 
-// 1. Content collections — non-singleton, non-pinned, alphabetical
 const contentCollections = collections
   .filter((c) => !c.singleton && !pinnedSlugs.has(c.slug))
   .sort((a, b) => a.labels.plural.localeCompare(b.labels.plural));
@@ -83,15 +113,14 @@ for (const c of contentCollections) {
     Icon: Layers,
     active: activeCollection === c.slug,
     newHref: `/admin/${c.slug}/new`,
+    weight: 10,
   });
 }
 
-// 2. Singles
 if (hasSingletons) {
-  navItems.push({ href: "/admin/singles", label: "Singles", Icon: FileText, active: isActiveSingles });
+  navItems.push({ href: "/admin/singles", label: "Singles", Icon: FileText, active: isActiveSingles, weight: 20 });
 }
 
-// 3–6. Pinned utility collections
 for (const slug of pinnedOrder) {
   const c = collections.find((col) => col.slug === slug);
   if (c) {
@@ -102,17 +131,33 @@ for (const slug of pinnedOrder) {
       Icon: pinnedIcons[slug] ?? LayoutGrid,
       active: activeCollection === c.slug,
       newHref: `/admin/${c.slug}/new`,
+      weight: 30,
     });
   }
 }
 
-// 7. Assets
 navItems.push({
   href: "/admin/assets",
   label: "Assets",
   Icon: Image,
   active: activeCollection === "assets",
+  weight: 40,
 });
+
+// Custom nav items from admin config
+const currentPath = Astro.url.pathname;
+for (const item of customNav) {
+  navItems.push({
+    href: item.href,
+    label: item.label,
+    Icon: navIconMap[item.icon ?? ""] ?? LayoutGrid,
+    active: currentPath === item.href || currentPath.startsWith(item.href + "/"),
+    weight: item.weight ?? 50,
+  });
+}
+
+// Sort all items by weight (stable sort preserves order within same weight)
+navItems.sort((a, b) => a.weight - b.weight);
 ---
 
 <!doctype html>
@@ -162,31 +207,31 @@ navItems.push({
             <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-3">
               {navItems.map((item) => (
                 <div
-                  class={cn(
-                    "group relative rounded-lg",
-                    item.active ? "bg-foreground/10 dark:bg-accent" : "hover:bg-foreground/5 dark:hover:bg-accent/60",
-                  )}
-                >
-                  <a
-                    href={item.href}
                     class={cn(
-                      "flex items-center gap-3 px-3 py-2.5 text-sm",
-                      item.newHref && "pr-8",
-                      item.active ? "text-accent-foreground" : "text-foreground/70 group-hover:text-foreground",
+                      "group relative rounded-lg",
+                      item.active ? "bg-foreground/10 dark:bg-accent" : "hover:bg-foreground/5 dark:hover:bg-accent/60",
                     )}
                   >
-                    <item.Icon className="size-4 shrink-0 stroke-1" />
-                    <span>{item.label}</span>
-                  </a>
-                  {item.newHref && (
                     <a
-                      href={item.newHref}
-                      title={`Add new ${(item.singularLabel ?? item.label).toLowerCase()}`}
-                      class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block"
+                      href={item.href}
+                      class={cn(
+                        "flex items-center gap-3 px-3 py-2.5 text-sm",
+                        item.newHref && "pr-8",
+                        item.active ? "text-accent-foreground" : "text-foreground/70 group-hover:text-foreground",
+                      )}
                     >
-                      <Plus className="size-3.5" />
+                      <item.Icon className="size-4 shrink-0 stroke-1" />
+                      <span>{item.label}</span>
                     </a>
-                  )}
+                    {item.newHref && (
+                      <a
+                        href={item.newHref}
+                        title={`Add new ${(item.singularLabel ?? item.label).toLowerCase()}`}
+                        class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block"
+                      >
+                        <Plus className="size-3.5" />
+                      </a>
+                    )}
                 </div>
               ))}
             </nav>

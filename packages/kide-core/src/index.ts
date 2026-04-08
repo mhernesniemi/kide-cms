@@ -48,6 +48,7 @@ export type {
   DatabaseConfig,
   LocaleConfig,
   AdminConfig,
+  AdminNavItem,
   AdminFieldComponent,
   FieldCondition,
   SeedDocument,
@@ -61,6 +62,13 @@ export type {
 
 export { createCms } from "./api";
 export type { FindOptions } from "./api";
+
+export type CustomFieldProps = {
+  name: string;
+  field: import("./define").FieldConfig;
+  value: string;
+  readOnly: boolean;
+};
 
 export {
   hashPassword,

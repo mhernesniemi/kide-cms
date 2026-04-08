@@ -1,3 +1,7 @@
+declare module "virtual:kide/custom-fields" {
+  export const customFields: Record<string, any>;
+}
+
 declare module "virtual:kide/config" {
   import type { CmsConfig } from "@kide/core";
   const config: CmsConfig;

@@ -492,6 +492,7 @@ const tableRows =
   collections={accessibleCollections}
   activeCollection={route.kind === "recent" ? "recent" : (collectionSlug ?? "singles")}
   embed={isEmbed}
+  customNav={config.admin?.nav}
 >
   {
     route.kind === "recent" && (

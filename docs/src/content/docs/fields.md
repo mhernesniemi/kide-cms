@@ -40,7 +40,7 @@ All fields accept these options:
 | `admin.help`        | `string`           | Help text below the input                       |
 | `admin.position`    | `"sidebar"`        | Place field in sidebar instead of content area  |
 | `admin.hidden`      | `boolean`          | Hide from admin UI                              |
-| `admin.component`   | `string`           | Custom admin component                          |
+| `admin.component`   | `string`           | Custom admin component (see [Admin UI](/admin-ui/#custom-field-components)) |
 
 ## Blocks
 
@@ -92,7 +92,7 @@ The `value` can be a string, boolean, or array of strings (matches any).
 Fields support `read` and `update` access rules:
 
 ```typescript
-import { hasRole } from "../core/define";
+import { hasRole } from "@kide/core";
 
 summary: fields.text({
   access: {

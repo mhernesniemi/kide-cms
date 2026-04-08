@@ -120,6 +120,26 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           ].join("\n"),
         );
 
+        // Generate custom field components barrel
+        const customFieldsDir = path.resolve(root, "src/cms/admin/fields");
+        const customFieldsBarrel = path.join(generatedDir, "custom-fields.ts");
+        const generateFieldsBarrel = () => {
+          if (existsSync(customFieldsDir)) {
+            const files = readdirSync(customFieldsDir).filter((f) => f.endsWith(".tsx"));
+            const imports = files.map((f) => {
+              const name = f.replace(".tsx", "");
+              return `  "${name}": (await import("${path.join(customFieldsDir, f)}")).default,`;
+            });
+            writeFileSync(
+              customFieldsBarrel,
+              `export const customFields: Record<string, any> = {\n${imports.join("\n")}\n};\n`,
+            );
+          } else {
+            writeFileSync(customFieldsBarrel, "export const customFields: Record<string, any> = {};\n");
+          }
+        };
+        generateFieldsBarrel();
+
         // Virtual module aliases — resolve route imports to the user's app files
         updateConfig({
           vite: {
@@ -133,6 +153,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
                 "virtual:kide/email": path.resolve(root, adaptersPath, "email"),
                 "virtual:kide/blocks": path.resolve(root, "src/cms/blocks"),
                 "virtual:kide/admin-css": wrapperCss,
+                "virtual:kide/custom-fields": customFieldsBarrel,
               },
             },
           },

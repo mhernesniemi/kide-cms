@@ -66,7 +66,7 @@ Check for the `?preview` param and query with `status: "any"` in preview mode:
 ```astro
 ---
 import { cms } from "@/cms/.generated/api";
-import { cacheTags } from "@/cms/core/content";
+import { cacheTags } from "@kide/core";
 
 const isPreview = Astro.url.searchParams.has("preview");
 const doc = await cms.posts.findOne({ slug: Astro.params.slug!, status: isPreview ? "any" : "published" });
@@ -79,13 +79,83 @@ if (!isPreview) Astro.cache.set({ tags: cacheTags("posts", doc._id) });
 
 ## Custom Field Components
 
-Register a custom React component for any field:
+Create a React component in `src/cms/admin/fields/` and reference it by name:
 
 ```typescript
 // In your collection definition
 color: fields.text({
-  admin: { component: "color-picker" },
+  admin: { component: "ColorPicker" },
 });
 ```
 
-Built-in custom components: `"radio"` (select as radio buttons), `"taxonomy-select"` (taxonomy term picker), `"repeater"` (JSON array editor), `"menu-items"`, `"taxonomy-terms"`.
+```tsx
+// src/cms/admin/fields/ColorPicker.tsx
+import type { CustomFieldProps } from "@kide/core";
+
+export default function ColorPicker({ name, value, readOnly }: CustomFieldProps) {
+  return (
+    <input
+      type="color"
+      name={name}
+      defaultValue={value || "#000000"}
+      disabled={readOnly}
+    />
+  );
+}
+```
+
+The component receives `name` (form field name), `field` (field config), `value` (serialized value), and `readOnly`. It renders with `client:load` and must include an input with the `name` prop so the form can read its value.
+
+Built-in component variants: `"radio"` (select as radio buttons), `"taxonomy-select"` (taxonomy term picker), `"repeater"` (JSON array editor), `"menu-items"`, `"taxonomy-terms"`.
+
+## Custom Navigation
+
+Add custom pages to the admin sidebar via `admin.nav` in your CMS config:
+
+```typescript
+export default defineConfig({
+  admin: {
+    nav: [
+      { label: "Dashboard", href: "/dashboard", icon: "Home", weight: -10 },
+      { label: "Analytics", href: "/analytics", icon: "BarChart", weight: 15 },
+      { label: "Settings", href: "/settings", icon: "Settings" },
+    ],
+  },
+  collections: [...],
+});
+```
+
+| Option   | Type     | Description                                      |
+| -------- | -------- | ------------------------------------------------ |
+| `label`  | `string` | Display text in the sidebar                      |
+| `href`   | `string` | Link URL                                         |
+| `icon`   | `string` | Lucide icon name (optional, defaults to grid)    |
+| `weight` | `number` | Sort order (optional, default `50`)              |
+
+Items are sorted by weight and interleaved with built-in items:
+
+| Weight | Built-in items                                       |
+| ------ | ---------------------------------------------------- |
+| 0      | Recent                                               |
+| 10     | Content collections                                  |
+| 20     | Singles                                              |
+| 30     | Pinned utilities (taxonomies, menus, authors, users) |
+| 40     | Assets                                               |
+| 50     | Custom items (default)                               |
+
+Use `weight: -10` to place an item before Recent, or `weight: 15` to insert between collections and singles.
+
+The linked pages are regular Astro pages you create in your app. To use the admin layout, import it from `@kide/core`:
+
+```astro
+---
+import AdminLayout from "@kide/core/admin/layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Analytics | Admin">
+  <h1>Analytics</h1>
+  <!-- your content -->
+</AdminLayout>
+```
+
+Available icons: `BarChart`, `Bell`, `Bookmark`, `Calendar`, `Clock`, `Database`, `FileText`, `FolderTree`, `Globe`, `Home`, `Image`, `Key`, `Layers`, `LayoutGrid`, `Link`, `Lock`, `Mail`, `Menu`, `MessageSquare`, `Package`, `Palette`, `PencilRuler`, `Search`, `Settings`, `Shield`, `Star`, `Tag`, `Terminal`, `Users`, `Zap`.

@@ -147,8 +147,17 @@ export type CollectionConfig = {
   seed?: SeedDocument[];
 };
 
+export type AdminNavItem = {
+  label: string;
+  href: string;
+  icon?: string;
+  /** Sort order — lower values appear first (default: 0) */
+  weight?: number;
+};
+
 export type AdminConfig = {
   dateFormat?: string;
+  nav?: AdminNavItem[];
 };
 
 export type CMSConfig = {

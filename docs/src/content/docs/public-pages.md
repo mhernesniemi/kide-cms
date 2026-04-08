@@ -10,7 +10,7 @@ Public pages are standard Astro pages that fetch content from the local API.
 ```astro
 ---
 import { cms } from "@/cms/.generated/api";
-import { cacheTags } from "@/cms/core/content";
+import { cacheTags } from "@kide/core";
 
 const isPreview = Astro.url.searchParams.has("preview");
 const doc = await cms.posts.findOne({ slug: Astro.params.slug!, status: isPreview ? "any" : "published" });
@@ -50,8 +50,8 @@ src/pages/
 import PublicLayout from "@/layouts/PublicLayout.astro";
 import RichTextContent from "@/components/RichTextContent.astro";
 import { cms } from "@/cms/.generated/api";
-import { cacheTags } from "@/cms/core/content";
-import { cmsImage, cmsSrcset } from "@/cms/core/image";
+import { cacheTags } from "@kide/core";
+import { cmsImage, cmsSrcset } from "@kide/core";
 
 const isPreview = Astro.url.searchParams.has("preview");
 const doc = await cms.posts.findOne({ slug: Astro.params.slug!, status: isPreview ? "any" : "published" });
@@ -84,7 +84,7 @@ if (!isPreview) Astro.cache.set({ tags: cacheTags("posts", doc._id) });
 import PublicLayout from "@/layouts/PublicLayout.astro";
 import BlockRenderer from "@/components/BlockRenderer.astro";
 import { cms } from "@/cms/.generated/api";
-import { cacheTags, parseBlocks } from "@/cms/core/content";
+import { cacheTags, parseBlocks } from "@kide/core";
 
 const isPreview = Astro.url.searchParams.has("preview");
 const doc = await cms.pages.findOne({ slug: Astro.params.slug!, status: isPreview ? "any" : "published" });
@@ -160,7 +160,7 @@ For fields that store JSON arrays (repeaters, image lists), use the `parseList` 
 
 ```astro
 ---
-import { parseList } from "@/cms/core/content";
+import { parseList } from "@kide/core";
 
 const { heading, items: rawItems } = Astro.props;
 const items = parseList<{ title?: string; description?: string }>(rawItems);
@@ -185,7 +185,7 @@ Use `cmsImage` and `cmsSrcset` for optimized images:
 
 ```astro
 ---
-import { cmsImage, cmsSrcset } from "@/cms/core/image";
+import { cmsImage, cmsSrcset } from "@kide/core";
 ---
 
 <!-- Single optimized image -->

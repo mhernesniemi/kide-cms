@@ -1,6 +1,7 @@
 ---
 import type { FieldConfig } from "@kide/core";
 import { serializeFieldValue, humanize } from "@kide/core";
+import { customFields } from "virtual:kide/custom-fields";
 import ImagePicker from "./ImagePicker";
 import TreeItemsEditor from "./TreeItemsEditor";
 import RichTextEditor from "./RichTextEditor";
@@ -63,6 +64,13 @@ const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg
 const isTreeEditor =
   field.type === "json" && (field.admin?.component === "menu-items" || field.admin?.component === "taxonomy-terms");
 
+// Custom field component: if admin.component is set and not a built-in variant, look for user-provided component
+const builtInComponents = new Set(["radio", "taxonomy-select", "menu-items", "taxonomy-terms"]);
+const CustomComponent =
+  field.admin?.component && !builtInComponents.has(field.admin.component)
+    ? customFields[field.admin.component] ?? null
+    : null;
+
 // Build serializable block types metadata for BlockEditor
 const blockTypesMeta =
   field.type === "blocks" && field.types
@@ -111,6 +119,21 @@ const blockTypesMeta =
   }
   {field.description && <p class="text-muted-foreground -mt-1 text-xs leading-5">{field.description}</p>}
   {field.admin?.help && <p class="text-muted-foreground -mt-1 -mb-0.5 text-xs leading-5">{field.admin.help}</p>}
+
+  {
+    CustomComponent && (
+      <CustomComponent
+        client:load
+        name={name}
+        field={field}
+        value={serializedValue}
+        readOnly={readOnly}
+      />
+    )
+  }
+
+  {!CustomComponent && (
+  <Fragment>
 
   {
     field.type === "image" && !readOnly && (
@@ -368,4 +391,7 @@ const blockTypesMeta =
       />
     )
   }
+
+  </Fragment>
+  )}
 </div>
