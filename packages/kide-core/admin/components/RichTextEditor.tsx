@@ -2,6 +2,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
+import { Markdown } from "@tiptap/markdown";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Bold,
@@ -365,6 +366,9 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
     [],
   );
 
+  const [markdownMode, setMarkdownMode] = useState(false);
+  const [markdownText, setMarkdownText] = useState("");
+
   const [cmsJson, setCmsJson] = useState<string>(() => {
     if (!initialValue) return JSON.stringify({ type: "root", children: [] });
     try {
@@ -400,6 +404,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
     extensions: [
       StarterKit,
       Image,
+      Markdown,
       Link.configure({
         openOnClick: false,
         autolink: false,
@@ -600,10 +605,43 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
         >
           <Redo className="size-4" />
         </ToolbarButton>
+
+        <div className="ml-auto" />
+
+        <ToolbarButton
+          onClick={() => {
+            if (!editor) return;
+            if (!markdownMode) {
+              setMarkdownText(editor.getMarkdown());
+              setMarkdownMode(true);
+            } else {
+              editor.commands.setContent(markdownText, { contentType: "markdown" });
+              setMarkdownMode(false);
+            }
+          }}
+          active={markdownMode}
+          disabled={!editor}
+          title={markdownMode ? "Switch to editor" : "Switch to Markdown"}
+        >
+          <span className="text-xs font-semibold leading-none">MD</span>
+        </ToolbarButton>
       </div>
 
-      {/* Editor area — placeholder shown until Tiptap mounts */}
-      {editor ? (
+      {/* Editor area */}
+      {markdownMode ? (
+        <textarea
+          className="w-full resize-none bg-transparent px-3 py-2.5 font-mono text-sm focus:outline-none"
+          style={{ minHeight }}
+          value={markdownText}
+          onChange={(e) => {
+            setMarkdownText(e.target.value);
+            // Update CMS JSON from markdown so the form stays in sync
+            if (editor) {
+              editor.commands.setContent(e.target.value, { contentType: "markdown" });
+            }
+          }}
+        />
+      ) : editor ? (
         <EditorContent editor={editor} />
       ) : (
         <div className="prose prose-sm max-w-none" style={{ minHeight, padding: "0.625rem 0.75rem" }} />
