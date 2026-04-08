@@ -481,7 +481,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
         <ToolbarButton
           onClick={() => editor?.chain().focus().toggleBold().run()}
           active={editor?.isActive("bold")}
-          disabled={!editor}
+          disabled={!editor || markdownMode}
           title="Bold"
         >
           <Bold className="size-4" />
@@ -489,7 +489,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
         <ToolbarButton
           onClick={() => editor?.chain().focus().toggleItalic().run()}
           active={editor?.isActive("italic")}
-          disabled={!editor}
+          disabled={!editor || markdownMode}
           title="Italic"
         >
           <Italic className="size-4" />
@@ -500,7 +500,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
         <ToolbarButton
           onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
           active={editor?.isActive("heading", { level: 2 })}
-          disabled={!editor}
+          disabled={!editor || markdownMode}
           title="Heading 2"
         >
           <Heading2 className="size-4" />
@@ -508,7 +508,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
         <ToolbarButton
           onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
           active={editor?.isActive("heading", { level: 3 })}
-          disabled={!editor}
+          disabled={!editor || markdownMode}
           title="Heading 3"
         >
           <Heading3 className="size-4" />
@@ -519,7 +519,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
         <ToolbarButton
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
           active={editor?.isActive("bulletList")}
-          disabled={!editor}
+          disabled={!editor || markdownMode}
           title="Bullet list"
         >
           <List className="size-4" />
@@ -527,7 +527,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
         <ToolbarButton
           onClick={() => editor?.chain().focus().toggleOrderedList().run()}
           active={editor?.isActive("orderedList")}
-          disabled={!editor}
+          disabled={!editor || markdownMode}
           title="Ordered list"
         >
           <ListOrdered className="size-4" />
@@ -535,7 +535,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
         <ToolbarButton
           onClick={() => editor?.chain().focus().toggleBlockquote().run()}
           active={editor?.isActive("blockquote")}
-          disabled={!editor}
+          disabled={!editor || markdownMode}
           title="Blockquote"
         >
           <Quote className="size-4" />
@@ -578,7 +578,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
             setLinkDialogOpen(true);
           }}
           active={editor?.isActive("link")}
-          disabled={!editor}
+          disabled={!editor || markdownMode}
           title="Link"
         >
           <LinkIcon className="size-4" />
@@ -586,21 +586,21 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
 
         <div className="bg-border mx-1 h-5 w-px" />
 
-        <ToolbarButton onClick={() => setImageBrowseOpen(true)} disabled={!editor} title="Insert image">
+        <ToolbarButton onClick={() => setImageBrowseOpen(true)} disabled={!editor || markdownMode} title="Insert image">
           <ImageIcon className="size-4" />
         </ToolbarButton>
         <div className="bg-border mx-1 h-5 w-px" />
 
         <ToolbarButton
           onClick={() => editor?.chain().focus().undo().run()}
-          disabled={!editor?.can().undo()}
+          disabled={!editor?.can().undo() || markdownMode}
           title="Undo"
         >
           <Undo className="size-4" />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor?.chain().focus().redo().run()}
-          disabled={!editor?.can().redo()}
+          disabled={!editor?.can().redo() || markdownMode}
           title="Redo"
         >
           <Redo className="size-4" />
