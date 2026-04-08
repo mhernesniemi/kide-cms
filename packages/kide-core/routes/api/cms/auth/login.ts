@@ -6,8 +6,35 @@ import { verifyPassword, createSession, setSessionCookie } from "virtual:kide/ru
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+// Simple in-memory rate limiter: max 5 attempts per 15 minutes per IP
+const attempts = new Map<string, { count: number; resetAt: number }>();
+const MAX_ATTEMPTS = 5;
+const WINDOW_MS = 15 * 60 * 1000;
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = attempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    attempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+    return false;
+  }
+  entry.count++;
+  return entry.count > MAX_ATTEMPTS;
+}
+
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   const contentType = request.headers.get("content-type") ?? "";
+
+  if (isRateLimited(clientAddress)) {
+    if (contentType.includes("application/json")) {
+      return Response.json({ error: "Too many login attempts. Try again later." }, { status: 429 });
+    }
+    return new Response(null, {
+      status: 303,
+      headers: { Location: "/admin/login?error=rate-limited" },
+    });
+  }
+
   let email: string;
   let password: string;
 
@@ -70,6 +97,9 @@ export const POST: APIRoute = async ({ request }) => {
       headers: { Location: "/admin/login?error=invalid" },
     });
   }
+
+  // Successful login — clear rate limit
+  attempts.delete(clientAddress);
 
   const session = await createSession(String(user._id));
 

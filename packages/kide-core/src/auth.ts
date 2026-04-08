@@ -167,7 +167,7 @@ export const SESSION_COOKIE_NAME = "cms_session";
 
 export const setSessionCookie = (token: string, expiresAt: string) => {
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `${SESSION_COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax${secure}; Expires=${new Date(expiresAt).toUTCString()}`;
+  return `${SESSION_COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Strict${secure}; Expires=${new Date(expiresAt).toUTCString()}`;
 };
 
-export const clearSessionCookie = () => `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+export const clearSessionCookie = () => `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`;

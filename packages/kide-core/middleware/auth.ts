@@ -25,6 +25,22 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return next();
   }
 
+  // Security headers for all admin routes
+  const addSecurityHeaders = (response: Response) => {
+    response.headers.set("X-Content-Type-Options", "nosniff");
+    response.headers.set("X-Frame-Options", "DENY");
+    return response;
+  };
+
+  // CSRF protection: verify Origin on state-changing requests
+  if (context.request.method !== "GET" && context.request.method !== "HEAD") {
+    const origin = context.request.headers.get("origin");
+    const host = context.url.origin;
+    if (origin && origin !== host) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
+    }
+  }
+
   // Check if any users exist (cached after first check)
   if (hasUsers === null || !hasUsers) {
     try {
@@ -45,7 +61,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // No users yet — redirect to setup
   if (!hasUsers) {
-    if (isSetupPage || isSetupApi) return next();
+    if (isSetupPage || isSetupApi) return addSecurityHeaders(await next());
     if (isAdminApiRoute) {
       return new Response(JSON.stringify({ error: "Setup required" }), { status: 403 });
     }
@@ -60,7 +76,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Always allow login page, login API, and cron endpoint (has its own auth)
   const isCronApi = pathname === "/api/cms/cron/publish";
   if (isLoginPage || isLoginApi || isSetupApi || isCronApi || isInvitePage || isInviteApi) {
-    return next();
+    return addSecurityHeaders(await next());
   }
 
   const user = await getSessionUser(context.request);
@@ -80,5 +96,5 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Attach user to locals for downstream use
   context.locals.user = user;
 
-  return next();
+  return addSecurityHeaders(await next());
 });

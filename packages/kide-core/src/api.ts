@@ -650,6 +650,8 @@ export const createCms = (config: CMSConfig) => {
         if (existingRows.length === 0) throw new Error(`${collection.labels.singular} not found.`);
 
         const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
+        const allowed = await canAccess(collection, "publish", context, existing);
+        if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
         const hookContext = getHookContext(collection, "unpublish", context);
         if (collection.hooks?.beforeUnpublish) {
           await collection.hooks.beforeUnpublish(existing, hookContext);
