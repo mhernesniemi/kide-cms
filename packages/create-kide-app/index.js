@@ -22,6 +22,7 @@ const runAsync = (cmd, cwd) =>
       else {
         const err = new Error(`Command failed: ${cmd}`);
         err.stderr = stderr;
+        err.stdout = stdout;
         reject(err);
       }
     });
@@ -34,7 +35,7 @@ const pm = { name: "pnpm", exec: "pnpm exec", dlx: "pnpm dlx", run: "pnpm", inst
 // --- Main ---
 
 async function main() {
-  p.intro("Create Kide CMS Project");
+  p.intro("🪐 Create Kide CMS Project");
 
   // 1. Project name
   const projectName =
@@ -337,14 +338,15 @@ async function main() {
           if (!p.isCancel(doDeploy) && doDeploy) {
             s.start("Building and deploying to Cloudflare");
             try {
-              const deployOutput = await runAsync(`${pm.run} deploy`, projectDir);
+              const deployOutput = await runAsync(`${pm.run} run deploy`, projectDir);
               const urlMatch = deployOutput.match(/https:\/\/[^\s]+\.workers\.dev/);
               if (urlMatch) cf.url = urlMatch[0];
               cf.deployed = true;
               s.stop("Deployed to Cloudflare");
             } catch (err) {
               s.stop("Deploy failed — run manually with: pnpm run deploy");
-              if (err.stderr) console.error(err.stderr.slice(-500));
+              if (err.stderr) console.error(err.stderr.slice(-1500));
+              if (err.stdout) console.error(err.stdout.slice(-1500));
             }
           }
         }
