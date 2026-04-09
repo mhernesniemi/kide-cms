@@ -7,6 +7,7 @@ import { getCollectionMap, getTranslatableFieldNames, isStructuralField } from "
 import { getDb } from "./runtime";
 import { getSchema } from "./schema";
 import { cloneValue, createRichTextFromPlainText, slugify } from "./values";
+import { dispatchWebhooks } from "./webhooks";
 
 export type FindOptions = {
   where?: Record<string, unknown>;
@@ -502,6 +503,7 @@ export const createCms = (config: CMSConfig) => {
 
         const result = await this.findById(docId, {}, context);
         await collection.hooks?.afterCreate?.(result!, hookContext);
+        dispatchWebhooks(config, "create", slug, result!, context.user);
         return result!;
       },
 
@@ -585,6 +587,7 @@ export const createCms = (config: CMSConfig) => {
 
         const result = await this.findById(id, { status: "any" }, context);
         await collection.hooks?.afterUpdate?.(result!, hookContext);
+        dispatchWebhooks(config, "update", slug, result!, context.user);
         return result!;
       },
 
@@ -606,6 +609,7 @@ export const createCms = (config: CMSConfig) => {
         await db.delete(tables.main).where(eq(tables.main._id, id));
 
         await collection.hooks?.afterDelete?.(existing, hookContext);
+        dispatchWebhooks(config, "delete", slug, existing, context.user);
       },
 
       async publish(id: string, context: RuntimeContext = {}) {
@@ -638,6 +642,7 @@ export const createCms = (config: CMSConfig) => {
 
         const result = await this.findById(id, { status: "any" }, context);
         await collection.hooks?.afterPublish?.(result!, hookContext);
+        dispatchWebhooks(config, "publish", slug, result!, context.user);
         return result!;
       },
 
@@ -669,6 +674,7 @@ export const createCms = (config: CMSConfig) => {
 
         const result = (await this.findById(id, { status: "any" }, context))!;
         await collection.hooks?.afterUnpublish?.(result, hookContext);
+        dispatchWebhooks(config, "unpublish", slug, result, context.user);
         return result;
       },
 

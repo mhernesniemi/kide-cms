@@ -289,8 +289,10 @@ async function main() {
     try {
       execSync(`${pm.run} cms:seed`, { cwd: projectDir, stdio: "pipe" });
       s.stop("Demo content seeded");
-    } catch {
+    } catch (err) {
       s.stop("Seeding failed — run `pnpm cms:seed` manually");
+      if (err.stderr) console.error(err.stderr.toString().slice(-1500));
+      if (err.stdout) console.error(err.stdout.toString().slice(-1500));
     }
   } else if (seedDemo && target === "cloudflare") {
     p.note(

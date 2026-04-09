@@ -155,6 +155,32 @@ export type AdminNavItem = {
   weight?: number;
 };
 
+export type WebhookEvent = "create" | "update" | "delete" | "publish" | "unpublish";
+
+export type WebhookContext = {
+  user?: { id: string; role?: string; email?: string } | null;
+  event: WebhookEvent;
+  collection: string;
+  timestamp: string;
+};
+
+export type WebhookConfig = {
+  /** Display name (shown in logs) */
+  name: string;
+  /** URL to POST to */
+  url: string;
+  /** Events that trigger this webhook */
+  events: WebhookEvent[];
+  /** Restrict to specific collections (omit for all) */
+  collections?: string[];
+  /** HTTP method (default: POST) */
+  method?: "POST" | "PUT" | "PATCH";
+  /** Custom headers */
+  headers?: Record<string, string>;
+  /** Transform the payload (default: { event, collection, doc, user, timestamp }) */
+  payload?: (doc: Record<string, unknown>, context: WebhookContext) => any;
+};
+
 export type AdminUploadConfig = {
   /** Allowed MIME types (default: images, PDF, video) */
   allowedTypes?: string[];
@@ -176,6 +202,8 @@ export type AdminConfig = {
   rateLimit?: AdminRateLimitConfig;
   /** Admin list page size (default: 20) */
   pageSize?: number;
+  /** Webhooks fired on content events */
+  webhooks?: WebhookConfig[];
 };
 
 export type CMSConfig = {

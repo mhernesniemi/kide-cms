@@ -15,6 +15,7 @@ export default defineConfig({
         { label: "Fields", slug: "fields" },
         { label: "Local API", slug: "local-api" },
         { label: "Hooks", slug: "hooks" },
+        { label: "Webhooks", slug: "webhooks" },
         { label: "Access Control", slug: "access-control" },
         { label: "Public Pages", slug: "public-pages" },
         { label: "Admin UI", slug: "admin-ui" },
