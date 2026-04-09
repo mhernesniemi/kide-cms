@@ -11,7 +11,7 @@
     "check": "pnpm --filter basic check && eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "core:build": "pnpm --filter @kide/core build"
+    "core:build": "pnpm --filter @kidecms/core build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

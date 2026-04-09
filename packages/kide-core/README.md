@@ -1,4 +1,4 @@
-# `@kide/core`
+# `@kidecms/core`
 
 Kide's runtime and admin package.
 
@@ -6,7 +6,7 @@ Kide's runtime and admin package.
 
 The goal is to keep onboarding simple:
 
-- `@kide/core` brings its own CMS runtime, generator, and admin UI dependencies.
+- `@kidecms/core` brings its own CMS runtime, generator, and admin UI dependencies.
 - The host app provides `react` and `react-dom`.
 - Some features are optional:
   - `@ai-sdk/openai` only when AI generation is enabled
@@ -25,4 +25,4 @@ Kide keeps project-specific code inside the app:
 Because those files live in the app, the app may still depend on packages like
 `drizzle-orm`, `zod`, or `nanoid` when it imports them directly.
 
-That is separate from `@kide/core`'s own package contract.
+That is separate from `@kidecms/core`'s own package contract.

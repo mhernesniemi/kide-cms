@@ -92,7 +92,7 @@ The `value` can be a string, boolean, or array of strings (matches any).
 Fields support `read` and `update` access rules:
 
 ```typescript
-import { hasRole } from "@kide/core";
+import { hasRole } from "@kidecms/core";
 
 summary: fields.text({
   access: {

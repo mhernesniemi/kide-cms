@@ -23,7 +23,7 @@ import {
   streamAltText,
   streamSeoDescription,
   streamTranslation,
-} from "@kide/core";
+} from "@kidecms/core";
 
 import * as schema from "../.generated/schema";
 import { closeDb, getDb } from "../adapters/db";

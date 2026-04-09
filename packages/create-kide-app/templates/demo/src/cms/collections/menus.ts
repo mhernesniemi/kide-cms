@@ -1,4 +1,4 @@
-import { defineCollection, fields } from "@kide/core";
+import { defineCollection, fields } from "@kidecms/core";
 
 export default defineCollection({
   slug: "menus",

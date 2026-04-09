@@ -1,5 +1,5 @@
 import path from "node:path";
-import { generate } from "@kide/core";
+import { generate } from "@kidecms/core";
 
 import config from "../cms.config";
 

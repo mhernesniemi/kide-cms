@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { transformImage } from "@kide/core";
+import { transformImage } from "@kidecms/core";
 
 export const prerender = false;
 

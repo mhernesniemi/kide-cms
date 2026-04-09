@@ -5,7 +5,7 @@ Code-first, single-schema CMS built inside Astro 6. Monorepo with core package a
 ## Repo Structure
 
 ```
-packages/kide-core/         # Core runtime, admin UI, routes, integration (@kide/core)
+packages/kide-core/         # Core runtime, admin UI, routes, integration (@kidecms/core)
 packages/create-kide-app/   # CLI scaffolding tool + app templates
   templates/base/            # Minimal starter (users collection only)
   templates/demo/            # Demo overlay (full schema, seed data, public pages)
@@ -32,7 +32,7 @@ pnpm dev              # start example dev server (auto-generates schema + pushes
 pnpm build            # production build of example
 pnpm check            # astro check (types) + eslint (lint)
 pnpm format           # prettier --write .
-pnpm core:build       # build @kide/core package
+pnpm core:build       # build @kidecms/core package
 ```
 
 Example-specific commands (run from `examples/basic/` or use `pnpm --filter basic`):
@@ -70,7 +70,7 @@ After code changes, ALWAYS run:
 - `labelField` on collections controls display name (fallback: title → name → first text field).
 - Always query content through the typed local API (`cms.posts.findOne()`, `cms.pages.find()`, etc.) — never bypass it with raw DB queries or untyped wrappers.
 - Routes in `packages/kide-core/routes/` import app-specific code via `virtual:kide/*` modules (resolved by the integration's Vite aliases).
-- Use the `cn()` utility from `@kide/core/admin/lib/utils` for conditional class names — never use template literal interpolation for className.
+- Use the `cn()` utility from `@kidecms/core/admin/lib/utils` for conditional class names — never use template literal interpolation for className.
 - When changing app-level code, update the templates first — `examples/basic/` should match the scaffolded output.
 
 ## Stack

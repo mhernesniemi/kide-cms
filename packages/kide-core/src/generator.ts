@@ -394,7 +394,7 @@ ${apiTypes}
 
 export const generate = async (config: CMSConfig, options: GeneratorOptions) => {
   const outputDir = options.outputDir;
-  const coreImportPath = options.coreImportPath ?? "@kide/core";
+  const coreImportPath = options.coreImportPath ?? "@kidecms/core";
   const runtimeImportPath = options.runtimeImportPath ?? "../runtime";
   const configImportPath = options.configImportPath ?? "../cms.config";
 

@@ -110,7 +110,7 @@ Check for the `?preview` param and query with `status: "any"` in preview mode:
 ```astro
 ---
 import { cms } from "@/cms/.generated/api";
-import { cacheTags } from "@kide/core";
+import { cacheTags } from "@kidecms/core";
 
 const isPreview = Astro.url.searchParams.has("preview");
 const doc = await cms.posts.findOne({ slug: Astro.params.slug!, status: isPreview ? "any" : "published" });
@@ -134,7 +134,7 @@ color: fields.text({
 
 ```tsx
 // src/cms/admin/fields/ColorPicker.tsx
-import type { CustomFieldProps } from "@kide/core";
+import type { CustomFieldProps } from "@kidecms/core";
 
 export default function ColorPicker({ name, value, readOnly }: CustomFieldProps) {
   return (
@@ -189,11 +189,11 @@ Items are sorted by weight and interleaved with built-in items:
 
 Use `weight: -10` to place an item before Recent, or `weight: 15` to insert between collections and singles.
 
-The linked pages are regular Astro pages you create in your app. To use the admin layout, import it from `@kide/core`:
+The linked pages are regular Astro pages you create in your app. To use the admin layout, import it from `@kidecms/core`:
 
 ```astro
 ---
-import AdminLayout from "@kide/core/admin/layouts/AdminLayout.astro";
+import AdminLayout from "@kidecms/core/admin/layouts/AdminLayout.astro";
 ---
 
 <AdminLayout title="Analytics | Admin">

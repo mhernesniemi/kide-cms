@@ -21,7 +21,7 @@ let runtime: CmsRuntimeConfig | null = null;
 
 const runtimeError = () =>
   new Error(
-    "@kide/core runtime not initialized. Call configureCmsRuntime(...) and initSchema(...) from your app before using runtime APIs.",
+    "@kidecms/core runtime not initialized. Call configureCmsRuntime(...) and initSchema(...) from your app before using runtime APIs.",
   );
 
 export const configureCmsRuntime = (config: CmsRuntimeConfig) => {

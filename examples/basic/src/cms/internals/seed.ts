@@ -1,4 +1,4 @@
-import { seedDatabase } from "@kide/core";
+import { seedDatabase } from "@kidecms/core";
 
 import "./runtime";
 import config from "../cms.config";

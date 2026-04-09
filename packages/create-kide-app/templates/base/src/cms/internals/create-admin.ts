@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline";
-import { createAdminUser } from "@kide/core";
+import { createAdminUser } from "@kidecms/core";
 
 import "./runtime";
 import { closeDb } from "../adapters/db";

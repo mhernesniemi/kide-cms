@@ -3,7 +3,7 @@ import cloudflare from "@astrojs/cloudflare";
 import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
-import cmsIntegration from "@kide/core/integration";
+import cmsIntegration from "@kidecms/core/integration";
 
 // https://astro.build/config
 export default defineConfig({

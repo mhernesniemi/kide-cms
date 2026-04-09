@@ -6,7 +6,7 @@ description: Role-based permissions for collections and fields.
 Access rules are defined directly in each collection config file using helper functions. Rules are pure functions evaluated before every API operation. Any operation without a rule is allowed by default.
 
 ```typescript
-import { defineCollection, fields, hasRole } from "@kide/core";
+import { defineCollection, fields, hasRole } from "@kidecms/core";
 
 export default defineCollection({
   slug: "posts",

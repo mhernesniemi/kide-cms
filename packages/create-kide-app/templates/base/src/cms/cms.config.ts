@@ -1,4 +1,4 @@
-import { defineConfig } from "@kide/core";
+import { defineConfig } from "@kidecms/core";
 import users from "./collections/users";
 
 export default defineConfig({

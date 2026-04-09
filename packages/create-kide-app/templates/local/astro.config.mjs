@@ -3,7 +3,7 @@ import node from "@astrojs/node";
 import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, memoryCache } from "astro/config";
-import cmsIntegration from "@kide/core/integration";
+import cmsIntegration from "@kidecms/core/integration";
 
 // https://astro.build/config
 export default defineConfig({

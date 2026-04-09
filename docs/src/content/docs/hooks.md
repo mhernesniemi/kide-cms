@@ -7,8 +7,8 @@ Define hooks directly in your collection config. They run inside the local API o
 
 ```typescript
 // src/cms/collections/posts.ts
-import { defineCollection, fields } from "@kide/core";
-import { richTextToPlainText } from "@kide/core";
+import { defineCollection, fields } from "@kidecms/core";
+import { richTextToPlainText } from "@kidecms/core";
 
 export default defineCollection({
   slug: "posts",

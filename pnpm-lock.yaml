@@ -47,7 +47,7 @@ importers:
       '@astrojs/react':
         specifier: ^5.0.0
         version: 5.0.0(@types/node@25.5.0)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(jiti@2.6.1)(lightningcss@1.31.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tsx@4.21.0)(yaml@2.8.2)
-      '@kide/core':
+      '@kidecms/core':
         specifier: workspace:*
         version: link:../../packages/kide-core
       '@tailwindcss/typography':

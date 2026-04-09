@@ -19,7 +19,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@kide/core": "workspace:*",
+    "@kidecms/core": "workspace:*",
     "@ai-sdk/openai": "^3.0.41",
     "@astrojs/node": "^10.0.1",
     "@astrojs/react": "^5.0.0",

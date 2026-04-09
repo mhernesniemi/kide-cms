@@ -15,7 +15,7 @@
     "cms:admin": "node --import tsx src/cms/internals/create-admin.ts"
   },
   "dependencies": {
-    "@kide/core": "latest",
+    "@kidecms/core": "latest",
     "@astrojs/node": "^10.0.1",
     "@astrojs/react": "^5.0.0",
     "@tailwindcss/typography": "^0.5.19",

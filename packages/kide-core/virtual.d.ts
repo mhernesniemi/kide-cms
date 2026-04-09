@@ -3,7 +3,7 @@ declare module "virtual:kide/custom-fields" {
 }
 
 declare module "virtual:kide/config" {
-  import type { CmsConfig } from "@kide/core";
+  import type { CmsConfig } from "@kidecms/core";
   const config: CmsConfig;
   export default config;
 }
@@ -43,7 +43,7 @@ declare module "virtual:kide/runtime" {
     assets,
     folders,
     createCms,
-  } from "@kide/core";
+  } from "@kidecms/core";
 }
 
 declare module "virtual:kide/block-renderer" {

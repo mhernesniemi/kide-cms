@@ -9,7 +9,7 @@ Collections are defined in `src/cms/collections/` and registered in `src/cms/cms
 
 ```typescript
 // src/cms/collections/posts.ts
-import { defineCollection, fields, hasRole } from "@kide/core";
+import { defineCollection, fields, hasRole } from "@kidecms/core";
 
 export default defineCollection({
   slug: "posts",
@@ -39,7 +39,7 @@ export default defineCollection({
 Register it in `src/cms/cms.config.ts`:
 
 ```typescript
-import { defineConfig } from "@kide/core";
+import { defineConfig } from "@kidecms/core";
 import posts from "./collections/posts";
 
 export default defineConfig({

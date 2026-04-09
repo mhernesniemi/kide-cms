@@ -1,20 +1,20 @@
 ---
 import { ArrowUpRight, Dot, Plus } from "lucide-react";
 
-import AdminCard from "@kide/core/admin/components/AdminCard.astro";
-import AiGenerateButton from "@kide/core/admin/components/AiGenerateButton";
-import DocumentActions from "@kide/core/admin/components/DocumentActions";
-import DocumentLock from "@kide/core/admin/components/DocumentLock";
-import DocumentsDataTable from "@kide/core/admin/components/DocumentsDataTable";
-import LiveHeading from "@kide/core/admin/components/LiveHeading";
-import UnsavedGuard from "@kide/core/admin/components/UnsavedGuard";
-import FieldControl from "@kide/core/admin/components/FieldControl.astro";
-import { StatusBadge } from "@kide/core/admin/components/ui/badge";
-import { buttonVariants } from "@kide/core/admin/components/ui/button";
+import AdminCard from "@kidecms/core/admin/components/AdminCard.astro";
+import AiGenerateButton from "@kidecms/core/admin/components/AiGenerateButton";
+import DocumentActions from "@kidecms/core/admin/components/DocumentActions";
+import DocumentLock from "@kidecms/core/admin/components/DocumentLock";
+import DocumentsDataTable from "@kidecms/core/admin/components/DocumentsDataTable";
+import LiveHeading from "@kidecms/core/admin/components/LiveHeading";
+import UnsavedGuard from "@kidecms/core/admin/components/UnsavedGuard";
+import FieldControl from "@kidecms/core/admin/components/FieldControl.astro";
+import { StatusBadge } from "@kidecms/core/admin/components/ui/badge";
+import { buttonVariants } from "@kidecms/core/admin/components/ui/button";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { isAiEnabled } from "virtual:kide/runtime";
-import { getLabelField } from "@kide/core";
+import { getLabelField } from "@kidecms/core";
 import {
   formatDate,
   formatFieldValue,
@@ -23,8 +23,8 @@ import {
   humanize,
   initDateFormat,
   resolveAdminRoute,
-} from "@kide/core";
-import AdminLayout from "@kide/core/admin/layouts/AdminLayout.astro";
+} from "@kidecms/core";
+import AdminLayout from "@kidecms/core/admin/layouts/AdminLayout.astro";
 export const prerender = false;
 
 initDateFormat(config, Astro.cookies.get("tz")?.value);
@@ -232,7 +232,7 @@ if (collection && collectionSlug && canAccessCurrent) {
     return Astro.redirect(`/admin/${collectionSlug}/${(await collectionApi.create({}, runtimeContext))._id}`);
   }
 
-  for (const [fieldName, field] of Object.entries(collection.fields) as [string, import("@kide/core").FieldConfig][]) {
+  for (const [fieldName, field] of Object.entries(collection.fields) as [string, import("@kidecms/core").FieldConfig][]) {
     if (field.type === "relation" && canRead(field.collection)) {
       const relatedDocs = await cmsRuntime[field.collection].find(
         {
@@ -265,7 +265,7 @@ if (collection && collectionSlug && canAccessCurrent) {
       for (const [typeName, typeFields] of Object.entries(field.types)) {
         for (const [subFieldName, subField] of Object.entries(typeFields) as [
           string,
-          import("@kide/core").FieldConfig,
+          import("@kidecms/core").FieldConfig,
         ][]) {
           if (subField.type === "relation" && canRead(subField.collection)) {
             const key = `block:${typeName}:${subFieldName}`;

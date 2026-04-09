@@ -4,7 +4,7 @@ import { loadRenderers } from "astro:container";
 import { getContainerRenderer } from "@astrojs/react";
 
 import BlockRenderer from "virtual:kide/block-renderer";
-import { renderRichText, parseBlocks } from "@kide/core";
+import { renderRichText, parseBlocks } from "@kidecms/core";
 
 export const prerender = false;
 

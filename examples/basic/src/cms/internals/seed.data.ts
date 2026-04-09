@@ -1,4 +1,4 @@
-import type { SeedDocument } from "@kide/core";
+import type { SeedDocument } from "@kidecms/core";
 
 const rt = (...children: any[]) => ({ type: "root", children });
 const p = (text: string) => ({ type: "paragraph", children: [{ type: "text", value: text }] });

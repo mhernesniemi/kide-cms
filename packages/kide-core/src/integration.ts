@@ -160,43 +160,43 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         });
 
         // Inject admin pages
-        injectRoute({ pattern: "/admin/login", entrypoint: "@kide/core/routes/pages/admin/login.astro" });
-        injectRoute({ pattern: "/admin/setup", entrypoint: "@kide/core/routes/pages/admin/setup.astro" });
-        injectRoute({ pattern: "/admin/invite", entrypoint: "@kide/core/routes/pages/admin/invite.astro" });
-        injectRoute({ pattern: "/admin/assets", entrypoint: "@kide/core/routes/pages/admin/assets/index.astro" });
-        injectRoute({ pattern: "/admin/assets/[id]", entrypoint: "@kide/core/routes/pages/admin/assets/[id].astro" });
-        injectRoute({ pattern: "/admin/[...path]", entrypoint: "@kide/core/routes/pages/admin/[...path].astro" });
+        injectRoute({ pattern: "/admin/login", entrypoint: "@kidecms/core/routes/pages/admin/login.astro" });
+        injectRoute({ pattern: "/admin/setup", entrypoint: "@kidecms/core/routes/pages/admin/setup.astro" });
+        injectRoute({ pattern: "/admin/invite", entrypoint: "@kidecms/core/routes/pages/admin/invite.astro" });
+        injectRoute({ pattern: "/admin/assets", entrypoint: "@kidecms/core/routes/pages/admin/assets/index.astro" });
+        injectRoute({ pattern: "/admin/assets/[id]", entrypoint: "@kidecms/core/routes/pages/admin/assets/[id].astro" });
+        injectRoute({ pattern: "/admin/[...path]", entrypoint: "@kidecms/core/routes/pages/admin/[...path].astro" });
 
         // Inject API routes
-        injectRoute({ pattern: "/api/cms/auth/login", entrypoint: "@kide/core/routes/api/cms/auth/login.ts" });
-        injectRoute({ pattern: "/api/cms/auth/logout", entrypoint: "@kide/core/routes/api/cms/auth/logout.ts" });
-        injectRoute({ pattern: "/api/cms/auth/setup", entrypoint: "@kide/core/routes/api/cms/auth/setup.ts" });
-        injectRoute({ pattern: "/api/cms/auth/invite", entrypoint: "@kide/core/routes/api/cms/auth/invite.ts" });
-        injectRoute({ pattern: "/api/cms/assets/upload", entrypoint: "@kide/core/routes/api/cms/assets/upload.ts" });
-        injectRoute({ pattern: "/api/cms/assets/folders", entrypoint: "@kide/core/routes/api/cms/assets/folders.ts" });
-        injectRoute({ pattern: "/api/cms/assets/[id]", entrypoint: "@kide/core/routes/api/cms/assets/[id].ts" });
-        injectRoute({ pattern: "/api/cms/assets", entrypoint: "@kide/core/routes/api/cms/assets/index.ts" });
-        injectRoute({ pattern: "/api/cms/ai/alt-text", entrypoint: "@kide/core/routes/api/cms/ai/alt-text.ts" });
-        injectRoute({ pattern: "/api/cms/ai/seo", entrypoint: "@kide/core/routes/api/cms/ai/seo.ts" });
-        injectRoute({ pattern: "/api/cms/ai/translate", entrypoint: "@kide/core/routes/api/cms/ai/translate.ts" });
-        injectRoute({ pattern: "/api/cms/cron/publish", entrypoint: "@kide/core/routes/api/cms/cron/publish.ts" });
+        injectRoute({ pattern: "/api/cms/auth/login", entrypoint: "@kidecms/core/routes/api/cms/auth/login.ts" });
+        injectRoute({ pattern: "/api/cms/auth/logout", entrypoint: "@kidecms/core/routes/api/cms/auth/logout.ts" });
+        injectRoute({ pattern: "/api/cms/auth/setup", entrypoint: "@kidecms/core/routes/api/cms/auth/setup.ts" });
+        injectRoute({ pattern: "/api/cms/auth/invite", entrypoint: "@kidecms/core/routes/api/cms/auth/invite.ts" });
+        injectRoute({ pattern: "/api/cms/assets/upload", entrypoint: "@kidecms/core/routes/api/cms/assets/upload.ts" });
+        injectRoute({ pattern: "/api/cms/assets/folders", entrypoint: "@kidecms/core/routes/api/cms/assets/folders.ts" });
+        injectRoute({ pattern: "/api/cms/assets/[id]", entrypoint: "@kidecms/core/routes/api/cms/assets/[id].ts" });
+        injectRoute({ pattern: "/api/cms/assets", entrypoint: "@kidecms/core/routes/api/cms/assets/index.ts" });
+        injectRoute({ pattern: "/api/cms/ai/alt-text", entrypoint: "@kidecms/core/routes/api/cms/ai/alt-text.ts" });
+        injectRoute({ pattern: "/api/cms/ai/seo", entrypoint: "@kidecms/core/routes/api/cms/ai/seo.ts" });
+        injectRoute({ pattern: "/api/cms/ai/translate", entrypoint: "@kidecms/core/routes/api/cms/ai/translate.ts" });
+        injectRoute({ pattern: "/api/cms/cron/publish", entrypoint: "@kidecms/core/routes/api/cms/cron/publish.ts" });
         injectRoute({
           pattern: "/api/cms/locks/[...path]",
-          entrypoint: "@kide/core/routes/api/cms/locks/[...path].ts",
+          entrypoint: "@kidecms/core/routes/api/cms/locks/[...path].ts",
         });
-        injectRoute({ pattern: "/api/cms/preview/render", entrypoint: "@kide/core/routes/api/cms/preview/render.ts" });
+        injectRoute({ pattern: "/api/cms/preview/render", entrypoint: "@kidecms/core/routes/api/cms/preview/render.ts" });
         injectRoute({
           pattern: "/api/cms/references/[collection]/[id]",
-          entrypoint: "@kide/core/routes/api/cms/references/[collection]/[id].ts",
+          entrypoint: "@kidecms/core/routes/api/cms/references/[collection]/[id].ts",
         });
-        injectRoute({ pattern: "/api/cms/img/[...path]", entrypoint: "@kide/core/routes/api/cms/img/[...path].ts" });
+        injectRoute({ pattern: "/api/cms/img/[...path]", entrypoint: "@kidecms/core/routes/api/cms/img/[...path].ts" });
         injectRoute({
           pattern: "/api/cms/[collection]/[...path]",
-          entrypoint: "@kide/core/routes/api/cms/[collection]/[...path].ts",
+          entrypoint: "@kidecms/core/routes/api/cms/[collection]/[...path].ts",
         });
 
         // Inject auth middleware
-        addMiddleware({ entrypoint: "@kide/core/middleware/auth.ts", order: "pre" });
+        addMiddleware({ entrypoint: "@kidecms/core/middleware/auth.ts", order: "pre" });
 
         // Generate schema, types, validators, and API
         console.log("  [cms] Generating schema, types, validators, and API...");
