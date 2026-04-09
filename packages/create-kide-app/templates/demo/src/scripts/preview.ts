@@ -20,10 +20,12 @@ if (new URLSearchParams(location.search).has("preview")) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: d.render, data: d.value }),
       })
-        .then((r) => r.text())
+        .then((r) => (r.ok ? r.text() : null))
         .then((html) => {
-          if (id === pending) els.forEach((el) => (el.innerHTML = html));
-        });
+          // Endpoint may not exist in production builds (only dev) — silently skip
+          if (html != null && id === pending) els.forEach((el) => (el.innerHTML = html));
+        })
+        .catch(() => {});
     } else if (d.html != null) {
       els.forEach((el) => (el.innerHTML = d.html));
     } else {

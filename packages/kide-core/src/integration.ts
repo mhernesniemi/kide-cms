@@ -201,7 +201,11 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           pattern: "/api/cms/locks/[...path]",
           entrypoint: "@kidecms/core/routes/api/cms/locks/[...path].ts",
         });
-        injectRoute({ pattern: "/api/cms/preview/render", entrypoint: "@kidecms/core/routes/api/cms/preview/render.ts" });
+        // Preview render route uses Astro Container API which depends on Vite internals.
+        // Only inject in dev mode — production builds (especially Cloudflare Workers) can't bundle it.
+        if (command === "dev") {
+          injectRoute({ pattern: "/api/cms/preview/render", entrypoint: "@kidecms/core/routes/api/cms/preview/render.ts" });
+        }
         injectRoute({
           pattern: "/api/cms/references/[collection]/[id]",
           entrypoint: "@kidecms/core/routes/api/cms/references/[collection]/[id].ts",
