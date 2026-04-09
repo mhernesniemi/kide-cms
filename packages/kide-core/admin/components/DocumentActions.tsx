@@ -149,11 +149,19 @@ export default function DocumentActions({
     const form = document.createElement("form");
     form.method = "post";
     form.action = restoreEndpoint;
-    form.innerHTML = `
-      <input type="hidden" name="_action" value="restore" />
-      <input type="hidden" name="version" value="${version}" />
-      <input type="hidden" name="redirectTo" value="${redirectTo ?? window.location.pathname + window.location.search}" />
-    `;
+
+    const addInput = (name: string, value: string) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    };
+
+    addInput("_action", "restore");
+    addInput("version", String(version));
+    addInput("redirectTo", redirectTo ?? window.location.pathname + window.location.search);
+
     document.body.appendChild(form);
     form.submit();
   };
