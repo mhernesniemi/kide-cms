@@ -1,13 +1,31 @@
 #!/usr/bin/env node
 
 import * as p from "@clack/prompts";
-import { execSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execSync, spawn } from "node:child_process";
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = path.join(__dirname, "templates");
+
+// Async spawn wrapper so long-running commands don't block clack spinners
+const runAsync = (cmd, cwd) =>
+  new Promise((resolve, reject) => {
+    const child = spawn(cmd, { cwd, shell: true });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d) => (stdout += d.toString()));
+    child.stderr.on("data", (d) => (stderr += d.toString()));
+    child.on("close", (code) => {
+      if (code === 0) resolve(stdout);
+      else {
+        const err = new Error(`Command failed: ${cmd}`);
+        err.stderr = stderr;
+        reject(err);
+      }
+    });
+  });
 
 // --- Package manager detection ---
 
@@ -77,6 +95,13 @@ async function main() {
 
   cpSync(path.join(TEMPLATES_DIR, "base"), projectDir, { recursive: true });
 
+  // Rename gitignore → .gitignore (npm strips dotfiles from published tarballs)
+  const gitignoreSrc = path.join(projectDir, "gitignore");
+  if (existsSync(gitignoreSrc)) {
+    cpSync(gitignoreSrc, path.join(projectDir, ".gitignore"));
+    rmSync(gitignoreSrc);
+  }
+
   // Apply demo schema and seed data if selected
   if (seedDemo) {
     cpSync(path.join(TEMPLATES_DIR, "demo"), projectDir, { recursive: true });
@@ -133,9 +158,8 @@ async function main() {
 
   if (target === "cloudflare") {
     const gitignorePath = path.join(projectDir, ".gitignore");
-    let gitignore = readFileSync(gitignorePath, "utf-8");
-    gitignore += "\n# Cloudflare\n.wrangler/\n";
-    writeFileSync(gitignorePath, gitignore);
+    const gitignore = existsSync(gitignorePath) ? readFileSync(gitignorePath, "utf-8") : "";
+    writeFileSync(gitignorePath, gitignore + "\n# Cloudflare\n.wrangler/\n");
   }
 
   s.stop("Configuration applied");
@@ -144,7 +168,7 @@ async function main() {
 
   s.start("Installing dependencies");
   try {
-    execSync(pm.install, { cwd: projectDir, stdio: "pipe" });
+    await runAsync(pm.install, projectDir);
     s.stop("Dependencies installed");
   } catch {
     s.stop(`${pm.install} failed — run it manually`);
@@ -193,7 +217,7 @@ async function main() {
 
   // --- Cloudflare resource setup ---
 
-  const cf = { d1Created: false, r2Created: false, migrationsApplied: false };
+  const cf = { d1Created: false, r2Created: false, migrationsApplied: false, deployed: false, url: null };
   if (target === "cloudflare") {
     const setupNow = await p.confirm({
       message: "Set up Cloudflare resources now? (creates D1 database and R2 bucket)",
@@ -293,11 +317,33 @@ async function main() {
             execSync(`${pm.exec} wrangler d1 migrations apply ${projectName}-db --remote`, {
               cwd: projectDir,
               stdio: "pipe",
+              input: "y\n",
             });
             cf.migrationsApplied = true;
             s.stop("Migrations applied");
           } catch {
             s.stop("Migration apply failed — run manually with: wrangler d1 migrations apply --remote");
+          }
+        }
+
+        // Deploy to Cloudflare
+        if (cf.migrationsApplied) {
+          const doDeploy = await p.confirm({
+            message: "Deploy to Cloudflare now?",
+            initialValue: true,
+          });
+          if (!p.isCancel(doDeploy) && doDeploy) {
+            s.start("Building and deploying to Cloudflare");
+            try {
+              const deployOutput = await runAsync(`${pm.run} deploy`, projectDir);
+              const urlMatch = deployOutput.match(/https:\/\/[^\s]+\.workers\.dev/);
+              if (urlMatch) cf.url = urlMatch[0];
+              cf.deployed = true;
+              s.stop("Deployed to Cloudflare");
+            } catch (err) {
+              s.stop("Deploy failed — run manually with: pnpm run deploy");
+              if (err.stderr) console.error(err.stderr.slice(-500));
+            }
           }
         }
       }
@@ -315,26 +361,34 @@ async function main() {
       console.log(`  To start again:   cd ${projectName} && pnpm dev\n`);
     }
   } else {
-    const lines = [`cd ${projectName}`];
-    const remaining = [];
-    if (!cf.d1Created) {
-      remaining.push(
-        `  ${pm.exec} wrangler d1 create ${projectName}-db`,
-        "  # Copy the database_id to wrangler.toml",
-      );
+    if (cf.deployed && cf.url) {
+      p.note([`Live at: ${cf.url}`, `Admin:   ${cf.url}/admin`, "", `cd ${projectName}`, "", "Local development:", `  ${pm.run} dev`, "", "Redeploy:", "  pnpm run deploy"].join("\n"), "🎉 Your Kide CMS is live");
+      p.outro("Project created!");
+    } else {
+      const lines = [`cd ${projectName}`];
+      const remaining = [];
+      if (!cf.d1Created) {
+        remaining.push(
+          `  ${pm.exec} wrangler d1 create ${projectName}-db`,
+          "  # Copy the database_id to wrangler.toml",
+        );
+      }
+      if (!cf.r2Created) {
+        remaining.push(`  ${pm.exec} wrangler r2 bucket create ${projectName}-assets`);
+      }
+      if (!cf.migrationsApplied) {
+        remaining.push(`  ${pm.exec} wrangler d1 migrations apply ${projectName}-db --remote`);
+      }
+      if (!cf.deployed) {
+        remaining.push(`  ${pm.run} run deploy`);
+      }
+      if (remaining.length > 0) {
+        lines.push("", "Remaining setup:", ...remaining);
+      }
+      lines.push("", "Local development:", `  ${pm.run} dev`);
+      p.note(lines.join("\n"), "Next steps");
+      p.outro("Project created!");
     }
-    if (!cf.r2Created) {
-      remaining.push(`  ${pm.exec} wrangler r2 bucket create ${projectName}-assets`);
-    }
-    if (!cf.migrationsApplied) {
-      remaining.push(`  ${pm.exec} wrangler d1 migrations apply ${projectName}-db --remote`);
-    }
-    if (remaining.length > 0) {
-      lines.push("", "Remaining setup:", ...remaining);
-    }
-    lines.push("", "Local development:", `  ${pm.run} dev`, "", "Deploy:", "  pnpm run deploy");
-    p.note(lines.join("\n"), "Next steps");
-    p.outro("Project created!");
   }
 }
 
