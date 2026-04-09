@@ -175,6 +175,96 @@ async function main() {
     s.stop(`${pm.install} failed — run it manually`);
   }
 
+  // --- Initialize git repository ---
+
+  let gitInitialized = false;
+  try {
+    execSync("git init -q && git add . && git commit -q -m 'Initial commit from create-kide-app'", {
+      cwd: projectDir,
+      stdio: "pipe",
+    });
+    gitInitialized = true;
+  } catch {
+    // git not available — silently skip
+  }
+
+  // --- Optional: create GitHub repository ---
+
+  if (gitInitialized) {
+    let ghAvailable = false;
+    try {
+      execSync("gh --version", { stdio: "pipe" });
+      execSync("gh auth status", { stdio: "pipe" });
+      ghAvailable = true;
+    } catch {
+      // gh not installed or not authenticated — skip the prompt
+    }
+
+    if (ghAvailable) {
+      const createRepo = await p.confirm({
+        message: "Create a GitHub repository for this project?",
+        initialValue: false,
+      });
+      if (!p.isCancel(createRepo) && createRepo) {
+        // Get the GitHub username so we can check repo availability
+        let ghUser = "";
+        try {
+          ghUser = execSync("gh api user --jq .login", { stdio: "pipe" }).toString().trim();
+        } catch {}
+
+        // Prompt for repo name, validate it doesn't already exist
+        let repoName = null;
+        while (true) {
+          const input = await p.text({
+            message: "Repository name",
+            initialValue: projectName,
+            validate: (value) => {
+              if (!value) return "Repository name is required";
+              if (!/^[a-zA-Z0-9._-]+$/.test(value)) return "Only letters, numbers, dots, hyphens, and underscores";
+            },
+          });
+          if (p.isCancel(input)) break;
+
+          // Check if repo already exists under the user's account
+          if (ghUser) {
+            try {
+              execSync(`gh repo view ${ghUser}/${input}`, { stdio: "pipe" });
+              p.note(`A repository named "${input}" already exists. Pick a different name.`, "Name taken");
+              continue;
+            } catch {
+              // Repo doesn't exist — name is free
+            }
+          }
+          repoName = input;
+          break;
+        }
+
+        if (repoName) {
+          const visibility = await p.select({
+            message: "Repository visibility",
+            options: [
+              { label: "Private", value: "--private" },
+              { label: "Public", value: "--public" },
+            ],
+          });
+          if (!p.isCancel(visibility)) {
+            s.start("Creating GitHub repository");
+            try {
+              execSync(`gh repo create ${repoName} ${visibility} --source=. --push`, {
+                cwd: projectDir,
+                stdio: "pipe",
+              });
+              s.stop("GitHub repository created and pushed");
+            } catch (err) {
+              s.stop("GitHub repository creation failed");
+              if (err.stderr) console.error(err.stderr.toString().slice(-500));
+            }
+          }
+        }
+      }
+    }
+  }
+
   // --- Generate schema ---
 
   s.start("Generating CMS schema");

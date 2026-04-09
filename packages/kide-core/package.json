@@ -1,6 +1,6 @@
 {
   "name": "@kidecms/core",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Code-first CMS framework built for Astro.",
   "author": "Matti Hernesniemi",
   "license": "MIT",
