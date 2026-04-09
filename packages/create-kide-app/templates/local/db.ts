@@ -20,6 +20,8 @@ export const getDb = async () => {
   if (dbInstance) return dbInstance;
 
   clientInstance = createClient({ url: getDbUrl() });
+  await clientInstance.execute("PRAGMA journal_mode = WAL");
+  await clientInstance.execute("PRAGMA foreign_keys = ON");
   dbInstance = drizzle(clientInstance);
 
   // Auto-run pending migrations on first connection (production only — dev uses drizzle-kit push)
