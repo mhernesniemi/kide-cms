@@ -44,6 +44,7 @@ type Props = {
   showUnpublish?: boolean;
   showDiscardDraft?: boolean;
   showDelete?: boolean;
+  showDuplicate?: boolean;
   showSchedule?: boolean;
   showCancelSchedule?: boolean;
   currentPublishAt?: string;
@@ -60,6 +61,7 @@ export default function DocumentActions({
   showUnpublish,
   showDiscardDraft,
   showDelete,
+  showDuplicate,
   showSchedule,
   showCancelSchedule,
   currentPublishAt,
@@ -74,9 +76,25 @@ export default function DocumentActions({
   const [publishAt, setPublishAt] = useState(currentPublishAt ? toLocalDatetime(currentPublishAt) : "");
   const [unpublishAt, setUnpublishAt] = useState(currentUnpublishAt ? toLocalDatetime(currentUnpublishAt) : "");
 
+  const canDuplicate = !!(showDuplicate && collectionSlug && documentId);
   const hasActions =
-    showUnpublish || showDiscardDraft || showDelete || showSchedule || showCancelSchedule || versions.length > 0;
+    canDuplicate || showUnpublish || showDiscardDraft || showDelete || showSchedule || showCancelSchedule || versions.length > 0;
   if (!hasActions) return null;
+
+  const duplicate = async () => {
+    if (!collectionSlug || !documentId) return;
+    try {
+      const res = await fetch(`/api/cms/${collectionSlug}/${documentId}/duplicate`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) throw new Error("Duplicate failed");
+      const created = await res.json();
+      window.location.assign(`/admin/${collectionSlug}/${created._id}?_toast=success&_msg=Document+duplicated`);
+    } catch {
+      window.location.assign(`${window.location.pathname}?_toast=error&_msg=Failed+to+duplicate`);
+    }
+  };
 
   const submitAction = (action: string) => {
     const form = document.getElementById(formId) as HTMLFormElement | null;
@@ -152,6 +170,7 @@ export default function DocumentActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
+          {canDuplicate && <DropdownMenuItem onClick={duplicate}>Duplicate</DropdownMenuItem>}
           {showSchedule && <DropdownMenuItem onClick={() => setScheduleOpen(true)}>Schedule publish</DropdownMenuItem>}
           {showCancelSchedule && (
             <DropdownMenuItem onClick={() => submitAction("unpublish")}>Cancel schedule</DropdownMenuItem>

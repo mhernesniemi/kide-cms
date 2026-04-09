@@ -75,6 +75,7 @@ type ServerPaginationConfig = {
 type DocumentsDataTableProps = {
   collectionSlug: string;
   draftsEnabled?: boolean;
+  duplicateEnabled?: boolean;
   defaultLocale?: string;
   labelField?: string;
   newHref?: string;
@@ -129,6 +130,7 @@ function DataTableColumnHeader({ column, title }: { column: Column<DataTableRow,
 export default function DocumentsDataTable({
   collectionSlug,
   draftsEnabled = false,
+  duplicateEnabled = true,
   defaultLocale,
   labelField = "title",
   newHref,
@@ -321,7 +323,7 @@ export default function DocumentsDataTable({
   );
 
   const runAction = React.useCallback(
-    async (action: "publish" | "unpublish" | "delete", rows: DataTableRow[]) => {
+    async (action: "publish" | "unpublish" | "delete" | "duplicate", rows: DataTableRow[]) => {
       if (!rows.length) {
         return;
       }
@@ -329,6 +331,20 @@ export default function DocumentsDataTable({
       setActionError(null);
 
       try {
+        // Duplicate action: create a copy and redirect to its edit page
+        if (action === "duplicate") {
+          const row = rows[0];
+          const rowCollection = row.editHref.split("/")[2] ?? collectionSlug;
+          const response = await fetch(`/api/cms/${rowCollection}/${row.id}/duplicate`, {
+            method: "POST",
+            headers: { Accept: "application/json" },
+          });
+          if (!response.ok) throw new Error("Failed to duplicate document.");
+          const created = await response.json();
+          window.location.assign(`/admin/${rowCollection}/${created._id}?_toast=success&_msg=Document+duplicated`);
+          return;
+        }
+
         await Promise.all(
           rows.map(async (row) => {
             // Extract collection slug from editHref (/admin/{slug}/{id})
@@ -486,6 +502,18 @@ export default function DocumentsDataTable({
                 <DropdownMenuItem onClick={() => window.location.assign(row.original.editHref)}>
                   Edit document
                 </DropdownMenuItem>
+                {duplicateEnabled && (
+                  <DropdownMenuItem
+                    disabled={isPending}
+                    onClick={() =>
+                      startTransition(() => {
+                        void runAction("duplicate", [row.original]);
+                      })
+                    }
+                  >
+                    Duplicate
+                  </DropdownMenuItem>
+                )}
                 {draftsEnabled && (
                   <>
                     <DropdownMenuItem
@@ -524,7 +552,7 @@ export default function DocumentsDataTable({
         ),
       },
     ],
-    [columns, draftsEnabled, isPending, primaryColumnKey, isServerMode, runAction],
+    [columns, draftsEnabled, duplicateEnabled, isPending, primaryColumnKey, isServerMode, runAction],
   );
 
   const table = useReactTable({

@@ -277,6 +277,54 @@ export const POST: APIRoute = async ({ params, request, locals, cache }) => {
     return Response.json(await collectionApi.schedule(documentId, body.publishAt, body.unpublishAt ?? null, ctx));
   }
 
+  if (pathAction === "duplicate" && documentId) {
+    const original = await collectionApi.findById(documentId, { status: "any" }, ctx);
+    if (!original) {
+      return Response.json({ error: "Not found." }, { status: 404 });
+    }
+    const collection = getCollection(collectionSlug);
+
+    // Strip system fields and unique values that would conflict
+    const stripFields = (source: Record<string, any>) => {
+      const out: Record<string, any> = {};
+      for (const [key, value] of Object.entries(source)) {
+        if (key.startsWith("_")) continue;
+        const fieldDef = collection.fields[key];
+        if (!fieldDef) continue;
+        if ("unique" in fieldDef && fieldDef.unique) continue;
+        if (fieldDef.type === "slug") continue;
+        out[key] = value;
+      }
+      return out;
+    };
+
+    const data = stripFields(original);
+    if (typeof data.title === "string") data.title = `Copy of ${data.title}`;
+    else if (typeof data.name === "string") data.name = `Copy of ${data.name}`;
+
+    const created = await collectionApi.create(data, ctx);
+
+    // Copy translations if the collection supports them
+    if (collectionApi.getTranslations && collectionApi.upsertTranslation) {
+      try {
+        const translations = await collectionApi.getTranslations(documentId);
+        if (translations && typeof translations === "object") {
+          for (const [locale, translationData] of Object.entries(translations)) {
+            if (!translationData || typeof translationData !== "object") continue;
+            const translatedData = stripFields(translationData as Record<string, any>);
+            if (typeof translatedData.title === "string") translatedData.title = `Copy of ${translatedData.title}`;
+            else if (typeof translatedData.name === "string") translatedData.name = `Copy of ${translatedData.name}`;
+            await collectionApi.upsertTranslation(created._id, locale, translatedData, ctx);
+          }
+        }
+      } catch {
+        // Translations are optional — ignore errors
+      }
+    }
+
+    return Response.json(created, { status: 201 });
+  }
+
   const body = await request.json();
   const created = await collectionApi.create(body, ctx);
   return Response.json(created, { status: 201 });
