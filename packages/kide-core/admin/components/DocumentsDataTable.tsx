@@ -58,6 +58,7 @@ type DataTableRow = {
   id: string;
   editHref: string;
   status?: string;
+  singleton?: boolean;
   locales: string[];
   searchText: string;
   values: Record<string, string>;
@@ -502,7 +503,7 @@ export default function DocumentsDataTable({
                 <DropdownMenuItem onClick={() => window.location.assign(row.original.editHref)}>
                   Edit document
                 </DropdownMenuItem>
-                {duplicateEnabled && (
+                {duplicateEnabled && !row.original.singleton && (
                   <DropdownMenuItem
                     disabled={isPending}
                     onClick={() =>

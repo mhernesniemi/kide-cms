@@ -93,6 +93,7 @@ let recentRows: Array<{
   id: string;
   editHref: string;
   status: string;
+  singleton?: boolean;
   locales: string[];
   searchText: string;
   values: Record<string, string>;
@@ -125,6 +126,7 @@ if (route.kind === "recent") {
       id: String(doc._id),
       editHref: `/admin/${cc.slug}/${doc._id}`,
       status: getVisualStatus(doc),
+      singleton: cc.singleton,
       locales: [
         defaultLocale,
         ...(Array.isArray(doc._availableLocales)
