@@ -29,7 +29,7 @@ const runAsync = (cmd, cwd) =>
 
 // --- Package manager detection ---
 
-const pm = { name: "pnpm", exec: "pnpm dlx", run: "pnpm", install: "pnpm install" };
+const pm = { name: "pnpm", exec: "pnpm exec", dlx: "pnpm dlx", run: "pnpm", install: "pnpm install" };
 
 // --- Main ---
 
@@ -206,9 +206,9 @@ async function main() {
       [
         "Seeding for Cloudflare requires a D1 database.",
         "",
-        `  ${pm.exec} wrangler d1 create ${projectName}-db`,
+        `  ${pm.dlx} wrangler d1 create ${projectName}-db`,
         "  # Add the database_id to wrangler.toml",
-        `  ${pm.exec} wrangler d1 migrations apply ${projectName}-db --local`,
+        `  ${pm.dlx} wrangler d1 migrations apply ${projectName}-db --local`,
         `  ${pm.run} cms:seed`,
       ].join("\n"),
       "Seed manually",
@@ -371,15 +371,15 @@ async function main() {
       const remaining = [];
       if (!cf.d1Created) {
         remaining.push(
-          `  ${pm.exec} wrangler d1 create ${projectName}-db`,
+          `  ${pm.dlx} wrangler d1 create ${projectName}-db`,
           "  # Copy the database_id to wrangler.toml",
         );
       }
       if (!cf.r2Created) {
-        remaining.push(`  ${pm.exec} wrangler r2 bucket create ${projectName}-assets`);
+        remaining.push(`  ${pm.dlx} wrangler r2 bucket create ${projectName}-assets`);
       }
       if (!cf.migrationsApplied) {
-        remaining.push(`  ${pm.exec} wrangler d1 migrations apply ${projectName}-db --remote`);
+        remaining.push(`  ${pm.dlx} wrangler d1 migrations apply ${projectName}-db --remote`);
       }
       if (!cf.deployed) {
         remaining.push(`  ${pm.run} run deploy`);
