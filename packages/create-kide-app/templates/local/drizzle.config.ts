@@ -4,7 +4,8 @@ export default defineConfig({
   schema: "./src/cms/.generated/schema.ts",
   out: "./src/cms/migrations",
   dialect: "sqlite",
+  driver: "libsql",
   dbCredentials: {
-    url: process.env.CMS_DATABASE_URL ?? "./data/cms.db",
+    url: process.env.CMS_DATABASE_URL ?? "file:./data/cms.db",
   },
 });

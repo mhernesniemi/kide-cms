@@ -113,13 +113,8 @@ async function main() {
   if (target === "cloudflare") {
     delete pkg.dependencies["@astrojs/node"];
     pkg.dependencies["@astrojs/cloudflare"] = "^13.0.0";
-
-    // Move better-sqlite3 to devDependencies — drizzle-kit needs it to push schema to local D1
-    if (pkg.dependencies["better-sqlite3"]) {
-      if (!pkg.devDependencies) pkg.devDependencies = {};
-      pkg.devDependencies["better-sqlite3"] = pkg.dependencies["better-sqlite3"];
-      delete pkg.dependencies["better-sqlite3"];
-    }
+    // libsql is for local target only; Cloudflare uses D1 directly
+    delete pkg.dependencies["@libsql/client"];
     delete pkg.dependencies["sharp"];
 
     let wranglerContent = readFileSync(path.join(targetDir, "wrangler.toml"), "utf-8");
