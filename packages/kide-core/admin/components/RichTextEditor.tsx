@@ -180,7 +180,7 @@ const ToolbarButton = ({
     disabled={disabled}
     title={title}
     className={cn(
-      "focus-visible:ring-ring/50 focus-visible:border-ring inline-flex size-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2 disabled:opacity-50",
+      "focus-visible:ring-ring/50 focus-visible:border-ring inline-flex size-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2 disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-muted-foreground",
       active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
     )}
   >
