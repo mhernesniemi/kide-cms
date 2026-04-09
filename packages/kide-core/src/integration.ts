@@ -88,7 +88,24 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         const corePkgDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
         const adminDir = path.join(corePkgDir, "admin");
         const routesDir = path.join(corePkgDir, "routes");
-        const twAnimateCssPath = path.join(corePkgDir, "node_modules", "tw-animate-css", "dist", "tw-animate.css");
+        // Find tw-animate-css — pnpm may hoist it anywhere in the dep tree
+        const findTwAnimate = () => {
+          const candidates = [
+            path.join(corePkgDir, "node_modules", "tw-animate-css", "dist", "tw-animate.css"),
+            path.join(root, "node_modules", "tw-animate-css", "dist", "tw-animate.css"),
+          ];
+          // Walk up from corePkgDir
+          let dir = corePkgDir;
+          while (dir !== path.dirname(dir)) {
+            candidates.push(path.join(dir, "node_modules", "tw-animate-css", "dist", "tw-animate.css"));
+            dir = path.dirname(dir);
+          }
+          for (const candidate of candidates) {
+            if (existsSync(candidate)) return candidate;
+          }
+          return candidates[0];
+        };
+        const twAnimateCssPath = findTwAnimate();
         const userAdminCss = path.resolve(root, "src/styles/admin.css");
         const generatedDir = path.join(root, "node_modules", ".kide");
         mkdirSync(generatedDir, { recursive: true });
