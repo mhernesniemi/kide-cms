@@ -196,6 +196,119 @@ async function main() {
     );
   }
 
+  // --- Cloudflare resource setup ---
+
+  const cf = { d1Created: false, r2Created: false, migrationsApplied: false };
+  if (target === "cloudflare") {
+    const setupNow = await p.confirm({
+      message: "Set up Cloudflare resources now? (creates D1 database and R2 bucket)",
+      initialValue: true,
+    });
+
+    if (!p.isCancel(setupNow) && setupNow) {
+      // Check wrangler authentication
+      let authenticated = false;
+      try {
+        execSync(`${pm.exec} wrangler whoami`, { cwd: projectDir, stdio: "pipe" });
+        authenticated = true;
+      } catch {
+        p.note("You need to log in to Cloudflare first.", "Wrangler login required");
+        const doLogin = await p.confirm({ message: "Open browser to log in?", initialValue: true });
+        if (!p.isCancel(doLogin) && doLogin) {
+          try {
+            execSync(`${pm.exec} wrangler login`, { cwd: projectDir, stdio: "inherit" });
+            authenticated = true;
+          } catch {
+            s.stop("Login failed");
+          }
+        }
+      }
+
+      if (authenticated) {
+        // Create D1 database
+        let databaseId = null;
+        s.start("Creating D1 database");
+        try {
+          const output = execSync(`${pm.exec} wrangler d1 create ${projectName}-db`, {
+            cwd: projectDir,
+            stdio: "pipe",
+          }).toString();
+          // Parse database_id from output (looks for UUID-like string)
+          const match = output.match(/database_id\s*=\s*"([^"]+)"/);
+          if (match) databaseId = match[1];
+          cf.d1Created = true;
+          s.stop("D1 database created");
+        } catch (err) {
+          // Already exists — look it up
+          try {
+            const listOutput = execSync(`${pm.exec} wrangler d1 list`, { cwd: projectDir, stdio: "pipe" }).toString();
+            const lines = listOutput.split("\n");
+            const dbLine = lines.find((l) => l.includes(`${projectName}-db`));
+            if (dbLine) {
+              const idMatch = dbLine.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/);
+              if (idMatch) databaseId = idMatch[0];
+            }
+            if (databaseId) {
+              cf.d1Created = true;
+              s.stop("D1 database already exists — using existing");
+            } else {
+              s.stop("D1 setup failed");
+              if (err.stderr) console.error(err.stderr.toString());
+            }
+          } catch {
+            s.stop("D1 setup failed");
+          }
+        }
+
+        // Update wrangler.toml with database_id
+        if (databaseId) {
+          const wranglerPath = path.join(projectDir, "wrangler.toml");
+          let wranglerContent = readFileSync(wranglerPath, "utf-8");
+          wranglerContent = wranglerContent.replace(
+            /database_id = "" #[^\n]*/,
+            `database_id = "${databaseId}"`,
+          );
+          writeFileSync(wranglerPath, wranglerContent);
+        }
+
+        // Create R2 bucket
+        s.start("Creating R2 bucket");
+        try {
+          execSync(`${pm.exec} wrangler r2 bucket create ${projectName}-assets`, { cwd: projectDir, stdio: "pipe" });
+          cf.r2Created = true;
+          s.stop("R2 bucket created");
+        } catch {
+          // Already exists is fine — assume it's there
+          cf.r2Created = true;
+          s.stop("R2 bucket already exists");
+        }
+
+        // Generate migrations and apply to remote D1
+        if (databaseId) {
+          s.start("Generating database migrations");
+          try {
+            execSync(`${pm.exec} drizzle-kit generate`, { cwd: projectDir, stdio: "pipe" });
+            s.stop("Migrations generated");
+          } catch {
+            s.stop("Migration generation failed");
+          }
+
+          s.start("Applying migrations to remote D1");
+          try {
+            execSync(`${pm.exec} wrangler d1 migrations apply ${projectName}-db --remote`, {
+              cwd: projectDir,
+              stdio: "pipe",
+            });
+            cf.migrationsApplied = true;
+            s.stop("Migrations applied");
+          } catch {
+            s.stop("Migration apply failed — run manually with: wrangler d1 migrations apply --remote");
+          }
+        }
+      }
+    }
+  }
+
   // --- Done ---
 
   if (target === "local") {
@@ -207,26 +320,25 @@ async function main() {
       console.log(`  To start again:   cd ${projectName} && pnpm dev\n`);
     }
   } else {
-    p.note(
-      [
-        `cd ${projectName}`,
-        "",
-        "Set up Cloudflare resources:",
+    const lines = [`cd ${projectName}`];
+    const remaining = [];
+    if (!cf.d1Created) {
+      remaining.push(
         `  ${pm.exec} wrangler d1 create ${projectName}-db`,
         "  # Copy the database_id to wrangler.toml",
-        `  ${pm.exec} wrangler r2 bucket create ${projectName}-assets`,
-        "",
-        "Push database schema:",
-        `  ${pm.exec} wrangler d1 migrations apply ${projectName}-db --remote`,
-        "",
-        "Local development:",
-        `  ${pm.run} dev`,
-        "",
-        "Deploy:",
-        "  pnpm run deploy",
-      ].join("\n"),
-      "Next steps",
-    );
+      );
+    }
+    if (!cf.r2Created) {
+      remaining.push(`  ${pm.exec} wrangler r2 bucket create ${projectName}-assets`);
+    }
+    if (!cf.migrationsApplied) {
+      remaining.push(`  ${pm.exec} wrangler d1 migrations apply ${projectName}-db --remote`);
+    }
+    if (remaining.length > 0) {
+      lines.push("", "Remaining setup:", ...remaining);
+    }
+    lines.push("", "Local development:", `  ${pm.run} dev`, "", "Deploy:", "  pnpm run deploy");
+    p.note(lines.join("\n"), "Next steps");
     p.outro("Project created!");
   }
 }
