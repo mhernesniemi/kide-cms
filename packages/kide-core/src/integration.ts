@@ -173,6 +173,43 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
                 "virtual:kide/custom-fields": customFieldsBarrel,
               },
             },
+            // Pre-bundle admin component deps. Without this, Vite's dep scanner skips
+            // the admin/ source (it lives in node_modules), so packages like @tiptap/react
+            // are served raw — and their CJS sub-deps (use-sync-external-store/shim) break
+            // browser ESM imports. Use "@kidecms/core > X" syntax so Vite resolves the
+            // packages through @kidecms/core's nested node_modules under pnpm.
+            optimizeDeps: {
+              include: [
+                "@kidecms/core > @tiptap/react",
+                "@kidecms/core > @tiptap/starter-kit",
+                "@kidecms/core > @tiptap/extension-image",
+                "@kidecms/core > @tiptap/extension-link",
+                "@kidecms/core > @tiptap/markdown",
+                "@kidecms/core > @tiptap/core",
+                "@kidecms/core > @dnd-kit/core",
+                "@kidecms/core > @dnd-kit/sortable",
+                "@kidecms/core > @dnd-kit/utilities",
+                "@kidecms/core > @radix-ui/react-dropdown-menu",
+                "@kidecms/core > @radix-ui/react-popover",
+                "@kidecms/core > @base-ui/react/alert-dialog",
+                "@kidecms/core > @base-ui/react/button",
+                "@kidecms/core > @base-ui/react/checkbox",
+                "@kidecms/core > @base-ui/react/collapsible",
+                "@kidecms/core > @base-ui/react/dialog",
+                "@kidecms/core > @base-ui/react/input",
+                "@kidecms/core > @base-ui/react/merge-props",
+                "@kidecms/core > @base-ui/react/select",
+                "@kidecms/core > @base-ui/react/separator",
+                "@kidecms/core > @base-ui/react/tooltip",
+                "@kidecms/core > @base-ui/react/use-render",
+                "@kidecms/core > @tanstack/react-table",
+                "@kidecms/core > class-variance-authority",
+                "@kidecms/core > clsx",
+                "@kidecms/core > cmdk",
+                "@kidecms/core > lucide-react",
+                "@kidecms/core > tailwind-merge",
+              ],
+            },
           },
         });
 

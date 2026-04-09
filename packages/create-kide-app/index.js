@@ -279,9 +279,17 @@ async function main() {
 
   if (seedDemo && target === "local") {
     s.start("Pushing schema to database");
+    // Ensure data/ directory exists — drizzle-kit push silently exits 0 if it can't open the file
+    mkdirSync(path.join(projectDir, "data"), { recursive: true });
+    let pushOk = false;
     try {
-      execSync(`${pm.exec} drizzle-kit push --force`, { cwd: projectDir, stdio: "pipe" });
-      s.stop("Schema pushed");
+      const out = execSync(`${pm.exec} drizzle-kit push --force`, {
+        cwd: projectDir,
+        stdio: "pipe",
+      }).toString();
+      // drizzle-kit exits 0 even on connection errors, so verify by checking output
+      pushOk = !out.includes("Error:") && out.includes("Changes applied");
+      s.stop(pushOk ? "Schema pushed" : "Schema push failed — run `pnpm exec drizzle-kit push` manually");
     } catch {
       s.stop("Schema will be set up on first dev start");
     }
@@ -291,8 +299,8 @@ async function main() {
       s.stop("Demo content seeded");
     } catch (err) {
       s.stop("Seeding failed — run `pnpm cms:seed` manually");
-      if (err.stderr) console.error(err.stderr.toString().slice(-1500));
-      if (err.stdout) console.error(err.stdout.toString().slice(-1500));
+      if (err.stderr) console.error(err.stderr.toString());
+      if (err.stdout) console.error(err.stdout.toString());
     }
   } else if (seedDemo && target === "cloudflare") {
     p.note(
