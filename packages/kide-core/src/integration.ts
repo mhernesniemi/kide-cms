@@ -151,7 +151,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
                 "virtual:kide/runtime": path.resolve(root, runtimePath),
                 "virtual:kide/db": path.resolve(root, adaptersPath, "db"),
                 "virtual:kide/email": path.resolve(root, adaptersPath, "email"),
-                "virtual:kide/blocks": path.resolve(root, "src/cms/blocks"),
+                "virtual:kide/block-renderer": path.resolve(root, "src/components/BlockRenderer.astro"),
                 "virtual:kide/admin-css": wrapperCss,
                 "virtual:kide/custom-fields": customFieldsBarrel,
               },

@@ -1,6 +1,4 @@
 ---
-import { renderBlock } from "@/cms/blocks";
-
 const { blocks = [] } = Astro.props as { blocks?: Array<Record<string, unknown>> };
 
 // Discover custom block components from src/components/blocks/
@@ -22,12 +20,13 @@ for (const [path, mod] of Object.entries(customComponents)) {
       const type = String(block.type ?? "");
       const Component = componentMap[type];
 
-      if (Component) {
-        return <Component {...block} />;
+      if (!Component) {
+        throw new Error(
+          `No block component found for type "${type}". Add src/components/blocks/${type.charAt(0).toUpperCase() + type.slice(1)}.astro`,
+        );
       }
 
-      // Fall back to generic renderer
-      return <Fragment set:html={renderBlock(block)} />;
+      return <Component {...block} />;
     })
   }
 </div>

@@ -46,9 +46,9 @@ declare module "virtual:kide/runtime" {
   } from "@kide/core";
 }
 
-declare module "virtual:kide/blocks" {
-  export function renderBlock(block: Record<string, any>): string;
-  export function renderBlocks(blocks: Array<Record<string, any>>): string;
+declare module "virtual:kide/block-renderer" {
+  const BlockRenderer: any;
+  export default BlockRenderer;
 }
 
 declare module "virtual:kide/db" {
