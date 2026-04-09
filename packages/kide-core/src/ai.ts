@@ -1,6 +1,6 @@
-import { streamText } from "ai";
-
 import { getStorage, readEnv } from "./runtime";
+
+const getStreamText = async () => (await import("ai")).streamText;
 
 export function isAiEnabled(): boolean {
   return !!(readEnv("AI_PROVIDER") && readEnv("AI_API_KEY"));
@@ -26,6 +26,7 @@ export async function streamAltText(imageUrl: string, filename: string) {
     throw new Error(`Image not found: ${imageUrl}`);
   }
 
+  const streamText = await getStreamText();
   return streamText({
     model,
     messages: [
@@ -54,6 +55,7 @@ Title: ${content.title}
 ${content.excerpt ? `Excerpt: ${content.excerpt}` : ""}
 ${content.body ? `Body preview: ${content.body.substring(0, 500)}` : ""}`;
 
+  const streamText = await getStreamText();
   return streamText({ model, prompt });
 }
 
@@ -80,5 +82,6 @@ ${content.text}`;
 ${content.text}`;
   }
 
+  const streamText = await getStreamText();
   return streamText({ model, prompt });
 }
