@@ -308,8 +308,10 @@ async function main() {
           try {
             execSync(`${pm.exec} drizzle-kit generate`, { cwd: projectDir, stdio: "pipe" });
             s.stop("Migrations generated");
-          } catch {
+          } catch (err) {
             s.stop("Migration generation failed");
+            if (err.stderr) console.error(err.stderr.toString().slice(-800));
+            if (err.stdout) console.error(err.stdout.toString().slice(-800));
           }
 
           s.start("Applying migrations to remote D1");
