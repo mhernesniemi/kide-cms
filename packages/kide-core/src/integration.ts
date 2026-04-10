@@ -81,7 +81,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
   return {
     name: "kide-cms",
     hooks: {
-      "astro:config:setup": ({ command, updateConfig, injectRoute, addMiddleware }) => {
+      "astro:config:setup": ({ command, updateConfig, injectRoute, injectScript, addMiddleware }) => {
         const root = process.cwd();
 
         // Generate a wrapper CSS that adds @source directives and imports user's admin CSS
@@ -218,7 +218,10 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         injectRoute({ pattern: "/admin/setup", entrypoint: "@kidecms/core/routes/pages/admin/setup.astro" });
         injectRoute({ pattern: "/admin/invite", entrypoint: "@kidecms/core/routes/pages/admin/invite.astro" });
         injectRoute({ pattern: "/admin/assets", entrypoint: "@kidecms/core/routes/pages/admin/assets/index.astro" });
-        injectRoute({ pattern: "/admin/assets/[id]", entrypoint: "@kidecms/core/routes/pages/admin/assets/[id].astro" });
+        injectRoute({
+          pattern: "/admin/assets/[id]",
+          entrypoint: "@kidecms/core/routes/pages/admin/assets/[id].astro",
+        });
         injectRoute({ pattern: "/admin/[...path]", entrypoint: "@kidecms/core/routes/pages/admin/[...path].astro" });
 
         // Inject API routes
@@ -227,7 +230,10 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         injectRoute({ pattern: "/api/cms/auth/setup", entrypoint: "@kidecms/core/routes/api/cms/auth/setup.ts" });
         injectRoute({ pattern: "/api/cms/auth/invite", entrypoint: "@kidecms/core/routes/api/cms/auth/invite.ts" });
         injectRoute({ pattern: "/api/cms/assets/upload", entrypoint: "@kidecms/core/routes/api/cms/assets/upload.ts" });
-        injectRoute({ pattern: "/api/cms/assets/folders", entrypoint: "@kidecms/core/routes/api/cms/assets/folders.ts" });
+        injectRoute({
+          pattern: "/api/cms/assets/folders",
+          entrypoint: "@kidecms/core/routes/api/cms/assets/folders.ts",
+        });
         injectRoute({ pattern: "/api/cms/assets/[id]", entrypoint: "@kidecms/core/routes/api/cms/assets/[id].ts" });
         injectRoute({ pattern: "/api/cms/assets", entrypoint: "@kidecms/core/routes/api/cms/assets/index.ts" });
         injectRoute({ pattern: "/api/cms/ai/alt-text", entrypoint: "@kidecms/core/routes/api/cms/ai/alt-text.ts" });
@@ -241,7 +247,10 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         // Preview render route uses Astro Container API which depends on Vite internals.
         // Only inject in dev mode — production builds (especially Cloudflare Workers) can't bundle it.
         if (command === "dev") {
-          injectRoute({ pattern: "/api/cms/preview/render", entrypoint: "@kidecms/core/routes/api/cms/preview/render.ts" });
+          injectRoute({
+            pattern: "/api/cms/preview/render",
+            entrypoint: "@kidecms/core/routes/api/cms/preview/render.ts",
+          });
         }
         injectRoute({
           pattern: "/api/cms/references/[collection]/[id]",
@@ -255,6 +264,10 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
 
         // Inject auth middleware
         addMiddleware({ entrypoint: "@kidecms/core/middleware/auth.ts", order: "pre" });
+
+        // Inject live-preview client script (no-op unless ?preview is in the URL)
+        const previewClient = path.join(corePkgDir, "client", "preview.ts");
+        injectScript("page", `import ${JSON.stringify(previewClient)};`);
 
         // Generate schema, types, validators, and API
         console.log("  [cms] Generating schema, types, validators, and API...");

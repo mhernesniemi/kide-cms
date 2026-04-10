@@ -137,14 +137,7 @@ color: fields.text({
 import type { CustomFieldProps } from "@kidecms/core";
 
 export default function ColorPicker({ name, value, readOnly }: CustomFieldProps) {
-  return (
-    <input
-      type="color"
-      name={name}
-      defaultValue={value || "#000000"}
-      disabled={readOnly}
-    />
-  );
+  return <input type="color" name={name} defaultValue={value || "#000000"} disabled={readOnly} />;
 }
 ```
 
@@ -169,12 +162,12 @@ export default defineConfig({
 });
 ```
 
-| Option   | Type     | Description                                      |
-| -------- | -------- | ------------------------------------------------ |
-| `label`  | `string` | Display text in the sidebar                      |
-| `href`   | `string` | Link URL                                         |
-| `icon`   | `string` | Lucide icon name (optional, defaults to grid)    |
-| `weight` | `number` | Sort order (optional, default `50`)              |
+| Option   | Type     | Description                                   |
+| -------- | -------- | --------------------------------------------- |
+| `label`  | `string` | Display text in the sidebar                   |
+| `href`   | `string` | Link URL                                      |
+| `icon`   | `string` | Lucide icon name (optional, defaults to grid) |
+| `weight` | `number` | Sort order (optional, default `50`)           |
 
 Items are sorted by weight and interleaved with built-in items:
 
@@ -227,24 +220,24 @@ export default defineConfig({
 
 ### Uploads
 
-| Option         | Type       | Default                                                    | Description              |
-| -------------- | ---------- | ---------------------------------------------------------- | ------------------------ |
-| `allowedTypes` | `string[]` | Images, PDF, MP4, WebM                                     | Allowed MIME types       |
-| `maxFileSize`  | `number`   | `52428800` (50 MB)                                         | Max file size in bytes   |
+| Option         | Type       | Default                | Description            |
+| -------------- | ---------- | ---------------------- | ---------------------- |
+| `allowedTypes` | `string[]` | Images, PDF, MP4, WebM | Allowed MIME types     |
+| `maxFileSize`  | `number`   | `52428800` (50 MB)     | Max file size in bytes |
 
 Default allowed types: `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `image/avif`, `image/svg+xml`, `application/pdf`, `video/mp4`, `video/webm`.
 
 ### Rate Limiting
 
-| Option        | Type     | Default    | Description                          |
-| ------------- | -------- | ---------- | ------------------------------------ |
-| `maxAttempts` | `number` | `5`        | Login attempts before blocking       |
-| `windowMs`    | `number` | `900000`   | Time window in ms (default 15 min)   |
+| Option        | Type     | Default  | Description                        |
+| ------------- | -------- | -------- | ---------------------------------- |
+| `maxAttempts` | `number` | `5`      | Login attempts before blocking     |
+| `windowMs`    | `number` | `900000` | Time window in ms (default 15 min) |
 
 ### Page Size
 
-| Option     | Type     | Default | Description                        |
-| ---------- | -------- | ------- | ---------------------------------- |
-| `pageSize` | `number` | `20`    | Number of items per page in lists  |
+| Option     | Type     | Default | Description                       |
+| ---------- | -------- | ------- | --------------------------------- |
+| `pageSize` | `number` | `20`    | Number of items per page in lists |
 
 All settings are optional — defaults apply when omitted.

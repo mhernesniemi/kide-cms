@@ -384,10 +384,7 @@ async function main() {
         if (databaseId) {
           const wranglerPath = path.join(projectDir, "wrangler.toml");
           let wranglerContent = readFileSync(wranglerPath, "utf-8");
-          wranglerContent = wranglerContent.replace(
-            /database_id = "" #[^\n]*/,
-            `database_id = "${databaseId}"`,
-          );
+          wranglerContent = wranglerContent.replace(/database_id = "" #[^\n]*/, `database_id = "${databaseId}"`);
           writeFileSync(wranglerPath, wranglerContent);
         }
 
@@ -466,16 +463,27 @@ async function main() {
     }
   } else {
     if (cf.deployed && cf.url) {
-      p.note([`Live at: ${cf.url}`, `Admin:   ${cf.url}/admin`, "", `cd ${projectName}`, "", "Local development:", `  ${pm.run} dev`, "", "Redeploy:", "  pnpm run deploy"].join("\n"), "🎉 Your Kide CMS is live");
+      p.note(
+        [
+          `Live at: ${cf.url}`,
+          `Admin:   ${cf.url}/admin`,
+          "",
+          `cd ${projectName}`,
+          "",
+          "Local development:",
+          `  ${pm.run} dev`,
+          "",
+          "Redeploy:",
+          "  pnpm run deploy",
+        ].join("\n"),
+        "🎉 Your Kide CMS is live",
+      );
       p.outro("Project created!");
     } else {
       const lines = [`cd ${projectName}`];
       const remaining = [];
       if (!cf.d1Created) {
-        remaining.push(
-          `  ${pm.dlx} wrangler d1 create ${projectName}-db`,
-          "  # Copy the database_id to wrangler.toml",
-        );
+        remaining.push(`  ${pm.dlx} wrangler d1 create ${projectName}-db`, "  # Copy the database_id to wrangler.toml");
       }
       if (!cf.r2Created) {
         remaining.push(`  ${pm.dlx} wrangler r2 bucket create ${projectName}-assets`);

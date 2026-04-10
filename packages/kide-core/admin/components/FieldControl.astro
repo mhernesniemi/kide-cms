@@ -68,7 +68,7 @@ const isTreeEditor =
 const builtInComponents = new Set(["radio", "taxonomy-select", "menu-items", "taxonomy-terms"]);
 const CustomComponent =
   field.admin?.component && !builtInComponents.has(field.admin.component)
-    ? customFields[field.admin.component] ?? null
+    ? (customFields[field.admin.component] ?? null)
     : null;
 
 // Build serializable block types metadata for BlockEditor
@@ -122,276 +122,239 @@ const blockTypesMeta =
 
   {
     CustomComponent && (
-      <CustomComponent
-        client:load
-        name={name}
-        field={field}
-        value={serializedValue}
-        readOnly={readOnly}
-      />
-    )
-  }
-
-  {!CustomComponent && (
-  <Fragment>
-
-  {
-    field.type === "image" && !readOnly && (
-      <ImagePicker client:load name={name} value={serializedValue} placeholder={placeholder} />
+      <CustomComponent client:load name={name} field={field} value={serializedValue} readOnly={readOnly} />
     )
   }
 
   {
-    field.type === "image" && readOnly && (
-      <Input
-        className={controlClass}
-        type="text"
-        id={name}
-        name={name}
-        defaultValue={serializedValue}
-        placeholder={placeholder}
-        readOnly={readOnly}
-      />
-    )
-  }
+    !CustomComponent && (
+      <Fragment>
+        {field.type === "image" && !readOnly && (
+          <ImagePicker client:load name={name} value={serializedValue} placeholder={placeholder} />
+        )}
 
-  {
-    field.type === "text" && field.admin?.component === "taxonomy-select" && !readOnly && (
-      <TaxonomySelect client:load name={name} value={serializedValue} taxonomySlug={field.admin?.placeholder ?? ""} />
-    )
-  }
+        {field.type === "image" && readOnly && (
+          <Input
+            className={controlClass}
+            type="text"
+            id={name}
+            name={name}
+            defaultValue={serializedValue}
+            placeholder={placeholder}
+            readOnly={readOnly}
+          />
+        )}
 
-  {
-    (field.type === "text" || field.type === "email" || field.type === "date") &&
-      field.admin?.component !== "taxonomy-select" &&
-      (field.type === "text" && field.admin?.rows ? (
-        <Textarea
-          className={controlClass}
-          id={name}
-          name={name}
-          rows={field.admin.rows}
-          defaultValue={serializedValue}
-          placeholder={placeholder}
-          readOnly={readOnly}
-          required={field.required}
-        />
-      ) : (
-        <Input
-          className={controlClass}
-          type={field.type === "email" ? "email" : field.type === "date" ? "date" : "text"}
-          id={name}
-          name={name}
-          defaultValue={serializedValue}
-          placeholder={placeholder}
-          readOnly={readOnly}
-          required={field.required}
-        />
-      ))
-  }
+        {field.type === "text" && field.admin?.component === "taxonomy-select" && !readOnly && (
+          <TaxonomySelect
+            client:load
+            name={name}
+            value={serializedValue}
+            taxonomySlug={field.admin?.placeholder ?? ""}
+          />
+        )}
 
-  {
-    field.type === "slug" && (
-      <SlugField
-        client:load
-        name={name}
-        value={serializedValue}
-        from={field.from}
-        readOnly={readOnly}
-        required={field.required}
-        placeholder={placeholder || "auto-generated-slug"}
-        className={controlClass}
-      />
-    )
-  }
-
-  {
-    field.type === "number" && (
-      <Input
-        className={controlClass}
-        type="number"
-        id={name}
-        name={name}
-        defaultValue={serializedValue}
-        inputMode={inputMode}
-        readOnly={readOnly}
-        required={field.required}
-      />
-    )
-  }
-
-  {field.type === "boolean" && <CheckboxField client:load name={name} checked={Boolean(value)} disabled={readOnly} />}
-
-  {
-    field.type === "select" && field.admin?.component !== "radio" && (
-      <SelectField
-        client:load
-        name={name}
-        value={String(value ?? "")}
-        placeholder="Select an option"
-        disabled={readOnly}
-        items={field.options.map((option) => ({ value: option, label: option }))}
-      />
-    )
-  }
-
-  {
-    field.type === "select" && field.admin?.component === "radio" && (
-      <div class="flex flex-wrap gap-x-5 gap-y-2 has-disabled:opacity-50">
-        {field.options.map((option) => (
-          <label class="hover:text-foreground flex items-center gap-2 text-sm transition-colors has-disabled:cursor-not-allowed has-disabled:hover:text-current">
-            <input
-              class="border-input hover:border-primary/60 checked:border-primary checked:hover:border-primary focus-visible:ring-ring/50 disabled:hover:border-input size-4 shrink-0 appearance-none rounded-full border transition-all checked:border-[5px] focus-visible:ring-3 focus-visible:outline-none disabled:cursor-not-allowed"
-              type="radio"
+        {(field.type === "text" || field.type === "email" || field.type === "date") &&
+          field.admin?.component !== "taxonomy-select" &&
+          (field.type === "text" && field.admin?.rows ? (
+            <Textarea
+              className={controlClass}
+              id={name}
               name={name}
-              value={option}
-              checked={String(value ?? "") === option}
-              disabled={readOnly}
+              rows={field.admin.rows}
+              defaultValue={serializedValue}
+              placeholder={placeholder}
+              readOnly={readOnly}
+              required={field.required}
             />
-            <span class="select-none">{option}</span>
-          </label>
-        ))}
-      </div>
+          ) : (
+            <Input
+              className={controlClass}
+              type={field.type === "email" ? "email" : field.type === "date" ? "date" : "text"}
+              id={name}
+              name={name}
+              defaultValue={serializedValue}
+              placeholder={placeholder}
+              readOnly={readOnly}
+              required={field.required}
+            />
+          ))}
+
+        {field.type === "slug" && (
+          <SlugField
+            client:load
+            name={name}
+            value={serializedValue}
+            from={field.from}
+            readOnly={readOnly}
+            required={field.required}
+            placeholder={placeholder || "auto-generated-slug"}
+            className={controlClass}
+          />
+        )}
+
+        {field.type === "number" && (
+          <Input
+            className={controlClass}
+            type="number"
+            id={name}
+            name={name}
+            defaultValue={serializedValue}
+            inputMode={inputMode}
+            readOnly={readOnly}
+            required={field.required}
+          />
+        )}
+
+        {field.type === "boolean" && (
+          <CheckboxField client:load name={name} checked={Boolean(value)} disabled={readOnly} />
+        )}
+
+        {field.type === "select" && field.admin?.component !== "radio" && (
+          <SelectField
+            client:load
+            name={name}
+            value={String(value ?? "")}
+            placeholder="Select an option"
+            disabled={readOnly}
+            items={field.options.map((option) => ({ value: option, label: option }))}
+          />
+        )}
+
+        {field.type === "select" && field.admin?.component === "radio" && (
+          <div class="flex flex-wrap gap-x-5 gap-y-2 has-disabled:opacity-50">
+            {field.options.map((option) => (
+              <label class="hover:text-foreground flex items-center gap-2 text-sm transition-colors has-disabled:cursor-not-allowed has-disabled:hover:text-current">
+                <input
+                  class="border-input hover:border-primary/60 checked:border-primary checked:hover:border-primary focus-visible:ring-ring/50 disabled:hover:border-input size-4 shrink-0 appearance-none rounded-full border transition-all checked:border-[5px] focus-visible:ring-3 focus-visible:outline-none disabled:cursor-not-allowed"
+                  type="radio"
+                  name={name}
+                  value={option}
+                  checked={String(value ?? "") === option}
+                  disabled={readOnly}
+                />
+                <span class="select-none">{option}</span>
+              </label>
+            ))}
+          </div>
+        )}
+
+        {field.type === "relation" && !readOnly && relationMeta && (
+          <RelationField
+            client:load
+            name={name}
+            value={Array.isArray(value) ? JSON.stringify(value) : String(value ?? "")}
+            hasMany={relationMeta.hasMany}
+            options={relationOptions}
+            collectionSlug={relationMeta.collectionSlug}
+            collectionLabel={relationMeta.collectionLabel}
+            labelField={relationMeta.labelField}
+          />
+        )}
+
+        {field.type === "relation" && (readOnly || !relationMeta) && (
+          <SelectField
+            client:load
+            name={name}
+            value={String(value ?? "")}
+            placeholder="Select a document"
+            disabled={readOnly}
+            items={relationOptions}
+          />
+        )}
+
+        {field.type === "richText" && !readOnly && (
+          <RichTextEditor client:load name={name} initialValue={value ? JSON.stringify(value) : ""} rows={rows} />
+        )}
+
+        {field.type === "richText" && readOnly && (
+          <Textarea
+            className={controlClass}
+            id={name}
+            name={name}
+            rows={rows}
+            readOnly={readOnly}
+            defaultValue={serializedValue}
+          />
+        )}
+
+        {field.type === "json" && field.admin?.component === "menu-items" && !readOnly && (
+          <TreeItemsEditor
+            client:load
+            name={name}
+            value={serializedValue}
+            variant="menu"
+            label={label}
+            linkOptions={menuLinkOptions}
+          />
+        )}
+
+        {field.type === "json" && field.admin?.component === "taxonomy-terms" && !readOnly && (
+          <TreeItemsEditor client:load name={name} value={serializedValue} variant="taxonomy" label={label} />
+        )}
+
+        {field.type === "json" &&
+          (field.admin?.component === "menu-items" || field.admin?.component === "taxonomy-terms") &&
+          readOnly && (
+            <Textarea
+              className={controlClass}
+              id={name}
+              name={name}
+              rows={rows}
+              readOnly={readOnly}
+              defaultValue={serializedValue}
+            />
+          )}
+
+        {field.type === "blocks" && !readOnly && (
+          <BlockEditor
+            client:load
+            name={name}
+            value={serializedValue}
+            types={blockTypesMeta}
+            blockRelationOptions={blockRelationOptions}
+          />
+        )}
+
+        {field.type === "blocks" && readOnly && (
+          <Textarea
+            className={controlClass}
+            id={name}
+            name={name}
+            rows={rows}
+            readOnly={readOnly}
+            defaultValue={serializedValue}
+          />
+        )}
+
+        {field.type === "array" && "of" in field && field.of?.type === "text" && (
+          <Input
+            className={controlClass}
+            id={name}
+            name={name}
+            placeholder={placeholder || "item1, item2, item3"}
+            readOnly={readOnly}
+            required={field.required}
+            defaultValue={serializedValue}
+          />
+        )}
+
+        {((field.type === "array" && !("of" in field && field.of?.type === "text")) ||
+          (field.type === "json" &&
+            field.admin?.component !== "menu-items" &&
+            field.admin?.component !== "taxonomy-terms")) && (
+          <Textarea
+            className={controlClass}
+            id={name}
+            name={name}
+            rows={rows}
+            placeholder={placeholder}
+            readOnly={readOnly}
+            required={field.required}
+            defaultValue={serializedValue}
+          />
+        )}
+      </Fragment>
     )
   }
-
-  {
-    field.type === "relation" && !readOnly && relationMeta && (
-      <RelationField
-        client:load
-        name={name}
-        value={Array.isArray(value) ? JSON.stringify(value) : String(value ?? "")}
-        hasMany={relationMeta.hasMany}
-        options={relationOptions}
-        collectionSlug={relationMeta.collectionSlug}
-        collectionLabel={relationMeta.collectionLabel}
-        labelField={relationMeta.labelField}
-      />
-    )
-  }
-
-  {
-    field.type === "relation" && (readOnly || !relationMeta) && (
-      <SelectField
-        client:load
-        name={name}
-        value={String(value ?? "")}
-        placeholder="Select a document"
-        disabled={readOnly}
-        items={relationOptions}
-      />
-    )
-  }
-
-  {
-    field.type === "richText" && !readOnly && (
-      <RichTextEditor client:load name={name} initialValue={value ? JSON.stringify(value) : ""} rows={rows} />
-    )
-  }
-
-  {
-    field.type === "richText" && readOnly && (
-      <Textarea
-        className={controlClass}
-        id={name}
-        name={name}
-        rows={rows}
-        readOnly={readOnly}
-        defaultValue={serializedValue}
-      />
-    )
-  }
-
-  {
-    field.type === "json" && field.admin?.component === "menu-items" && !readOnly && (
-      <TreeItemsEditor
-        client:load
-        name={name}
-        value={serializedValue}
-        variant="menu"
-        label={label}
-        linkOptions={menuLinkOptions}
-      />
-    )
-  }
-
-  {
-    field.type === "json" && field.admin?.component === "taxonomy-terms" && !readOnly && (
-      <TreeItemsEditor client:load name={name} value={serializedValue} variant="taxonomy" label={label} />
-    )
-  }
-
-  {
-    field.type === "json" &&
-      (field.admin?.component === "menu-items" || field.admin?.component === "taxonomy-terms") &&
-      readOnly && (
-        <Textarea
-          className={controlClass}
-          id={name}
-          name={name}
-          rows={rows}
-          readOnly={readOnly}
-          defaultValue={serializedValue}
-        />
-      )
-  }
-
-  {
-    field.type === "blocks" && !readOnly && (
-      <BlockEditor
-        client:load
-        name={name}
-        value={serializedValue}
-        types={blockTypesMeta}
-        blockRelationOptions={blockRelationOptions}
-      />
-    )
-  }
-
-  {
-    field.type === "blocks" && readOnly && (
-      <Textarea
-        className={controlClass}
-        id={name}
-        name={name}
-        rows={rows}
-        readOnly={readOnly}
-        defaultValue={serializedValue}
-      />
-    )
-  }
-
-  {
-    field.type === "array" && "of" in field && field.of?.type === "text" && (
-      <Input
-        className={controlClass}
-        id={name}
-        name={name}
-        placeholder={placeholder || "item1, item2, item3"}
-        readOnly={readOnly}
-        required={field.required}
-        defaultValue={serializedValue}
-      />
-    )
-  }
-
-  {
-    ((field.type === "array" && !("of" in field && field.of?.type === "text")) ||
-      (field.type === "json" &&
-        field.admin?.component !== "menu-items" &&
-        field.admin?.component !== "taxonomy-terms")) && (
-      <Textarea
-        className={controlClass}
-        id={name}
-        name={name}
-        rows={rows}
-        placeholder={placeholder}
-        readOnly={readOnly}
-        required={field.required}
-        defaultValue={serializedValue}
-      />
-    )
-  }
-
-  </Fragment>
-  )}
 </div>

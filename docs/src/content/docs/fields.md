@@ -25,21 +25,21 @@ description: All available field types.
 
 All fields accept these options:
 
-| Option              | Type               | Description                                     |
-| ------------------- | ------------------ | ----------------------------------------------- |
-| `required`          | `boolean`          | Validate as non-empty on save                   |
-| `label`             | `string`           | Custom label (defaults to humanized field name) |
-| `description`       | `string`           | Text shown below the label                      |
-| `defaultValue`      | varies             | Initial value for new documents                 |
-| `translatable`      | `boolean`          | Store per-locale in translations table          |
-| `indexed`           | `boolean`          | Add database index                              |
-| `unique`            | `boolean`          | Enforce unique values                           |
-| `condition`         | `{ field, value }` | Show/hide based on another field                |
-| `admin.placeholder` | `string`           | Input placeholder text                          |
-| `admin.rows`        | `number`           | Textarea height (text fields)                   |
-| `admin.help`        | `string`           | Help text below the input                       |
-| `admin.position`    | `"sidebar"`        | Place field in sidebar instead of content area  |
-| `admin.hidden`      | `boolean`          | Hide from admin UI                              |
+| Option              | Type               | Description                                                                 |
+| ------------------- | ------------------ | --------------------------------------------------------------------------- |
+| `required`          | `boolean`          | Validate as non-empty on save                                               |
+| `label`             | `string`           | Custom label (defaults to humanized field name)                             |
+| `description`       | `string`           | Text shown below the label                                                  |
+| `defaultValue`      | varies             | Initial value for new documents                                             |
+| `translatable`      | `boolean`          | Store per-locale in translations table                                      |
+| `indexed`           | `boolean`          | Add database index                                                          |
+| `unique`            | `boolean`          | Enforce unique values                                                       |
+| `condition`         | `{ field, value }` | Show/hide based on another field                                            |
+| `admin.placeholder` | `string`           | Input placeholder text                                                      |
+| `admin.rows`        | `number`           | Textarea height (text fields)                                               |
+| `admin.help`        | `string`           | Help text below the input                                                   |
+| `admin.position`    | `"sidebar"`        | Place field in sidebar instead of content area                              |
+| `admin.hidden`      | `boolean`          | Hide from admin UI                                                          |
 | `admin.component`   | `string`           | Custom admin component (see [Admin UI](/admin-ui/#custom-field-components)) |
 
 ## Blocks

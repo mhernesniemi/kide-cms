@@ -20,6 +20,7 @@ docs/                        # Documentation (Starlight)
 The `create-kide-app` templates define what users get. `examples/basic/` should be reproducible by running `create-kide-app` with demo content selected. If you change app-level code (adapters, runtime, collections, public pages, styles), change it in the templates — not just in `examples/basic/`.
 
 Files that belong in templates:
+
 - `templates/base/` — adapters, runtime, generator, create-admin, admin.css, public.css, minimal config
 - `templates/demo/` — full collections, seed data, blocks renderer, public pages, components, layouts
 
@@ -51,14 +52,14 @@ After code changes, ALWAYS run:
 
 ## Key Files
 
-| File | Purpose |
-| --- | --- |
-| `packages/kide-core/src/` | Core TypeScript runtime (compiled by tsc) |
-| `packages/kide-core/admin/` | Admin UI components, layouts, styles (raw source) |
-| `packages/kide-core/routes/` | Admin pages + API routes (injected via integration) |
-| `packages/kide-core/middleware/` | Auth middleware (injected via integration) |
+| File                                    | Purpose                                              |
+| --------------------------------------- | ---------------------------------------------------- |
+| `packages/kide-core/src/`               | Core TypeScript runtime (compiled by tsc)            |
+| `packages/kide-core/admin/`             | Admin UI components, layouts, styles (raw source)    |
+| `packages/kide-core/routes/`            | Admin pages + API routes (injected via integration)  |
+| `packages/kide-core/middleware/`        | Auth middleware (injected via integration)           |
 | `packages/kide-core/src/integration.ts` | Astro integration (route injection, virtual modules) |
-| `packages/create-kide-app/templates/` | App templates — source of truth for user-facing code |
+| `packages/create-kide-app/templates/`   | App templates — source of truth for user-facing code |
 
 ## Rules
 

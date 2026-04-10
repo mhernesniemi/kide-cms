@@ -47,7 +47,12 @@ const assetData = folderAssets.map((a) => ({
 }));
 ---
 
-<AdminLayout title="Assets | Kide CMS" collections={accessibleCollections} activeCollection="assets" customNav={config.admin?.nav}>
+<AdminLayout
+  title="Assets | Kide CMS"
+  collections={accessibleCollections}
+  activeCollection="assets"
+  customNav={config.admin?.nav}
+>
   <AssetsGrid
     client:load
     folders={folderData}

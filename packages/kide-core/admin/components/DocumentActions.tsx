@@ -78,7 +78,13 @@ export default function DocumentActions({
 
   const canDuplicate = !!(showDuplicate && collectionSlug && documentId);
   const hasActions =
-    canDuplicate || showUnpublish || showDiscardDraft || showDelete || showSchedule || showCancelSchedule || versions.length > 0;
+    canDuplicate ||
+    showUnpublish ||
+    showDiscardDraft ||
+    showDelete ||
+    showSchedule ||
+    showCancelSchedule ||
+    versions.length > 0;
   if (!hasActions) return null;
 
   const duplicate = async () => {

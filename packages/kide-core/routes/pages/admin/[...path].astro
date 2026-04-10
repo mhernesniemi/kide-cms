@@ -232,7 +232,10 @@ if (collection && collectionSlug && canAccessCurrent) {
     return Astro.redirect(`/admin/${collectionSlug}/${(await collectionApi.create({}, runtimeContext))._id}`);
   }
 
-  for (const [fieldName, field] of Object.entries(collection.fields) as [string, import("@kidecms/core").FieldConfig][]) {
+  for (const [fieldName, field] of Object.entries(collection.fields) as [
+    string,
+    import("@kidecms/core").FieldConfig,
+  ][]) {
     if (field.type === "relation" && canRead(field.collection)) {
       const relatedDocs = await cmsRuntime[field.collection].find(
         {

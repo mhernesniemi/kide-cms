@@ -6,7 +6,10 @@ const RETRY_DELAYS = [1000, 3000, 9000];
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function deliverOnce(webhook: WebhookConfig, body: string): Promise<{ ok: boolean; status?: number; error?: string }> {
+async function deliverOnce(
+  webhook: WebhookConfig,
+  body: string,
+): Promise<{ ok: boolean; status?: number; error?: string }> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -70,7 +73,9 @@ export async function dispatchWebhooks(
 
   // Fire all matching webhooks in parallel — don't block the operation
   for (const webhook of matching) {
-    const payload = webhook.payload ? webhook.payload(doc, context) : { event, collection: collectionSlug, doc, user, timestamp: context.timestamp };
+    const payload = webhook.payload
+      ? webhook.payload(doc, context)
+      : { event, collection: collectionSlug, doc, user, timestamp: context.timestamp };
     const body = JSON.stringify(payload);
     // Fire and forget — failures are logged but don't bubble up
     deliverWebhook(webhook, body).catch((err) => {

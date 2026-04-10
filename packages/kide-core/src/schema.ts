@@ -20,7 +20,9 @@ export const resetSchema = () => {
 
 export const getSchema = (): SchemaModule => {
   if (!schema) {
-    throw new Error("@kidecms/core schema not initialized. Call initSchema(...) from your app before using runtime APIs.");
+    throw new Error(
+      "@kidecms/core schema not initialized. Call initSchema(...) from your app before using runtime APIs.",
+    );
   }
 
   return schema;

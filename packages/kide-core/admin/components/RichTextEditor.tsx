@@ -180,7 +180,7 @@ const ToolbarButton = ({
     disabled={disabled}
     title={title}
     className={cn(
-      "focus-visible:ring-ring/50 focus-visible:border-ring inline-flex size-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2 disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-muted-foreground",
+      "focus-visible:ring-ring/50 focus-visible:border-ring disabled:hover:text-muted-foreground inline-flex size-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2 disabled:opacity-50 disabled:hover:bg-transparent",
       active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
     )}
   >
@@ -623,7 +623,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
           disabled={!editor}
           title={markdownMode ? "Switch to editor" : "Switch to Markdown"}
         >
-          <span className="text-xs font-semibold leading-none">MD</span>
+          <span className="text-xs leading-none font-semibold">MD</span>
         </ToolbarButton>
       </div>
 
