@@ -6,7 +6,7 @@ export function isAiEnabled(): boolean {
   return !!(readEnv("AI_PROVIDER") && readEnv("AI_API_KEY"));
 }
 
-export async function getAiModel() {
+export async function getAiModel(): Promise<any> {
   const provider = readEnv("AI_PROVIDER") || "openai";
   const modelName = readEnv("AI_MODEL") || "gpt-4o-mini";
 
@@ -19,7 +19,7 @@ export async function getAiModel() {
   throw new Error(`Unsupported AI provider: ${provider}`);
 }
 
-export async function streamAltText(imageUrl: string, filename: string) {
+export async function streamAltText(imageUrl: string, filename: string): Promise<any> {
   const model = await getAiModel();
   const image = await getStorage().getFile(imageUrl);
   if (!image) {
@@ -47,7 +47,7 @@ export async function streamAltText(imageUrl: string, filename: string) {
   });
 }
 
-export async function streamSeoDescription(content: { title: string; excerpt?: string; body?: string }) {
+export async function streamSeoDescription(content: { title: string; excerpt?: string; body?: string }): Promise<any> {
   const model = await getAiModel();
   const prompt = `Generate an SEO-optimized meta description (max 155 characters) for a page with the following content. Return only the description, no quotes or extra formatting.
 
@@ -65,7 +65,7 @@ export async function streamTranslation(content: {
   targetLocale: string;
   fieldName: string;
   fieldType: "text" | "richText" | "slug";
-}) {
+}): Promise<any> {
   const model = await getAiModel();
 
   let prompt: string;
