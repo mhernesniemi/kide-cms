@@ -13,7 +13,6 @@ src/cms/.generated/          # Auto-generated — never edit
 src/components/              # Astro/React components
 src/layouts/                 # Page layouts
 src/pages/                   # Routes
-src/styles/admin.css         # Admin theme overrides (shadcn variables)
 src/styles/public.css        # Public site styles (plain Tailwind)
 ```
 
@@ -32,8 +31,6 @@ pnpm cms:seed         # seed database with demo content (if configured)
 - Always query content through the typed local API: `cms.posts.find()`, `cms.pages.findOne()`, etc. Never bypass it with raw DB queries.
 - DB columns use `snake_case`, TypeScript fields use `camelCase`. System fields are prefixed with `_`.
 - Rich text is stored as JSON AST, never HTML or Markdown.
-- Admin styles use shadcn CSS variables. Public site uses plain Tailwind colors — no shared styles between admin and public.
-- Use the `cn()` utility from `@kidecms/core/admin/lib/utils` for conditional class names in admin components.
 - `labelField` on collections controls display name in the admin (fallback: title, name, or first text field).
 
 ## Stack
