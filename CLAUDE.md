@@ -80,4 +80,57 @@ Astro 6, React 19, Drizzle ORM (SQLite dev), Zod, Tiptap, shadcn/ui, Tailwind CS
 
 ## Field Types
 
-`text`, `slug`, `email`, `number`, `boolean`, `date`, `select`, `richText`, `image`, `relation`, `array`, `json`, `blocks`
+All fields share base options: `label`, `description`, `required`, `defaultValue`, `indexed`, `unique`, `translatable`, `condition`, `admin`, `access`.
+
+| Field      | Type-specific options                                                           |
+| ---------- | ------------------------------------------------------------------------------- |
+| `text`     | `maxLength?: number`                                                            |
+| `slug`     | `from?: string` — field to auto-generate slug from                              |
+| `email`    | _(base only)_                                                                   |
+| `number`   | _(base only)_                                                                   |
+| `boolean`  | _(base only)_                                                                   |
+| `date`     | _(base only)_                                                                   |
+| `select`   | `options: string[]` **(required)**                                              |
+| `richText` | _(base only)_ — stored as JSON AST `{ type: "root", children: RichTextNode[] }` |
+| `image`    | _(base only)_ — stores asset reference                                          |
+| `relation` | `collection: string` **(required)**, `hasMany?: boolean`                        |
+| `array`    | `of: FieldConfig` **(required)** — field config for each item                   |
+| `json`     | `schema?: string`                                                               |
+| `blocks`   | `types: Record<string, Record<string, FieldConfig>>` **(required)**             |
+
+`admin` sub-options: `component`, `placeholder`, `position` (`"content"` \| `"sidebar"`), `rows`, `help`, `hidden`.
+
+`condition`: `{ field: string; value: string | string[] | boolean }` — show/hide field based on another field's value.
+
+`access`: `{ read?, update? }` — functions receiving `{ user, doc, operation, collection }`, return `boolean`.
+
+## Virtual Modules
+
+Routes in `packages/kide-core/routes/` import app-specific code via `virtual:kide/*` aliases (resolved by the integration). Never import user files by path from core routes — use these modules.
+
+| Module                        | Resolves to                          | Exports                                            |
+| ----------------------------- | ------------------------------------ | -------------------------------------------------- |
+| `virtual:kide/config`         | `src/cms/cms.config`                 | Default `CmsConfig`                                |
+| `virtual:kide/api`            | `src/cms/.generated/api`             | `{ cms }` — typed local API                        |
+| `virtual:kide/schema`         | `src/cms/.generated/schema`          | `{ cmsTables }` — Drizzle table map                |
+| `virtual:kide/runtime`        | `src/cms/internals/runtime`          | Session, auth, assets, AI, locks, `createCms`      |
+| `virtual:kide/db`             | `src/cms/adapters/db`                | `{ getDb }` — Drizzle instance                     |
+| `virtual:kide/email`          | `src/cms/adapters/email`             | `{ sendInviteEmail, isEmailConfigured }`           |
+| `virtual:kide/block-renderer` | `src/components/BlockRenderer.astro` | Default Astro component                            |
+| `virtual:kide/admin-css`      | Generated `.kide/admin.css`          | Side-effect import (styles)                        |
+| `virtual:kide/custom-fields`  | Generated `.kide/custom-fields.ts`   | `{ customFields }` — custom admin field components |
+
+## Live Preview Protocol
+
+BroadcastChannel `"cms-preview"` connects admin form → preview tab. The client script (`packages/kide-core/client/preview.ts`) is auto-injected by the integration on every page; activates only when `?preview` is in the URL.
+
+**Message shapes (admin → preview):**
+
+| Sender                         | Shape                                  | Preview behavior                                      |
+| ------------------------------ | -------------------------------------- | ----------------------------------------------------- |
+| `UnsavedGuard` (form inputs)   | `{ field, value }`                     | Sets `textContent` on `[data-cms="{field}"]` elements |
+| `RichTextEditor`               | `{ field, value, render: "richText" }` | POSTs to `/api/cms/preview/render`, sets `innerHTML`  |
+| `BlockEditor`                  | `{ field, value, render: "blocks" }`   | POSTs to `/api/cms/preview/render`, sets `innerHTML`  |
+| `[...path].astro` (after save) | `{ type: "reload" }`                   | `location.reload()`                                   |
+
+Public pages opt into preview by adding `data-cms="{fieldName}"` attributes to elements. The render endpoint is dev-only (uses Astro Container API).
