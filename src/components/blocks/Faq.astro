@@ -1,0 +1,22 @@
+---
+import { parseList } from "@/cms/core";
+
+const { heading, items: rawItems } = Astro.props;
+const items = parseList<{ title?: string; description?: string }>(rawItems);
+---
+
+<section>
+  {heading && <h2 class="mb-4 text-xl font-semibold">{heading}</h2>}
+  {
+    items.length > 0 && (
+      <div class="grid gap-3">
+        {items.map((item) => (
+          <div class="rounded-lg border border-gray-200 bg-gray-50 px-5 py-4">
+            {item.title && <p class="mb-1 font-semibold">{item.title}</p>}
+            {item.description && <p class="m-0 text-gray-500">{item.description}</p>}
+          </div>
+        ))}
+      </div>
+    )
+  }
+</section>

@@ -1,0 +1,51 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import BlockRenderer from "@/components/BlockRenderer.astro";
+import type { PostsDocument } from "@/cms/.generated/types";
+import { cms } from "@/cms/.generated/api";
+import { parseBlocks } from "@/cms/core";
+
+const isPreview = Astro.url.searchParams.has("preview");
+const page = await cms["front-page"].findOne({ status: isPreview ? "any" : "published" });
+const blocks = parseBlocks(page?.blocks);
+
+// Resolve hero ctaHref relation (page ID → slug URL)
+for (const block of blocks) {
+  if (block.type === "hero" && block.ctaHref) {
+    const linked = await cms.pages.findOne({ where: { _id: String(block.ctaHref) } });
+    if (linked) block.ctaHref = `/${linked.slug}`;
+  }
+}
+
+const posts = await cms.posts.find({
+  status: "published",
+  sort: { field: "sortOrder", direction: "desc" },
+  limit: 10,
+});
+
+if (!isPreview) Astro.cache.set({ tags: ["front-page", "posts", "home"] });
+---
+
+<PublicLayout title="Kide CMS">
+  <div class="mx-auto flex max-w-4xl gap-8 px-4 py-8">
+    <main class="min-w-0 flex-1">
+      {blocks.length > 0 ? <BlockRenderer blocks={blocks} /> : <p class="text-gray-500">No content yet.</p>}
+    </main>
+
+    <aside class="hidden w-64 shrink-0 lg:block">
+      <h2 class="mb-3 text-sm font-semibold text-gray-900">Recent posts</h2>
+      <ul class="space-y-2">
+        {
+          posts.map((post: PostsDocument) => (
+            <li>
+              <a href={`/blog/${post.slug}`} class="text-sm text-teal-700 hover:underline">
+                {post.title}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+      {posts.length === 0 && <p class="text-sm text-gray-500">No published posts yet.</p>}
+    </aside>
+  </div>
+</PublicLayout>

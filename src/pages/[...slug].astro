@@ -1,0 +1,31 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import BlockRenderer from "@/components/BlockRenderer.astro";
+import { cms } from "@/cms/.generated/api";
+import { cacheTags, parseBlocks } from "@/cms/core";
+
+const isPreview = Astro.url.searchParams.has("preview");
+const doc = await cms.pages.findOne({ slug: Astro.params.slug!, status: isPreview ? "any" : "published" });
+if (!doc) return Astro.redirect("/");
+
+if (!isPreview) Astro.cache.set({ tags: cacheTags("pages", doc._id) });
+
+const blocks = parseBlocks(doc.blocks);
+---
+
+<PublicLayout title={doc.title}>
+  <article class="mx-auto max-w-2xl px-4 py-8">
+    <a href="/" class="text-sm text-teal-700">&larr; Back</a>
+    <h1 data-cms="title" class="mt-4 mb-2 text-2xl font-semibold">{doc.title}</h1>
+    {
+      doc.summary && (
+        <p data-cms="summary" class="mb-6 text-gray-500">
+          {doc.summary}
+        </p>
+      )
+    }
+    <div data-cms="blocks">
+      <BlockRenderer blocks={blocks} />
+    </div>
+  </article>
+</PublicLayout>

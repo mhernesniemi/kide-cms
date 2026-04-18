@@ -1,8 +1,0 @@
-node_modules/
-dist/
-.astro/
-data/
-src/cms/.generated/
-public/uploads/
-.cms-cache/
-.env

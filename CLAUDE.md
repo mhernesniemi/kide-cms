@@ -1,46 +1,41 @@
 # Kide CMS
 
-Code-first, single-schema CMS built inside Astro 6. Monorepo with core package and scaffolding tool.
+Code-first, single-schema CMS built inside Astro 6. Runtime, admin UI, routes, and middleware all live inside `src/cms/`. No external package boundary — own your code.
 
 ## Repo Structure
 
 ```
-packages/kide-core/         # Core runtime, admin UI, routes, integration (@kidecms/core)
-packages/create-kide-app/   # CLI scaffolding tool + app templates
-  templates/base/            # Minimal starter (users collection only)
-  templates/demo/            # Demo overlay (full schema, seed data, public pages)
-  templates/local/           # Node.js/SQLite adapter overrides
-  templates/cloudflare/      # D1/R2 adapter overrides
-examples/basic/              # Working example app (output of create-kide-app with demo)
-docs/                        # Documentation (Starlight)
+src/
+  cms/
+    cms.config.ts         # CMS configuration (collections, admin, locales)
+    collections/          # Collection definitions
+    adapters/             # db, email, storage adapters
+    internals/            # Thin runner scripts (runtime, generator, seed, create-admin)
+    migrations/           # Drizzle migrations
+    .generated/           # Auto-generated schema/types/validators/api (do not edit)
+    integration.ts        # Astro integration (route injection, virtual modules)
+    virtual.d.ts          # Ambient types for virtual:kide/* modules
+    core/                 # CMS runtime library (define, api, auth, schema, content, ...)
+    admin/                # Admin UI (components, layouts, lib)
+    routes/               # Admin pages + API routes (injected by integration)
+    middleware/           # Auth middleware (injected by integration)
+    client/               # preview.ts — browser-side live-preview client
+  components/             # App-level components (incl. BlockRenderer)
+  layouts/, pages/, styles/, env.d.ts
+docs/                     # Standalone Starlight docs site (own package.json)
 ```
-
-## Templates are the source of truth
-
-The `create-kide-app` templates define what users get. `examples/basic/` should be reproducible by running `create-kide-app` with demo content selected. If you change app-level code (adapters, runtime, collections, public pages, styles), change it in the templates — not just in `examples/basic/`.
-
-Files that belong in templates:
-
-- `templates/base/` — adapters, runtime, generator, create-admin, admin.css, public.css, minimal config
-- `templates/demo/` — full collections, seed data, blocks renderer, public pages, components, layouts
-
-`examples/basic/` exists for development convenience (running `pnpm dev` from the monorepo root). It should match what `base/ + demo/ + local/` produces.
 
 ## Commands
 
 ```bash
-pnpm dev              # start example dev server (auto-generates schema + pushes DB)
-pnpm build            # production build of example
+pnpm dev              # start dev server (auto-generates schema + pushes DB)
+pnpm build            # production build
+pnpm preview          # preview production build
 pnpm check            # astro check (types) + eslint (lint)
 pnpm format           # prettier --write .
-pnpm core:build       # build @kidecms/core package
-```
-
-Example-specific commands (run from `examples/basic/` or use `pnpm --filter basic`):
-
-```bash
-pnpm cms:generate     # regenerate .generated/ from cms.config.ts
+pnpm cms:generate     # regenerate src/cms/.generated/ from cms.config.ts
 pnpm cms:seed         # seed database with demo content
+pnpm cms:admin        # create an admin user from CLI
 ```
 
 ## Validation (IMPORTANT)
@@ -52,27 +47,31 @@ After code changes, ALWAYS run:
 
 ## Key Files
 
-| File                                    | Purpose                                              |
-| --------------------------------------- | ---------------------------------------------------- |
-| `packages/kide-core/src/`               | Core TypeScript runtime (compiled by tsc)            |
-| `packages/kide-core/admin/`             | Admin UI components, layouts, styles (raw source)    |
-| `packages/kide-core/routes/`            | Admin pages + API routes (injected via integration)  |
-| `packages/kide-core/middleware/`        | Auth middleware (injected via integration)           |
-| `packages/kide-core/src/integration.ts` | Astro integration (route injection, virtual modules) |
-| `packages/create-kide-app/templates/`   | App templates — source of truth for user-facing code |
+| File                     | Purpose                                               |
+| ------------------------ | ----------------------------------------------------- |
+| `src/cms/cms.config.ts`  | Top-level CMS config — collections, admin, locales    |
+| `src/cms/collections/`   | Collection schemas                                    |
+| `src/cms/adapters/`      | Project-specific db / email / storage adapters        |
+| `src/cms/internals/`     | Thin runner scripts (runtime wiring, generator, etc.) |
+| `src/cms/integration.ts` | Astro integration (route injection, virtual modules)  |
+| `src/cms/core/`          | CMS runtime library (edit to change behavior)         |
+| `src/cms/admin/`         | Admin UI components, layouts, styles                  |
+| `src/cms/routes/`        | Admin pages + API routes injected by integration      |
+| `src/cms/middleware/`    | Auth middleware injected by integration               |
+| `src/cms/client/`        | Browser-side live-preview client                      |
 
 ## Rules
 
 - Use **pnpm** for all package management and scripts (`pnpm install`, `pnpm add`, `pnpm exec`, etc.). Do not use npm or yarn.
-- Never edit `.generated/` files — they're overwritten on every generation.
+- Never edit `src/cms/.generated/` files — they're overwritten on every generation.
 - DB columns use `snake_case`, TS fields use `camelCase`. System fields prefixed with `_`.
 - Rich text is JSON AST, never HTML or Markdown in storage.
 - Admin styles use shadcn CSS variables. Public site uses plain Tailwind colors — no shared styles.
 - `labelField` on collections controls display name (fallback: title → name → first text field).
 - Always query content through the typed local API (`cms.posts.findOne()`, `cms.pages.find()`, etc.) — never bypass it with raw DB queries or untyped wrappers.
-- Routes in `packages/kide-core/routes/` import app-specific code via `virtual:kide/*` modules (resolved by the integration's Vite aliases).
-- Use the `cn()` utility from `@kidecms/core/admin/lib/utils` for conditional class names — never use template literal interpolation for className.
-- When changing app-level code, update the templates first — `examples/basic/` should match the scaffolded output.
+- Routes in `src/cms/routes/` import app-specific code via `virtual:kide/*` modules (resolved by the integration's Vite aliases).
+- Use the `cn()` utility from `@/cms/admin/lib/utils` for conditional class names — never use template literal interpolation for className.
+- Import the CMS library via the `@/cms/core` alias (tsconfig `@/*` → `./src/*`), not relative paths.
 
 ## Stack
 
@@ -106,11 +105,11 @@ All fields share base options: `label`, `description`, `required`, `defaultValue
 
 ## Virtual Modules
 
-Routes in `packages/kide-core/routes/` import app-specific code via `virtual:kide/*` aliases (resolved by the integration). Never import user files by path from core routes — use these modules.
+Routes in `src/cms/routes/` import app-specific code via `virtual:kide/*` aliases (resolved by the integration). Never import user files by path from core routes — use these modules.
 
 | Module                        | Resolves to                          | Exports                                            |
 | ----------------------------- | ------------------------------------ | -------------------------------------------------- |
-| `virtual:kide/config`         | `src/cms/cms.config`                 | Default `CmsConfig`                                |
+| `virtual:kide/config`         | `src/cms/cms.config`                 | Default `CMSConfig`                                |
 | `virtual:kide/api`            | `src/cms/.generated/api`             | `{ cms }` — typed local API                        |
 | `virtual:kide/schema`         | `src/cms/.generated/schema`          | `{ cmsTables }` — Drizzle table map                |
 | `virtual:kide/runtime`        | `src/cms/internals/runtime`          | Session, auth, assets, AI, locks, `createCms`      |
@@ -122,7 +121,7 @@ Routes in `packages/kide-core/routes/` import app-specific code via `virtual:kid
 
 ## Live Preview Protocol
 
-BroadcastChannel `"cms-preview"` connects admin form → preview tab. The client script (`packages/kide-core/client/preview.ts`) is auto-injected by the integration on every page; activates only when `?preview` is in the URL.
+BroadcastChannel `"cms-preview"` connects admin form → preview tab. The client script (`src/cms/client/preview.ts`) is auto-injected by the integration on every page; activates only when `?preview` is in the URL.
 
 **Message shapes (admin → preview):**
 

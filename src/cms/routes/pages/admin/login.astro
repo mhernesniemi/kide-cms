@@ -1,0 +1,58 @@
+---
+import "virtual:kide/admin-css";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/cms/admin/components/ui/card";
+import { Input } from "@/cms/admin/components/ui/input";
+import { Label } from "@/cms/admin/components/ui/label";
+import { buttonVariants } from "@/cms/admin/components/ui/button";
+
+export const prerender = false;
+
+const error = Astro.url.searchParams.get("error");
+const errorMessage =
+  error === "invalid" ? "Invalid email or password." : error === "missing" ? "Email and password are required." : null;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>Sign in | Kide CMS</title>
+  </head>
+  <body class="bg-background text-foreground min-h-screen antialiased">
+    <div class="flex min-h-screen items-center justify-center px-4">
+      <div class="w-full max-w-sm space-y-6">
+        <h1 class="text-center text-xl font-semibold tracking-tight">Kide CMS</h1>
+        <Card>
+          <CardHeader>
+            <CardTitle>Sign in</CardTitle>
+            <CardDescription>Enter your credentials to continue</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {
+              errorMessage && (
+                <div class="border-destructive/50 bg-destructive/10 text-destructive mb-4 rounded-lg border px-3 py-2 text-sm">
+                  {errorMessage}
+                </div>
+              )
+            }
+            <form method="post" action="/api/cms/auth/login" class="grid gap-4">
+              <div class="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" name="email" type="email" placeholder="admin@example.com" required autoFocus />
+              </div>
+              <div class="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" name="password" type="password" placeholder="Enter password" required />
+              </div>
+              <button class={buttonVariants({ size: "lg", className: "w-full" })} type="submit"> Sign in </button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  </body>
+</html>

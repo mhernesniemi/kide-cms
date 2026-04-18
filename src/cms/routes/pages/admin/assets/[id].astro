@@ -1,0 +1,183 @@
+---
+import { ArrowLeft, Trash2 } from "lucide-react";
+
+import AdminCard from "@/cms/admin/components/AdminCard.astro";
+import AiGenerateButton from "@/cms/admin/components/AiGenerateButton";
+import FocalPointSelector from "@/cms/admin/components/FocalPointSelector";
+import UnsavedGuard from "@/cms/admin/components/UnsavedGuard";
+import TreeSelect, { flattenByParent } from "@/cms/admin/components/TreeSelect";
+import { buttonVariants } from "@/cms/admin/components/ui/button";
+import { Label } from "@/cms/admin/components/ui/label";
+import { Textarea } from "@/cms/admin/components/ui/textarea";
+import config from "virtual:kide/config";
+import { assets, folders, isAiEnabled } from "virtual:kide/runtime";
+import { formatDate, initDateFormat } from "@/cms/core";
+import AdminLayout from "@/cms/admin/layouts/AdminLayout.astro";
+
+export const prerender = false;
+
+const user = Astro.locals.user;
+const accessibleCollections = config.collections.filter((c) => {
+  const rule = c.access?.read;
+  if (!rule) return true;
+  return rule({ user: user ?? null, doc: null, operation: "read", collection: c.slug });
+});
+
+initDateFormat(config, Astro.cookies.get("tz")?.value);
+const { id } = Astro.params;
+if (!id) return Astro.redirect("/admin/assets");
+
+const asset = await assets.findById(id);
+if (!asset) return Astro.redirect("/admin/assets");
+
+const aiEnabled = isAiEnabled();
+const isImage = asset.mimeType.startsWith("image/");
+const currentFolder = asset.folder ? await folders.findById(asset.folder) : null;
+const allFolders = await folders.findAll();
+
+const formatSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const folderItems = flattenByParent(
+  allFolders,
+  (f) => f._id,
+  (f) => f.name,
+  (f) => f.parent,
+);
+---
+
+<AdminLayout
+  title={`${asset.filename} | Assets | Kide CMS`}
+  collections={accessibleCollections}
+  activeCollection="assets"
+  customNav={config.admin?.nav}
+>
+  <section class="space-y-6">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <a
+          href={asset.folder ? `/admin/assets?folder=${asset.folder}` : "/admin/assets"}
+          class="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm transition-colors"
+        >
+          <ArrowLeft className="size-3.5" />
+          {currentFolder ? currentFolder.name : "Assets"}
+        </a>
+        <h1 class="text-2xl font-semibold tracking-tight">{asset.filename}</h1>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-end gap-2">
+      <button type="submit" form="asset-form" value="save" disabled class={buttonVariants({ variant: "outline" })}>
+        Save
+      </button>
+      <form method="post" action={`/api/cms/assets/${asset._id}`}>
+        <input type="hidden" name="_method" value="DELETE" />
+        <button type="submit" class={buttonVariants({ variant: "destructive" })}>
+          <Trash2 className="size-3.5" />
+          Delete
+        </button>
+      </form>
+    </div>
+
+    <UnsavedGuard client:load formId="asset-form" isNew={false} isDraft={false} />
+    <form id="asset-form" method="post" action={`/api/cms/assets/${asset._id}`}>
+      <input type="hidden" name="_action" value="update" />
+      <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]">
+        <div class="space-y-6">
+          {
+            isImage && (
+              <AdminCard title="Preview">
+                <FocalPointSelector
+                  client:load
+                  src={asset.url}
+                  alt={asset.alt ?? asset.filename}
+                  focalX={asset.focalX}
+                  focalY={asset.focalY}
+                />
+              </AdminCard>
+            )
+          }
+        </div>
+
+        <div class="space-y-6 text-sm [&_input]:text-sm [&_textarea]:text-sm">
+          <AdminCard title="Info">
+            <dl class="grid gap-3">
+              <div>
+                <dt class="text-muted-foreground text-xs">Filename</dt>
+                <dd class="mt-0.5">{asset.filename}</dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground text-xs">Type</dt>
+                <dd class="mt-0.5">{asset.mimeType}</dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground text-xs">Size</dt>
+                <dd class="mt-0.5">{formatSize(asset.size)}</dd>
+              </div>
+              {
+                asset.width && asset.height && (
+                  <div>
+                    <dt class="text-muted-foreground text-xs">Dimensions</dt>
+                    <dd class="mt-0.5">
+                      {asset.width} &times; {asset.height} px
+                    </dd>
+                  </div>
+                )
+              }
+              <div>
+                <dt class="text-muted-foreground text-xs">Path</dt>
+                <dd class="mt-0.5 font-mono text-xs break-all">{asset.storagePath}</dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground text-xs">Created</dt>
+                <dd class="mt-0.5">{formatDate(asset._createdAt)}</dd>
+              </div>
+            </dl>
+          </AdminCard>
+
+          <AdminCard title="Details">
+            <div class="grid gap-5">
+              <div class="grid gap-2">
+                <Label htmlFor="folder">Folder</Label>
+                <TreeSelect
+                  client:load
+                  name="folder"
+                  value={asset.folder ?? ""}
+                  placeholder="Select folder..."
+                  searchPlaceholder="Search folders..."
+                  emptyMessage="No folders found."
+                  items={folderItems}
+                />
+              </div>
+              <div class="grid gap-2">
+                <Label htmlFor="alt">Alt text</Label>
+                <Textarea
+                  className="w-full shadow-none"
+                  id="alt"
+                  name="alt"
+                  rows={3}
+                  defaultValue={asset.alt ?? ""}
+                  placeholder="Describe the image for accessibility..."
+                />
+                {
+                  aiEnabled && isImage && (
+                    <AiGenerateButton
+                      client:load
+                      endpoint="/api/cms/ai/alt-text"
+                      payload={{ imageUrl: asset.url, filename: asset.filename }}
+                      targetField="alt"
+                      label="Generate alt text"
+                    />
+                  )
+                }
+              </div>
+            </div>
+          </AdminCard>
+        </div>
+      </div>
+    </form>
+  </section>
+</AdminLayout>
