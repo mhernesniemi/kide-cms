@@ -28,7 +28,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Security headers for all admin routes
   const addSecurityHeaders = (response: Response) => {
     response.headers.set("X-Content-Type-Options", "nosniff");
-    response.headers.set("X-Frame-Options", "DENY");
+    response.headers.set("X-Frame-Options", "SAMEORIGIN");
     return response;
   };
 
