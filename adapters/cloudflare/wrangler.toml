@@ -1,0 +1,17 @@
+name = "{{PROJECT_NAME}}"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "CMS_DB"
+database_name = "{{PROJECT_NAME}}-db"
+database_id = "" # Run: pnpm wrangler d1 create {{PROJECT_NAME}}-db, then paste the id here
+migrations_dir = "src/cms/migrations"
+
+[triggers]
+crons = ["* * * * *"]  # scheduled publishing — every minute
+
+[[r2_buckets]]
+binding = "CMS_ASSETS"
+bucket_name = "{{PROJECT_NAME}}-assets"
+# Run: pnpm wrangler r2 bucket create {{PROJECT_NAME}}-assets

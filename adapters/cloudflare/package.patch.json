@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "add": { "@astrojs/cloudflare": "^13.0.0" },
+    "remove": ["@astrojs/node", "sharp"]
+  },
+  "devDependencies": {
+    "add": { "wrangler": "^4.0.0" },
+    "moveFromDependencies": ["better-sqlite3"]
+  },
+  "scripts": {
+    "preview": "astro build && wrangler dev --config dist/server/wrangler.json",
+    "deploy": "astro build && wrangler deploy --config dist/server/wrangler.json"
+  }
+}
