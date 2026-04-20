@@ -1,0 +1,126 @@
+---
+import { cms } from "@/cms/.generated/api";
+
+type FormFieldConfig = {
+  type: "text" | "email" | "textarea" | "select" | "checkbox";
+  name: string;
+  label: string;
+  placeholder?: string;
+  required?: boolean;
+  maxLength?: number;
+  rows?: number;
+  options?: string[];
+};
+
+const { slug } = Astro.props as { slug: string };
+const form = await cms.forms.findOne({ where: { slug } });
+
+if (!form) {
+  throw new Error(`Form with slug "${slug}" not found. Create one in the admin UI.`);
+}
+
+const fieldConfigs = Array.isArray(form.fields) ? (form.fields as FormFieldConfig[]) : [];
+
+const submitted = Astro.url.searchParams.get("submitted") === "1";
+const formError = Astro.url.searchParams.get("formError");
+const action = `/api/cms/forms/submit/${slug}`;
+---
+
+<form method="POST" action={action} class="flex flex-col gap-4">
+  {/* Honeypot — bots fill visible inputs; humans never see this one */}
+  <input
+    type="text"
+    name="_hp"
+    tabindex="-1"
+    autocomplete="off"
+    aria-hidden="true"
+    style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;"
+  />
+
+  {
+    fieldConfigs.map((field) => {
+      const inputId = `${slug}-${field.name}`;
+      if (field.type === "textarea") {
+        return (
+          <label for={inputId} class="flex flex-col gap-1 text-sm">
+            <span class="font-medium">
+              {field.label}
+              {field.required && <span aria-hidden="true"> *</span>}
+            </span>
+            <textarea
+              id={inputId}
+              name={field.name}
+              rows={field.rows ?? 4}
+              placeholder={field.placeholder ?? ""}
+              required={field.required}
+              class="rounded border border-gray-300 px-3 py-2"
+            />
+          </label>
+        );
+      }
+
+      if (field.type === "select") {
+        return (
+          <label for={inputId} class="flex flex-col gap-1 text-sm">
+            <span class="font-medium">
+              {field.label}
+              {field.required && <span aria-hidden="true"> *</span>}
+            </span>
+            <select
+              id={inputId}
+              name={field.name}
+              required={field.required}
+              class="rounded border border-gray-300 px-3 py-2"
+            >
+              <option value="">Select…</option>
+              {(field.options ?? []).map((opt) => (
+                <option value={opt}>{opt}</option>
+              ))}
+            </select>
+          </label>
+        );
+      }
+
+      if (field.type === "checkbox") {
+        return (
+          <label for={inputId} class="flex items-center gap-2 text-sm">
+            <input id={inputId} type="checkbox" name={field.name} required={field.required} />
+            <span>
+              {field.label}
+              {field.required && <span aria-hidden="true"> *</span>}
+            </span>
+          </label>
+        );
+      }
+
+      // text | email
+      return (
+        <label for={inputId} class="flex flex-col gap-1 text-sm">
+          <span class="font-medium">
+            {field.label}
+            {field.required && <span aria-hidden="true"> *</span>}
+          </span>
+          <input
+            id={inputId}
+            type={field.type}
+            name={field.name}
+            placeholder={field.placeholder ?? ""}
+            required={field.required}
+            maxlength={field.maxLength}
+            class="rounded border border-gray-300 px-3 py-2"
+          />
+        </label>
+      );
+    })
+  }
+
+  <button
+    type="submit"
+    class="self-start rounded bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
+  >
+    Submit
+  </button>
+
+  {submitted && <p class="text-sm text-green-700">{form.successMessage}</p>}
+  {formError && <p class="text-sm text-red-700">{formError}</p>}
+</form>

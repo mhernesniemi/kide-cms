@@ -456,6 +456,54 @@ const getBlockRelationOptions = (_fieldName: string): Record<string, Array<{ val
 };
 const aiEnabled = isAiEnabled();
 
+// Forms-specific: submissions tab data
+const isFormsEdit = !!collection && collection.slug === "forms" && route.kind === "edit";
+const formTab = isFormsEdit && Astro.url.searchParams.get("tab") === "submissions" ? "submissions" : "edit";
+const formDocumentId = isFormsEdit && "documentId" in route ? route.documentId : null;
+let submissionRows: Array<{
+  id: string;
+  editHref: string;
+  status: string;
+  locales: string[];
+  searchText: string;
+  values: Record<string, string>;
+}> = [];
+let submissionCount = 0;
+if (isFormsEdit && formDocumentId) {
+  try {
+    const submissions = (await cmsRuntime["form-submissions"].find(
+      {
+        where: { form: formDocumentId },
+        sort: { field: "submittedAt", direction: "desc" },
+        limit: 500,
+      },
+      runtimeContext,
+    )) as Array<Record<string, unknown>>;
+    submissionCount = submissions.length;
+    submissionRows = submissions.map((entry) => {
+      const data = (entry.data ?? {}) as Record<string, unknown>;
+      const summary = Object.entries(data)
+        .slice(0, 2)
+        .map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
+        .join(" · ");
+      return {
+        id: String(entry._id),
+        editHref: `/admin/form-submissions/${entry._id}`,
+        status: String(entry.status ?? "new"),
+        locales: [defaultLocale],
+        searchText: summary,
+        values: {
+          submittedAt: formatDate(String(entry.submittedAt ?? entry._createdAt ?? "")),
+          status: String(entry.status ?? "new"),
+          summary: summary || "—",
+        },
+      };
+    });
+  } catch {
+    submissionCount = 0;
+  }
+}
+
 const tableRows =
   collection && route.kind === "list"
     ? docs.map((entry) => ({
@@ -645,7 +693,51 @@ const tableRows =
           />
         )}
 
-        {(route.kind === "new" || route.kind === "edit") && (
+        {isFormsEdit && (
+          <div class="border-border/60 flex gap-4 border-b">
+            <a
+              href={`/admin/forms/${formDocumentId}`}
+              class:list={[
+                "-mb-px border-b-2 px-1 pb-2 text-sm",
+                formTab === "edit"
+                  ? "border-primary font-medium"
+                  : "text-muted-foreground hover:text-foreground border-transparent",
+              ]}
+            >
+              Fields
+            </a>
+            <a
+              href={`/admin/forms/${formDocumentId}?tab=submissions`}
+              class:list={[
+                "-mb-px border-b-2 px-1 pb-2 text-sm",
+                formTab === "submissions"
+                  ? "border-primary font-medium"
+                  : "text-muted-foreground hover:text-foreground border-transparent",
+              ]}
+            >
+              Submissions{submissionCount > 0 ? ` (${submissionCount})` : ""}
+            </a>
+          </div>
+        )}
+
+        {isFormsEdit && formTab === "submissions" && (
+          <DocumentsDataTable
+            client:load
+            collectionSlug="form-submissions"
+            draftsEnabled={false}
+            labelField="submittedAt"
+            title="Submissions"
+            columns={[
+              { key: "submittedAt", label: "Submitted" },
+              { key: "status", label: "Status" },
+              { key: "summary", label: "Preview" },
+            ]}
+            data={submissionRows}
+            searchPlaceholder="Filter submissions..."
+          />
+        )}
+
+        {(route.kind === "new" || route.kind === "edit") && formTab !== "submissions" && (
           <>
             {route.kind === "edit" && (
               <DocumentLock client:load collection={route.collectionSlug} documentId={route.documentId} />

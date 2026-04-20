@@ -101,6 +101,7 @@ const toastMessage =
 // 2. Singles
 // 3. Taxonomies, Menus, Authors, Users (pinned utility collections)
 // 4. Assets
+// 5. Forms, Submissions (pinned to the bottom)
 
 const pinnedOrder = ["taxonomies", "menus", "authors", "users"];
 const pinnedSlugs = new Set(pinnedOrder);
@@ -110,6 +111,16 @@ const pinnedIcons: Record<string, any> = {
   authors: PencilRuler,
   users: Users,
 };
+
+const bottomOrder = ["forms"];
+const bottomSlugs = new Set(bottomOrder);
+const bottomIcons: Record<string, any> = {
+  forms: MessageSquare,
+};
+
+// Collections that should never appear as a top-level sidebar entry.
+// Submissions are viewed as a tab on the parent form's detail page.
+const hiddenFromSidebar = new Set(["form-submissions"]);
 
 const hasSingletons = collections.some((c) => c.singleton);
 const singletonSlugs = new Set(collections.filter((c) => c.singleton).map((c) => c.slug));
@@ -137,7 +148,7 @@ navItems.push({
 });
 
 const contentCollections = collections
-  .filter((c) => !c.singleton && !pinnedSlugs.has(c.slug))
+  .filter((c) => !c.singleton && !pinnedSlugs.has(c.slug) && !bottomSlugs.has(c.slug) && !hiddenFromSidebar.has(c.slug))
   .sort((a, b) => a.labels.plural.localeCompare(b.labels.plural));
 for (const c of contentCollections) {
   navItems.push({
@@ -177,6 +188,21 @@ navItems.push({
   active: activeCollection === "assets",
   weight: 40,
 });
+
+for (const slug of bottomOrder) {
+  const c = collections.find((col) => col.slug === slug);
+  if (c) {
+    navItems.push({
+      href: `/admin/${c.slug}`,
+      label: c.labels.plural,
+      singularLabel: c.labels.singular,
+      Icon: bottomIcons[slug] ?? LayoutGrid,
+      active: activeCollection === c.slug,
+      newHref: `/admin/${c.slug}/new`,
+      weight: 45,
+    });
+  }
+}
 
 // Custom nav items from admin config
 const currentPath = Astro.url.pathname;

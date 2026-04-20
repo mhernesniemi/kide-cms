@@ -222,6 +222,10 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         injectRoute({ pattern: "/api/cms/ai/translate", entrypoint: "./src/cms/routes/api/cms/ai/translate.ts" });
         injectRoute({ pattern: "/api/cms/cron/publish", entrypoint: "./src/cms/routes/api/cms/cron/publish.ts" });
         injectRoute({
+          pattern: "/api/cms/forms/submit/[slug]",
+          entrypoint: "./src/cms/routes/api/cms/forms/submit/[slug].ts",
+        });
+        injectRoute({
           pattern: "/api/cms/locks/[...path]",
           entrypoint: "./src/cms/routes/api/cms/locks/[...path].ts",
         });

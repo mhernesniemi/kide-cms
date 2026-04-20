@@ -56,5 +56,10 @@ declare module "virtual:kide/db" {
 
 declare module "virtual:kide/email" {
   export function sendInviteEmail(to: string, inviteUrl: string): Promise<boolean>;
+  export function sendFormSubmissionEmail(
+    to: string,
+    formTitle: string,
+    data: Record<string, unknown>,
+  ): Promise<boolean>;
   export function isEmailConfigured(): boolean;
 }

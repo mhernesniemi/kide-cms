@@ -75,7 +75,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Always allow login page, login API, and cron endpoint (has its own auth)
   const isCronApi = pathname === "/api/cms/cron/publish";
-  if (isLoginPage || isLoginApi || isSetupApi || isCronApi || isInvitePage || isInviteApi) {
+  const isFormSubmit = pathname.startsWith("/api/cms/forms/submit/");
+  if (isLoginPage || isLoginApi || isSetupApi || isCronApi || isInvitePage || isInviteApi || isFormSubmit) {
     return addSecurityHeaders(await next());
   }
 
