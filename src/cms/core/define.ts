@@ -281,7 +281,10 @@ const createField = <T extends FieldConfig>(type: T["type"], options?: Omit<T, "
 
 export const fields = {
   text: (options?: Omit<TextFieldConfig, "type">) => createField<TextFieldConfig>("text", options),
-  slug: (options?: Omit<SlugFieldConfig, "type">) => createField<SlugFieldConfig>("slug", options),
+  slug: (options?: Omit<SlugFieldConfig, "type">) =>
+    // Slugs default to unique: true since they're almost always used as URL identifiers.
+    // Pass `unique: false` explicitly to opt out.
+    createField<SlugFieldConfig>("slug", { unique: true, ...(options ?? {}) }),
   email: (options?: Omit<EmailFieldConfig, "type">) => createField<EmailFieldConfig>("email", options),
   number: (options?: Omit<NumberFieldConfig, "type">) => createField<NumberFieldConfig>("number", options),
   boolean: (options?: Omit<BooleanFieldConfig, "type">) => createField<BooleanFieldConfig>("boolean", options),

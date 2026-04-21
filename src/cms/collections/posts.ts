@@ -16,7 +16,7 @@ export default defineCollection({
       indexed: true,
       translatable: true,
     }),
-    slug: fields.slug({ from: "title", unique: true, translatable: true, admin: { position: "sidebar" } }),
+    slug: fields.slug({ from: "title", translatable: true, admin: { position: "sidebar" } }),
     excerpt: fields.text({
       maxLength: 300,
       translatable: true,

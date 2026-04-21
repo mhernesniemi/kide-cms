@@ -12,7 +12,7 @@ export default defineCollection({
   },
   fields: {
     title: fields.text({ required: true, translatable: true }),
-    slug: fields.slug({ from: "title", unique: true, translatable: true, admin: { position: "sidebar" } }),
+    slug: fields.slug({ from: "title", translatable: true, admin: { position: "sidebar" } }),
     summary: fields.text({
       translatable: true,
       admin: { rows: 3 },

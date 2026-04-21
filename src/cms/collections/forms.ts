@@ -10,7 +10,7 @@ export default defineCollection({
   },
   fields: {
     title: fields.text({ required: true }),
-    slug: fields.slug({ from: "title", unique: true, admin: { position: "sidebar" } }),
+    slug: fields.slug({ from: "title", admin: { position: "sidebar" } }),
     submitRedirect: fields.text({
       admin: { help: "Optional URL to redirect to after submit. Leave empty to stay on the page." },
     }),

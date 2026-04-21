@@ -127,6 +127,6 @@ const action = `/api/cms/forms/submit/${slug}`;
     Submit
   </button>
 
-  {submitted && <p class="text-sm text-green-700">{form.successMessage}</p>}
+  {submitted && <p class="text-sm text-green-700">{form.successMessage || "Thanks — we got your message."}</p>}
   {formError && <p class="text-sm text-red-700">{formError}</p>}
 </form>
