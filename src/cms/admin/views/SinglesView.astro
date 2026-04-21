@@ -48,6 +48,7 @@ const singletonsData = await Promise.all(
     title="Singles"
     columns={[
       { key: "name", label: "Name" },
+      { key: "slug", label: "API slug" },
       ...(singletonCollections.some((c) => c.drafts) ? [{ key: "_status", label: "Status" }] : []),
       { key: "updatedAt", label: "Last updated" },
     ]}
@@ -56,8 +57,8 @@ const singletonsData = await Promise.all(
       collectionSlug: s.collectionSlug,
       editHref: s.editHref,
       locales: s.locales,
-      searchText: s.label,
-      values: { name: s.label, _status: s.status, updatedAt: s.updatedAt },
+      searchText: `${s.label} ${s.collectionSlug}`,
+      values: { name: s.label, slug: s.collectionSlug, _status: s.status, updatedAt: s.updatedAt },
     }))}
     searchPlaceholder="Filter singles..."
   />

@@ -11,6 +11,15 @@ export default defineCollection({
     publish: hasRole("admin"),
   },
   fields: {
+    seoDescription: fields.text({
+      maxLength: 160,
+      translatable: true,
+      admin: {
+        rows: 3,
+        help: "Meta description for search engines. Max 160 characters.",
+        position: "sidebar",
+      },
+    }),
     blocks: fields.blocks({
       translatable: true,
       types: {
