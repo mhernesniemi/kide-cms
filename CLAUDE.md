@@ -20,8 +20,9 @@ src/
     client/               # preview.ts — browser-side live-preview client
   components/             # App-level components (incl. BlockRenderer)
   layouts/, pages/, styles/, env.d.ts
-docs/                     # Standalone Starlight docs site (own package.json)
 ```
+
+(The Starlight docs site lives in a separate `kide-cms-docs` repo, not inside this project.)
 
 ## Commands
 
