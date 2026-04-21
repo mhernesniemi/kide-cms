@@ -195,56 +195,56 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         });
 
         // Inject admin pages
-        injectRoute({ pattern: "/admin/login", entrypoint: "./src/cms/routes/pages/admin/login.astro" });
-        injectRoute({ pattern: "/admin/setup", entrypoint: "./src/cms/routes/pages/admin/setup.astro" });
-        injectRoute({ pattern: "/admin/invite", entrypoint: "./src/cms/routes/pages/admin/invite.astro" });
-        injectRoute({ pattern: "/admin/assets", entrypoint: "./src/cms/routes/pages/admin/assets/index.astro" });
+        injectRoute({ pattern: "/admin/login", entrypoint: "./src/cms/routes/admin/login.astro" });
+        injectRoute({ pattern: "/admin/setup", entrypoint: "./src/cms/routes/admin/setup.astro" });
+        injectRoute({ pattern: "/admin/invite", entrypoint: "./src/cms/routes/admin/invite.astro" });
+        injectRoute({ pattern: "/admin/assets", entrypoint: "./src/cms/routes/admin/assets/index.astro" });
         injectRoute({
           pattern: "/admin/assets/[id]",
-          entrypoint: "./src/cms/routes/pages/admin/assets/[id].astro",
+          entrypoint: "./src/cms/routes/admin/assets/[id].astro",
         });
-        injectRoute({ pattern: "/admin/[...path]", entrypoint: "./src/cms/routes/pages/admin/[...path].astro" });
+        injectRoute({ pattern: "/admin/[...path]", entrypoint: "./src/cms/routes/admin/[...path].astro" });
 
         // Inject API routes
-        injectRoute({ pattern: "/api/cms/auth/login", entrypoint: "./src/cms/routes/api/cms/auth/login.ts" });
-        injectRoute({ pattern: "/api/cms/auth/logout", entrypoint: "./src/cms/routes/api/cms/auth/logout.ts" });
-        injectRoute({ pattern: "/api/cms/auth/setup", entrypoint: "./src/cms/routes/api/cms/auth/setup.ts" });
-        injectRoute({ pattern: "/api/cms/auth/invite", entrypoint: "./src/cms/routes/api/cms/auth/invite.ts" });
-        injectRoute({ pattern: "/api/cms/assets/upload", entrypoint: "./src/cms/routes/api/cms/assets/upload.ts" });
+        injectRoute({ pattern: "/api/cms/auth/login", entrypoint: "./src/cms/routes/api/auth/login.ts" });
+        injectRoute({ pattern: "/api/cms/auth/logout", entrypoint: "./src/cms/routes/api/auth/logout.ts" });
+        injectRoute({ pattern: "/api/cms/auth/setup", entrypoint: "./src/cms/routes/api/auth/setup.ts" });
+        injectRoute({ pattern: "/api/cms/auth/invite", entrypoint: "./src/cms/routes/api/auth/invite.ts" });
+        injectRoute({ pattern: "/api/cms/assets/upload", entrypoint: "./src/cms/routes/api/assets/upload.ts" });
         injectRoute({
           pattern: "/api/cms/assets/folders",
-          entrypoint: "./src/cms/routes/api/cms/assets/folders.ts",
+          entrypoint: "./src/cms/routes/api/assets/folders.ts",
         });
-        injectRoute({ pattern: "/api/cms/assets/[id]", entrypoint: "./src/cms/routes/api/cms/assets/[id].ts" });
-        injectRoute({ pattern: "/api/cms/assets", entrypoint: "./src/cms/routes/api/cms/assets/index.ts" });
-        injectRoute({ pattern: "/api/cms/ai/alt-text", entrypoint: "./src/cms/routes/api/cms/ai/alt-text.ts" });
-        injectRoute({ pattern: "/api/cms/ai/seo", entrypoint: "./src/cms/routes/api/cms/ai/seo.ts" });
-        injectRoute({ pattern: "/api/cms/ai/translate", entrypoint: "./src/cms/routes/api/cms/ai/translate.ts" });
-        injectRoute({ pattern: "/api/cms/cron/publish", entrypoint: "./src/cms/routes/api/cms/cron/publish.ts" });
+        injectRoute({ pattern: "/api/cms/assets/[id]", entrypoint: "./src/cms/routes/api/assets/[id].ts" });
+        injectRoute({ pattern: "/api/cms/assets", entrypoint: "./src/cms/routes/api/assets/index.ts" });
+        injectRoute({ pattern: "/api/cms/ai/alt-text", entrypoint: "./src/cms/routes/api/ai/alt-text.ts" });
+        injectRoute({ pattern: "/api/cms/ai/seo", entrypoint: "./src/cms/routes/api/ai/seo.ts" });
+        injectRoute({ pattern: "/api/cms/ai/translate", entrypoint: "./src/cms/routes/api/ai/translate.ts" });
+        injectRoute({ pattern: "/api/cms/cron/publish", entrypoint: "./src/cms/routes/api/cron/publish.ts" });
         injectRoute({
           pattern: "/api/cms/forms/submit/[slug]",
-          entrypoint: "./src/cms/routes/api/cms/forms/submit/[slug].ts",
+          entrypoint: "./src/cms/routes/api/forms/submit/[slug].ts",
         });
         injectRoute({
           pattern: "/api/cms/locks/[...path]",
-          entrypoint: "./src/cms/routes/api/cms/locks/[...path].ts",
+          entrypoint: "./src/cms/routes/api/locks/[...path].ts",
         });
         // Preview render route uses Astro Container API which depends on Vite internals.
         // Only inject in dev mode — production builds (especially Cloudflare Workers) can't bundle it.
         if (command === "dev") {
           injectRoute({
             pattern: "/api/cms/preview/render",
-            entrypoint: "./src/cms/routes/api/cms/preview/render.ts",
+            entrypoint: "./src/cms/routes/api/preview/render.ts",
           });
         }
         injectRoute({
           pattern: "/api/cms/references/[collection]/[id]",
-          entrypoint: "./src/cms/routes/api/cms/references/[collection]/[id].ts",
+          entrypoint: "./src/cms/routes/api/references/[collection]/[id].ts",
         });
-        injectRoute({ pattern: "/api/cms/img/[...path]", entrypoint: "./src/cms/routes/api/cms/img/[...path].ts" });
+        injectRoute({ pattern: "/api/cms/img/[...path]", entrypoint: "./src/cms/routes/api/img/[...path].ts" });
         injectRoute({
           pattern: "/api/cms/[collection]/[...path]",
-          entrypoint: "./src/cms/routes/api/cms/[collection]/[...path].ts",
+          entrypoint: "./src/cms/routes/api/[collection]/[...path].ts",
         });
 
         // Inject auth middleware

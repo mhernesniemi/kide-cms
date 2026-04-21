@@ -100,23 +100,17 @@ const toastMessage =
 // Build sidebar nav in explicit order:
 // 1. Content collections (alphabetical, shared icon)
 // 2. Singles
-// 3. Taxonomies, Menus, Authors, Users (pinned utility collections)
+// 3. Taxonomies, Menus, Forms, Authors, Users (pinned utility collections)
 // 4. Assets
-// 5. Forms, Submissions (pinned to the bottom)
 
-const pinnedOrder = ["taxonomies", "menus", "authors", "users"];
+const pinnedOrder = ["taxonomies", "menus", "forms", "authors", "users"];
 const pinnedSlugs = new Set(pinnedOrder);
 const pinnedIcons: Record<string, any> = {
   taxonomies: FolderTree,
   menus: Menu,
+  forms: MessageSquare,
   authors: PencilRuler,
   users: Users,
-};
-
-const bottomOrder = ["forms"];
-const bottomSlugs = new Set(bottomOrder);
-const bottomIcons: Record<string, any> = {
-  forms: MessageSquare,
 };
 
 // Unread submissions badge — shown next to "Forms" in the sidebar.
@@ -161,7 +155,7 @@ navItems.push({
 });
 
 const contentCollections = collections
-  .filter((c) => !c.singleton && !pinnedSlugs.has(c.slug) && !bottomSlugs.has(c.slug) && !hiddenFromSidebar.has(c.slug))
+  .filter((c) => !c.singleton && !pinnedSlugs.has(c.slug) && !hiddenFromSidebar.has(c.slug))
   .sort((a, b) => a.labels.plural.localeCompare(b.labels.plural));
 for (const c of contentCollections) {
   navItems.push({
@@ -190,6 +184,7 @@ for (const slug of pinnedOrder) {
       active: activeCollection === c.slug,
       newHref: `/admin/${c.slug}/new`,
       weight: 30,
+      badge: slug === "forms" && unreadSubmissions > 0 ? unreadSubmissions : undefined,
     });
   }
 }
@@ -201,22 +196,6 @@ navItems.push({
   active: activeCollection === "assets",
   weight: 40,
 });
-
-for (const slug of bottomOrder) {
-  const c = collections.find((col) => col.slug === slug);
-  if (c) {
-    navItems.push({
-      href: `/admin/${c.slug}`,
-      label: c.labels.plural,
-      singularLabel: c.labels.singular,
-      Icon: bottomIcons[slug] ?? LayoutGrid,
-      active: activeCollection === c.slug,
-      newHref: `/admin/${c.slug}/new`,
-      weight: 45,
-      badge: slug === "forms" && unreadSubmissions > 0 ? unreadSubmissions : undefined,
-    });
-  }
-}
 
 // Custom nav items from admin config
 const currentPath = Astro.url.pathname;
