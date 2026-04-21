@@ -85,6 +85,8 @@ type DocumentsDataTableProps = {
   columns: DataTableColumn[];
   data: DataTableRow[];
   serverPagination?: ServerPaginationConfig;
+  /** Bulk status change: if provided, renders "Mark as <status>" entries in the selection menu. */
+  statusOptions?: string[];
 };
 
 const formatDateClient = (value: unknown): string => {
@@ -140,6 +142,7 @@ export default function DocumentsDataTable({
   columns,
   data,
   serverPagination,
+  statusOptions,
 }: DocumentsDataTableProps) {
   const isServerMode = !!serverPagination;
 
@@ -321,6 +324,49 @@ export default function DocumentsDataTable({
       }
     },
     [isServerMode, sorting, serverSearch, fetchPage],
+  );
+
+  const runStatusChange = React.useCallback(
+    async (newStatus: string, rows: DataTableRow[]) => {
+      if (!rows.length) return;
+      setActionError(null);
+      try {
+        await Promise.all(
+          rows.map(async (row) => {
+            const rowCollection = row.editHref.split("/")[2] ?? collectionSlug;
+            const body = new URLSearchParams({ _action: "update", status: newStatus });
+            const response = await fetch(`/api/cms/${rowCollection}/${row.id}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: body.toString(),
+            });
+            if (!response.ok) throw new Error(`Failed to update status for ${row.id}.`);
+          }),
+        );
+
+        if (isServerMode) {
+          await fetchPage(serverPage, serverSort, serverSearch);
+          return;
+        }
+        const count = rows.length;
+        const label = count === 1 ? "document" : "documents";
+        const url = new URL(window.location.href);
+        url.searchParams.set("_toast", "success");
+        url.searchParams.set("_msg", `${count} ${label} marked as ${newStatus}`);
+        window.location.assign(url.pathname + url.search);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "Status change failed";
+        if (isServerMode) {
+          setActionError(msg);
+          return;
+        }
+        const url = new URL(window.location.href);
+        url.searchParams.set("_toast", "error");
+        url.searchParams.set("_msg", msg);
+        window.location.assign(url.pathname + url.search);
+      }
+    },
+    [collectionSlug, isServerMode, serverPage, serverSort, serverSearch, fetchPage],
   );
 
   const runAction = React.useCallback(
@@ -663,6 +709,25 @@ export default function DocumentsDataTable({
                     >
                       Unpublish selected
                     </DropdownMenuItem>
+                  </>
+                )}
+                {statusOptions && statusOptions.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Set status</DropdownMenuLabel>
+                    {statusOptions.map((status) => (
+                      <DropdownMenuItem
+                        key={status}
+                        disabled={isPending}
+                        onClick={() =>
+                          startTransition(() => {
+                            void runStatusChange(status, selectedRows);
+                          })
+                        }
+                      >
+                        Mark as {status}
+                      </DropdownMenuItem>
+                    ))}
                   </>
                 )}
                 <DropdownMenuSeparator />
