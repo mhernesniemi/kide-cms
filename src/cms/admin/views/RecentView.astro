@@ -1,0 +1,73 @@
+---
+import DocumentsDataTable from "@/cms/admin/components/DocumentsDataTable";
+import config from "virtual:kide/config";
+import { cms } from "virtual:kide/api";
+import { formatDate, getLabelField } from "@/cms/core";
+import { canRead, getVisualStatus } from "@/cms/admin/lib/access";
+
+const user = Astro.locals.user;
+const runtimeContext = user ? { user: { id: user.id, role: user.role, email: user.email } } : {};
+const cmsRuntime = cms as Record<string, any>;
+const defaultLocale = config.locales?.default ?? "en";
+
+const pinnedSlugs = new Set(["taxonomies", "menus", "authors", "users"]);
+const contentCollections = config.collections.filter(
+  (c) => !c.auth && !pinnedSlugs.has(c.slug) && canRead(config, user, c.slug),
+);
+
+const allEntries: Array<{ doc: Record<string, unknown>; collection: (typeof contentCollections)[0] }> = [];
+for (const cc of contentCollections) {
+  const api = cmsRuntime[cc.slug];
+  const docs = await api.find(
+    { status: "any", locale: defaultLocale, sort: { field: "_updatedAt", direction: "desc" }, limit: 50 },
+    runtimeContext,
+  );
+  for (const doc of docs) allEntries.push({ doc, collection: cc });
+}
+allEntries.sort((a, b) => String(b.doc._updatedAt ?? "").localeCompare(String(a.doc._updatedAt ?? "")));
+
+const recentRows = allEntries.slice(0, 50).map(({ doc, collection: cc }) => {
+  const displayTitle = cc.singleton
+    ? cc.labels.singular
+    : String(doc[getLabelField(cc)] ?? doc.slug ?? cc.labels.singular);
+  return {
+    id: String(doc._id),
+    editHref: `/admin/${cc.slug}/${doc._id}`,
+    status: getVisualStatus(doc),
+    singleton: cc.singleton,
+    locales: [
+      defaultLocale,
+      ...(Array.isArray(doc._availableLocales)
+        ? doc._availableLocales.map((l) => String(l)).filter((l) => l !== defaultLocale)
+        : []),
+    ],
+    searchText: displayTitle,
+    values: {
+      title: displayTitle,
+      collection: cc.labels.singular,
+      _status: getVisualStatus(doc),
+      _updatedAt: formatDate(doc._updatedAt),
+    },
+  };
+});
+---
+
+<section class="space-y-6">
+  <div class="flex items-start justify-between gap-4">
+    <h1 class="text-2xl font-semibold tracking-tight">Recent</h1>
+  </div>
+  <DocumentsDataTable
+    client:load
+    collectionSlug="recent"
+    draftsEnabled={true}
+    title="Recent"
+    columns={[
+      { key: "title", label: "Title" },
+      { key: "collection", label: "Collection" },
+      { key: "_status", label: "Status" },
+      { key: "_updatedAt", label: "Updated" },
+    ]}
+    data={recentRows}
+    searchPlaceholder="Filter recent entries..."
+  />
+</section>

@@ -1,0 +1,581 @@
+---
+import { ArrowLeft, ArrowUpRight, Dot } from "lucide-react";
+
+import AdminCard from "@/cms/admin/components/AdminCard.astro";
+import AiGenerateButton from "@/cms/admin/components/AiGenerateButton";
+import DocumentActions from "@/cms/admin/components/DocumentActions";
+import DocumentLock from "@/cms/admin/components/DocumentLock";
+import DocumentsDataTable from "@/cms/admin/components/DocumentsDataTable";
+import LiveHeading from "@/cms/admin/components/LiveHeading";
+import UnsavedGuard from "@/cms/admin/components/UnsavedGuard";
+import FieldControl from "@/cms/admin/components/FieldControl.astro";
+import { StatusBadge } from "@/cms/admin/components/ui/badge";
+import { buttonVariants } from "@/cms/admin/components/ui/button";
+import config from "virtual:kide/config";
+import { cms } from "virtual:kide/api";
+import { isAiEnabled } from "virtual:kide/runtime";
+import { formatDate, getFieldSets, getLabelField } from "@/cms/core";
+import {
+  getFormAction,
+  getVisualStatus,
+  isFieldHidden as isFieldHiddenFn,
+  isFieldReadOnly as isFieldReadOnlyFn,
+} from "@/cms/admin/lib/access";
+import {
+  loadDocument,
+  loadFormSubmissions,
+  loadMenuLinkOptions,
+  loadParentFormTitle,
+  loadRelationOptions,
+  loadReverseRefs,
+} from "@/cms/admin/lib/edit-data";
+import EditScripts from "./edit/EditScripts.astro";
+import ReverseReferencesList from "./edit/ReverseReferencesList.astro";
+
+type CollectionLike = {
+  slug: string;
+  labels: { singular: string; plural: string };
+  singleton?: boolean;
+  drafts?: boolean;
+  preview?: boolean | string;
+  pathPrefix?: string;
+  fields: Record<string, any>;
+};
+
+const { collection, mode, documentId } = Astro.props as {
+  collection: CollectionLike;
+  mode: "new" | "edit";
+  documentId?: string;
+};
+
+const user = Astro.locals.user;
+const runtimeContext = user ? { user: { id: user.id, role: user.role, email: user.email } } : {};
+const cmsRuntime = cms as Record<string, any> & { meta: typeof cms.meta };
+const locales = config.locales?.supported ?? [];
+const defaultLocale = config.locales?.default ?? "en";
+const requestedLocale = Astro.url.searchParams.get("locale") ?? defaultLocale;
+const aiEnabled = isAiEnabled();
+const collectionApi = cmsRuntime[collection.slug];
+const isSingleton = collection.singleton === true;
+
+const isFieldHidden = (fieldName: string) => isFieldHiddenFn(collection, user, fieldName);
+const isFieldReadOnly = (fieldName: string) => isFieldReadOnlyFn(collection, user, fieldName);
+
+// --- Data loading ---
+let doc: Record<string, unknown> | null = null;
+let baseDoc: Record<string, unknown> | null = null;
+let versions: Array<{ version: number; createdAt: string }> = [];
+if (mode === "edit" && documentId) {
+  try {
+    const loaded = await loadDocument(collectionApi, documentId, requestedLocale, defaultLocale, runtimeContext);
+    if (!loaded.doc) return Astro.redirect(`/admin/${collection.slug}`);
+    doc = loaded.doc;
+    baseDoc = loaded.baseDoc;
+    versions = loaded.versions;
+  } catch {
+    return Astro.redirect(`/admin/${collection.slug}?_toast=error&_msg=Access+denied`);
+  }
+}
+
+const { relationOptionsByField, relationMetaByField } = await loadRelationOptions(
+  collection,
+  config,
+  user,
+  cmsRuntime,
+  defaultLocale,
+  runtimeContext,
+);
+const menuLinkOptions =
+  collection.slug === "menus" ? await loadMenuLinkOptions(config, user, cmsRuntime, defaultLocale, runtimeContext) : [];
+const reverseRefs =
+  mode === "edit" && documentId
+    ? await loadReverseRefs(collection, documentId, config, user, cmsRuntime, defaultLocale, runtimeContext)
+    : [];
+
+// --- Forms-specific: tab + submissions list ---
+const isFormsEdit = collection.slug === "forms" && mode === "edit";
+const formTab = isFormsEdit && Astro.url.searchParams.get("tab") === "submissions" ? "submissions" : "edit";
+const { submissionRows, submissionCount } =
+  isFormsEdit && documentId
+    ? await loadFormSubmissions(documentId, defaultLocale, cmsRuntime, runtimeContext, formatDate)
+    : { submissionRows: [], submissionCount: 0 };
+
+// --- Form-submissions-specific: custom read-only view ---
+const isSubmissionView = collection.slug === "form-submissions" && mode === "edit";
+const parentFormTitle =
+  isSubmissionView && doc?.form ? await loadParentFormTitle(String(doc.form), cmsRuntime, runtimeContext) : null;
+const submissionData = (isSubmissionView && doc?.data ? doc.data : {}) as Record<string, unknown>;
+const { _context: submissionContext, ...submittedFields } = submissionData;
+const submissionContextEntries =
+  submissionContext && typeof submissionContext === "object"
+    ? Object.entries(submissionContext as Record<string, unknown>)
+    : [];
+const formatSubmissionValue = (value: unknown): string => {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "string") return value;
+  return JSON.stringify(value);
+};
+
+// --- Layout / derived state ---
+const selectedLocale = mode === "new" ? defaultLocale : requestedLocale;
+const translatableFields = Object.entries(collection.fields)
+  .filter(([, field]: [string, any]) => field.translatable)
+  .map(([fieldName]) => fieldName);
+const translationMode = mode === "edit" && selectedLocale !== defaultLocale && translatableFields.length > 0;
+const fieldSets = getFieldSets(collection);
+const primaryFieldSets = fieldSets.filter((set: { position?: string }) => set.position !== "sidebar");
+const sidebarFieldSets = fieldSets.filter((set: { position?: string }) => set.position === "sidebar");
+const mainFieldSets = primaryFieldSets.length > 0 ? primaryFieldSets : fieldSets.slice(0, 1);
+const effectiveSidebarFieldSets =
+  sidebarFieldSets.length > 0 ? sidebarFieldSets : fieldSets.slice(mainFieldSets.length);
+
+const hasPreview = !!(mode === "edit" && (collection.preview || (collection.pathPrefix && doc?.slug)));
+const previewUrl = hasPreview
+  ? typeof collection.preview === "string"
+    ? `${collection.preview}?preview=true`
+    : `${cms.meta.getRouteForDocument(collection.slug, doc)}?preview=true`
+  : null;
+
+const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
+const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
+const blockRelationOptions: Record<string, Array<{ value: string; label: string }>> = {};
+for (const [key, opts] of Object.entries(relationOptionsByField)) {
+  if (key.startsWith("block:")) blockRelationOptions[key] = opts;
+}
+const fieldSetTitle = (position: string) => (position === "sidebar" ? "Details" : "Content");
+---
+
+<section class="space-y-6">
+  {
+    isSubmissionView && doc?.form && (
+      <a
+        href={`/admin/forms/${doc.form}?tab=submissions`}
+        class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
+      >
+        <ArrowLeft className="size-4" />
+        {parentFormTitle ? `${parentFormTitle} submissions` : "Back to submissions"}
+      </a>
+    )
+  }
+
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">
+        {mode === "new" && <LiveHeading client:load initial={`New ${collection.labels.singular}`} />}
+        {
+          mode === "edit" && (
+            <LiveHeading
+              client:load
+              initial={
+                collection.singleton
+                  ? collection.labels.singular
+                  : String(doc?.[getLabelField(collection)] ?? doc?.slug ?? collection.labels.singular)
+              }
+            />
+          )
+        }
+      </h1>
+      {
+        mode === "edit" && doc && collection.drafts && (
+          <div class="text-muted-foreground mt-1 flex flex-col gap-0.5 text-xs sm:flex-row sm:items-center sm:gap-0">
+            <StatusBadge status={getVisualStatus(doc)} styled />
+            {doc._status === "scheduled" && doc._publishAt && (
+              <>
+                <Dot className="hidden size-6 text-muted-foreground/70 sm:block" />
+                <span>Publishes {formatDate(doc._publishAt)}</span>
+                {doc._unpublishAt && (
+                  <>
+                    <Dot className="hidden size-6 text-muted-foreground/70 sm:block" />
+                    <span>Unpublishes {formatDate(doc._unpublishAt)}</span>
+                  </>
+                )}
+              </>
+            )}
+            <Dot className="hidden size-6 text-muted-foreground/70 sm:block" />
+            <span>Created {formatDate(doc._createdAt)}</span>
+            <Dot className="hidden size-6 text-muted-foreground/70 sm:block" />
+            <span>Updated {formatDate(doc._updatedAt)}</span>
+          </div>
+        )
+      }
+      {
+        isSubmissionView && doc && (
+          <div class="text-muted-foreground mt-1 flex flex-col gap-0.5 text-xs sm:flex-row sm:items-center sm:gap-0">
+            {parentFormTitle && <span>{parentFormTitle}</span>}
+            {parentFormTitle && <Dot className="hidden size-6 text-muted-foreground/70 sm:block" />}
+            <span>Submitted {formatDate(String(doc._createdAt ?? ""))}</span>
+          </div>
+        )
+      }
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      {
+        hasPreview && previewUrl && !translationMode && (
+          <a
+            href={previewUrl}
+            target="_blank"
+            class="text-foreground/70 hover:text-foreground flex items-center gap-1 text-sm transition-colors"
+          >
+            Preview
+            <ArrowUpRight className="size-4" />
+          </a>
+        )
+      }
+    </div>
+  </div>
+
+  {
+    isFormsEdit && (
+      <div class="border-border/60 flex gap-4 border-b">
+        <a
+          href={`/admin/forms/${documentId}`}
+          class:list={[
+            "-mb-px border-b-2 px-1 pb-2 text-sm",
+            formTab === "edit"
+              ? "border-primary font-medium"
+              : "text-muted-foreground hover:text-foreground border-transparent",
+          ]}
+        >
+          Fields
+        </a>
+        <a
+          href={`/admin/forms/${documentId}?tab=submissions`}
+          class:list={[
+            "-mb-px border-b-2 px-1 pb-2 text-sm",
+            formTab === "submissions"
+              ? "border-primary font-medium"
+              : "text-muted-foreground hover:text-foreground border-transparent",
+          ]}
+        >
+          Submissions{submissionCount > 0 ? ` (${submissionCount})` : ""}
+        </a>
+      </div>
+    )
+  }
+
+  {
+    isFormsEdit && formTab === "submissions" && (
+      <DocumentsDataTable
+        client:load
+        collectionSlug="form-submissions"
+        draftsEnabled={false}
+        labelField="submittedAt"
+        title="Submissions"
+        columns={[
+          { key: "submittedAt", label: "Submitted" },
+          { key: "status", label: "Status" },
+          { key: "summary", label: "Preview" },
+        ]}
+        data={submissionRows}
+        searchPlaceholder="Filter submissions..."
+      />
+    )
+  }
+
+  {
+    formTab !== "submissions" && (
+      <>
+        {mode === "edit" && documentId && (
+          <DocumentLock client:load collection={collection.slug} documentId={documentId} />
+        )}
+        <UnsavedGuard
+          client:load
+          formId={translationMode ? "translation-form" : "document-form"}
+          isNew={mode === "new"}
+          isDraft={Boolean(
+            !translationMode &&
+            collection.drafts &&
+            (doc?._status === "draft" || doc?._status === "scheduled" || (doc && getVisualStatus(doc) === "changed")),
+          )}
+        />
+        <div id="document-edit-area" class="space-y-6">
+          {collection.slug === "users" && mode === "edit" && Astro.url.searchParams.get("inviteToken") && (
+            <AdminCard title={Astro.url.searchParams.get("emailSent") === "true" ? "Invitation sent" : "Invite link"}>
+              {Astro.url.searchParams.get("emailSent") === "true" ? (
+                <p class="text-muted-foreground text-sm">
+                  An invitation email has been sent. The user can also use this link:
+                </p>
+              ) : (
+                <p class="text-muted-foreground text-sm">
+                  Email is not configured. Share this link with the user to complete their registration:
+                </p>
+              )}
+              <code class="bg-muted mt-2 block rounded-md px-3 py-2 text-sm break-all select-all">
+                {Astro.url.origin}/admin/invite?token={Astro.url.searchParams.get("inviteToken")}
+              </code>
+            </AdminCard>
+          )}
+
+          <div
+            class={
+              effectiveSidebarFieldSets.length === 0 || translationMode
+                ? "grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
+                : ""
+            }
+          >
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex flex-wrap items-center gap-2">
+                {locales.length > 1 &&
+                  mode === "edit" &&
+                  translatableFields.length > 0 &&
+                  locales.map((locale) => (
+                    <a
+                      href={`/admin/${collection.slug}/${documentId}?locale=${locale}`}
+                      class:list={[
+                        buttonVariants({ variant: "outline", size: "sm" }),
+                        selectedLocale === locale
+                          ? "border-primary/50 bg-background ring-ring/30 font-medium ring-2"
+                          : "text-muted-foreground border-border/60",
+                      ]}
+                    >
+                      {locale.toUpperCase()}
+                    </a>
+                  ))}
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                {translationMode ? (
+                  <button
+                    class={buttonVariants({ variant: "outline" })}
+                    type="submit"
+                    form="translation-form"
+                    value="save"
+                    disabled
+                  >
+                    Save translation
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      class={buttonVariants({ variant: "outline" })}
+                      type="submit"
+                      form="document-form"
+                      name="_intent"
+                      value="save"
+                      disabled={mode === "edit"}
+                    >
+                      {collection.slug === "users" && mode === "new"
+                        ? "Send invite"
+                        : collection.drafts
+                          ? "Save draft"
+                          : "Save"}
+                    </button>
+                    {collection.drafts && (
+                      <button
+                        class={buttonVariants({ variant: "publish" })}
+                        type="submit"
+                        form="document-form"
+                        name="_intent"
+                        value="publish"
+                        disabled={
+                          mode === "edit" &&
+                          !(
+                            doc?._status === "draft" ||
+                            doc?._status === "scheduled" ||
+                            (doc && getVisualStatus(doc) === "changed")
+                          )
+                        }
+                      >
+                        Publish
+                      </button>
+                    )}
+                  </>
+                )}
+                {mode === "edit" && !translationMode && documentId && (
+                  <DocumentActions
+                    client:load
+                    formId="document-form"
+                    collectionSlug={collection.slug}
+                    documentId={documentId}
+                    showUnpublish={collection.drafts && doc?._status === "published"}
+                    showDiscardDraft={Boolean(collection.drafts && doc?._status === "published" && doc?._published)}
+                    showDelete={!isSingleton}
+                    showDuplicate={!isSingleton}
+                    showSchedule={!!collection.drafts}
+                    showCancelSchedule={collection.drafts && doc?._status === "scheduled"}
+                    currentPublishAt={doc?._publishAt ? String(doc._publishAt) : undefined}
+                    currentUnpublishAt={doc?._unpublishAt ? String(doc._unpublishAt) : undefined}
+                    versions={versions}
+                    restoreEndpoint={getFormAction(collection.slug, documentId)}
+                    redirectTo={Astro.url.pathname + Astro.url.search}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {!translationMode && (
+            <form
+              id="document-form"
+              method="post"
+              action={getFormAction(collection.slug, mode === "edit" ? documentId : undefined)}
+              class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
+            >
+              <input type="hidden" name="_action" value={mode === "new" ? "create" : "update"} />
+              <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
+
+              <div class="space-y-6">
+                {isSubmissionView ? (
+                  <AdminCard title="Submission">
+                    <table class="w-full text-sm">
+                      <tbody>
+                        {Object.entries(submittedFields).map(([key, value]) => (
+                          <tr class="border-b last:border-b-0">
+                            <td class="text-muted-foreground w-1/3 py-2 pr-4 align-top font-medium">{key}</td>
+                            <td class="py-2 align-top break-words whitespace-pre-wrap">
+                              {formatSubmissionValue(value)}
+                            </td>
+                          </tr>
+                        ))}
+                        {submissionContextEntries.map(([key, value]) => (
+                          <tr class="border-b last:border-b-0">
+                            <td class="text-muted-foreground w-1/3 py-2 pr-4 align-top font-medium">{key}</td>
+                            <td class="py-2 align-top break-words whitespace-pre-wrap">
+                              {formatSubmissionValue(value)}
+                            </td>
+                          </tr>
+                        ))}
+                        {Object.keys(submittedFields).length === 0 && submissionContextEntries.length === 0 && (
+                          <tr>
+                            <td class="text-muted-foreground py-2" colspan="2">
+                              No data.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </AdminCard>
+                ) : (
+                  mainFieldSets.map((set) => (
+                    <AdminCard title={fieldSetTitle("content")}>
+                      <div class="grid gap-5">
+                        {set.fields
+                          .filter((fieldName) => collection.fields[fieldName] && !isFieldHidden(fieldName))
+                          .map((fieldName) => (
+                            <FieldControl
+                              name={fieldName}
+                              field={collection.fields[fieldName]}
+                              value={getCurrentValue(fieldName)}
+                              readOnly={isFieldReadOnly(fieldName)}
+                              relationOptions={relationOptionsByField[fieldName] ?? []}
+                              relationMeta={relationMetaByField[fieldName]}
+                              menuLinkOptions={menuLinkOptions}
+                              blockRelationOptions={blockRelationOptions}
+                            />
+                          ))}
+                      </div>
+                    </AdminCard>
+                  ))
+                )}
+              </div>
+
+              <div class="space-y-6 text-sm [&_button]:text-sm [&_input]:text-sm [&_select]:text-sm [&_textarea]:text-sm">
+                {effectiveSidebarFieldSets.map((set) => (
+                  <AdminCard title={fieldSetTitle("sidebar")}>
+                    <div class="grid gap-5">
+                      {set.fields
+                        .filter((fieldName) => collection.fields[fieldName] && !isFieldHidden(fieldName))
+                        .map((fieldName) => (
+                          <div>
+                            <FieldControl
+                              name={fieldName}
+                              field={collection.fields[fieldName]}
+                              value={getCurrentValue(fieldName)}
+                              readOnly={isFieldReadOnly(fieldName)}
+                              relationOptions={relationOptionsByField[fieldName] ?? []}
+                              relationMeta={relationMetaByField[fieldName]}
+                              menuLinkOptions={menuLinkOptions}
+                            />
+                            {aiEnabled && fieldName === "seoDescription" && !isFieldReadOnly(fieldName) && (
+                              <div class="mt-1.5">
+                                <AiGenerateButton
+                                  client:load
+                                  endpoint="/api/cms/ai/seo"
+                                  payload={{
+                                    title: getCurrentValue("title") ?? "",
+                                    excerpt: getCurrentValue("excerpt") ?? "",
+                                  }}
+                                  targetField={fieldName}
+                                  label="Generate description"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </AdminCard>
+                ))}
+                <ReverseReferencesList reverseRefs={reverseRefs} />
+              </div>
+            </form>
+          )}
+
+          {translationMode && (
+            <div class="space-y-6">
+              <form
+                id="translation-form"
+                method="post"
+                action={getFormAction(collection.slug, documentId)}
+                class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]"
+              >
+                <input type="hidden" name="_action" value="save-translation" />
+                <input type="hidden" name="locale" value={selectedLocale} />
+                <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
+
+                <AdminCard title="Localized content">
+                  <div class="grid gap-5">
+                    {translatableFields
+                      .filter((fn) => !isFieldHidden(fn))
+                      .map((fieldName) => {
+                        const fieldDef = collection.fields[fieldName];
+                        const fieldType =
+                          fieldDef.type === "richText" ? "richText" : fieldDef.type === "slug" ? "slug" : "text";
+                        const sourceValue = getSharedValue(fieldName);
+                        const sourceText =
+                          typeof sourceValue === "object" && sourceValue !== null
+                            ? JSON.stringify(sourceValue)
+                            : String(sourceValue ?? "");
+                        return (
+                          <div>
+                            <FieldControl
+                              name={fieldName}
+                              field={fieldDef}
+                              value={getCurrentValue(fieldName)}
+                              readOnly={isFieldReadOnly(fieldName)}
+                              relationOptions={relationOptionsByField[fieldName] ?? []}
+                              relationMeta={relationMetaByField[fieldName]}
+                              menuLinkOptions={menuLinkOptions}
+                            />
+                            {aiEnabled && sourceText && fieldDef.type !== "slug" && fieldDef.type !== "blocks" && (
+                              <div class="mt-1.5">
+                                <AiGenerateButton
+                                  client:load
+                                  endpoint="/api/cms/ai/translate"
+                                  payload={{
+                                    text: sourceText,
+                                    sourceLocale: defaultLocale,
+                                    targetLocale: selectedLocale,
+                                    fieldName,
+                                    fieldType,
+                                  }}
+                                  targetField={fieldName}
+                                  label={`Translate from ${defaultLocale.toUpperCase()}`}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                </AdminCard>
+              </form>
+            </div>
+          )}
+        </div>
+      </>
+    )
+  }
+</section>
+
+<EditScripts />

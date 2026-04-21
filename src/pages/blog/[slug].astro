@@ -1,6 +1,7 @@
 ---
 import PublicLayout from "@/layouts/PublicLayout.astro";
 import RichTextContent from "@/components/RichTextContent.astro";
+import CmsForm from "@/components/CmsForm.astro";
 import { cms } from "@/cms/.generated/api";
 import { cacheTags, cmsImage, cmsSrcset } from "@/cms/core";
 
@@ -37,5 +38,10 @@ if (!isPreview) Astro.cache.set({ tags: cacheTags("posts", doc._id) });
     <div data-cms="body" class="prose">
       <RichTextContent content={doc.body} />
     </div>
+
+    <section class="mt-12 border-t pt-8">
+      <h2 class="mb-4 text-xl font-semibold">Comments</h2>
+      <CmsForm slug="formi" context={{ pageTitle: doc.title, pageUrl: Astro.url.pathname }} />
+    </section>
   </article>
 </PublicLayout>

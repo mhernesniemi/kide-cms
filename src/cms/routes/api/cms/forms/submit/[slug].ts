@@ -62,17 +62,23 @@ export const POST: APIRoute = async ({ request, params, redirect }) => {
     return redirect(buildRedirectUrl(request, errors.join(", "), false), 303);
   }
 
+  // Collect context fields set by the host page via <CmsForm context={{...}} />.
+  const context: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith("_ctx_")) context[key.slice(5)] = String(value);
+  }
+
   try {
     await cms["form-submissions"].create(
       {
         form: form._id,
-        submittedAt: new Date().toISOString(),
         status: "new",
-        data,
+        data: Object.keys(context).length > 0 ? { ...data, _context: context } : data,
       },
       { _system: true },
     );
-  } catch {
+  } catch (err) {
+    console.error("[forms] Failed to save submission:", err);
     return redirect(buildRedirectUrl(request, "Could not save submission", false), 303);
   }
 

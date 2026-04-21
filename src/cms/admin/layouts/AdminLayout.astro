@@ -1,5 +1,6 @@
 ---
 import "virtual:kide/admin-css";
+import { cms } from "virtual:kide/api";
 
 import {
   ExternalLink,
@@ -118,6 +119,17 @@ const bottomIcons: Record<string, any> = {
   forms: MessageSquare,
 };
 
+// Unread submissions badge — shown next to "Forms" in the sidebar.
+let unreadSubmissions = 0;
+try {
+  const cmsAny = cms as Record<string, any>;
+  if (cmsAny["form-submissions"]) {
+    unreadSubmissions = await cmsAny["form-submissions"].count({ where: { status: "new" } }, { _system: true });
+  }
+} catch {
+  // Table may not exist yet on first run — ignore.
+}
+
 // Collections that should never appear as a top-level sidebar entry.
 // Submissions are viewed as a tab on the parent form's detail page.
 const hiddenFromSidebar = new Set(["form-submissions"]);
@@ -135,6 +147,7 @@ type NavItem = {
   active: boolean;
   newHref?: string;
   weight: number;
+  badge?: number;
 };
 const navItems: NavItem[] = [];
 
@@ -200,6 +213,7 @@ for (const slug of bottomOrder) {
       active: activeCollection === c.slug,
       newHref: `/admin/${c.slug}/new`,
       weight: 45,
+      badge: slug === "forms" && unreadSubmissions > 0 ? unreadSubmissions : undefined,
     });
   }
 }
@@ -281,7 +295,12 @@ navItems.sort((a, b) => a.weight - b.weight);
                     )}
                   >
                     <item.Icon className="size-4 shrink-0 stroke-1" />
-                    <span>{item.label}</span>
+                    <span class="flex-1">{item.label}</span>
+                    {item.badge ? (
+                      <span class="text-muted-foreground/80 text-xs tabular-nums">
+                        {item.badge > 99 ? "99+" : item.badge} new
+                      </span>
+                    ) : null}
                   </a>
                   {item.newHref && (
                     <a
@@ -342,7 +361,12 @@ navItems.sort((a, b) => a.weight - b.weight);
                         )}
                       >
                         <item.Icon className="size-4 shrink-0 stroke-1" />
-                        <span>{item.label}</span>
+                        <span class="flex-1">{item.label}</span>
+                        {item.badge ? (
+                          <span class="text-muted-foreground/80 text-xs tabular-nums">
+                            {item.badge > 99 ? "99+" : item.badge} new
+                          </span>
+                        ) : null}
                       </a>
                       {item.newHref && (
                         <a

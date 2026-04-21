@@ -1,0 +1,118 @@
+---
+import { Plus } from "lucide-react";
+
+import DocumentsDataTable from "@/cms/admin/components/DocumentsDataTable";
+import { buttonVariants } from "@/cms/admin/components/ui/button";
+import config from "virtual:kide/config";
+import { cms } from "virtual:kide/api";
+import { formatDate, formatFieldValue, getLabelField, getListColumns, humanize } from "@/cms/core";
+import { canWrite, getVisualStatus } from "@/cms/admin/lib/access";
+
+type CollectionLike = {
+  slug: string;
+  labels: { singular: string; plural: string };
+  drafts?: boolean;
+  fields: Record<string, any>;
+  views?: Record<string, any>;
+};
+
+const { collection } = Astro.props as { collection: CollectionLike };
+const user = Astro.locals.user;
+const runtimeContext = user ? { user: { id: user.id, role: user.role, email: user.email } } : {};
+const cmsRuntime = cms as Record<string, any>;
+const defaultLocale = config.locales?.default ?? "en";
+const locales = config.locales?.supported ?? [];
+
+const PAGE_SIZE = config.admin?.pageSize ?? 20;
+const viewConfig = collection.views ?? {};
+const defaultSort = viewConfig.list?.defaultSort ?? { field: "_updatedAt", direction: "desc" };
+const sortParam = Astro.url.searchParams.get("sort");
+const sortDirParam = Astro.url.searchParams.get("dir");
+const currentSort = sortParam
+  ? { field: sortParam, direction: (sortDirParam === "asc" ? "asc" : "desc") as "asc" | "desc" }
+  : defaultSort;
+const currentPage = Math.max(1, Number(Astro.url.searchParams.get("page") ?? "1"));
+const searchParam = Astro.url.searchParams.get("q") ?? "";
+const offset = (currentPage - 1) * PAGE_SIZE;
+
+const collectionApi = cmsRuntime[collection.slug];
+const [docs, totalDocs] = await Promise.all([
+  collectionApi.find(
+    {
+      status: "any",
+      locale: defaultLocale,
+      sort: currentSort,
+      limit: PAGE_SIZE,
+      offset,
+      search: searchParam || undefined,
+    },
+    runtimeContext,
+  ),
+  collectionApi.count({ status: "any", locale: defaultLocale, search: searchParam || undefined }, runtimeContext),
+]);
+const totalPages = Math.max(1, Math.ceil(totalDocs / PAGE_SIZE));
+
+const listColumns = getListColumns(collection, viewConfig.list);
+const tableRows = docs.map((entry: Record<string, unknown>) => ({
+  id: String(entry._id),
+  editHref: `/admin/${collection.slug}/${entry._id}`,
+  status: getVisualStatus(entry),
+  locales: [
+    defaultLocale,
+    ...(Array.isArray(entry._availableLocales)
+      ? entry._availableLocales.map((l) => String(l)).filter((l) => l !== defaultLocale)
+      : []),
+  ],
+  searchText: String(entry[getLabelField(collection)] ?? entry.slug ?? entry._id ?? ""),
+  values: Object.fromEntries(
+    listColumns.map((column) => [
+      column,
+      column === "_status"
+        ? getVisualStatus(entry)
+        : column === "_updatedAt" || column === "_createdAt"
+          ? formatDate(entry[column])
+          : column.startsWith("_")
+            ? String(entry[column] ?? "—")
+            : formatFieldValue(collection.fields[column], entry[column]),
+    ]),
+  ),
+}));
+---
+
+<section class="space-y-6">
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">{collection.labels.plural}</h1>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      {
+        canWrite(config, user, collection.slug) && (
+          <a href={`/admin/${collection.slug}/new`} class={buttonVariants({})}>
+            <Plus className="size-4" />
+            {collection.slug === "users" ? "Invite user" : `New ${collection.labels.singular}`}
+          </a>
+        )
+      }
+    </div>
+  </div>
+  <DocumentsDataTable
+    client:load
+    collectionSlug={collection.slug}
+    draftsEnabled={collection.drafts}
+    defaultLocale={locales.length > 1 ? defaultLocale : undefined}
+    labelField={getLabelField(collection)}
+    newHref={`/admin/${collection.slug}/new`}
+    title={collection.labels.plural}
+    columns={listColumns.map((column) => ({ key: column, label: humanize(column) }))}
+    data={tableRows}
+    searchPlaceholder={`Filter ${collection.labels.plural.toLowerCase()}...`}
+    serverPagination={{
+      totalDocs,
+      totalPages,
+      currentPage,
+      pageSize: PAGE_SIZE,
+      currentSort,
+      currentSearch: searchParam,
+    }}
+  />
+</section>

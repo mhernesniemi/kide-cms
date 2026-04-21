@@ -12,7 +12,7 @@ type FormFieldConfig = {
   options?: string[];
 };
 
-const { slug } = Astro.props as { slug: string };
+const { slug, context } = Astro.props as { slug: string; context?: Record<string, string | number | boolean> };
 const form = await cms.forms.findOne({ where: { slug } });
 
 if (!form) {
@@ -36,6 +36,12 @@ const action = `/api/cms/forms/submit/${slug}`;
     aria-hidden="true"
     style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;"
   />
+
+  {/* Context metadata — page title, URL, or anything else the host page wants to attach */}
+  {
+    context &&
+      Object.entries(context).map(([key, value]) => <input type="hidden" name={`_ctx_${key}`} value={String(value)} />)
+  }
 
   {
     fieldConfigs.map((field) => {

@@ -1,0 +1,64 @@
+---
+import DocumentsDataTable from "@/cms/admin/components/DocumentsDataTable";
+import config from "virtual:kide/config";
+import { cms } from "virtual:kide/api";
+import { formatDate } from "@/cms/core";
+import { canRead } from "@/cms/admin/lib/access";
+
+const user = Astro.locals.user;
+const runtimeContext = user ? { user: { id: user.id, role: user.role, email: user.email } } : {};
+const cmsRuntime = cms as Record<string, any>;
+const defaultLocale = config.locales?.default ?? "en";
+
+const singletonCollections = config.collections.filter((c) => c.singleton && canRead(config, user, c.slug));
+const singletonsData = await Promise.all(
+  singletonCollections.map(async (sc) => {
+    const api = cmsRuntime[sc.slug];
+    const singleDocs = await api.find({ status: "any", limit: 1, locale: defaultLocale }, runtimeContext);
+    const singleDoc = singleDocs[0] ?? null;
+    return {
+      id: singleDoc ? String(singleDoc._id) : "",
+      collectionSlug: sc.slug,
+      label: sc.labels.singular,
+      status: singleDoc && sc.drafts ? String(singleDoc._status ?? "draft") : "",
+      locales: singleDoc
+        ? [
+            defaultLocale,
+            ...(Array.isArray(singleDoc._availableLocales)
+              ? singleDoc._availableLocales.filter((l: string) => l !== defaultLocale)
+              : []),
+          ]
+        : [],
+      updatedAt: singleDoc ? formatDate(singleDoc._updatedAt) : "—",
+      editHref: `/admin/${sc.slug}`,
+    };
+  }),
+);
+---
+
+<section class="space-y-6">
+  <div class="flex items-start justify-between gap-4">
+    <h1 class="text-2xl font-semibold tracking-tight">Singles</h1>
+  </div>
+  <DocumentsDataTable
+    client:load
+    collectionSlug="singles"
+    draftsEnabled={true}
+    duplicateEnabled={false}
+    title="Singles"
+    columns={[
+      { key: "name", label: "Name" },
+      ...(singletonCollections.some((c) => c.drafts) ? [{ key: "_status", label: "Status" }] : []),
+      { key: "updatedAt", label: "Last updated" },
+    ]}
+    data={singletonsData.map((s) => ({
+      id: s.id,
+      collectionSlug: s.collectionSlug,
+      editHref: s.editHref,
+      locales: s.locales,
+      searchText: s.label,
+      values: { name: s.label, _status: s.status, updatedAt: s.updatedAt },
+    }))}
+    searchPlaceholder="Filter singles..."
+  />
+</section>

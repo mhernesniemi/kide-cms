@@ -1,0 +1,120 @@
+---
+// Client-side glue for the edit form: conditional field visibility, autofocus on new,
+// AJAX form submit (so validation errors surface as toasts without losing form state).
+---
+
+<script is:inline>
+  (function () {
+    // --- Conditional fields ---
+    var conditionals = document.querySelectorAll("[data-condition-field]");
+    if (conditionals.length > 0) {
+      var matchesCondition = function (currentValue, expected) {
+        if (Array.isArray(expected)) {
+          return expected.some(function (v) {
+            return String(v) === String(currentValue);
+          });
+        }
+        if (typeof expected === "boolean") {
+          return expected
+            ? currentValue === "true" || currentValue === true
+            : currentValue === "false" || currentValue === false || currentValue === "";
+        }
+        return String(expected) === String(currentValue);
+      };
+
+      var getFieldValue = function (fieldName) {
+        var radio = document.querySelector('input[type="radio"][name="' + fieldName + '"]:checked');
+        if (radio) return radio.value;
+        if (document.querySelector('input[type="radio"][name="' + fieldName + '"]')) return "";
+        var checkbox = document.querySelector('input[type="checkbox"][name="' + fieldName + '"]');
+        if (checkbox) return checkbox.checked ? "true" : "false";
+        var hidden = document.querySelector('input[type="hidden"][name="' + fieldName + '"]');
+        if (hidden) return hidden.value;
+        var input = document.querySelector('[name="' + fieldName + '"]');
+        if (input) return input.value;
+        return "";
+      };
+
+      var updateVisibility = function () {
+        conditionals.forEach(function (el) {
+          var depField = el.getAttribute("data-condition-field");
+          var expected = JSON.parse(el.getAttribute("data-condition-value"));
+          var currentValue = getFieldValue(depField);
+          var visible = matchesCondition(currentValue, expected);
+          var target = el.parentElement && el.parentElement.childElementCount === 1 ? el.parentElement : el;
+          target.style.display = visible ? "" : "none";
+          el.querySelectorAll("input, textarea, select").forEach(function (input) {
+            input.disabled = !visible;
+          });
+        });
+      };
+
+      updateVisibility();
+      var form = document.getElementById("document-form");
+      if (form) {
+        form.addEventListener("input", updateVisibility);
+        form.addEventListener("change", updateVisibility);
+      }
+    }
+  })();
+</script>
+
+<script is:inline>
+  (function () {
+    var form = document.getElementById("document-form");
+    if (!form) return;
+    if (location.pathname.endsWith("/new")) {
+      var first = form.querySelector('input[type="text"], textarea');
+      if (first) first.focus();
+    }
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var f = e.target;
+      var sub = e.submitter;
+      var fd = new FormData(f);
+      if (sub && sub.name && sub.value) fd.set(sub.name, sub.value);
+      fetch(f.action, {
+        method: f.method || "POST",
+        body: new URLSearchParams(fd),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      })
+        .then(function (res) {
+          var u = new URL(res.url);
+          if (u.searchParams.get("_toast") === "error") {
+            var existing = document.getElementById("admin-toast");
+            if (existing) existing.parentElement.remove();
+            var msg = decodeURIComponent(u.searchParams.get("_msg") || "Something went wrong");
+            var w = document.createElement("div");
+            w.className = "fixed top-4 left-1/2 z-50 w-full max-w-sm -translate-x-1/2";
+            w.innerHTML =
+              '<div id="admin-toast" role="alert" class="bg-card flex items-center gap-2 rounded-lg border border-red-500/30 px-5 py-3 text-sm shadow-lg" style="animation:toast-in .25s ease-out,toast-out .3s ease-in 4.7s forwards">' +
+              '<svg class="size-4 shrink-0 text-red-600 dark:text-red-400" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>' +
+              '<span class="text-red-700 dark:text-red-400">' +
+              msg +
+              "</span></div>";
+            document.body.appendChild(w);
+            setTimeout(function () {
+              w.remove();
+            }, 5200);
+            return;
+          }
+          if (u.searchParams.get("_toast") === "success") {
+            try {
+              new BroadcastChannel("cms-preview").postMessage({ type: "reload" });
+            } catch (e) {}
+          }
+          if (window.parent !== window && u.searchParams.get("_toast") === "success") {
+            var idMatch = u.pathname.match(/\/admin\/[^/]+\/([^/]+)/);
+            if (idMatch) {
+              window.parent.postMessage({ type: "cms:created", id: idMatch[1] }, "*");
+              return;
+            }
+          }
+          window.location.assign(res.url);
+        })
+        .catch(function () {
+          f.submit();
+        });
+    });
+  })();
+</script>

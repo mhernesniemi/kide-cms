@@ -1,0 +1,53 @@
+---
+import AdminCard from "@/cms/admin/components/AdminCard.astro";
+import type { ReverseRef } from "@/cms/admin/lib/edit-data";
+
+const { reverseRefs } = Astro.props as { reverseRefs: ReverseRef[] };
+
+const allDocs = reverseRefs.flatMap((ref) =>
+  ref.docs.map((d) => ({ ...d, collectionSlug: ref.collectionSlug, collectionLabel: ref.collectionLabel })),
+);
+const visible = allDocs.slice(0, 30);
+const hidden = allDocs.slice(30);
+---
+
+{
+  allDocs.length > 0 && (
+    <AdminCard title="Referenced by">
+      <ul class="grid gap-1">
+        {visible.map((d) => (
+          <li class="flex min-w-0 items-baseline justify-between gap-2">
+            <a
+              href={`/admin/${d.collectionSlug}/${d._id}`}
+              target="_blank"
+              class="text-foreground/70 hover:text-foreground truncate text-sm transition-colors hover:underline"
+            >
+              {d.label}
+            </a>
+            <span class="text-muted-foreground shrink-0 text-xs">{d.collectionLabel}</span>
+          </li>
+        ))}
+      </ul>
+      {hidden.length > 0 && (
+        <details class="mt-2">
+          <summary class="text-muted-foreground hover:text-foreground cursor-pointer text-xs transition-colors">
+            Show {hidden.length} more
+          </summary>
+          <ul class="mt-1 grid gap-1">
+            {hidden.map((d) => (
+              <li class="flex min-w-0 items-baseline justify-between gap-2">
+                <a
+                  href={`/admin/${d.collectionSlug}/${d._id}`}
+                  class="text-foreground/70 hover:text-foreground truncate text-sm transition-colors hover:underline"
+                >
+                  {d.label}
+                </a>
+                <span class="text-muted-foreground shrink-0 text-xs">{d.collectionLabel}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </AdminCard>
+  )
+}
