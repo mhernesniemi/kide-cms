@@ -27,8 +27,8 @@ export default defineCollection({
           name: fields.text({ required: true, admin: { help: "Field name used in form data (e.g. name)" } }),
           label: fields.text({ required: true }),
           placeholder: fields.text(),
-          required: fields.boolean(),
           maxLength: fields.number(),
+          required: fields.boolean(),
         },
         email: {
           name: fields.text({ required: true }),
@@ -40,14 +40,14 @@ export default defineCollection({
           name: fields.text({ required: true }),
           label: fields.text({ required: true }),
           placeholder: fields.text(),
-          required: fields.boolean(),
           rows: fields.number({ defaultValue: 4 }),
+          required: fields.boolean(),
         },
         select: {
           name: fields.text({ required: true }),
           label: fields.text({ required: true }),
-          required: fields.boolean(),
           options: fields.array({ of: fields.text(), defaultValue: [] }),
+          required: fields.boolean(),
         },
         checkbox: {
           name: fields.text({ required: true }),

@@ -12,7 +12,7 @@ export default function CheckboxField({ name, checked: initial = false, disabled
   const hiddenRef = useRef<HTMLInputElement>(null);
 
   return (
-    <label className="group inline-flex cursor-pointer items-center gap-2.5 text-sm">
+    <label className="group inline-flex cursor-pointer items-center gap-3 text-sm">
       <input type="hidden" name={name} value={checked ? "true" : "false"} ref={hiddenRef} />
       <Checkbox
         className="group-hover:border-primary/60 disabled:group-hover:border-input"
@@ -25,7 +25,7 @@ export default function CheckboxField({ name, checked: initial = false, disabled
         }}
         disabled={disabled}
       />
-      <span className="text-foreground select-none">{checked ? "Enabled" : "Disabled"}</span>
+      <span className="text-muted-foreground select-none">{checked ? "true" : "false"}</span>
     </label>
   );
 }

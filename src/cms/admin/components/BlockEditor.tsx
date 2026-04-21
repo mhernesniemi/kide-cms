@@ -615,7 +615,7 @@ function SubFieldControl({
 
     case "boolean":
       return (
-        <span className="border-input bg-background inline-flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
+        <span className="inline-flex items-center gap-3 text-sm">
           <input
             id={fieldId}
             type="checkbox"
@@ -623,7 +623,7 @@ function SubFieldControl({
             checked={Boolean(value)}
             onChange={(e) => onChange(e.target.checked)}
           />
-          <span className="text-muted-foreground">{value ? "Enabled" : "Disabled"}</span>
+          <span className="text-muted-foreground">{value ? "true" : "false"}</span>
         </span>
       );
 
