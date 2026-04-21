@@ -10,11 +10,9 @@ src/
     cms.config.ts         # CMS configuration (collections, admin, locales)
     collections/          # Collection definitions
     adapters/             # db, email, storage adapters
-    internals/            # Thin runner scripts (runtime, generator, seed, create-admin)
+    internals/            # Thin runner scripts + integration.ts + virtual.d.ts (not user-edited)
     migrations/           # Drizzle migrations
     .generated/           # Auto-generated schema/types/validators/api (do not edit)
-    integration.ts        # Astro integration (route injection, virtual modules)
-    virtual.d.ts          # Ambient types for virtual:kide/* modules
     core/                 # CMS runtime library (define, api, auth, schema, content, ...)
     admin/                # Admin UI (components, layouts, lib)
     routes/               # Admin pages + API routes (injected by integration)
@@ -53,7 +51,7 @@ After code changes, ALWAYS run:
 | `src/cms/collections/`   | Collection schemas                                    |
 | `src/cms/adapters/`      | Project-specific db / email / storage adapters        |
 | `src/cms/internals/`     | Thin runner scripts (runtime wiring, generator, etc.) |
-| `src/cms/integration.ts` | Astro integration (route injection, virtual modules)  |
+| `src/cms/internals/integration.ts` | Astro integration (route injection, virtual modules) |
 | `src/cms/core/`          | CMS runtime library (edit to change behavior)         |
 | `src/cms/admin/`         | Admin UI components, layouts, styles                  |
 | `src/cms/routes/`        | Admin pages + API routes injected by integration      |
