@@ -30,10 +30,13 @@ const recentRows = allEntries.slice(0, 50).map(({ doc, collection: cc }) => {
   const displayTitle = cc.singleton
     ? cc.labels.singular
     : String(doc[getLabelField(cc)] ?? doc.slug ?? cc.labels.singular);
+  // Only compute status for collections that opt into drafts. Otherwise it defaults
+  // to "draft" and the recent list shows a misleading badge for non-draftable docs.
+  const status = cc.drafts ? getVisualStatus(doc) : "";
   return {
     id: String(doc._id),
     editHref: `/admin/${cc.slug}/${doc._id}`,
-    status: getVisualStatus(doc),
+    status,
     singleton: cc.singleton,
     locales: [
       defaultLocale,
@@ -45,7 +48,7 @@ const recentRows = allEntries.slice(0, 50).map(({ doc, collection: cc }) => {
     values: {
       title: displayTitle,
       collection: cc.labels.singular,
-      _status: getVisualStatus(doc),
+      _status: status,
       _updatedAt: formatDate(doc._updatedAt),
     },
   };
