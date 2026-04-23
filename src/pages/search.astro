@@ -1,0 +1,218 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import { cms } from "@/cms/.generated/api";
+import { search, type SearchResult, type SearchSort } from "@/cms/core";
+
+type TaxonomyTerm = { id?: string; name?: string; slug?: string; children?: TaxonomyTerm[] };
+
+const flattenTerms = (terms: TaxonomyTerm[] | undefined, depth = 0): Array<{ slug: string; label: string }> => {
+  if (!Array.isArray(terms)) return [];
+  const out: Array<{ slug: string; label: string }> = [];
+  for (const term of terms) {
+    if (!term?.slug) continue;
+    const indent = "— ".repeat(depth);
+    out.push({ slug: term.slug, label: `${indent}${term.name ?? term.slug}` });
+    if (term.children) out.push(...flattenTerms(term.children, depth + 1));
+  }
+  return out;
+};
+
+const params = Astro.url.searchParams;
+const q = params.get("q")?.trim() ?? "";
+const collectionParam = params.get("collection") ?? "all";
+const categoryParam = params.get("category") ?? "";
+const sortParam = (params.get("sort") ?? "relevance") as SearchSort;
+
+const COLLECTION_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "posts", label: "Posts" },
+  { value: "pages", label: "Pages" },
+];
+const SORT_OPTIONS: Array<{ value: SearchSort; label: string }> = [
+  { value: "relevance", label: "Relevance" },
+  { value: "date", label: "Newest first" },
+  { value: "title", label: "Title A–Z" },
+];
+
+const taxonomies = (await cms.taxonomies.find({ status: "any" })) as Array<{ terms?: TaxonomyTerm[] }>;
+const categoryOptions = taxonomies.flatMap((tax) => flattenTerms(tax.terms));
+
+const effectiveCollection = categoryParam ? "posts" : collectionParam;
+const collectionsFilter = effectiveCollection === "all" ? undefined : [effectiveCollection];
+
+let docIdsFilter: string[] | undefined;
+if (categoryParam) {
+  const matching = await cms.posts.find({
+    where: { category: categoryParam },
+    status: "published",
+    limit: 500,
+  });
+  docIdsFilter = matching.map((p) => p._id);
+}
+
+const results: SearchResult[] =
+  !q || (categoryParam && (!docIdsFilter || docIdsFilter.length === 0))
+    ? []
+    : await search(q, {
+        collections: collectionsFilter,
+        docIds: docIdsFilter,
+        sort: sortParam,
+        limit: 50,
+      });
+
+const formatDate = (iso: string | null) => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+};
+
+const resultCountLabel = q ? `${results.length} result${results.length === 1 ? "" : "s"}` : "";
+---
+
+<PublicLayout title={q ? `Search: ${q}` : "Search"}>
+  <section class="mx-auto max-w-3xl px-4 py-10">
+    <h1 class="mb-8 text-4xl font-bold">Search</h1>
+
+    <form method="get" data-search-form class="space-y-8">
+      <input
+        type="search"
+        name="q"
+        value={q}
+        placeholder="Enter search query..."
+        autofocus
+        autocomplete="off"
+        class="w-full rounded-md border border-gray-300 px-4 py-4 text-base focus:border-teal-700 focus:outline-none"
+      />
+
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold">Categories</span>
+          <select
+            name="category"
+            class="w-full rounded-md border border-gray-300 bg-white px-4 py-3 text-sm focus:border-teal-700 focus:outline-none"
+          >
+            <option value="">Select</option>
+            {
+              categoryOptions.map((opt) => (
+                <option value={opt.slug} selected={categoryParam === opt.slug}>
+                  {opt.label}
+                </option>
+              ))
+            }
+          </select>
+        </label>
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold">Collections</span>
+          <select
+            name="collection"
+            class="w-full rounded-md border border-gray-300 bg-white px-4 py-3 text-sm focus:border-teal-700 focus:outline-none"
+          >
+            {
+              COLLECTION_OPTIONS.map((opt) => (
+                <option value={opt.value} selected={collectionParam === opt.value}>
+                  {opt.label}
+                </option>
+              ))
+            }
+          </select>
+        </label>
+      </div>
+
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-sm text-gray-500">{resultCountLabel}</p>
+        <label class="flex items-center gap-2 text-sm text-gray-500">
+          Sort by:
+          <select
+            name="sort"
+            class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-teal-700 focus:outline-none"
+          >
+            {
+              SORT_OPTIONS.map((opt) => (
+                <option value={opt.value} selected={sortParam === opt.value}>
+                  {opt.label}
+                </option>
+              ))
+            }
+          </select>
+        </label>
+      </div>
+
+      <noscript>
+        <button
+          type="submit"
+          class="rounded-md bg-teal-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-teal-800"
+        >
+          Apply
+        </button>
+      </noscript>
+    </form>
+
+    {
+      q && results.length > 0 && (
+        <ul class="mt-10 space-y-6">
+          {results.map((r) => {
+            const date = formatDate(r.publishedAt);
+            return (
+              <li>
+                <a href={r.url} class="text-lg font-medium text-teal-700 hover:underline">
+                  {r.title}
+                </a>
+                <div class="mt-0.5 flex gap-2 text-xs text-gray-500">
+                  <span class="uppercase">{r.collection}</span>
+                  {date && (
+                    <>
+                      <span>•</span>
+                      <span>{date}</span>
+                    </>
+                  )}
+                </div>
+                {r.snippet && <p class="mt-1 text-sm text-gray-600" set:html={r.snippet} />}
+              </li>
+            );
+          })}
+        </ul>
+      )
+    }
+
+    {
+      q && results.length === 0 && (
+        <p class="mt-10 text-gray-500">
+          No results for <span class="font-medium">{q}</span>.
+        </p>
+      )
+    }
+  </section>
+</PublicLayout>
+
+<script is:inline>
+  (function () {
+    const form = document.querySelector("form[data-search-form]");
+    if (!form) return;
+    const input = form.querySelector('input[name="q"]');
+    const selects = form.querySelectorAll("select");
+
+    const submit = () => {
+      // Drop empty params so the URL stays clean
+      for (const el of form.elements) {
+        if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement) {
+          if (el.name && el.value === "") el.disabled = true;
+        }
+      }
+      form.submit();
+    };
+
+    let debounceId;
+    input?.addEventListener("input", () => {
+      clearTimeout(debounceId);
+      debounceId = setTimeout(submit, 300);
+    });
+    selects.forEach((s) => s.addEventListener("change", submit));
+
+    // Restore cursor to end on server-rendered reload, so typing continues naturally
+    if (input && input.value) {
+      const end = input.value.length;
+      input.setSelectionRange?.(end, end);
+    }
+  })();
+</script>
