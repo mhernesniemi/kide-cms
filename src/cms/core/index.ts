@@ -122,7 +122,7 @@ export {
   ensureSearchSchema,
   isCollectionSearchable,
 } from "./search";
-export type { SearchResult, SearchOptions } from "./search";
+export type { SearchResult, SearchOptions, SearchSort } from "./search";
 
 export { isAiEnabled, getAiModel, streamAltText, streamSeoDescription, streamTranslation } from "./ai";
 
