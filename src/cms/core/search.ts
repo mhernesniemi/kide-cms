@@ -430,32 +430,30 @@ export const search = async (query: string, options: SearchOptions = {}): Promis
     _scoringText: `${row.title} ${row.snippet.split(MARK_OPEN).join("").split(MARK_CLOSE).join("")}`,
   }));
 
-  // Fuzzy re-rank for relevance mode: scores each candidate by min edit
-  // distance to words in title + snippet, with bm25 as tiebreaker. Rows where
-  // any query term has no word within the distance cap are dropped entirely —
-  // this is how we keep "kissa" from returning "heissan" just because both
-  // share the trigram "ssa".
+  // Fuzzy filter runs regardless of sort mode — it's a correctness gate, not
+  // a ranking concern. FTS5's trigram OR is permissive by design (to catch
+  // typos); without this filter, a random string like "kikkomaanidkssoecncru"
+  // matches any doc that happens to contain any 3-char slice.
+  const queryTerms = query
+    .toLowerCase()
+    .replace(/["'()]/g, " ")
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 3);
+  const scored = mapped
+    .map((row) => ({ row, fuzz: fuzzyScore(queryTerms, row._scoringText) }))
+    .filter((entry): entry is { row: (typeof mapped)[number]; fuzz: number } => entry.fuzz !== null);
+
+  // Relevance mode re-sorts by fuzzy distance (bm25 tiebreaker). Title/date
+  // sorts stay in the order SQL already gave us — Array.filter is stable.
   if ((options.sort ?? "relevance") === "relevance") {
-    const queryTerms = query
-      .toLowerCase()
-      .replace(/["'()]/g, " ")
-      .split(/\s+/)
-      .map((t) => t.trim())
-      .filter((t) => t.length >= 3);
-    const scored = mapped
-      .map((row) => ({ row, fuzz: fuzzyScore(queryTerms, row._scoringText) }))
-      .filter((entry): entry is { row: (typeof mapped)[number]; fuzz: number } => entry.fuzz !== null);
     scored.sort((a, b) => {
       if (a.fuzz !== b.fuzz) return a.fuzz - b.fuzz;
       return a.row.rank - b.row.rank;
     });
-    return scored.map(({ row }) => {
-      const { _scoringText, ...rest } = row;
-      return rest;
-    });
   }
 
-  return mapped.map((row) => {
+  return scored.map(({ row }) => {
     const { _scoringText, ...rest } = row;
     return rest;
   });
