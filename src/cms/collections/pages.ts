@@ -6,6 +6,7 @@ export default defineCollection({
   preview: true,
   timestamps: true,
   drafts: true,
+  searchable: true,
   versions: { max: 20 },
   views: {
     list: { columns: ["title", "_status", "_updatedAt"] },

@@ -16,6 +16,7 @@
     "cms:generate": "node --import tsx src/cms/internals/generator.ts",
     "cms:seed": "node --import tsx src/cms/internals/seed.ts",
     "cms:admin": "node --import tsx src/cms/internals/create-admin.ts",
+    "cms:reindex": "node --import tsx src/cms/internals/reindex.ts",
     "db:generate": "pnpm cms:generate && drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"

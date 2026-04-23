@@ -59,7 +59,7 @@ function verifyMagicBytes(buffer: ArrayBuffer, declaredType: string): boolean {
   return false;
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   const contentType = request.headers.get("content-type") ?? "";
 
   if (!contentType.includes("multipart/form-data")) {
@@ -92,10 +92,16 @@ export const POST: APIRoute = async ({ request }) => {
   // Reconstruct File from buffer since arrayBuffer() consumed the stream
   const verifiedFile = new File([buffer], file.name, { type: file.type });
 
-  const asset = await assets.upload(verifiedFile, {
-    alt: alt ? String(alt) : undefined,
-    folder: folder ? String(folder) : undefined,
-  });
+  const user = locals.user;
+  const actor = user ? { id: user.id, email: user.email, role: user.role } : null;
+  const asset = await assets.upload(
+    verifiedFile,
+    {
+      alt: alt ? String(alt) : undefined,
+      folder: folder ? String(folder) : undefined,
+    },
+    { actor },
+  );
 
   const redirectTo = formData.get("redirectTo");
 

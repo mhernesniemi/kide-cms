@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { getDb } from "virtual:kide/db";
 import {
+  auditRequestMeta,
   createInvite,
   validateInvite,
   consumeInvite,
@@ -10,6 +11,7 @@ import {
   createSession,
   setSessionCookie,
   getSessionUser,
+  recordAudit,
 } from "virtual:kide/runtime";
 import { sendInviteEmail, isEmailConfigured } from "virtual:kide/email";
 
@@ -20,7 +22,7 @@ export const POST: APIRoute = async ({ request, url }) => {
   const action = String(formData.get("_action") ?? "create");
 
   if (action === "accept") {
-    return handleAccept(formData);
+    return handleAccept(formData, request);
   }
 
   return handleCreate(formData, url, request);
@@ -100,7 +102,7 @@ async function handleCreate(formData: FormData, url: URL, request: Request) {
   });
 }
 
-async function handleAccept(formData: FormData) {
+async function handleAccept(formData: FormData, request: Request) {
   const token = String(formData.get("token") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const password = String(formData.get("password") ?? "");
@@ -155,6 +157,27 @@ async function handleAccept(formData: FormData) {
   await consumeInvite(token);
 
   const session = await createSession(invite.userId);
+
+  const acceptedUserRows = await db
+    .select()
+    .from(tables.users.main)
+    .where(eq(tables.users.main._id, invite.userId))
+    .limit(1);
+  const acceptedUser = acceptedUserRows[0] as Record<string, unknown> | undefined;
+
+  void recordAudit({
+    action: "auth.invite_accepted",
+    resourceType: "invite",
+    resourceId: token,
+    actor: acceptedUser
+      ? {
+          id: String(acceptedUser._id),
+          email: String(acceptedUser.email ?? ""),
+          role: String(acceptedUser.role ?? ""),
+        }
+      : null,
+    ...auditRequestMeta(request),
+  });
 
   return new Response(null, {
     status: 303,

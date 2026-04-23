@@ -42,6 +42,13 @@ declare module "virtual:kide/runtime" {
     assets,
     folders,
     createCms,
+    recordAudit,
+    pruneAuditLog,
+    auditRequestMeta,
+    search,
+    indexDocument,
+    removeDocument,
+    reindexAll,
   } from "@/cms/core";
 }
 

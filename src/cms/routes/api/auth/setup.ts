@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { nanoid } from "nanoid";
 
 import { getDb } from "virtual:kide/db";
-import { hashPassword, createSession, setSessionCookie } from "virtual:kide/runtime";
+import { auditRequestMeta, createSession, hashPassword, recordAudit, setSessionCookie } from "virtual:kide/runtime";
 
 export const prerender = false;
 
@@ -66,6 +66,15 @@ export const POST: APIRoute = async ({ request }) => {
   });
 
   const session = await createSession(id);
+
+  void recordAudit({
+    action: "auth.setup_completed",
+    resourceType: "user",
+    resourceCollection: "users",
+    resourceId: id,
+    actor: { id, email, role: "admin" },
+    ...auditRequestMeta(request),
+  });
 
   return new Response(null, {
     status: 303,

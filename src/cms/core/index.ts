@@ -49,6 +49,7 @@ export type {
   LocaleConfig,
   AdminConfig,
   AdminNavItem,
+  SearchableConfig,
   WebhookConfig,
   WebhookEvent,
   WebhookContext,
@@ -109,6 +110,19 @@ export {
 export type { AdminRoute } from "./admin";
 
 export { acquireLock, releaseLock } from "./locks";
+
+export { recordAudit, pruneAuditLog, auditRequestMeta } from "./audit";
+export type { AuditEvent, AuditActor } from "./audit";
+
+export {
+  search,
+  indexDocument,
+  removeDocument,
+  reindexAll,
+  ensureSearchSchema,
+  isCollectionSearchable,
+} from "./search";
+export type { SearchResult, SearchOptions } from "./search";
 
 export { isAiEnabled, getAiModel, streamAltText, streamSeoDescription, streamTranslation } from "./ai";
 

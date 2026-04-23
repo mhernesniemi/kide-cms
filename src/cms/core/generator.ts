@@ -122,7 +122,7 @@ const generateVersionsTable = (collection: CollectionConfig): string | null => {
 const generateSchemaFile = (config: CMSConfig): string => {
   const parts: string[] = [
     `// auto-generated — do not edit`,
-    `import { sqliteTable, text, integer, real, unique } from "drizzle-orm/sqlite-core";`,
+    `import { sqliteTable, text, integer, real, unique, index } from "drizzle-orm/sqlite-core";`,
     ``,
   ];
 
@@ -179,6 +179,24 @@ const generateSchemaFile = (config: CMSConfig): string => {
   expiresAt: text("expires_at").notNull(),
   usedAt: text("used_at"),
 });`);
+  parts.push("");
+  parts.push(`export const cmsAuditLog = sqliteTable("cms_audit_log", {
+  _id: text("_id").primaryKey(),
+  timestamp: integer("timestamp").notNull(),
+  actorId: text("actor_id"),
+  actorEmail: text("actor_email"),
+  actorRole: text("actor_role"),
+  action: text("action").notNull(),
+  resourceType: text("resource_type").notNull(),
+  resourceCollection: text("resource_collection"),
+  resourceId: text("resource_id"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+}, (table) => ({
+  timestampIdx: index("audit_timestamp_idx").on(table.timestamp),
+  actorIdx: index("audit_actor_idx").on(table.actorId),
+  resourceIdx: index("audit_resource_idx").on(table.resourceType, table.resourceCollection, table.resourceId),
+}));`);
   parts.push("");
 
   const tableExports: string[] = [];

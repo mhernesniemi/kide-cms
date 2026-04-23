@@ -129,6 +129,8 @@ export type CollectionViewConfig = {
   };
 };
 
+export type SearchableConfig = boolean | { fields: string[] };
+
 export type CollectionConfig = {
   slug: string;
   labels: CollectionLabels;
@@ -140,6 +142,7 @@ export type CollectionConfig = {
   versions?: { max: number };
   auth?: boolean;
   singleton?: boolean;
+  searchable?: SearchableConfig;
   access?: CollectionAccess;
   hooks?: CollectionHooks;
   fields: CollectionFieldMap;

@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "virtual:kide/db";
-import { verifyPassword, createSession, setSessionCookie } from "virtual:kide/runtime";
+import { auditRequestMeta, createSession, recordAudit, setSessionCookie, verifyPassword } from "virtual:kide/runtime";
 import config from "virtual:kide/config";
 
 export const prerender = false;
@@ -68,8 +68,15 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   }
 
   const rows = await db.select().from(tables.users.main).where(eq(tables.users.main.email, email)).limit(1);
+  const requestMeta = auditRequestMeta(request);
 
   if (rows.length === 0) {
+    void recordAudit({
+      action: "auth.login_failed",
+      resourceType: "session",
+      attemptedEmail: email,
+      ...requestMeta,
+    });
     if (contentType.includes("application/json")) {
       return Response.json({ error: "Invalid credentials." }, { status: 401 });
     }
@@ -90,6 +97,12 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   }
 
   if (!valid) {
+    void recordAudit({
+      action: "auth.login_failed",
+      resourceType: "session",
+      attemptedEmail: email,
+      ...requestMeta,
+    });
     if (contentType.includes("application/json")) {
       return Response.json({ error: "Invalid credentials." }, { status: 401 });
     }
@@ -103,6 +116,18 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   attempts.delete(clientAddress);
 
   const session = await createSession(String(user._id));
+
+  void recordAudit({
+    action: "auth.login",
+    resourceType: "session",
+    resourceId: session.token,
+    actor: {
+      id: String(user._id),
+      email: String(user.email ?? ""),
+      role: String(user.role ?? ""),
+    },
+    ...requestMeta,
+  });
 
   if (contentType.includes("application/json")) {
     return new Response(JSON.stringify({ ok: true }), {

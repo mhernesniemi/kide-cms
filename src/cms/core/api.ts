@@ -1,11 +1,13 @@
 import { and, asc, desc, eq, like, lte, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
+import { recordAudit, type AuditActor } from "./audit";
 import { hashPassword } from "./auth";
 import type { CMSConfig, CollectionConfig, FieldConfig, RichTextDocument } from "./define";
 import { getCollectionMap, getTranslatableFieldNames, isStructuralField } from "./define";
 import { getDb } from "./runtime";
 import { getSchema } from "./schema";
+import { indexDocument, isCollectionSearchable, removeDocument } from "./search";
 import { cloneValue, createRichTextFromPlainText, slugify } from "./values";
 import { dispatchWebhooks } from "./webhooks";
 
@@ -239,6 +241,36 @@ const getHookContext = (collection: CollectionConfig, operation: string, context
   timestamp: now(),
   cache: context.cache,
 });
+
+const toAuditActor = (context: RuntimeContext): AuditActor => {
+  if (!context.user) return null;
+  return {
+    id: context.user.id,
+    email: context.user.email ?? "",
+    role: context.user.role ?? "",
+  };
+};
+
+const auditContent = (action: string, slug: string, resourceId: string, context: RuntimeContext) => {
+  void recordAudit({
+    action,
+    resourceType: "content",
+    resourceCollection: slug,
+    resourceId,
+    actor: toAuditActor(context),
+  });
+};
+
+const syncSearch = (config: CMSConfig, collection: CollectionConfig, docId: string) => {
+  if (!isCollectionSearchable(collection)) return;
+  const locales = config.locales?.supported ?? [];
+  void indexDocument(collection, docId, locales);
+};
+
+const removeSearch = (collection: CollectionConfig, docId: string) => {
+  if (!isCollectionSearchable(collection)) return;
+  void removeDocument(collection.slug, docId);
+};
 
 const getTableRefs = async (collectionSlug: string) => {
   const tables = getSchema().cmsTables[collectionSlug] as {
@@ -503,6 +535,8 @@ export const createCms = (config: CMSConfig) => {
 
         const result = await this.findById(docId, {}, context);
         await collection.hooks?.afterCreate?.(result!, hookContext);
+        auditContent("content.create", slug, docId, context);
+        syncSearch(config, collection, docId);
         dispatchWebhooks(config, "create", slug, result!, context.user);
         return result!;
       },
@@ -587,6 +621,8 @@ export const createCms = (config: CMSConfig) => {
 
         const result = await this.findById(id, { status: "any" }, context);
         await collection.hooks?.afterUpdate?.(result!, hookContext);
+        auditContent("content.update", slug, id, context);
+        syncSearch(config, collection, id);
         dispatchWebhooks(config, "update", slug, result!, context.user);
         return result!;
       },
@@ -609,6 +645,8 @@ export const createCms = (config: CMSConfig) => {
         await db.delete(tables.main).where(eq(tables.main._id, id));
 
         await collection.hooks?.afterDelete?.(existing, hookContext);
+        auditContent("content.delete", slug, id, context);
+        removeSearch(collection, id);
         dispatchWebhooks(config, "delete", slug, existing, context.user);
       },
 
@@ -642,6 +680,8 @@ export const createCms = (config: CMSConfig) => {
 
         const result = await this.findById(id, { status: "any" }, context);
         await collection.hooks?.afterPublish?.(result!, hookContext);
+        auditContent("content.publish", slug, id, context);
+        syncSearch(config, collection, id);
         dispatchWebhooks(config, "publish", slug, result!, context.user);
         return result!;
       },
@@ -674,6 +714,8 @@ export const createCms = (config: CMSConfig) => {
 
         const result = (await this.findById(id, { status: "any" }, context))!;
         await collection.hooks?.afterUnpublish?.(result, hookContext);
+        auditContent("content.unpublish", slug, id, context);
+        removeSearch(collection, id);
         dispatchWebhooks(config, "unpublish", slug, result, context.user);
         return result;
       },
@@ -708,6 +750,8 @@ export const createCms = (config: CMSConfig) => {
 
         const result = (await this.findById(id, { status: "any" }, context))!;
         await collection.hooks?.afterSchedule?.(result, hookContext);
+        auditContent("content.schedule", slug, id, context);
+        removeSearch(collection, id);
         return result;
       },
 
@@ -889,6 +933,7 @@ export const createCms = (config: CMSConfig) => {
           });
         }
 
+        syncSearch(config, collection, id);
         return (await this.findById(id, { locale, status: "any" }, context))!;
       },
     };

@@ -46,18 +46,18 @@ After code changes, ALWAYS run:
 
 ## Key Files
 
-| File                     | Purpose                                               |
-| ------------------------ | ----------------------------------------------------- |
-| `src/cms/cms.config.ts`  | Top-level CMS config — collections, admin, locales    |
-| `src/cms/collections/`   | Collection schemas                                    |
-| `src/cms/adapters/`      | Project-specific db / email / storage adapters        |
-| `src/cms/internals/`     | Thin runner scripts (runtime wiring, generator, etc.) |
-| `src/cms/internals/integration.ts` | Astro integration (route injection, virtual modules) |
-| `src/cms/core/`          | CMS runtime library (edit to change behavior)         |
-| `src/cms/admin/`         | Admin UI components, layouts, styles                  |
-| `src/cms/routes/`        | Admin pages + API routes injected by integration      |
-| `src/cms/middleware/`    | Auth middleware injected by integration               |
-| `src/cms/client/`        | Browser-side live-preview client                      |
+| File                               | Purpose                                               |
+| ---------------------------------- | ----------------------------------------------------- |
+| `src/cms/cms.config.ts`            | Top-level CMS config — collections, admin, locales    |
+| `src/cms/collections/`             | Collection schemas                                    |
+| `src/cms/adapters/`                | Project-specific db / email / storage adapters        |
+| `src/cms/internals/`               | Thin runner scripts (runtime wiring, generator, etc.) |
+| `src/cms/internals/integration.ts` | Astro integration (route injection, virtual modules)  |
+| `src/cms/core/`                    | CMS runtime library (edit to change behavior)         |
+| `src/cms/admin/`                   | Admin UI components, layouts, styles                  |
+| `src/cms/routes/`                  | Admin pages + API routes injected by integration      |
+| `src/cms/middleware/`              | Auth middleware injected by integration               |
+| `src/cms/client/`                  | Browser-side live-preview client                      |
 
 ## Rules
 

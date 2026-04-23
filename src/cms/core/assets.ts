@@ -1,8 +1,11 @@
 import { desc, eq, isNull, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
+import { recordAudit, type AuditActor } from "./audit";
 import { getDb, getStorage } from "./runtime";
 import { getSchema } from "./schema";
+
+export type AssetContext = { actor?: AuditActor };
 
 export type AssetRecord = {
   _id: string;
@@ -28,7 +31,7 @@ export type FolderRecord = {
 };
 
 export const assets = {
-  async upload(file: File, options?: { alt?: string; folder?: string }): Promise<AssetRecord> {
+  async upload(file: File, options?: { alt?: string; folder?: string }, context?: AssetContext): Promise<AssetRecord> {
     const db = await getDb();
     const schema = getSchema();
     const storage = getStorage();
@@ -54,6 +57,13 @@ export const assets = {
       folder,
       storagePath,
       _createdAt: createdAt,
+    });
+
+    void recordAudit({
+      action: "asset.upload",
+      resourceType: "asset",
+      resourceId: id,
+      actor: context?.actor ?? null,
     });
 
     return {
@@ -110,7 +120,7 @@ export const assets = {
     return { ...row, url: row.storagePath };
   },
 
-  async delete(id: string): Promise<void> {
+  async delete(id: string, context?: AssetContext): Promise<void> {
     const db = await getDb();
     const schema = getSchema();
     const storage = getStorage();
@@ -119,11 +129,19 @@ export const assets = {
     const asset = rows[0] as any;
     await storage.deleteFile(asset.storagePath);
     await db.delete(schema.cmsAssets).where(eq(schema.cmsAssets._id, id));
+
+    void recordAudit({
+      action: "asset.delete",
+      resourceType: "asset",
+      resourceId: id,
+      actor: context?.actor ?? null,
+    });
   },
 
   async update(
     id: string,
     data: { alt?: string; filename?: string; folder?: string | null; focalX?: number | null; focalY?: number | null },
+    context?: AssetContext,
   ): Promise<AssetRecord | null> {
     const db = await getDb();
     const schema = getSchema();
@@ -139,6 +157,12 @@ export const assets = {
 
     if (Object.keys(updateValues).length > 0) {
       await db.update(schema.cmsAssets).set(updateValues).where(eq(schema.cmsAssets._id, id));
+      void recordAudit({
+        action: "asset.update",
+        resourceType: "asset",
+        resourceId: id,
+        actor: context?.actor ?? null,
+      });
     }
 
     return this.findById(id);

@@ -6,6 +6,7 @@ export default defineCollection({
   pathPrefix: "blog",
   timestamps: true,
   drafts: true,
+  searchable: true,
   versions: { max: 20 },
   views: {
     list: { columns: ["title", "category", "_status", "_updatedAt"] },

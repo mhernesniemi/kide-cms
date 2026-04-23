@@ -20,12 +20,29 @@ CREATE TABLE `cms_assets` (
 	`_created_at` text NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE `cms_audit_log` (
+	`_id` text PRIMARY KEY NOT NULL,
+	`timestamp` integer NOT NULL,
+	`actor_id` text,
+	`actor_email` text,
+	`actor_role` text,
+	`action` text NOT NULL,
+	`resource_type` text NOT NULL,
+	`resource_collection` text,
+	`resource_id` text,
+	`ip_address` text,
+	`user_agent` text
+);
+--> statement-breakpoint
+CREATE INDEX `audit_timestamp_idx` ON `cms_audit_log` (`timestamp`);--> statement-breakpoint
+CREATE INDEX `audit_actor_idx` ON `cms_audit_log` (`actor_id`);--> statement-breakpoint
+CREATE INDEX `audit_resource_idx` ON `cms_audit_log` (`resource_type`,`resource_collection`,`resource_id`);--> statement-breakpoint
 CREATE TABLE `cms_authors` (
 	`_id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`description` text,
 	`slug` text,
-	`title` text NOT NULL,
+	`title` text,
 	`avatar` text,
 	`_created_at` text NOT NULL,
 	`_updated_at` text NOT NULL
@@ -41,8 +58,32 @@ CREATE TABLE `cms_authors_translations` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `cms_authors_translations__entity_id__language_code_unique` ON `cms_authors_translations` (`_entity_id`,`_language_code`);--> statement-breakpoint
+CREATE TABLE `cms_form_submissions` (
+	`_id` text PRIMARY KEY NOT NULL,
+	`label` text,
+	`form` text NOT NULL,
+	`status` text DEFAULT 'new',
+	`data` text,
+	`_created_at` text NOT NULL,
+	`_updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `cms_forms` (
+	`_id` text PRIMARY KEY NOT NULL,
+	`title` text NOT NULL,
+	`slug` text,
+	`submit_redirect` text,
+	`success_message` text DEFAULT 'Thanks — we got your message.',
+	`notification_email` text,
+	`fields` text,
+	`_created_at` text NOT NULL,
+	`_updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `cms_forms_slug_unique` ON `cms_forms` (`slug`);--> statement-breakpoint
 CREATE TABLE `cms_front_page` (
 	`_id` text PRIMARY KEY NOT NULL,
+	`seo_description` text,
 	`blocks` text,
 	`_status` text DEFAULT 'draft' NOT NULL,
 	`_published_at` text,
@@ -57,6 +98,7 @@ CREATE TABLE `cms_front_page_translations` (
 	`_id` text PRIMARY KEY NOT NULL,
 	`_entity_id` text NOT NULL,
 	`_language_code` text NOT NULL,
+	`seo_description` text,
 	`blocks` text,
 	FOREIGN KEY (`_entity_id`) REFERENCES `cms_front_page`(`_id`) ON UPDATE no action ON DELETE cascade
 );
