@@ -68,10 +68,11 @@ type ServerPaginationConfig = {
   totalDocs: number;
   totalPages: number;
   currentPage: number;
-  pageSize: number;
   currentSort: { field: string; direction: "asc" | "desc" };
   currentSearch: string;
 };
+
+export const PAGE_SIZE = 10;
 
 type DocumentsDataTableProps = {
   collectionSlug: string;
@@ -197,7 +198,6 @@ export default function DocumentsDataTable({
   const [searchInput, setSearchInput] = React.useState(serverPagination?.currentSearch ?? "");
   const [isLoading, setIsLoading] = React.useState(false);
   const searchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pageSize = serverPagination?.pageSize ?? 20;
 
   const fetchPage = React.useCallback(
     async (page: number, sort: { field: string; direction: string } | null, search: string) => {
@@ -207,8 +207,8 @@ export default function DocumentsDataTable({
       try {
         const params = new URLSearchParams();
         params.set("status", "any");
-        params.set("limit", String(pageSize));
-        params.set("offset", String((page - 1) * pageSize));
+        params.set("limit", String(PAGE_SIZE));
+        params.set("offset", String((page - 1) * PAGE_SIZE));
         if (sort) {
           params.set("sort", JSON.stringify(sort));
         }
@@ -269,7 +269,7 @@ export default function DocumentsDataTable({
         setIsLoading(false);
       }
     },
-    [isServerMode, collectionSlug, columns, pageSize, defaultLocale, labelField],
+    [isServerMode, collectionSlug, columns, defaultLocale, labelField],
   );
 
   // Cleanup debounce timer
@@ -623,13 +623,14 @@ export default function DocumentsDataTable({
           getPaginationRowModel: getPaginationRowModel(),
           getSortedRowModel: getSortedRowModel(),
           getFilteredRowModel: getFilteredRowModel(),
+          initialState: { pagination: { pageIndex: 0, pageSize: PAGE_SIZE } },
         }),
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
-      ...(isServerMode ? { pagination: { pageIndex: serverPage - 1, pageSize } } : {}),
+      ...(isServerMode ? { pagination: { pageIndex: serverPage - 1, pageSize: PAGE_SIZE } } : {}),
     },
   });
 

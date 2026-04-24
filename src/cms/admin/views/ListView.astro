@@ -1,7 +1,7 @@
 ---
 import { Plus } from "lucide-react";
 
-import DocumentsDataTable from "@/cms/admin/components/DocumentsDataTable";
+import DocumentsDataTable, { PAGE_SIZE } from "@/cms/admin/components/DocumentsDataTable";
 import { buttonVariants } from "@/cms/admin/components/ui/button";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
@@ -23,7 +23,6 @@ const cmsRuntime = cms as Record<string, any>;
 const defaultLocale = config.locales?.default ?? "en";
 const locales = config.locales?.supported ?? [];
 
-const PAGE_SIZE = config.admin?.pageSize ?? 20;
 const viewConfig = collection.views ?? {};
 const defaultSort = viewConfig.list?.defaultSort ?? { field: "_updatedAt", direction: "desc" };
 const sortParam = Astro.url.searchParams.get("sort");
@@ -110,7 +109,6 @@ const tableRows = docs.map((entry: Record<string, unknown>) => ({
       totalDocs,
       totalPages,
       currentPage,
-      pageSize: PAGE_SIZE,
       currentSort,
       currentSearch: searchParam,
     }}

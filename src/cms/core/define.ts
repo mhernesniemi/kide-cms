@@ -203,8 +203,6 @@ export type AdminConfig = {
   nav?: AdminNavItem[];
   uploads?: AdminUploadConfig;
   rateLimit?: AdminRateLimitConfig;
-  /** Admin list page size (default: 20) */
-  pageSize?: number;
   /** Webhooks fired on content events */
   webhooks?: WebhookConfig[];
 };
