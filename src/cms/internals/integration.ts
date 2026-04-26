@@ -154,42 +154,26 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
                 "virtual:kide/custom-fields": customFieldsBarrel,
               },
             },
-            // Pre-bundle admin component deps. Admin components live under src/cms/admin/
-            // but are only reached via injected routes, so Vite's dep scanner skips them
-            // during pre-bundling. Without this, packages like @tiptap/react are served raw
-            // and their CJS sub-deps (use-sync-external-store/shim) break browser ESM imports,
-            // causing React hydration to silently fail — fields render but don't respond to clicks.
+            // Pre-bundle admin component deps.
+            //
+            // Admin components live under src/cms/admin/ but are only reached via injected
+            // routes, so Vite's default dep scanner (which starts from index.html) skips
+            // them entirely. Without pre-bundling, packages like @tiptap/react are served
+            // raw to the browser; their CJS sub-deps (use-sync-external-store/shim) break
+            // ESM imports; React hydration silently fails; fields render but don't respond
+            // to clicks (and appear to "disappear" when interacted with).
+            //
+            // `entries` points the dep scanner directly at every admin source file, so any
+            // package transitively imported by an admin component is discovered automatically.
+            // This replaces a hand-maintained `include` list that fell behind every time a
+            // new admin dep was added.
+            //
+            // `force` re-runs pre-bundling on every dev start, which avoids the recurrence
+            // mode where a stale `node_modules/.vite` cache from a previous session reuses
+            // broken pre-bundled output even after the source has been fixed.
             optimizeDeps: {
-              include: [
-                "@tiptap/react",
-                "@tiptap/starter-kit",
-                "@tiptap/extension-image",
-                "@tiptap/extension-link",
-                "@tiptap/markdown",
-                "@tiptap/core",
-                "@dnd-kit/core",
-                "@dnd-kit/sortable",
-                "@dnd-kit/utilities",
-                "@radix-ui/react-dropdown-menu",
-                "@radix-ui/react-popover",
-                "@base-ui/react/alert-dialog",
-                "@base-ui/react/button",
-                "@base-ui/react/checkbox",
-                "@base-ui/react/collapsible",
-                "@base-ui/react/dialog",
-                "@base-ui/react/input",
-                "@base-ui/react/merge-props",
-                "@base-ui/react/select",
-                "@base-ui/react/separator",
-                "@base-ui/react/tooltip",
-                "@base-ui/react/use-render",
-                "@tanstack/react-table",
-                "class-variance-authority",
-                "clsx",
-                "cmdk",
-                "lucide-react",
-                "tailwind-merge",
-              ],
+              entries: [path.resolve(root, "src/cms/admin/**/*.{ts,tsx,astro}")],
+              force: command === "dev",
             },
           },
         });
