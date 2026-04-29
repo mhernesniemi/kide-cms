@@ -96,16 +96,18 @@ export default function CommandPalette() {
   }, [query]);
 
   const grouped = React.useMemo(() => {
+    // Group by collectionLabel rather than collection slug so that all singletons
+    // (each its own collection) collapse into a single "Singles" header.
     const groups = new Map<string, { label: string; items: Result[] }>();
     for (const r of results) {
-      let g = groups.get(r.collection);
+      let g = groups.get(r.collectionLabel);
       if (!g) {
         g = { label: r.collectionLabel, items: [] };
-        groups.set(r.collection, g);
+        groups.set(r.collectionLabel, g);
       }
       g.items.push(r);
     }
-    return Array.from(groups.entries()).map(([collection, { label, items }]) => ({ collection, label, items }));
+    return Array.from(groups.entries()).map(([key, { label, items }]) => ({ key, label, items }));
   }, [results]);
 
   const trimmed = query.trim();
@@ -133,7 +135,7 @@ export default function CommandPalette() {
             {showLoading && <div className="text-muted-foreground py-6 text-center text-sm">Searching…</div>}
             {showEmpty && <CommandEmpty>No results.</CommandEmpty>}
             {grouped.map((group) => (
-              <CommandGroup key={group.collection} heading={group.label}>
+              <CommandGroup key={group.key} heading={group.label}>
                 {group.items.map((item) => (
                   <CommandItem
                     key={itemValue(item)}
