@@ -168,12 +168,13 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
             // This replaces a hand-maintained `include` list that fell behind every time a
             // new admin dep was added.
             //
-            // `force` re-runs pre-bundling on every dev start, which avoids the recurrence
-            // mode where a stale `node_modules/.vite` cache from a previous session reuses
-            // broken pre-bundled output even after the source has been fixed.
+            // We intentionally do NOT set `force: true` here. Forcing re-optimization on
+            // every dev start regenerates chunk hashes, which 504s any browser tab opened
+            // before the restart ("Outdated Optimize Dep"). Vite's content-based hash
+            // already invalidates correctly when deps change. For the rare case where the
+            // pre-bundle cache is genuinely corrupt, run `pnpm dev:clean` to nuke and rebuild.
             optimizeDeps: {
               entries: [path.resolve(root, "src/cms/admin/**/*.{ts,tsx,astro}")],
-              force: command === "dev",
             },
           },
         });
@@ -226,6 +227,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           entrypoint: "./src/cms/routes/api/references/[collection]/[id].ts",
         });
         injectRoute({ pattern: "/api/cms/img/[...path]", entrypoint: "./src/cms/routes/api/img/[...path].ts" });
+        injectRoute({ pattern: "/api/cms/admin/search", entrypoint: "./src/cms/routes/api/admin/search.ts" });
         injectRoute({
           pattern: "/api/cms/[collection]/[...path]",
           entrypoint: "./src/cms/routes/api/[collection]/[...path].ts",
