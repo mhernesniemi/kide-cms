@@ -70,6 +70,7 @@ const navIconMap: Record<string, any> = {
   Zap,
 };
 
+import CommandPalette from "../components/CommandPalette";
 import MobileSidebar from "../components/MobileSidebar";
 import SidebarUserMenu from "../components/SidebarUserMenu";
 import Toast from "../components/Toast.astro";
@@ -234,6 +235,7 @@ navItems.sort((a, b) => a.weight - b.weight);
     </script>
   </head>
   <body class="bg-background text-foreground min-h-screen antialiased">
+    <CommandPalette client:load />
     {
       embed ? (
         <main class="mx-auto w-full px-4 py-6 lg:px-8 lg:py-8">
