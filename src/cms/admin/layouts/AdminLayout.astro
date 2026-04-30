@@ -250,16 +250,17 @@ navItems.sort((a, b) => a.weight - b.weight);
               <button
                 type="button"
                 data-cms-search-trigger
-                class="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors"
+                class="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground/90 flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors"
                 aria-label="Search content"
               >
                 <Search className="size-4 shrink-0 stroke-1" />
                 <span class="flex-1 text-left">Search…</span>
                 <kbd
                   data-cms-search-kbd
-                  class="bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-mono text-[10px]"
+                  class="border-border text-foreground/45 inline-flex items-center gap-1 rounded border px-1.5 py-0.5 font-sans text-[12px] leading-none font-medium"
                 >
-                  ⌘K
+                  <span class="text-[13px] leading-none">⌘</span>
+                  <span>K</span>
                 </kbd>
               </button>
             </div>
