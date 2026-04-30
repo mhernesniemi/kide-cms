@@ -71,6 +71,7 @@ After code changes, ALWAYS run:
 - Routes in `src/cms/routes/` import app-specific code via `virtual:kide/*` modules (resolved by the integration's Vite aliases). Userland (`src/pages/`, `src/layouts/`, `src/components/`) imports directly via `@/cms/*` — virtual is the one-way core → user contract, don't use it in userland.
 - Use the `cn()` utility from `@/cms/admin/lib/utils` for conditional class names — never use template literal interpolation for className.
 - Import the CMS library via the `@/cms/core` alias (tsconfig `@/*` → `./src/*`), not relative paths.
+- If you start dev server, remember to stop it when you're done.
 
 ## Stack
 
