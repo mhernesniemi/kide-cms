@@ -163,18 +163,26 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
             // ESM imports; React hydration silently fails; fields render but don't respond
             // to clicks (and appear to "disappear" when interacted with).
             //
-            // `entries` points the dep scanner directly at every admin source file, so any
-            // package transitively imported by an admin component is discovered automatically.
-            // This replaces a hand-maintained `include` list that fell behind every time a
-            // new admin dep was added.
+            // `entries` points the dep scanner directly at every admin source file. We
+            // include admin/, the injected routes, .generated/ (api.ts, schema.ts), and
+            // client/ — all paths that can introduce a browser-side dep. If any one is
+            // missing and a request hits a code path with an undiscovered dep, Vite
+            // re-optimizes mid-session, which 504s in-flight chunk requests with
+            // "Outdated Optimize Dep" and breaks hydration on whatever tab is open
+            // (appears as random "React fields stop working" failures).
             //
             // We intentionally do NOT set `force: true` here. Forcing re-optimization on
             // every dev start regenerates chunk hashes, which 504s any browser tab opened
-            // before the restart ("Outdated Optimize Dep"). Vite's content-based hash
-            // already invalidates correctly when deps change. For the rare case where the
-            // pre-bundle cache is genuinely corrupt, run `pnpm dev:clean` to nuke and rebuild.
+            // before the restart. Vite's content-based hash already invalidates correctly
+            // when deps change. For the rare case where the pre-bundle cache is genuinely
+            // corrupt, run `pnpm dev:clean` to nuke and rebuild.
             optimizeDeps: {
-              entries: [path.resolve(root, "src/cms/admin/**/*.{ts,tsx,astro}")],
+              entries: [
+                path.resolve(root, "src/cms/admin/**/*.{ts,tsx,astro}"),
+                path.resolve(root, "src/cms/routes/admin/**/*.astro"),
+                path.resolve(root, "src/cms/.generated/**/*.ts"),
+                path.resolve(root, "src/cms/client/**/*.ts"),
+              ],
             },
           },
         });
