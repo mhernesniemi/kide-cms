@@ -62,7 +62,7 @@ export default function SidebarUserMenu({
         <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent side="bottom" align="start" className="w-(--radix-dropdown-menu-trigger-width)">
+      <DropdownMenuContent side="top" align="start" sideOffset={6} className="w-(--radix-dropdown-menu-trigger-width)">
         <DropdownMenuItem onClick={() => changeTheme("light")}>
           <Sun className="text-muted-foreground size-3.5" />
           Light

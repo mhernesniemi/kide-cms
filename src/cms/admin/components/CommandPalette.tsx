@@ -30,14 +30,19 @@ export default function CommandPalette() {
   const itemValue = (r: Result) => `${r.collection}:${r.docId}`;
 
   React.useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
+    const keyHandler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setOpen((v) => !v);
       }
     };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    const openHandler = () => setOpen(true);
+    document.addEventListener("keydown", keyHandler);
+    window.addEventListener("cms:open-search", openHandler);
+    return () => {
+      document.removeEventListener("keydown", keyHandler);
+      window.removeEventListener("cms:open-search", openHandler);
+    };
   }, []);
 
   const handleOpenChange = React.useCallback((next: boolean) => {
@@ -144,7 +149,7 @@ export default function CommandPalette() {
                       window.location.href = item.editUrl;
                       setOpen(false);
                     }}
-                    className="px-3"
+                    className="cursor-pointer px-3"
                   >
                     <span className="flex-1 truncate">{item.title}</span>
                     {item.status && item.status !== "published" && (

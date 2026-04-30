@@ -3,7 +3,6 @@ import "virtual:kide/admin-css";
 import { cms } from "virtual:kide/api";
 
 import {
-  ExternalLink,
   Clock,
   FileText,
   FolderTree,
@@ -74,7 +73,6 @@ import CommandPalette from "../components/CommandPalette";
 import MobileSidebar from "../components/MobileSidebar";
 import SidebarUserMenu from "../components/SidebarUserMenu";
 import Toast from "../components/Toast.astro";
-import { Separator } from "../components/ui/separator";
 import { cn } from "../lib/utils";
 
 const {
@@ -248,15 +246,22 @@ navItems.sort((a, b) => a.weight - b.weight);
         >
           {/* ── Desktop sidebar ──────────────────────────────────────────── */}
           <aside class="bg-sidebar/40 sticky top-0 mt-1 hidden h-screen overflow-hidden border-r backdrop-blur transition-transform duration-150 ease-in-out lg:flex lg:flex-col">
-            <div class="px-3 pt-3 pb-2">
-              {user && (
-                <SidebarUserMenu
-                  client:load
-                  userName={user.name}
-                  userEmail={user.email}
-                  logoutAction="/api/cms/auth/logout"
-                />
-              )}
+            <div class="px-3 pt-4 pb-1">
+              <button
+                type="button"
+                data-cms-search-trigger
+                class="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors"
+                aria-label="Search content"
+              >
+                <Search className="size-4 shrink-0 stroke-1" />
+                <span class="flex-1 text-left">Search…</span>
+                <kbd
+                  data-cms-search-kbd
+                  class="bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-mono text-[10px]"
+                >
+                  ⌘K
+                </kbd>
+              </button>
             </div>
 
             <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-3">
@@ -295,15 +300,15 @@ navItems.sort((a, b) => a.weight - b.weight);
                 </div>
               ))}
             </nav>
-            <div class="border-t px-3 pt-2.5 pb-3">
-              <a
-                href="/"
-                target="_blank"
-                class="text-foreground/70 hover:text-foreground hover:bg-foreground/5 dark:hover:bg-accent/60 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm"
-              >
-                <ExternalLink className="size-4 shrink-0 stroke-1" />
-                <span>View site</span>
-              </a>
+            <div class="border-t px-3 pt-2 pb-2">
+              {user && (
+                <SidebarUserMenu
+                  client:load
+                  userName={user.name}
+                  userEmail={user.email}
+                  logoutAction="/api/cms/auth/logout"
+                />
+              )}
             </div>
           </aside>
 
@@ -311,16 +316,16 @@ navItems.sort((a, b) => a.weight - b.weight);
             {/* ── Mobile header ────────────────────────────────────────── */}
             <header class="bg-background/95 supports-backdrop-filter:bg-background/75 flex items-center gap-3 border-b px-4 py-3 backdrop-blur lg:hidden">
               <MobileSidebar client:load>
-                <div class="px-3 pt-3 pb-1">
-                  {user && (
-                    <SidebarUserMenu
-                      client:load
-                      userName={user.name}
-                      userEmail={user.email}
-                      logoutAction="/api/cms/auth/logout"
-                    />
-                  )}
-                  <Separator className="mt-3" />
+                <div class="px-3 pt-4 pb-1">
+                  <button
+                    type="button"
+                    data-cms-search-trigger
+                    class="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors"
+                    aria-label="Search content"
+                  >
+                    <Search className="size-4 shrink-0 stroke-1" />
+                    <span class="flex-1 text-left">Search…</span>
+                  </button>
                 </div>
 
                 <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-3">
@@ -361,15 +366,15 @@ navItems.sort((a, b) => a.weight - b.weight);
                     </div>
                   ))}
                 </nav>
-                <div class="border-t px-3 py-3">
-                  <a
-                    href="/"
-                    target="_blank"
-                    class="text-foreground/70 hover:text-foreground hover:bg-foreground/5 dark:hover:bg-accent/60 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm"
-                  >
-                    <ExternalLink className="size-4 shrink-0 stroke-1" />
-                    <span>View site</span>
-                  </a>
+                <div class="border-t px-3 py-2">
+                  {user && (
+                    <SidebarUserMenu
+                      client:load
+                      userName={user.name}
+                      userEmail={user.email}
+                      logoutAction="/api/cms/auth/logout"
+                    />
+                  )}
                 </div>
               </MobileSidebar>
             </header>
@@ -383,6 +388,22 @@ navItems.sort((a, b) => a.weight - b.weight);
     }
 
     {toastStatus && <Toast status={toastStatus} message={toastMessage} />}
+
+    {/* Wire sidebar search triggers to the CommandPalette */}
+    <script is:inline>
+      (function () {
+        document.addEventListener("click", function (e) {
+          var t = e.target instanceof Element ? e.target.closest("[data-cms-search-trigger]") : null;
+          if (t) window.dispatchEvent(new Event("cms:open-search"));
+        });
+        var isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+        if (!isMac) {
+          document.querySelectorAll("[data-cms-search-kbd]").forEach(function (el) {
+            el.textContent = "Ctrl+K";
+          });
+        }
+      })();
+    </script>
 
     {/* Clean toast params from URL and remove toast element after animation */}
     <script is:inline>
