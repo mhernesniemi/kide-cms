@@ -149,6 +149,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
                 "virtual:kide/runtime": path.resolve(root, runtimePath),
                 "virtual:kide/db": path.resolve(root, adaptersPath, "db"),
                 "virtual:kide/email": path.resolve(root, adaptersPath, "email"),
+                "virtual:kide/payment": path.resolve(root, adaptersPath, "payment"),
                 "virtual:kide/block-renderer": path.resolve(root, "src/components/BlockRenderer.astro"),
                 "virtual:kide/admin-css": wrapperCss,
                 "virtual:kide/custom-fields": customFieldsBarrel,
@@ -236,6 +237,14 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         });
         injectRoute({ pattern: "/api/cms/img/[...path]", entrypoint: "./src/cms/routes/api/img/[...path].ts" });
         injectRoute({ pattern: "/api/cms/admin/search", entrypoint: "./src/cms/routes/api/admin/search.ts" });
+        injectRoute({
+          pattern: "/api/cms/checkout/session",
+          entrypoint: "./src/cms/routes/api/checkout/session.ts",
+        });
+        injectRoute({
+          pattern: "/api/cms/webhooks/stripe",
+          entrypoint: "./src/cms/routes/api/webhooks/stripe.ts",
+        });
         injectRoute({
           pattern: "/api/cms/[collection]/[...path]",
           entrypoint: "./src/cms/routes/api/[collection]/[...path].ts",

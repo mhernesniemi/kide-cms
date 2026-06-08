@@ -8,6 +8,8 @@ import frontPage from "./collections/front-page";
 import pages from "./collections/pages";
 import forms from "./collections/forms";
 import formSubmissions from "./collections/form-submissions";
+import products from "./collections/products";
+import orders from "./collections/orders";
 
 export default defineConfig({
   database: { dialect: "sqlite" },
@@ -15,5 +17,5 @@ export default defineConfig({
     default: "en",
     supported: ["en"],
   },
-  collections: [users, authors, posts, taxonomies, menus, frontPage, pages, forms, formSubmissions],
+  collections: [users, authors, posts, taxonomies, menus, frontPage, pages, forms, formSubmissions, products, orders],
 });

@@ -100,6 +100,9 @@ importers:
       sharp:
         specifier: ^0.34.5
         version: 0.34.5
+      stripe:
+        specifier: ^22.1.0
+        version: 22.1.0(@types/node@24.12.2)
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.5.0
@@ -4413,6 +4416,16 @@ packages:
       { integrity: sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ== }
     engines: { node: ">=0.10.0" }
 
+  stripe@22.1.0:
+    resolution:
+      { integrity: sha512-w/xHyJGxXWnLPbNHG13sz/fae0MrFGC80Oz7YbICQymbfpqfEcsoG+6yG+9BWb81PWc4rrkeSO4wmTcmefmbLw== }
+    engines: { node: ">=18" }
+    peerDependencies:
+      "@types/node": ">=18"
+    peerDependenciesMeta:
+      "@types/node":
+        optional: true
+
   suf-log@2.5.3:
     resolution:
       { integrity: sha512-KvC8OPjzdNOe+xQ4XWJV2whQA0aM1kGVczMQ8+dStAO6KfEB140JEVQ9dE76ONZ0/Ylf67ni4tILPJB41U0eow== }
@@ -8632,6 +8645,10 @@ snapshots:
       ansi-regex: 5.0.1
 
   strip-json-comments@2.0.1: {}
+
+  stripe@22.1.0(@types/node@24.12.2):
+    optionalDependencies:
+      "@types/node": 24.12.2
 
   suf-log@2.5.3:
     dependencies:

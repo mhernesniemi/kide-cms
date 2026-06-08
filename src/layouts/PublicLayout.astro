@@ -1,6 +1,7 @@
 ---
 import "@/styles/public.css";
 import { cms } from "@/cms/.generated/api";
+import Cart from "@/components/Cart";
 
 const { title = "Kide CMS", description = "A code-first CMS built inside Astro." } = Astro.props;
 type MenuItem = { id: string; label?: string; href?: string; target?: string; children: MenuItem[] };
@@ -41,12 +42,15 @@ const menuItems: MenuItem[] = menu?.items ? (Array.isArray(menu.items) ? menu.it
           </nav>
         )
       }
-      <a
-        href="/admin"
-        class="ml-auto rounded-md border border-teal-700 px-3 py-1.5 text-sm font-medium text-teal-700 no-underline transition-colors hover:bg-teal-50"
-      >
-        Open admin
-      </a>
+      <div class="ml-auto flex items-center gap-3">
+        <Cart client:load />
+        <a
+          href="/admin"
+          class="rounded-md border border-teal-700 px-3 py-1.5 text-sm font-medium text-teal-700 no-underline transition-colors hover:bg-teal-50"
+        >
+          Open admin
+        </a>
+      </div>
     </header>
     <slot />
   </body>

@@ -68,5 +68,41 @@ declare module "virtual:kide/email" {
     formTitle: string,
     data: Record<string, unknown>,
   ): Promise<boolean>;
+  export type OrderEmailLineItem = {
+    title: string;
+    quantity: number;
+    unitAmount: number;
+    currency: string;
+  };
+  export function sendOrderConfirmationEmail(
+    to: string,
+    orderNumber: string,
+    lineItems: OrderEmailLineItem[],
+    totalAmount: number,
+    currency: string,
+  ): Promise<boolean>;
   export function isEmailConfigured(): boolean;
+}
+
+declare module "virtual:kide/payment" {
+  import type Stripe from "stripe";
+  export type CheckoutLineItem = {
+    name: string;
+    description?: string;
+    amount: number;
+    currency: string;
+    quantity: number;
+  };
+  export type CreateCheckoutOptions = {
+    lineItems: CheckoutLineItem[];
+    customerEmail?: string;
+    successUrl: string;
+    cancelUrl: string;
+    metadata?: Record<string, string>;
+    shippingAddressCollection?: { allowedCountries: string[] };
+  };
+  export function createCheckoutSession(opts: CreateCheckoutOptions): Promise<{ url: string; sessionId: string }>;
+  export function getCheckoutSession(sessionId: string): Promise<Stripe.Checkout.Session>;
+  export function verifyWebhookEvent(rawBody: string | Buffer, signature: string): Promise<Stripe.Event>;
+  export function isPaymentConfigured(): boolean;
 }

@@ -1,0 +1,61 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import { cms } from "@/cms/.generated/api";
+
+export const prerender = false;
+
+const sessionId = Astro.url.searchParams.get("session_id");
+let order: Record<string, any> | null = null;
+if (sessionId) {
+  const ordersApi = (cms as Record<string, any>).orders;
+  if (ordersApi) {
+    order = await ordersApi.findOne({ where: { stripeSessionId: sessionId } }, { _system: true });
+  }
+}
+
+const lineItems = Array.isArray(order?.lineItems) ? (order!.lineItems as any[]) : [];
+const formatMoney = (amount: number, currency: string) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(amount / 100);
+---
+
+<PublicLayout title="Order confirmed">
+  <main class="mx-auto max-w-xl px-4 py-16">
+    <h1 class="text-2xl font-semibold">Thanks for your order</h1>
+    {
+      order ? (
+        <>
+          <p class="mt-2 text-gray-600">
+            Order <strong>{String(order.orderNumber)}</strong> — a confirmation email is on its way.
+          </p>
+          <div class="mt-8 overflow-hidden rounded-lg border border-gray-200">
+            <table class="w-full text-sm">
+              <tbody>
+                {lineItems.map((item: any) => (
+                  <tr class="border-b border-gray-100 last:border-0">
+                    <td class="px-4 py-3">
+                      {item.title} <span class="text-gray-500">× {item.quantity}</span>
+                    </td>
+                    <td class="px-4 py-3 text-right tabular-nums">
+                      {formatMoney(item.unitAmount * item.quantity, item.currency)}
+                    </td>
+                  </tr>
+                ))}
+                <tr class="bg-gray-50">
+                  <td class="px-4 py-3 font-medium">Total</td>
+                  <td class="px-4 py-3 text-right font-semibold tabular-nums">
+                    {formatMoney(Number(order.total ?? 0), String(order.currency ?? "eur"))}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        <p class="mt-2 text-gray-600">
+          Your payment was received. The order will appear once Stripe finishes notifying us — refresh in a moment.
+        </p>
+      )
+    }
+    <a href="/" class="mt-8 inline-block text-sm text-teal-700 underline-offset-2 hover:underline"> Back to home </a>
+  </main>
+</PublicLayout>
