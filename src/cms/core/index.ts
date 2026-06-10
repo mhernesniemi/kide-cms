@@ -48,6 +48,8 @@ export type {
   DatabaseConfig,
   LocaleConfig,
   AdminConfig,
+  ImagePreset,
+  ImagesConfig,
   AdminNavItem,
   SearchableConfig,
   WebhookConfig,
@@ -96,7 +98,8 @@ export type { AssetRecord, FolderRecord } from "./assets";
 export { parseBlocks, parseList, cacheTags } from "./content";
 export { renderRichText, createRichTextFromPlainText, richTextToPlainText } from "./richtext";
 export { cloneValue, slugify, escapeHtml, serializeFieldValue } from "./values";
-export { cmsImage, cmsSrcset, transformImage } from "./image";
+export { cmsImage, cmsSrcset, transformImage, DEFAULT_PRESETS, resolveImagePreset } from "./image";
+export type { CropOptions, TransformOptions } from "./image";
 
 export {
   initDateFormat,

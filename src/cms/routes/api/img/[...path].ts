@@ -5,11 +5,16 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ params, url }) => {
   const src = `/${params.path}`;
-  const width = url.searchParams.get("w") ? Number(url.searchParams.get("w")) : undefined;
-  const format = url.searchParams.get("f") || "webp";
-  const quality = url.searchParams.get("q") ? Number(url.searchParams.get("q")) : undefined;
+  const num = (key: string) => (url.searchParams.get(key) ? Number(url.searchParams.get(key)) : undefined);
 
-  const result = await transformImage(src, width, format, quality);
+  const result = await transformImage(src, {
+    width: num("w"),
+    height: num("h"),
+    format: url.searchParams.get("f") || "webp",
+    quality: num("q"),
+    focalX: num("fx") ?? null,
+    focalY: num("fy") ?? null,
+  });
 
   if (!result) {
     return new Response("Not found", { status: 404 });

@@ -11,7 +11,7 @@ import { Label } from "@/cms/admin/components/ui/label";
 import { Textarea } from "@/cms/admin/components/ui/textarea";
 import config from "virtual:kide/config";
 import { assets, folders, isAiEnabled } from "virtual:kide/runtime";
-import { formatDate, initDateFormat } from "@/cms/core";
+import { formatDate, initDateFormat, DEFAULT_PRESETS } from "@/cms/core";
 import AdminLayout from "@/cms/admin/layouts/AdminLayout.astro";
 
 export const prerender = false;
@@ -32,6 +32,16 @@ if (!asset) return Astro.redirect("/admin/assets");
 
 const aiEnabled = isAiEnabled();
 const isImage = asset.mimeType.startsWith("image/");
+
+// Distinct aspect ratios across configured + built-in presets, for the crop preview.
+const mergedPresets = { ...DEFAULT_PRESETS, ...(config.images?.presets ?? {}) };
+const cropPresets: Array<{ name: string; aspect: string }> = [];
+const seenAspects = new Set<string>();
+for (const [name, preset] of Object.entries(mergedPresets)) {
+  if (!preset.aspect || seenAspects.has(preset.aspect)) continue;
+  seenAspects.add(preset.aspect);
+  cropPresets.push({ name, aspect: preset.aspect });
+}
 const currentFolder = asset.folder ? await folders.findById(asset.folder) : null;
 const allFolders = await folders.findAll();
 
@@ -96,6 +106,7 @@ const folderItems = flattenByParent(
                   alt={asset.alt ?? asset.filename}
                   focalX={asset.focalX}
                   focalY={asset.focalY}
+                  presets={cropPresets}
                 />
               </AdminCard>
             )

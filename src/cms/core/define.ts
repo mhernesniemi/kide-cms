@@ -207,10 +207,27 @@ export type AdminConfig = {
   webhooks?: WebhookConfig[];
 };
 
+export type ImagePreset = {
+  /** Aspect ratio as "W/H" (e.g. "21/9"). Omit for width-only resizing (no crop). */
+  aspect?: string;
+  /** Candidate widths for srcset (should stay within the pipeline's allowed widths). */
+  widths: number[];
+  /** Output formats, most-preferred first. Defaults to ["avif", "webp"]. */
+  formats?: Array<"webp" | "avif" | "jpeg" | "png">;
+  /** Default `sizes` attribute for this rendition. */
+  sizes?: string;
+};
+
+export type ImagesConfig = {
+  /** Named renditions, merged over the built-in defaults in core/image.ts. */
+  presets?: Record<string, ImagePreset>;
+};
+
 export type CMSConfig = {
   database?: DatabaseConfig;
   locales?: LocaleConfig;
   admin?: AdminConfig;
+  images?: ImagesConfig;
   collections: CollectionConfig[];
 };
 

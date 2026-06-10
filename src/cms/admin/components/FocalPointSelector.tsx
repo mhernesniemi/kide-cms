@@ -10,9 +10,11 @@ type Props = {
   alt: string;
   focalX: number | null;
   focalY: number | null;
+  /** Aspect-ratio renditions to preview (e.g. [{ name: "hero", aspect: "21/9" }]). */
+  presets?: Array<{ name: string; aspect: string }>;
 };
 
-export default function FocalPointSelector({ src, alt, focalX: initialX, focalY: initialY }: Props) {
+export default function FocalPointSelector({ src, alt, focalX: initialX, focalY: initialY, presets = [] }: Props) {
   const [focalX, setFocalX] = useState<number | null>(initialX);
   const [focalY, setFocalY] = useState<number | null>(initialY);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -93,6 +95,30 @@ export default function FocalPointSelector({ src, alt, focalX: initialX, focalY:
           </div>
         )}
       </div>
+      {presets.length > 0 && (
+        <div className="space-y-1.5 pt-1">
+          <div className="text-muted-foreground text-xs">Crop preview</div>
+          <div className="flex flex-wrap gap-2">
+            {presets.map((preset) => (
+              <div key={preset.name} className="space-y-1">
+                <div
+                  className="bg-muted/30 w-24 overflow-hidden rounded-sm"
+                  style={{ aspectRatio: preset.aspect.replace(/[:x]/, "/") }}
+                >
+                  <img
+                    src={src}
+                    alt=""
+                    className="size-full object-cover"
+                    style={{ objectPosition: `${focalX ?? 50}% ${focalY ?? 50}%` }}
+                    draggable={false}
+                  />
+                </div>
+                <div className="text-muted-foreground text-center text-[10px] capitalize">{preset.name}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <input ref={hiddenXRef} type="hidden" name="focalX" value={focalX ?? ""} />
       <input type="hidden" name="focalY" value={focalY ?? ""} />
     </div>

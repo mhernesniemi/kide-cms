@@ -1,0 +1,98 @@
+---
+import { assets, cmsImage, cmsSrcset, resolveImagePreset } from "@/cms/core";
+import type { CropOptions, ImagePreset } from "@/cms/core";
+import config from "@/cms/cms.config";
+
+interface Props {
+  /** Asset URL (e.g. "/uploads/abc.webp") or any external/static src. */
+  src: string;
+  alt: string;
+  /** Rendition for the fallback <img> and the default <source> set. */
+  preset?: string;
+  /** Art-directed sources: each breakpoint gets a different crop. First match wins. */
+  art?: Array<{ media: string; preset: string }>;
+  /** Focal point override (0–100). When omitted, falls back to the asset's stored focal point. */
+  focalX?: number | null;
+  focalY?: number | null;
+  loading?: "eager" | "lazy";
+  fetchpriority?: "high" | "auto" | "low";
+  /** Overrides the base preset's `sizes`. */
+  sizes?: string;
+  class?: string;
+}
+
+const {
+  src,
+  alt,
+  preset = "banner",
+  art = [],
+  focalX: focalXProp,
+  focalY: focalYProp,
+  loading = "lazy",
+  fetchpriority = "auto",
+  sizes,
+  class: className,
+} = Astro.props;
+
+const isUpload = typeof src === "string" && src.startsWith("/uploads/");
+
+// Look up the asset once for focal point + intrinsic dimensions.
+const asset = isUpload ? await assets.findByUrl(src) : null;
+const focalX = focalXProp ?? asset?.focalX ?? null;
+const focalY = focalYProp ?? asset?.focalY ?? null;
+
+const configPresets = config.images?.presets;
+const base = resolveImagePreset(preset, configPresets);
+
+type SourceDef = { media?: string; srcset: string; type: string; sizes?: string };
+const sources: SourceDef[] = [];
+
+function addPreset(p: ImagePreset, media: string | undefined, sz: string | undefined) {
+  const crop: CropOptions = { aspect: p.aspect, focalX, focalY };
+  for (const format of p.formats ?? ["avif", "webp"]) {
+    sources.push({ media, srcset: cmsSrcset(src, p.widths, format, crop), type: `image/${format}`, sizes: sz });
+  }
+}
+
+if (isUpload) {
+  // Art-directed breakpoints first (more specific), then the base rendition.
+  for (const entry of art) {
+    const p = resolveImagePreset(entry.preset, configPresets);
+    addPreset(p, entry.media, p.sizes);
+  }
+  addPreset(base, undefined, sizes ?? base.sizes);
+}
+
+// Intrinsic dimensions for the fallback <img> — prevents layout shift (CLS).
+// A preset aspect wins; otherwise fall back to the asset's real ratio.
+function parseRatio(a?: string): number | undefined {
+  if (!a) return undefined;
+  const [w, h] = a.split(/[/:x]/).map(Number);
+  return w && h ? w / h : undefined;
+}
+const imgWidth = base.widths[Math.floor(base.widths.length / 2)] ?? base.widths[0];
+const ratio = parseRatio(base.aspect) ?? (asset?.width && asset?.height ? asset.width / asset.height : undefined);
+const imgHeight = ratio ? Math.round(imgWidth / ratio) : undefined;
+const imgSrc = isUpload ? cmsImage(src, imgWidth, "webp", { aspect: base.aspect, focalX, focalY }) : src;
+---
+
+{
+  isUpload ? (
+    <picture>
+      {sources.map((s) => (
+        <source media={s.media} srcset={s.srcset} type={s.type} sizes={s.sizes} />
+      ))}
+      <img
+        src={imgSrc}
+        width={imgWidth}
+        height={imgHeight}
+        alt={alt}
+        loading={loading}
+        fetchpriority={fetchpriority}
+        class={className}
+      />
+    </picture>
+  ) : (
+    <img src={src} alt={alt} loading={loading} fetchpriority={fetchpriority} class={className} />
+  )
+}

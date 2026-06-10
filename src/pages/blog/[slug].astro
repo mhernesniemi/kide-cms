@@ -2,8 +2,9 @@
 import PublicLayout from "@/layouts/PublicLayout.astro";
 import RichTextContent from "@/components/RichTextContent.astro";
 import CmsForm from "@/components/CmsForm.astro";
+import CmsPicture from "@/components/CmsPicture.astro";
 import { cms } from "@/cms/.generated/api";
-import { cacheTags, cmsImage, cmsSrcset } from "@/cms/core";
+import { cacheTags } from "@/cms/core";
 
 const isPreview = Astro.url.searchParams.has("preview");
 const doc = await cms.posts.findOne({ slug: Astro.params.slug!, status: isPreview ? "any" : "published" });
@@ -18,12 +19,13 @@ if (!isPreview) Astro.cache.set({ tags: cacheTags("posts", doc._id) });
     <h1 data-cms="title" class="mt-4 mb-2 text-2xl font-semibold">{doc.title}</h1>
     {
       doc.image && (
-        <img
-          src={cmsImage(doc.image, 1024)}
-          srcset={cmsSrcset(doc.image)}
-          sizes="(max-width: 640px) 100vw, 640px"
+        <CmsPicture
+          src={doc.image}
           alt={doc.title}
+          preset="banner"
+          art={[{ media: "(max-width: 640px)", preset: "heroMobile" }]}
           loading="eager"
+          fetchpriority="high"
           class="mb-6 h-auto w-full rounded-lg"
         />
       )

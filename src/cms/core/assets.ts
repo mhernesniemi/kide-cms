@@ -40,7 +40,23 @@ export const assets = {
     const safeName = `${nanoid(12)}${ext}`;
     const storagePath = `/uploads/${safeName}`;
 
-    await storage.putFile(storagePath, new Uint8Array(await file.arrayBuffer()));
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    await storage.putFile(storagePath, bytes);
+
+    // Capture intrinsic dimensions for rasters so consumers can prevent layout shift.
+    let width: number | null = null;
+    let height: number | null = null;
+    if ((file.type || "").startsWith("image/") && file.type !== "image/svg+xml") {
+      try {
+        const sharpModule = "sharp";
+        const sharp = (await import(/* @vite-ignore */ sharpModule)).default;
+        const meta = await sharp(bytes).metadata();
+        width = meta.width ?? null;
+        height = meta.height ?? null;
+      } catch {
+        // Unreadable/unsupported image — leave dimensions null.
+      }
+    }
 
     const id = nanoid();
     const createdAt = new Date().toISOString();
@@ -51,8 +67,8 @@ export const assets = {
       filename: file.name,
       mimeType: file.type || "application/octet-stream",
       size: file.size,
-      width: null,
-      height: null,
+      width,
+      height,
       alt: options?.alt ?? null,
       folder,
       storagePath,
@@ -71,8 +87,8 @@ export const assets = {
       filename: file.name,
       mimeType: file.type || "application/octet-stream",
       size: file.size,
-      width: null,
-      height: null,
+      width,
+      height,
       focalX: null,
       focalY: null,
       alt: options?.alt ?? null,

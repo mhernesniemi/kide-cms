@@ -77,7 +77,11 @@ const renderNode = (node: RichTextNode): string => {
     const alt = escapeHtml(String(node.alt ?? ""));
     const isLocal = src.startsWith("/uploads/");
     if (isLocal) {
-      return `<img src="${escapeHtml(cmsImage(src, 1024))}" srcset="${escapeHtml(cmsSrcset(src))}" sizes="(max-width: 768px) 100vw, 768px" alt="${alt}" loading="lazy" class="h-auto max-w-full rounded-lg" />`;
+      const sizes = "(max-width: 768px) 100vw, 768px";
+      const avif = escapeHtml(cmsSrcset(src, undefined, "avif"));
+      const webp = escapeHtml(cmsSrcset(src, undefined, "webp"));
+      const fallback = escapeHtml(cmsImage(src, 1024));
+      return `<picture><source type="image/avif" srcset="${avif}" sizes="${sizes}" /><source type="image/webp" srcset="${webp}" sizes="${sizes}" /><img src="${fallback}" alt="${alt}" loading="lazy" class="h-auto max-w-full rounded-lg" /></picture>`;
     }
     return `<img src="${escapeHtml(src)}" alt="${alt}" loading="lazy" class="max-w-full rounded-lg" />`;
   }
