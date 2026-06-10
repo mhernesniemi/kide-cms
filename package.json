@@ -2,7 +2,7 @@
   "name": "kide-cms",
   "private": true,
   "type": "module",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "engines": {
     "node": ">=22.12.0"
   },
@@ -12,6 +12,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check && eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "cms:generate": "node --import tsx src/cms/internals/generator.ts",
@@ -76,7 +78,8 @@
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.57.1"
+    "typescript-eslint": "^8.57.1",
+    "vitest": "^4.0.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

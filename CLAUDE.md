@@ -31,6 +31,7 @@ pnpm dev              # start dev server (auto-generates schema + pushes DB)
 pnpm build            # production build
 pnpm preview          # preview production build
 pnpm check            # astro check (types) + eslint (lint)
+pnpm test             # vitest (unit + generator golden + in-memory DB integration)
 pnpm format           # prettier --write .
 pnpm cms:generate     # regenerate src/cms/.generated/ from cms.config.ts
 pnpm cms:seed         # seed database with demo content
@@ -42,7 +43,8 @@ pnpm cms:admin        # create an admin user from CLI
 After code changes, ALWAYS run:
 
 1. `pnpm check` — Fix all errors before considering the task done.
-2. `pnpm format` — Must be the very last step.
+2. `pnpm test` — All tests must pass. Add tests when changing `src/cms/core/`.
+3. `pnpm format` — Must be the very last step.
 
 ## Key Files
 

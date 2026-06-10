@@ -1,0 +1,299 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generate > api.ts > matches the golden snapshot 1`] = `
+"// auto-generated — do not edit
+import config from "../cms.config";
+import { createCms } from "../runtime";
+import type {
+  ArticlesDocument,
+  ArticlesInput,
+  ArticlesTranslationInput,
+  WritersDocument,
+  WritersInput,
+  WritersTranslationInput,
+} from "./types";
+
+export const cms = createCms(config) as {
+  articles: {
+    find(options?: import("@/cms/core").FindOptions, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<ArticlesDocument[]>;
+    findOne(filter: Record<string, unknown> & { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<ArticlesDocument | null>;
+    findById(id: string, options?: { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<ArticlesDocument | null>;
+    create(data: ArticlesInput, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<ArticlesDocument>;
+    update(id: string, data: Partial<ArticlesInput>, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<ArticlesDocument>;
+    delete(id: string, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<void>;
+    count(filter?: Omit<import("@/cms/core").FindOptions, "limit" | "offset" | "sort">, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<number>;
+    versions(id: string): Promise<import("./types").StoredVersion[]>;
+    restore(id: string, versionNumber: number, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<ArticlesDocument>;
+    publish(id: string, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<ArticlesDocument>;
+    unpublish(id: string, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<ArticlesDocument>;
+    schedule(id: string, publishAt: string, unpublishAt?: string | null, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<ArticlesDocument>;
+    getTranslations(id: string): Promise<Record<string, ArticlesTranslationInput>>;
+    upsertTranslation(id: string, locale: string, data: ArticlesTranslationInput, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<ArticlesDocument>;
+  };
+  writers: {
+    find(options?: import("@/cms/core").FindOptions, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<WritersDocument[]>;
+    findOne(filter: Record<string, unknown> & { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<WritersDocument | null>;
+    findById(id: string, options?: { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<WritersDocument | null>;
+    create(data: WritersInput, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<WritersDocument>;
+    update(id: string, data: Partial<WritersInput>, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<WritersDocument>;
+    delete(id: string, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<void>;
+    count(filter?: Omit<import("@/cms/core").FindOptions, "limit" | "offset" | "sort">, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<number>;
+    versions(id: string): Promise<import("./types").StoredVersion[]>;
+    restore(id: string, versionNumber: number, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<WritersDocument>;
+    publish(id: string, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<WritersDocument>;
+    unpublish(id: string, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<WritersDocument>;
+    schedule(id: string, publishAt: string, unpublishAt?: string | null, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<WritersDocument>;
+    getTranslations(id: string): Promise<Record<string, WritersTranslationInput>>;
+    upsertTranslation(id: string, locale: string, data: WritersTranslationInput, context?: { user?: { id: string; role?: string; email?: string } | null }): Promise<WritersDocument>;
+  };
+  meta: ReturnType<typeof createCms>["meta"];
+  scheduled: ReturnType<typeof createCms>["scheduled"];
+};
+"
+`;
+
+exports[`generate > schema.ts > matches the golden snapshot 1`] = `
+"// auto-generated — do not edit
+import { sqliteTable, text, integer, real, unique, index } from "drizzle-orm/sqlite-core";
+
+export const cmsArticles = sqliteTable("cms_articles", {
+  _id: text("_id").primaryKey(),
+  title: text("title").notNull(),
+  slug: text("slug").unique(),
+  readingTime: integer("reading_time").default(5),
+  featured: integer("featured", { mode: "boolean" }).default(false),
+  publishDate: text("publish_date"),
+  tone: text("tone"),
+  body: text("body"),
+  cover: text("cover"),
+  author: text("author"),
+  related: text("related"),
+  tags: text("tags"),
+  meta: text("meta"),
+  sections: text("sections"),
+  _status: text("_status").notNull().default("draft"),
+  _publishedAt: text("_published_at"),
+  _publishAt: text("_publish_at"),
+  _unpublishAt: text("_unpublish_at"),
+  _published: text("_published"),
+  _createdAt: text("_created_at").notNull(),
+  _updatedAt: text("_updated_at").notNull(),
+});
+
+export const cmsArticlesTranslations = sqliteTable("cms_articles_translations", {
+  _id: text("_id").primaryKey(),
+  _entityId: text("_entity_id").notNull().references(() => cmsArticles._id, { onDelete: "cascade" }),
+  _languageCode: text("_language_code").notNull(),
+  title: text("title").notNull(),
+  body: text("body"),
+}, (table) => ({
+  uniqueLocale: unique().on(table._entityId, table._languageCode),
+}));
+
+export const cmsArticlesVersions = sqliteTable("cms_articles_versions", {
+  _id: text("_id").primaryKey(),
+  _docId: text("_doc_id").notNull().references(() => cmsArticles._id, { onDelete: "cascade" }),
+  _version: integer("_version").notNull(),
+  _snapshot: text("_snapshot").notNull(),
+  _createdAt: text("_created_at").notNull(),
+});
+
+export const cmsWriters = sqliteTable("cms_writers", {
+  _id: text("_id").primaryKey(),
+  name: text("name").notNull(),
+  contactEmail: text("contact_email").unique(),
+});
+
+export const cmsAssets = sqliteTable("cms_assets", {
+  _id: text("_id").primaryKey(),
+  filename: text("filename").notNull(),
+  mimeType: text("mime_type").notNull(),
+  size: integer("size").notNull(),
+  width: integer("width"),
+  height: integer("height"),
+  focalX: real("focal_x"),
+  focalY: real("focal_y"),
+  alt: text("alt"),
+  folder: text("folder"),
+  storagePath: text("storage_path").notNull(),
+  _createdAt: text("_created_at").notNull(),
+});
+
+export const cmsAssetFolders = sqliteTable("cms_asset_folders", {
+  _id: text("_id").primaryKey(),
+  name: text("name").notNull(),
+  parent: text("parent"),
+  _createdAt: text("_created_at").notNull(),
+});
+
+export const cmsSessions = sqliteTable("cms_sessions", {
+  _id: text("_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  expiresAt: text("expires_at").notNull(),
+});
+
+export const cmsLocks = sqliteTable("cms_locks", {
+  _id: text("_id").primaryKey(),
+  collection: text("collection").notNull(),
+  documentId: text("document_id").notNull(),
+  userId: text("user_id").notNull(),
+  userEmail: text("user_email").notNull(),
+  lockedAt: text("locked_at").notNull(),
+});
+
+export const cmsInvites = sqliteTable("cms_invites", {
+  _id: text("_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: text("expires_at").notNull(),
+  usedAt: text("used_at"),
+});
+
+export const cmsAuditLog = sqliteTable("cms_audit_log", {
+  _id: text("_id").primaryKey(),
+  timestamp: integer("timestamp").notNull(),
+  actorId: text("actor_id"),
+  actorEmail: text("actor_email"),
+  actorRole: text("actor_role"),
+  action: text("action").notNull(),
+  resourceType: text("resource_type").notNull(),
+  resourceCollection: text("resource_collection"),
+  resourceId: text("resource_id"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+}, (table) => ({
+  timestampIdx: index("audit_timestamp_idx").on(table.timestamp),
+  actorIdx: index("audit_actor_idx").on(table.actorId),
+  resourceIdx: index("audit_resource_idx").on(table.resourceType, table.resourceCollection, table.resourceId),
+}));
+
+export const cmsTables = {
+  articles: { main: cmsArticles, translations: cmsArticlesTranslations, versions: cmsArticlesVersions },
+  writers: { main: cmsWriters },
+};"
+`;
+
+exports[`generate > types.ts > matches the golden snapshot 1`] = `
+"// auto-generated — do not edit
+import type { RichTextDocument } from "@/cms/core";
+
+export type CMSCollectionSlug = "articles" | "writers";
+
+export type ArticlesInput = {
+  title: string;
+  slug?: string;
+  readingTime?: number;
+  featured?: boolean;
+  publishDate?: string;
+  tone?: "formal" | "casual";
+  body?: RichTextDocument;
+  cover?: string;
+  author?: string;
+  related?: string[];
+  tags?: string[];
+  meta?: Record<string, unknown>;
+  sections?: Array<{ type: "hero"; heading: string; image?: string; } | { type: "quote"; text?: string; attribution?: string; }>;
+};
+
+export type ArticlesTranslationInput = {
+  title?: string;
+  body?: RichTextDocument;
+};
+
+export type ArticlesDocument = ArticlesInput & {
+  _id: string;
+  _status: "draft" | "published" | "scheduled";
+  _publishedAt?: string | null;
+  _publishAt?: string | null;
+  _unpublishAt?: string | null;
+  _createdAt: string;
+  _updatedAt: string;
+  _locale?: string | null;
+  _availableLocales?: string[];
+};
+
+export type WritersInput = {
+  name: string;
+  contactEmail?: string;
+};
+
+export type WritersTranslationInput = {
+  [key: string]: never;
+};
+
+export type WritersDocument = WritersInput & {
+  _id: string;
+  _status: "draft" | "published" | "scheduled";
+  _publishedAt?: string | null;
+  _publishAt?: string | null;
+  _unpublishAt?: string | null;
+  _createdAt: string;
+  _updatedAt: string;
+  _locale?: string | null;
+  _availableLocales?: string[];
+};
+
+export type StoredVersion = {
+  version: number;
+  createdAt: string;
+  snapshot: Record<string, unknown>;
+};"
+`;
+
+exports[`generate > validators.ts > matches the golden snapshot 1`] = `
+"// auto-generated — do not edit
+import { z } from "zod";
+
+export const ArticlesCreateSchema = z.object({
+  title: z.string(),
+  slug: z.string().optional(),
+  readingTime: z.number().optional(),
+  featured: z.boolean().optional(),
+  publishDate: z.string().optional(),
+  tone: z.enum(["formal", "casual"]).optional(),
+  body: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
+  cover: z.string().optional(),
+  author: z.string().optional(),
+  related: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+  meta: z.record(z.unknown()).optional(),
+  sections: z.array(z.discriminatedUnion("type", [
+    z.object({ type: z.literal("hero"), heading: z.string(), image: z.string().optional() }),
+    z.object({ type: z.literal("quote"), text: z.string().optional(), attribution: z.string().optional() }),
+  ])).optional(),
+});
+
+export const ArticlesUpdateSchema = z.object({
+  title: z.string().optional(),
+  slug: z.string().optional(),
+  readingTime: z.number().optional(),
+  featured: z.boolean().optional(),
+  publishDate: z.string().optional(),
+  tone: z.enum(["formal", "casual"]).optional(),
+  body: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
+  cover: z.string().optional(),
+  author: z.string().optional(),
+  related: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+  meta: z.record(z.unknown()).optional(),
+  sections: z.array(z.discriminatedUnion("type", [
+    z.object({ type: z.literal("hero"), heading: z.string(), image: z.string().optional() }),
+    z.object({ type: z.literal("quote"), text: z.string().optional(), attribution: z.string().optional() }),
+  ])).optional(),
+});
+
+export const WritersCreateSchema = z.object({
+  name: z.string(),
+  contactEmail: z.string().email().optional(),
+});
+
+export const WritersUpdateSchema = z.object({
+  name: z.string().optional(),
+  contactEmail: z.string().email().optional(),
+});
+
+export const validators = {
+  "articles": { create: ArticlesCreateSchema, update: ArticlesUpdateSchema },
+  "writers": { create: WritersCreateSchema, update: WritersUpdateSchema },
+};"
+`;
