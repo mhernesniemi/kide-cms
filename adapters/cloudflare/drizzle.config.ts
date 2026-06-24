@@ -21,4 +21,10 @@ export default defineConfig({
   dbCredentials: {
     url: getLocalD1Path() ?? ":memory:",
   },
+  // The FTS5 search index (cms_search_index + its shadow tables) is created
+  // lazily at runtime by ensureSearchSchema() in src/cms/core/search.ts. It is
+  // not part of the Drizzle schema, and drizzle-kit can't model FTS5 virtual
+  // tables — `push` errors with "no such table: cms_search_index_data". Exclude
+  // them so the dev integration's auto-push (and manual pushes) stay clean.
+  tablesFilter: ["!cms_search_index*"],
 });

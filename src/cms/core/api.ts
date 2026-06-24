@@ -5,7 +5,7 @@ import { recordAudit, type AuditActor } from "./audit";
 import { hashPassword } from "./auth";
 import type { CMSConfig, CollectionConfig, FieldConfig, RichTextDocument } from "./define";
 import { getCollectionMap, getTranslatableFieldNames, isStructuralField } from "./define";
-import { getDb } from "./runtime";
+import { getDb, trackTask } from "./runtime";
 import { getSchema } from "./schema";
 import { indexDocument, isCollectionSearchable, removeDocument } from "./search";
 import { cloneValue, createRichTextFromPlainText, slugify } from "./values";
@@ -252,24 +252,26 @@ const toAuditActor = (context: RuntimeContext): AuditActor => {
 };
 
 const auditContent = (action: string, slug: string, resourceId: string, context: RuntimeContext) => {
-  void recordAudit({
-    action,
-    resourceType: "content",
-    resourceCollection: slug,
-    resourceId,
-    actor: toAuditActor(context),
-  });
+  trackTask(
+    recordAudit({
+      action,
+      resourceType: "content",
+      resourceCollection: slug,
+      resourceId,
+      actor: toAuditActor(context),
+    }),
+  );
 };
 
 const syncSearch = (config: CMSConfig, collection: CollectionConfig, docId: string) => {
   if (!isCollectionSearchable(collection)) return;
   const locales = config.locales?.supported ?? [];
-  void indexDocument(collection, docId, locales);
+  trackTask(indexDocument(collection, docId, locales));
 };
 
 const removeSearch = (collection: CollectionConfig, docId: string) => {
   if (!isCollectionSearchable(collection)) return;
-  void removeDocument(collection.slug, docId);
+  trackTask(removeDocument(collection.slug, docId));
 };
 
 const getTableRefs = async (collectionSlug: string) => {
@@ -539,6 +541,35 @@ export const createCms = (config: CMSConfig) => {
         syncSearch(config, collection, docId);
         dispatchWebhooks(config, "create", slug, result!, context.user);
         return result!;
+      },
+
+      // Create many documents sequentially (avoids DB write contention). Runs the
+      // full per-document path — hooks, versions, search, audit, webhooks.
+      async createMany(items: Array<Record<string, unknown>>, context: RuntimeContext = {}) {
+        const created: Record<string, unknown>[] = [];
+        for (const item of items) created.push(await this.create(item, context));
+        return created;
+      },
+
+      // Upsert by _id: update when a row with data._id already exists, else create.
+      // Pairs with create()'s caller-supplied _id to make imports idempotent
+      // (re-runnable) without a wipe-first step.
+      async upsert(data: Record<string, unknown>, context: RuntimeContext = {}) {
+        const id = typeof data._id === "string" && data._id ? data._id : undefined;
+        if (id) {
+          const db = await getDb();
+          const tables = await getTableRefs(slug);
+          const existing = await db
+            .select({ _id: tables.main._id })
+            .from(tables.main)
+            .where(eq(tables.main._id, id))
+            .limit(1);
+          if (existing.length) {
+            const { _id: _ignored, ...rest } = data;
+            return this.update(id, rest, context);
+          }
+        }
+        return this.create(data, context);
       },
 
       async update(id: string, data: Record<string, unknown>, context: RuntimeContext = {}) {

@@ -1,7 +1,8 @@
-import { env } from "cloudflare:workers";
+import { getCfEnv } from "./cf-env";
 
-function getBucket(): R2Bucket {
-  const bucket = (env as any).CMS_ASSETS as R2Bucket | undefined;
+async function getBucket(): Promise<R2Bucket> {
+  const env = await getCfEnv();
+  const bucket = env.CMS_ASSETS as R2Bucket | undefined;
   if (!bucket) throw new Error("R2 bucket binding CMS_ASSETS not found. Check wrangler.toml.");
   return bucket;
 }
@@ -11,15 +12,15 @@ function toKey(storagePath: string): string {
 }
 
 export async function putFile(storagePath: string, data: ArrayBuffer | Uint8Array): Promise<void> {
-  await getBucket().put(toKey(storagePath), data);
+  await (await getBucket()).put(toKey(storagePath), data);
 }
 
 export async function getFile(storagePath: string): Promise<ArrayBuffer | null> {
-  const obj = await getBucket().get(toKey(storagePath));
+  const obj = await (await getBucket()).get(toKey(storagePath));
   if (!obj) return null;
   return obj.arrayBuffer();
 }
 
 export async function deleteFile(storagePath: string): Promise<void> {
-  await getBucket().delete(toKey(storagePath));
+  await (await getBucket()).delete(toKey(storagePath));
 }

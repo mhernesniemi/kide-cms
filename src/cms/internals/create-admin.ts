@@ -31,7 +31,7 @@ async function main() {
 
   await createAdminUser({ name, email, password });
   console.log(`Admin user "${name}" created.`);
-  closeDb();
+  await closeDb();
 }
 
 main().catch((error) => {

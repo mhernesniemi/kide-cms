@@ -381,6 +381,8 @@ const generateApiFile = (
     findOne(filter: Record<string, unknown> & { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, ${ctx}): Promise<${baseName}Document | null>;
     findById(id: string, options?: { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, ${ctx}): Promise<${baseName}Document | null>;
     create(data: ${baseName}Input, ${ctx}): Promise<${baseName}Document>;
+    createMany(items: ${baseName}Input[], ${ctx}): Promise<${baseName}Document[]>;
+    upsert(data: ${baseName}Input & { _id?: string }, ${ctx}): Promise<${baseName}Document>;
     update(id: string, data: Partial<${baseName}Input>, ${ctx}): Promise<${baseName}Document>;
     delete(id: string, ${ctx}): Promise<void>;
     count(filter?: Omit<import("${coreImportPath}").FindOptions, "limit" | "offset" | "sort">, ${ctx}): Promise<number>;

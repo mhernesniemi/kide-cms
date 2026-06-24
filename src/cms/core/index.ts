@@ -7,6 +7,8 @@ export {
   getStorage,
   getEmail,
   readEnv,
+  trackTask,
+  flushTasks,
 } from "./runtime";
 export type { CmsRuntimeConfig, CmsStorageAdapter, CmsEmailAdapter } from "./runtime";
 
@@ -96,7 +98,7 @@ export { assets, folders } from "./assets";
 export type { AssetRecord, FolderRecord } from "./assets";
 
 export { parseBlocks, parseList, cacheTags } from "./content";
-export { renderRichText, createRichTextFromPlainText, richTextToPlainText } from "./richtext";
+export { renderRichText, createRichTextFromPlainText, richTextToPlainText, htmlToRichText } from "./richtext";
 export { cloneValue, slugify, escapeHtml, serializeFieldValue } from "./values";
 export { cmsImage, cmsSrcset, transformImage, DEFAULT_PRESETS, resolveImagePreset } from "./image";
 export type { CropOptions, TransformOptions } from "./image";

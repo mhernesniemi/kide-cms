@@ -1,6 +1,7 @@
 import { lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
+import { log } from "./log";
 import { getDb } from "./runtime";
 import { getSchema } from "./schema";
 
@@ -46,14 +47,15 @@ export const recordAudit = async (event: AuditEvent): Promise<void> => {
 
   // Structured log line. Filter by `kind: "audit"` in Cloudflare Workers Logs,
   // `wrangler tail`, or any stdout-to-log pipeline (Logpush, Datadog, Axiom…).
-  console.log(JSON.stringify({ kind: "audit", ...row }));
+  // Emitted at "info" — set CMS_LOG_LEVEL=warn to silence during bulk scripts.
+  log.info(JSON.stringify({ kind: "audit", ...row }));
 
   try {
     const db = await getDb();
     const schema = getSchema();
     await db.insert(schema.cmsAuditLog).values(row);
   } catch (error) {
-    console.warn("[audit] failed to persist event", event.action, error);
+    log.warn("[audit] failed to persist event", event.action, error);
   }
 };
 
