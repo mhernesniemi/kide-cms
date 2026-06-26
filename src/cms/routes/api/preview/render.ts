@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import { loadRenderers } from "astro:container";
-import { getContainerRenderer } from "@astrojs/react";
+import { getContainerRenderer } from "@astrojs/react/container-renderer";
 
 import BlockRenderer from "virtual:kide/block-renderer";
 import { renderRichText, parseBlocks } from "@/cms/core";

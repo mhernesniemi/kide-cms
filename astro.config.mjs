@@ -15,13 +15,11 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
   },
-  experimental: {
-    cache: {
-      provider: memoryCache(),
-    },
-    routeRules: {
-      "/blog/**": { maxAge: 86400, swr: 3600 },
-      "/": { maxAge: 86400, swr: 3600 },
-    },
+  cache: {
+    provider: memoryCache(),
+  },
+  routeRules: {
+    "/blog/**": { maxAge: 86400, swr: 3600 },
+    "/": { maxAge: 86400, swr: 3600 },
   },
 });
