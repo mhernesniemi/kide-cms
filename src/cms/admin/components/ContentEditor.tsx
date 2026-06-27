@@ -1,30 +1,14 @@
 import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
 import { Node } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
+import Placeholder from "@tiptap/extension-placeholder";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import {
-  Bold,
-  ChevronRight,
-  GripVertical,
-  Italic,
-  Heading2,
-  Heading3,
-  List,
-  ListOrdered,
-  Quote,
-  ImageIcon,
-  Link as LinkIcon,
-  Plus,
-  Trash2,
-  Undo,
-  Redo,
-} from "lucide-react";
+import { Bold, ChevronRight, GripVertical, Italic, Heading2, Heading3, Link as LinkIcon, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { cn } from "../lib/utils";
-import ImageBrowseDialog from "./ImageBrowseDialog";
 import {
   LinkDialog,
   fetchLinkGroups,
@@ -33,15 +17,8 @@ import {
   type CmsNode,
   type LinkGroup,
 } from "./RichTextEditor";
-import {
-  SubField,
-  blankBlockFields,
-  humanize,
-  type BlockTypesMeta,
-  type RelationOption,
-  type SubFieldMeta,
-} from "./block-fields";
-import { blockNodeSpec, BLOCK_NODE_NAME, insertBlockNode, type BlockNodeOptions } from "./content-block-spec";
+import { SubField, humanize, type BlockTypesMeta, type RelationOption, type SubFieldMeta } from "./block-fields";
+import { blockNodeSpec, BLOCK_NODE_NAME, type BlockNodeOptions } from "./content-block-spec";
 import { SlashCommand } from "./slash-command";
 
 // -----------------------------------------------
@@ -233,8 +210,6 @@ type Props = {
 export default function ContentEditor({ name, initialValue, rows = 14, types, blockRelationOptions = {} }: Props) {
   const hiddenRef = useRef<HTMLInputElement>(null);
   const previewChannelRef = useRef<BroadcastChannel | null>(null);
-  const [imageBrowseOpen, setImageBrowseOpen] = useState(false);
-  const [insertOpen, setInsertOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkType, setLinkType] = useState<"internal" | "external">("internal");
   const [linkUrl, setLinkUrl] = useState("");
@@ -270,8 +245,6 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
     }
   }, [cmsJson]);
 
-  const typeNames = Object.keys(types);
-
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -282,6 +255,12 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
         autolink: false,
         linkOnPaste: false,
         HTMLAttributes: { class: "text-primary underline cursor-text pointer-events-none" },
+      }),
+      // Hint that the editor is command-driven (no persistent toolbar). Shown on every
+      // empty paragraph, not just the first.
+      Placeholder.configure({
+        showOnlyCurrent: false,
+        placeholder: ({ node }) => (node.type.name === "paragraph" ? "Type / for commands…" : ""),
       }),
       BlockNode.configure({ types, blockRelationOptions, fieldName: name }),
       SlashCommand.configure({ types }),
@@ -340,12 +319,6 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
     return () => hidden.removeEventListener("cms:set-value", handler);
   });
 
-  const insertBlock = (blockType: string) => {
-    if (!editor) return;
-    insertBlockNode(editor, blockType, blankBlockFields(types[blockType] ?? {}));
-    setInsertOpen(false);
-  };
-
   const openLinkDialog = () => {
     if (!editor) return;
     const href = editor.getAttributes("link").href ?? "";
@@ -359,146 +332,58 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
   const minHeight = `${rows * 1.5}rem`;
 
   return (
-    <div className="border-input hover:border-foreground/20 focus-within:border-ring focus-within:ring-ring/50 overflow-hidden rounded-lg border transition-colors focus-within:ring-3">
+    <div className="border-input hover:border-foreground/20 focus-within:border-ring overflow-hidden rounded-lg border transition-colors">
       <input ref={hiddenRef} type="hidden" name={name} value={cmsJson} />
-
-      {/* Toolbar */}
-      <div className="bg-muted/40 dark:bg-input/30 flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5">
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleBold().run()}
-          active={editor?.isActive("bold")}
-          disabled={!editor}
-          title="Bold"
-        >
-          <Bold className="size-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleItalic().run()}
-          active={editor?.isActive("italic")}
-          disabled={!editor}
-          title="Italic"
-        >
-          <Italic className="size-4" />
-        </ToolbarButton>
-
-        <div className="bg-border mx-1 h-5 w-px" />
-
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-          active={editor?.isActive("heading", { level: 2 })}
-          disabled={!editor}
-          title="Heading 2"
-        >
-          <Heading2 className="size-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
-          active={editor?.isActive("heading", { level: 3 })}
-          disabled={!editor}
-          title="Heading 3"
-        >
-          <Heading3 className="size-4" />
-        </ToolbarButton>
-
-        <div className="bg-border mx-1 h-5 w-px" />
-
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleBulletList().run()}
-          active={editor?.isActive("bulletList")}
-          disabled={!editor}
-          title="Bullet list"
-        >
-          <List className="size-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-          active={editor?.isActive("orderedList")}
-          disabled={!editor}
-          title="Ordered list"
-        >
-          <ListOrdered className="size-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-          active={editor?.isActive("blockquote")}
-          disabled={!editor}
-          title="Blockquote"
-        >
-          <Quote className="size-4" />
-        </ToolbarButton>
-
-        <ToolbarButton onClick={openLinkDialog} active={editor?.isActive("link")} disabled={!editor} title="Link">
-          <LinkIcon className="size-4" />
-        </ToolbarButton>
-
-        <div className="bg-border mx-1 h-5 w-px" />
-
-        <ToolbarButton onClick={() => setImageBrowseOpen(true)} disabled={!editor} title="Insert image">
-          <ImageIcon className="size-4" />
-        </ToolbarButton>
-
-        {typeNames.length > 0 && (
-          <Popover open={insertOpen} onOpenChange={setInsertOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                disabled={!editor}
-                title="Insert block"
-                className="text-muted-foreground hover:bg-accent/60 hover:text-foreground focus-visible:ring-ring/50 ml-1 inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium transition-colors outline-none focus-visible:ring-2 disabled:opacity-50"
-              >
-                <Plus className="size-4" />
-                Block
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-48 p-1">
-              <div className="grid">
-                {typeNames.map((typeName) => (
-                  <button
-                    key={typeName}
-                    type="button"
-                    className="hover:bg-accent hover:text-accent-foreground flex items-center rounded-sm px-2 py-1.5 text-sm transition-colors"
-                    onClick={() => insertBlock(typeName)}
-                  >
-                    {humanize(typeName)}
-                  </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
-
-        <div className="ml-auto" />
-
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().undo().run()}
-          disabled={!editor?.can().undo()}
-          title="Undo"
-        >
-          <Undo className="size-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().redo().run()}
-          disabled={!editor?.can().redo()}
-          title="Redo"
-        >
-          <Redo className="size-4" />
-        </ToolbarButton>
-      </div>
 
       {/* Editor area */}
       {editor ? (
-        <EditorContent editor={editor} />
+        <>
+          {/* Selection toolbar — appears when text is highlighted */}
+          <BubbleMenu
+            editor={editor}
+            options={{ placement: "top" }}
+            shouldShow={({ editor: ed, from, to }) => from !== to && !ed.isActive(BLOCK_NODE_NAME)}
+            className="bg-popover flex items-center gap-0.5 rounded-md border p-1 shadow-md"
+          >
+            <ToolbarButton
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              active={editor.isActive("bold")}
+              title="Bold"
+            >
+              <Bold className="size-4" />
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              active={editor.isActive("italic")}
+              title="Italic"
+            >
+              <Italic className="size-4" />
+            </ToolbarButton>
+            <div className="bg-border mx-0.5 h-5 w-px" />
+            <ToolbarButton
+              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+              active={editor.isActive("heading", { level: 2 })}
+              title="Heading 2"
+            >
+              <Heading2 className="size-4" />
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+              active={editor.isActive("heading", { level: 3 })}
+              title="Heading 3"
+            >
+              <Heading3 className="size-4" />
+            </ToolbarButton>
+            <div className="bg-border mx-0.5 h-5 w-px" />
+            <ToolbarButton onClick={openLinkDialog} active={editor.isActive("link")} title="Link">
+              <LinkIcon className="size-4" />
+            </ToolbarButton>
+          </BubbleMenu>
+          <EditorContent editor={editor} />
+        </>
       ) : (
         <div className="prose prose-sm max-w-none" style={{ minHeight, padding: "0.625rem 0.75rem" }} />
       )}
-
-      <ImageBrowseDialog
-        open={imageBrowseOpen}
-        onOpenChange={setImageBrowseOpen}
-        onSelect={(asset) => {
-          editor?.chain().focus().setImage({ src: asset.url, alt: asset.filename }).run();
-        }}
-      />
 
       <LinkDialog
         open={linkDialogOpen}
