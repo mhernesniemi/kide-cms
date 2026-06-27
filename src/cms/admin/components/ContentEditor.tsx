@@ -1,5 +1,4 @@
 import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
-import { BubbleMenu } from "@tiptap/react/menus";
 import { Node } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
@@ -488,50 +487,7 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
 
       {/* Editor area */}
       {editor ? (
-        <>
-          {/* Selection toolbar — appears when text is highlighted */}
-          <BubbleMenu
-            editor={editor}
-            options={{ placement: "top" }}
-            shouldShow={({ editor: ed, from, to }) => from !== to && !ed.isActive(BLOCK_NODE_NAME)}
-            className="bg-popover flex items-center gap-0.5 rounded-md border p-1 shadow-md"
-          >
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleBold().run()}
-              active={editor.isActive("bold")}
-              title="Bold"
-            >
-              <Bold className="size-4" />
-            </ToolbarButton>
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleItalic().run()}
-              active={editor.isActive("italic")}
-              title="Italic"
-            >
-              <Italic className="size-4" />
-            </ToolbarButton>
-            <div className="bg-border mx-0.5 h-5 w-px" />
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-              active={editor.isActive("heading", { level: 2 })}
-              title="Heading 2"
-            >
-              <Heading2 className="size-4" />
-            </ToolbarButton>
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-              active={editor.isActive("heading", { level: 3 })}
-              title="Heading 3"
-            >
-              <Heading3 className="size-4" />
-            </ToolbarButton>
-            <div className="bg-border mx-0.5 h-5 w-px" />
-            <ToolbarButton onClick={openLinkDialog} active={editor.isActive("link")} title="Link">
-              <LinkIcon className="size-4" />
-            </ToolbarButton>
-          </BubbleMenu>
-          <EditorContent editor={editor} />
-        </>
+        <EditorContent editor={editor} />
       ) : (
         <div className="prose prose-sm max-w-none" style={{ minHeight, padding: "0.625rem 0.75rem" }} />
       )}
