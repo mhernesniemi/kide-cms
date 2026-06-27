@@ -177,11 +177,11 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
      Save / Publish stay reachable while editing long documents. */
   }
   <div
-    class="border-border/50 bg-background/80 sticky top-0 z-30 -mx-4 -mt-6 mb-1 border-b px-4 py-3 backdrop-blur-md lg:-mx-8 lg:-mt-8 lg:px-8"
+    class="border-border bg-background/80 sticky top-0 z-30 -mx-4 -mt-6 mb-1 border-b px-4 py-3 backdrop-blur-md lg:-mx-8 lg:-mt-8 lg:px-8"
   >
     <div class="flex items-center justify-between gap-3">
       <div class="flex min-w-0 items-center gap-2.5">
-        <h1 class="truncate text-lg font-semibold tracking-tight">
+        <h1 class="truncate text-lg font-semibold tracking-tight md:text-xl">
           {mode === "new" && <LiveHeading client:load initial={`New ${collection.labels.singular}`} />}
           {
             mode === "edit" && (
@@ -397,7 +397,7 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
             (doc?._status === "draft" || doc?._status === "scheduled" || (doc && getVisualStatus(doc) === "changed")),
           )}
         />
-        <div id="document-edit-area" class:list={["space-y-6", !hasMetaLine && "mt-6"]}>
+        <div id="document-edit-area" class:list={[!hasMetaLine && "mt-12"]}>
           {collection.slug === "users" && mode === "edit" && Astro.url.searchParams.get("inviteToken") && (
             <AdminCard title={Astro.url.searchParams.get("emailSent") === "true" ? "Invitation sent" : "Invite link"}>
               {Astro.url.searchParams.get("emailSent") === "true" ? (
@@ -482,7 +482,7 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
               </div>
 
               {hasSidebarColumn && (
-                <div class="2xl:border-border/50 text-sm 2xl:border-l 2xl:pl-12 [&_button]:text-sm [&_input]:text-sm [&_select]:text-sm [&_textarea]:text-sm">
+                <div class="2xl:border-border text-sm 2xl:border-l 2xl:pl-12 [&_button]:text-sm [&_input]:text-sm [&_select]:text-sm [&_textarea]:text-sm">
                   <div class="space-y-6">
                     {effectiveSidebarFieldSets.map((set) => (
                       <div class="grid gap-6">

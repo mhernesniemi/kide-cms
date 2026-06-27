@@ -101,7 +101,7 @@ export default function TreeSelect({
             role="combobox"
             aria-expanded={open}
             size="lg"
-            className="border-input bg-muted/30 hover:bg-muted dark:bg-input/30 dark:hover:bg-input/50 w-full justify-between text-base font-normal"
+            className="border-input bg-muted/30 hover:bg-muted dark:bg-input/30 dark:hover:bg-input/50 w-full justify-between text-sm font-normal"
           >
             <span className={cn("truncate", !selected && "text-muted-foreground")}>
               {selected ? (
