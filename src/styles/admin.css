@@ -21,6 +21,12 @@
   --border: oklch(0.929 0.006 264);
   --input: oklch(0.872 0.009 264);
   --ring: oklch(0.556 0.01 264);
+
+  /* Form-field focus — single source of truth. Change these two to restyle the
+     focus border + ring of every input / select / textarea / button / editor. */
+  --field-focus-border: color-mix(in oklch, var(--ring) 45%, transparent);
+  --field-focus-ring: color-mix(in oklch, var(--ring) 10%, transparent);
+
   --chart-1: oklch(0.623 0.214 259.815);
   --chart-2: oklch(0.546 0.245 262.881);
   --chart-3: oklch(0.488 0.243 264.376);
@@ -69,6 +75,12 @@
   --border: oklch(0.3 0.012 265);
   --input: oklch(0.36 0.012 265);
   --ring: oklch(0.6 0.006 265);
+
+  /* Dark uses the full (lighter) ring for the focus border so it keeps the same
+     contrast against the darker resting border as light mode does. */
+  --field-focus-border: var(--ring);
+  --field-focus-ring: color-mix(in oklch, var(--ring) 30%, transparent);
+
   --sidebar: oklch(0.175 0.014 265);
   --sidebar-foreground: oklch(0.96 0.004 265);
   --sidebar-primary: oklch(0.623 0.214 259.815);

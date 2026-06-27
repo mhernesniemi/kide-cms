@@ -187,7 +187,7 @@ const ToolbarButton = ({
     disabled={disabled}
     title={title}
     className={cn(
-      "focus-visible:ring-ring/30 focus-visible:border-ring/70 dark:focus-visible:border-ring disabled:hover:text-muted-foreground inline-flex size-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2 disabled:opacity-50 disabled:hover:bg-transparent",
+      "disabled:hover:text-muted-foreground inline-flex size-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:border-(color:--field-focus-border) focus-visible:ring-2 focus-visible:ring-(color:--field-focus-ring) disabled:opacity-50 disabled:hover:bg-transparent",
       active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
     )}
   >
@@ -277,8 +277,8 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
     onTransaction: forceTick,
     editorProps: {
       attributes: {
-        class: "prose prose-sm max-w-none text-base focus:outline-none",
-        style: `min-height: ${rows * 1.5}rem; padding: 0.625rem 0.75rem`,
+        class: "prose prose-sm max-w-none text-base focus:outline-none py-3 px-5",
+        style: `min-height: ${rows * 1.5}rem;`,
       },
       handleDOMEvents: {
         mousedown(_view, event) {
@@ -331,7 +331,7 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
   const minHeight = `${rows * 1.5}rem`;
 
   return (
-    <div className="border-input hover:border-foreground/20 focus-within:border-ring/70 dark:focus-within:border-ring focus-within:hover:border-ring focus-within:ring-ring/30 bg-muted/30 dark:bg-input/30 overflow-hidden rounded-lg border transition-colors focus-within:ring-2">
+    <div className="border-input hover:border-foreground/20 focus-within:hover:border-ring bg-muted/30 dark:bg-input/30 overflow-hidden rounded-lg border transition-colors focus-within:border-(color:--field-focus-border) focus-within:ring-2 focus-within:ring-(color:--field-focus-ring)">
       <input ref={hiddenRef} type="hidden" name={name} value={cmsJson} />
 
       {/* Editor area */}
