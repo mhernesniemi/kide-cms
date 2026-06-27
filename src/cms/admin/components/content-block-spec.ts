@@ -1,4 +1,5 @@
-import { mergeAttributes } from "@tiptap/core";
+import { mergeAttributes, isNodeSelection, type Editor } from "@tiptap/core";
+import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import type { BlockTypesMeta, RelationOption } from "./block-fields";
 
 /**
@@ -63,3 +64,45 @@ export const blockNodeSpec = {
     return ["div", mergeAttributes({ "data-cms-block": "" }, HTMLAttributes)] as const;
   },
 };
+
+/**
+ * Insert an inline component block, then guarantee an editable text block follows it with
+ * the caret inside — mirroring Tiptap's own setHorizontalRule so an atom block never leaves
+ * the user stranded with nowhere to type. Pass `range` to first delete a slash trigger.
+ * Shared by the toolbar "+ Block" inserter and the slash command.
+ */
+export function insertBlockNode(
+  editor: Editor,
+  blockType: string,
+  fields: Record<string, unknown>,
+  range?: { from: number; to: number },
+) {
+  const content = { type: BLOCK_NODE_NAME, attrs: { blockType, fields } };
+  const chain = editor.chain().focus();
+  if (range) chain.deleteRange(range).insertContent(content);
+  else if (isNodeSelection(editor.state.selection)) chain.insertContentAt(editor.state.selection.$to.pos, content);
+  else chain.insertContent(content);
+
+  chain
+    .command(({ state, tr, dispatch }) => {
+      if (dispatch) {
+        const { $to } = tr.selection;
+        const posAfter = $to.end();
+        if ($to.nodeAfter) {
+          if ($to.nodeAfter.isTextblock) tr.setSelection(TextSelection.create(tr.doc, $to.pos + 1));
+          else if ($to.nodeAfter.isBlock) tr.setSelection(NodeSelection.create(tr.doc, $to.pos));
+          else tr.setSelection(TextSelection.create(tr.doc, $to.pos));
+        } else {
+          const nodeType = state.schema.nodes.paragraph ?? $to.parent.type.contentMatch.defaultType;
+          const node = nodeType?.create();
+          if (node) {
+            tr.insert(posAfter, node);
+            tr.setSelection(TextSelection.create(tr.doc, posAfter + 1));
+          }
+        }
+        tr.scrollIntoView();
+      }
+      return true;
+    })
+    .run();
+}

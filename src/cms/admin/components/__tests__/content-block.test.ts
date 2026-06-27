@@ -8,11 +8,10 @@
 // content group "block") that corrupted the schema.
 
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { Editor, Node, isNodeSelection } from "@tiptap/core";
+import { Editor, Node } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
-import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 
-import { blockNodeSpec, BLOCK_NODE_NAME } from "../content-block-spec";
+import { blockNodeSpec, BLOCK_NODE_NAME, insertBlockNode } from "../content-block-spec";
 
 const BlockNode = Node.create(blockNodeSpec);
 
@@ -26,35 +25,9 @@ const makeEditor = () =>
 const blocksOf = (editor: Editor): any[] =>
   (editor.getJSON().content ?? []).filter((n: any) => n.type === BLOCK_NODE_NAME);
 
-// Mirrors ContentEditor.insertBlock: insert the atom block then guarantee an editable
-// text block after it with the caret inside.
-function insertBlock(editor: Editor, blockType: string, fields: Record<string, unknown>) {
-  const content = { type: BLOCK_NODE_NAME, attrs: { blockType, fields } };
-  const chain = editor.chain().focus();
-  if (isNodeSelection(editor.state.selection)) chain.insertContentAt(editor.state.selection.$to.pos, content);
-  else chain.insertContent(content);
-  chain
-    .command(({ state, tr, dispatch }) => {
-      if (dispatch) {
-        const { $to } = tr.selection;
-        const posAfter = $to.end();
-        if ($to.nodeAfter) {
-          if ($to.nodeAfter.isTextblock) tr.setSelection(TextSelection.create(tr.doc, $to.pos + 1));
-          else if ($to.nodeAfter.isBlock) tr.setSelection(NodeSelection.create(tr.doc, $to.pos));
-          else tr.setSelection(TextSelection.create(tr.doc, $to.pos));
-        } else {
-          const nodeType = state.schema.nodes.paragraph ?? $to.parent.type.contentMatch.defaultType;
-          const node = nodeType?.create();
-          if (node) {
-            tr.insert(posAfter, node);
-            tr.setSelection(TextSelection.create(tr.doc, posAfter + 1));
-          }
-        }
-      }
-      return true;
-    })
-    .run();
-}
+// Exercise the SHARED helper the toolbar + slash menu both call.
+const insertBlock = (editor: Editor, blockType: string, fields: Record<string, unknown>) =>
+  insertBlockNode(editor, blockType, fields);
 
 describe("content inline block node (headless editor)", () => {
   let editor: Editor;
@@ -118,6 +91,21 @@ describe("content inline block node (headless editor)", () => {
     expect(blocks).toHaveLength(1);
     expect(blocks[0].attrs.blockType).toBe("image");
     expect(blocks[0].attrs.fields).toEqual({ images: ["/uploads/a.jpg"] });
+  });
+
+  it("deletes the slash trigger range when inserting via the slash command", () => {
+    editor.chain().focus().insertContent("hi /faq").run();
+    // Slash command passes the range covering the "/faq" trigger to delete it first.
+    const doc = editor.state.doc.textContent; // "hi /faq"
+    const slashStart = doc.indexOf("/") + 1; // +1 for the paragraph open token
+    const range = { from: slashStart, to: slashStart + "/faq".length };
+    insertBlockNode(editor, "faq", { heading: "" }, range);
+
+    expect(blocksOf(editor)).toHaveLength(1);
+    expect(blocksOf(editor)[0].attrs.blockType).toBe("faq");
+    // The "/faq" text must be gone; the leading "hi " prose stays.
+    expect(editor.getText()).not.toContain("/faq");
+    expect(editor.getText()).toContain("hi");
   });
 
   it("removes a block when its node range is deleted, leaving the prose intact", () => {

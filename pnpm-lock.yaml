@@ -64,6 +64,9 @@ importers:
       "@tiptap/starter-kit":
         specifier: ^3.22.3
         version: 3.22.4
+      "@tiptap/suggestion":
+        specifier: 3.22.4
+        version: 3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4)
       ai:
         specifier: ^6.0.116
         version: 6.0.168(zod@4.3.6)
@@ -2688,6 +2691,13 @@ packages:
   "@tiptap/starter-kit@3.22.4":
     resolution:
       { integrity: sha512-qWjw+vfdin1rzMRpRU4cC5tLTwMJtUpXeQukv+6mOqqvhptuwuZBjUHImVEJaSPoHXS7+1ut+nTnrLyWyEuE5Q== }
+
+  "@tiptap/suggestion@3.22.4":
+    resolution:
+      { integrity: sha512-1buvLZemITTeKmPf2wGFWvvhRFKjdQ+JgMqc67xBraOKeDd8wQi1e2XlhCYAtlVMm5f6j+qlLC/MvwuHI2jHeQ== }
+    peerDependencies:
+      "@tiptap/core": 3.22.4
+      "@tiptap/pm": 3.22.4
 
   "@tybys/wasm-util@0.10.3":
     resolution:
@@ -7581,6 +7591,11 @@ snapshots:
       "@tiptap/extension-text": 3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))
       "@tiptap/extension-underline": 3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))
       "@tiptap/extensions": 3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4)
+      "@tiptap/pm": 3.22.4
+
+  "@tiptap/suggestion@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4)":
+    dependencies:
+      "@tiptap/core": 3.22.4(@tiptap/pm@3.22.4)
       "@tiptap/pm": 3.22.4
 
   "@tybys/wasm-util@0.10.3":

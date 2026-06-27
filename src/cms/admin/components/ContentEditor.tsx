@@ -1,6 +1,6 @@
 import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
-import { Node, isNodeSelection } from "@tiptap/core";
-import { NodeSelection, TextSelection } from "@tiptap/pm/state";
+import { BubbleMenu } from "@tiptap/react/menus";
+import { Node } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
@@ -42,7 +42,8 @@ import {
   type RelationOption,
   type SubFieldMeta,
 } from "./block-fields";
-import { blockNodeSpec, BLOCK_NODE_NAME, type BlockNodeOptions } from "./content-block-spec";
+import { blockNodeSpec, BLOCK_NODE_NAME, insertBlockNode, type BlockNodeOptions } from "./content-block-spec";
+import { SlashCommand } from "./slash-command";
 
 // -----------------------------------------------
 // Content AST ↔ Tiptap JSON conversion
@@ -284,6 +285,7 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
         HTMLAttributes: { class: "text-primary underline cursor-text pointer-events-none" },
       }),
       BlockNode.configure({ types, blockRelationOptions, fieldName: name }),
+      SlashCommand.configure({ types }),
     ],
     content: contentToTiptap(parsedInitial),
     onUpdate: ({ editor }) => {
@@ -341,35 +343,18 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
 
   const insertBlock = (blockType: string) => {
     if (!editor) return;
-    const content = { type: BLOCK_NODE_NAME, attrs: { blockType, fields: blankBlockFields(types[blockType] ?? {}) } };
-    const chain = editor.chain().focus();
-    if (isNodeSelection(editor.state.selection)) chain.insertContentAt(editor.state.selection.$to.pos, content);
-    else chain.insertContent(content);
-    // Mirror Tiptap's setHorizontalRule: ensure an editable text block follows the
-    // inserted atom block and drop the caret into it, so the user can keep typing.
-    chain
-      .command(({ state, tr, dispatch }) => {
-        if (dispatch) {
-          const { $to } = tr.selection;
-          const posAfter = $to.end();
-          if ($to.nodeAfter) {
-            if ($to.nodeAfter.isTextblock) tr.setSelection(TextSelection.create(tr.doc, $to.pos + 1));
-            else if ($to.nodeAfter.isBlock) tr.setSelection(NodeSelection.create(tr.doc, $to.pos));
-            else tr.setSelection(TextSelection.create(tr.doc, $to.pos));
-          } else {
-            const nodeType = state.schema.nodes.paragraph ?? $to.parent.type.contentMatch.defaultType;
-            const node = nodeType?.create();
-            if (node) {
-              tr.insert(posAfter, node);
-              tr.setSelection(TextSelection.create(tr.doc, posAfter + 1));
-            }
-          }
-          tr.scrollIntoView();
-        }
-        return true;
-      })
-      .run();
+    insertBlockNode(editor, blockType, blankBlockFields(types[blockType] ?? {}));
     setInsertOpen(false);
+  };
+
+  const openLinkDialog = () => {
+    if (!editor) return;
+    const href = editor.getAttributes("link").href ?? "";
+    setLinkUrl(href);
+    const isExternal = href.startsWith("http://") || href.startsWith("https://");
+    setLinkType(href && !isExternal ? "internal" : href ? "external" : "internal");
+    if (linkGroups.length === 0) fetchLinkGroups().then(setLinkGroups);
+    setLinkDialogOpen(true);
   };
 
   const minHeight = `${rows * 1.5}rem`;
@@ -443,19 +428,7 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
           <Quote className="size-4" />
         </ToolbarButton>
 
-        <ToolbarButton
-          onClick={() => {
-            const href = editor?.getAttributes("link").href ?? "";
-            setLinkUrl(href);
-            const isExternal = href.startsWith("http://") || href.startsWith("https://");
-            setLinkType(href && !isExternal ? "internal" : href ? "external" : "internal");
-            if (linkGroups.length === 0) fetchLinkGroups().then(setLinkGroups);
-            setLinkDialogOpen(true);
-          }}
-          active={editor?.isActive("link")}
-          disabled={!editor}
-          title="Link"
-        >
+        <ToolbarButton onClick={openLinkDialog} active={editor?.isActive("link")} disabled={!editor} title="Link">
           <LinkIcon className="size-4" />
         </ToolbarButton>
 
@@ -515,7 +488,50 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
 
       {/* Editor area */}
       {editor ? (
-        <EditorContent editor={editor} />
+        <>
+          {/* Selection toolbar — appears when text is highlighted */}
+          <BubbleMenu
+            editor={editor}
+            options={{ placement: "top" }}
+            shouldShow={({ editor: ed, from, to }) => from !== to && !ed.isActive(BLOCK_NODE_NAME)}
+            className="bg-popover flex items-center gap-0.5 rounded-md border p-1 shadow-md"
+          >
+            <ToolbarButton
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              active={editor.isActive("bold")}
+              title="Bold"
+            >
+              <Bold className="size-4" />
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              active={editor.isActive("italic")}
+              title="Italic"
+            >
+              <Italic className="size-4" />
+            </ToolbarButton>
+            <div className="bg-border mx-0.5 h-5 w-px" />
+            <ToolbarButton
+              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+              active={editor.isActive("heading", { level: 2 })}
+              title="Heading 2"
+            >
+              <Heading2 className="size-4" />
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+              active={editor.isActive("heading", { level: 3 })}
+              title="Heading 3"
+            >
+              <Heading3 className="size-4" />
+            </ToolbarButton>
+            <div className="bg-border mx-0.5 h-5 w-px" />
+            <ToolbarButton onClick={openLinkDialog} active={editor.isActive("link")} title="Link">
+              <LinkIcon className="size-4" />
+            </ToolbarButton>
+          </BubbleMenu>
+          <EditorContent editor={editor} />
+        </>
       ) : (
         <div className="prose prose-sm max-w-none" style={{ minHeight, padding: "0.625rem 0.75rem" }} />
       )}
