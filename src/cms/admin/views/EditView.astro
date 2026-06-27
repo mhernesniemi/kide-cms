@@ -139,6 +139,10 @@ const hasSidebarColumn =
   ) ||
     reverseRefs.length > 0);
 
+// The meta line (Created/Updated, or Submitted) renders just under the header and gives
+// the content a visual buffer. When it's absent (e.g. a new doc), add that gap manually.
+const hasMetaLine = (mode === "edit" && !!doc && !!collection.drafts) || (isSubmissionView && !!doc);
+
 const hasPreview = !!(mode === "edit" && (collection.preview || (collection.pathPrefix && doc?.slug)));
 const previewUrl = hasPreview
   ? typeof collection.preview === "string"
@@ -393,7 +397,7 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
             (doc?._status === "draft" || doc?._status === "scheduled" || (doc && getVisualStatus(doc) === "changed")),
           )}
         />
-        <div id="document-edit-area" class="space-y-6">
+        <div id="document-edit-area" class:list={["space-y-6", !hasMetaLine && "mt-6"]}>
           {collection.slug === "users" && mode === "edit" && Astro.url.searchParams.get("inviteToken") && (
             <AdminCard title={Astro.url.searchParams.get("emailSent") === "true" ? "Invitation sent" : "Invite link"}>
               {Astro.url.searchParams.get("emailSent") === "true" ? (
@@ -478,7 +482,7 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
               </div>
 
               {hasSidebarColumn && (
-                <div class="2xl:border-border/50 text-sm 2xl:sticky 2xl:top-[4.75rem] 2xl:self-start 2xl:border-l 2xl:pl-12 [&_button]:text-sm [&_input]:text-sm [&_select]:text-sm [&_textarea]:text-sm">
+                <div class="2xl:border-border/50 text-sm 2xl:border-l 2xl:pl-12 [&_button]:text-sm [&_input]:text-sm [&_select]:text-sm [&_textarea]:text-sm">
                   <div class="space-y-6">
                     {effectiveSidebarFieldSets.map((set) => (
                       <div class="grid gap-6">
