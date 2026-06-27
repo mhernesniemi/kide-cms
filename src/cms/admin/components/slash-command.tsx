@@ -1,7 +1,7 @@
 import { Extension, type Editor, type Range } from "@tiptap/core";
 import Suggestion, { type SuggestionOptions } from "@tiptap/suggestion";
 import { ReactRenderer } from "@tiptap/react";
-import { forwardRef, useEffect, useImperativeHandle, useState, type ComponentType } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ComponentType } from "react";
 import { Heading2, Heading3, List, ListOrdered, Quote, Blocks, type LucideProps } from "lucide-react";
 import { cn } from "../lib/utils";
 import { insertBlockNode } from "./content-block-spec";
@@ -78,8 +78,14 @@ type SlashMenuProps = {
 
 const SlashMenu = forwardRef<SlashMenuRef, SlashMenuProps>(({ items, command }, ref) => {
   const [selected, setSelected] = useState(0);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setSelected(0), [items]);
+
+  // Keep the highlighted item visible when the list is height-constrained and scrolls.
+  useEffect(() => {
+    (listRef.current?.children[selected] as HTMLElement | undefined)?.scrollIntoView({ block: "nearest" });
+  }, [selected]);
 
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }) => {
@@ -106,7 +112,7 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashMenuProps>(({ items, command }, 
   }
 
   return (
-    <div className="bg-popover max-h-72 w-64 overflow-y-auto rounded-md border p-1 shadow-md">
+    <div ref={listRef} className="bg-popover max-h-72 w-64 overflow-y-auto rounded-md border p-1 shadow-md">
       {items.map((item, index) => {
         const Icon = item.icon;
         return (
@@ -158,15 +164,37 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
       render: () => {
         let component: ReactRenderer<SlashMenuRef, SlashMenuProps> | null = null;
 
-        const position = (clientRect?: (() => DOMRect | null) | null) => {
+        const place = (clientRect?: (() => DOMRect | null) | null) => {
           const rect = clientRect?.();
           if (!rect || !component) return;
           const el = component.element as HTMLElement;
+          const menu = el.firstElementChild as HTMLElement | null;
           el.style.position = "fixed";
-          el.style.left = `${rect.left}px`;
-          el.style.top = `${rect.bottom + 6}px`;
           el.style.zIndex = "50";
+          el.style.left = `${rect.left}px`;
+
+          const margin = 8;
+          const gap = 6;
+          const vh = window.innerHeight;
+          const spaceBelow = vh - rect.bottom - margin;
+          const spaceAbove = rect.top - margin;
+          const MAX = 288; // matches max-h-72
+          const needed = Math.min(menu?.scrollHeight || MAX, MAX);
+
+          // Open downward when it fits or there's more room below; otherwise flip above.
+          if (spaceBelow >= needed || spaceBelow >= spaceAbove) {
+            el.style.top = `${rect.bottom + gap}px`;
+            el.style.bottom = "auto";
+            if (menu) menu.style.maxHeight = `${Math.max(Math.min(needed, spaceBelow), 0)}px`;
+          } else {
+            el.style.top = "auto";
+            el.style.bottom = `${vh - rect.top + gap}px`;
+            if (menu) menu.style.maxHeight = `${Math.max(Math.min(needed, spaceAbove), 0)}px`;
+          }
         };
+
+        // Measure after paint so the menu's rendered height (scrollHeight) is accurate.
+        const position = (clientRect?: (() => DOMRect | null) | null) => requestAnimationFrame(() => place(clientRect));
 
         return {
           onStart: (props) => {
