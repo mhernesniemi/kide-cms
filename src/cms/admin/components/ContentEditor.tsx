@@ -332,7 +332,7 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
   const minHeight = `${rows * 1.5}rem`;
 
   return (
-    <div className="border-input hover:border-foreground/20 focus-within:border-ring overflow-hidden rounded-lg border transition-colors">
+    <div className="border-input hover:border-foreground/20 focus-within:border-ring focus-within:hover:border-ring focus-within:ring-ring/50 bg-muted/30 dark:bg-input/30 overflow-hidden rounded-lg border transition-colors focus-within:ring-3">
       <input ref={hiddenRef} type="hidden" name={name} value={cmsJson} />
 
       {/* Editor area */}
