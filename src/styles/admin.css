@@ -190,6 +190,15 @@
   line-height: 1.6;
 }
 
+/* Command hint on the empty field / the cursor's empty paragraph ("Type / for commands…"). */
+.tiptap p.is-empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-placeholder);
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
 .tiptap h2 {
   font-size: 1.25rem;
   font-weight: 600;
@@ -248,6 +257,6 @@
 }
 
 /* ── Dark mode: Tiptap placeholder ───────────────────────────────── */
-.dark .tiptap p.is-editor-empty:first-child::before {
+.dark .tiptap p.is-empty::before {
   color: var(--color-placeholder) !important;
 }

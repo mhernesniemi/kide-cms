@@ -256,10 +256,9 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
         linkOnPaste: false,
         HTMLAttributes: { class: "text-primary underline cursor-text pointer-events-none" },
       }),
-      // Hint that the editor is command-driven (no persistent toolbar). Shown on every
-      // empty paragraph, not just the first.
+      // Command hint, shown on the empty field and on the empty paragraph the cursor is on.
       Placeholder.configure({
-        showOnlyCurrent: false,
+        showOnlyCurrent: true,
         placeholder: ({ node }) => (node.type.name === "paragraph" ? "Type / for commands…" : ""),
       }),
       BlockNode.configure({ types, blockRelationOptions, fieldName: name }),
