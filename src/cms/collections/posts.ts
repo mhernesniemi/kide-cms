@@ -1,4 +1,4 @@
-import { defineCollection, fields, richTextToPlainText } from "@/cms/core";
+import { contentToPlainText, defineCollection, fields } from "@/cms/core";
 
 export default defineCollection({
   slug: "posts",
@@ -24,7 +24,24 @@ export default defineCollection({
       admin: { rows: 3 },
     }),
     image: fields.image(),
-    body: fields.richText({ translatable: true, admin: { rows: 14 } }),
+    // Mixed prose + inline component blocks (Gutenberg / Lexical-style authoring).
+    // Stored as a rich-text AST whose children may include `block` nodes; rendered
+    // with <ContentRenderer> which interleaves prose and the block components below.
+    body: fields.content({
+      translatable: true,
+      admin: { rows: 14 },
+      blocks: {
+        faq: {
+          heading: fields.text(),
+          items: fields.json({
+            admin: { component: "repeater", help: "Add question and answer pairs" },
+          }),
+        },
+        image: {
+          images: fields.array({ of: fields.image(), defaultValue: [] }),
+        },
+      },
+    }),
     category: fields.text({
       admin: { component: "taxonomy-select", placeholder: "categories", position: "sidebar" },
     }),
@@ -38,7 +55,7 @@ export default defineCollection({
   hooks: {
     beforeCreate(data) {
       if (!data.excerpt && typeof data.body === "object" && data.body) {
-        const text = richTextToPlainText(data.body as never);
+        const text = contentToPlainText(data.body as never);
         if (text) data.excerpt = text.slice(0, 180);
       }
       return data;

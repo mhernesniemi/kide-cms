@@ -32,7 +32,7 @@ export type SearchOptions = {
   limit?: number;
 };
 
-const DEFAULT_SEARCHABLE_TYPES = new Set(["text", "slug", "richText", "blocks", "array"]);
+const DEFAULT_SEARCHABLE_TYPES = new Set(["text", "slug", "richText", "content", "blocks", "array"]);
 
 let schemaReady = false;
 
@@ -78,6 +78,7 @@ export const ensureSearchSchema = async (): Promise<void> => {
 
 const isJsonField = (field: FieldConfig) =>
   field.type === "richText" ||
+  field.type === "content" ||
   field.type === "array" ||
   field.type === "json" ||
   field.type === "blocks" ||
@@ -121,7 +122,7 @@ const flattenField = (field: FieldConfig, value: unknown): string => {
       return "";
     }
   }
-  if (field.type === "blocks" || field.type === "array") {
+  if (field.type === "content" || field.type === "blocks" || field.type === "array") {
     return extractStrings(value);
   }
   if (typeof value === "string") return value;

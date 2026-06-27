@@ -1,5 +1,5 @@
 import type { CMSConfig, CollectionConfig, FieldConfig } from "./define";
-import { richTextToPlainText } from "./values";
+import { contentToPlainText, richTextToPlainText } from "./values";
 
 const DEFAULT_DATE_FORMAT = "en-US";
 
@@ -66,8 +66,8 @@ export const formatFieldValue = (
   if (value === undefined || value === null || value === "") return "—";
   if (!field) return String(value);
 
-  if (field.type === "richText") {
-    const text = richTextToPlainText(value as never);
+  if (field.type === "richText" || field.type === "content") {
+    const text = field.type === "content" ? contentToPlainText(value as never) : richTextToPlainText(value as never);
     return text.length > 120 ? `${text.slice(0, 117)}...` : text;
   }
 

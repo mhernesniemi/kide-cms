@@ -39,6 +39,7 @@ export type {
   DateFieldConfig,
   SelectFieldConfig,
   RichTextFieldConfig,
+  ContentFieldConfig,
   ImageFieldConfig,
   RelationFieldConfig,
   ArrayFieldConfig,
@@ -46,6 +47,9 @@ export type {
   BlocksFieldConfig,
   RichTextNode,
   RichTextDocument,
+  ContentNode,
+  ContentBlockNode,
+  ContentDocument,
   CollectionLabels,
   DatabaseConfig,
   LocaleConfig,
@@ -99,7 +103,16 @@ export type { AssetRecord, FolderRecord } from "./assets";
 
 export { parseBlocks, parseList, cacheTags } from "./content";
 export { renderRichText, createRichTextFromPlainText, richTextToPlainText, htmlToRichText } from "./richtext";
-export { cloneValue, slugify, escapeHtml, serializeFieldValue } from "./values";
+export {
+  cloneValue,
+  slugify,
+  escapeHtml,
+  serializeFieldValue,
+  contentSegments,
+  contentBlocks,
+  contentToPlainText,
+} from "./values";
+export type { ContentSegment } from "./values";
 export { cmsImage, cmsSrcset, transformImage, DEFAULT_PRESETS, resolveImagePreset } from "./image";
 export type { CropOptions, TransformOptions } from "./image";
 

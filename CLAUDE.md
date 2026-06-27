@@ -46,6 +46,8 @@ After code changes, ALWAYS run:
 2. `pnpm test` — All tests must pass. Add tests when changing `src/cms/core/`.
 3. `pnpm format` — Must be the very last step.
 
+> **Known pre-existing `pnpm check` errors:** `astro check` reports ~6 errors confined to `adapters/cloudflare/` (missing Cloudflare ambient types — `R2Bucket`, `D1Database`, `cloudflare:workers`, `@astrojs/cloudflare`). That adapter is meant to be consumed inside a Cloudflare project where those types exist; they are not resolvable in the base repo. Treat them as baseline noise — verify your change adds **zero new errors** outside `adapters/cloudflare/` rather than expecting a fully clean run.
+
 ## Key Files
 
 | File                               | Purpose                                               |

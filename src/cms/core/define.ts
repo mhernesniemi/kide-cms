@@ -87,6 +87,34 @@ export type RichTextDocument = {
 export type RichTextFieldConfig = BaseFieldConfig<"richText", RichTextDocument>;
 export type ImageFieldConfig = BaseFieldConfig<"image", string>;
 
+/**
+ * An embedded component block inside a `content` field. Shares the same shape as
+ * a `blocks` entry but lives inline in the rich-text stream, identified by `blockType`.
+ */
+export type ContentBlockNode = {
+  type: "block";
+  blockType: string;
+  fields: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+export type ContentNode = RichTextNode | ContentBlockNode;
+
+/**
+ * Storage shape for a `content` field: a rich-text document whose children may
+ * also include inline component blocks. Compatible with RichTextDocument — plain
+ * rich-text renderers simply skip the `block` nodes.
+ */
+export type ContentDocument = {
+  type: "root";
+  children: ContentNode[];
+};
+
+export type ContentFieldConfig = BaseFieldConfig<"content", ContentDocument> & {
+  /** Component block types that can be embedded inline, same shape as `blocks`. */
+  blocks: Record<string, Record<string, FieldConfig>>;
+};
+
 export type RelationFieldConfig = BaseFieldConfig<"relation", string | string[]> & {
   collection: string;
   hasMany?: boolean;
@@ -113,6 +141,7 @@ export type FieldConfig =
   | DateFieldConfig
   | SelectFieldConfig
   | RichTextFieldConfig
+  | ContentFieldConfig
   | ImageFieldConfig
   | RelationFieldConfig
   | ArrayFieldConfig
@@ -309,6 +338,7 @@ export const fields = {
   date: (options?: Omit<DateFieldConfig, "type">) => createField<DateFieldConfig>("date", options),
   select: (options: Omit<SelectFieldConfig, "type">) => createField<SelectFieldConfig>("select", options),
   richText: (options?: Omit<RichTextFieldConfig, "type">) => createField<RichTextFieldConfig>("richText", options),
+  content: (options: Omit<ContentFieldConfig, "type">) => createField<ContentFieldConfig>("content", options),
   image: (options?: Omit<ImageFieldConfig, "type">) => createField<ImageFieldConfig>("image", options),
   relation: (options: Omit<RelationFieldConfig, "type">) => createField<RelationFieldConfig>("relation", options),
   array: (options: Omit<ArrayFieldConfig, "type">) => createField<ArrayFieldConfig>("array", options),

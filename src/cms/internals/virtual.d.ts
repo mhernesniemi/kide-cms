@@ -57,6 +57,11 @@ declare module "virtual:kide/block-renderer" {
   export default BlockRenderer;
 }
 
+declare module "virtual:kide/content-renderer" {
+  const ContentRenderer: any;
+  export default ContentRenderer;
+}
+
 declare module "virtual:kide/db" {
   export function getDb(): Promise<any>;
 }

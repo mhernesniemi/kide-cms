@@ -1,4 +1,11 @@
-import type { FieldConfig, RichTextDocument, RichTextNode } from "./define";
+import type {
+  ContentBlockNode,
+  ContentDocument,
+  ContentNode,
+  FieldConfig,
+  RichTextDocument,
+  RichTextNode,
+} from "./define";
 import { cmsImage, cmsSrcset } from "./image";
 
 export const cloneValue = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -43,9 +50,25 @@ export const createRichTextFromPlainText = (text: string): RichTextDocument => (
 // bold/italic/href). Unknown/unsupported tags are unwrapped, not errored on.
 
 const NAMED_ENTITIES: Record<string, string> = {
-  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", copy: "©", reg: "®",
-  trade: "™", hellip: "…", mdash: "—", ndash: "–", lsquo: "‘", rsquo: "’",
-  ldquo: "“", rdquo: "”", deg: "°", times: "×", middot: "·",
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+  copy: "©",
+  reg: "®",
+  trade: "™",
+  hellip: "…",
+  mdash: "—",
+  ndash: "–",
+  lsquo: "‘",
+  rsquo: "’",
+  ldquo: "“",
+  rdquo: "”",
+  deg: "°",
+  times: "×",
+  middot: "·",
 };
 
 const decodeEntities = (text: string): string =>
@@ -61,10 +84,44 @@ type HtmlEl = { tag: string; attrs: Record<string, string>; children: HtmlChild[
 type HtmlChild = HtmlEl | { text: string };
 const isText = (n: HtmlChild): n is { text: string } => "text" in n;
 
-const VOID_TAGS = new Set(["br", "hr", "img", "input", "source", "meta", "link", "col", "area", "base", "embed", "wbr"]);
+const VOID_TAGS = new Set([
+  "br",
+  "hr",
+  "img",
+  "input",
+  "source",
+  "meta",
+  "link",
+  "col",
+  "area",
+  "base",
+  "embed",
+  "wbr",
+]);
 const BLOCK_OR_CONTAINER = new Set([
-  "p", "pre", "ul", "ol", "li", "blockquote", "div", "section", "article", "main", "header",
-  "footer", "aside", "figure", "figcaption", "table", "img", "h1", "h2", "h3", "h4", "h5", "h6",
+  "p",
+  "pre",
+  "ul",
+  "ol",
+  "li",
+  "blockquote",
+  "div",
+  "section",
+  "article",
+  "main",
+  "header",
+  "footer",
+  "aside",
+  "figure",
+  "figcaption",
+  "table",
+  "img",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
 ]);
 
 const parseAttrs = (raw: string): Record<string, string> => {
@@ -80,7 +137,8 @@ const parseAttrs = (raw: string): Record<string, string> => {
 const buildHtmlTree = (html: string): HtmlEl => {
   const root: HtmlEl = { tag: "#root", attrs: {}, children: [] };
   const stack: HtmlEl[] = [root];
-  const re = /<!--[\s\S]*?-->|<\/([a-zA-Z][a-zA-Z0-9-]*)\s*>|<([a-zA-Z][a-zA-Z0-9-]*)((?:[^>"']|"[^"]*"|'[^']*')*?)\/?>/g;
+  const re =
+    /<!--[\s\S]*?-->|<\/([a-zA-Z][a-zA-Z0-9-]*)\s*>|<([a-zA-Z][a-zA-Z0-9-]*)((?:[^>"']|"[^"]*"|'[^']*')*?)\/?>/g;
   let last = 0;
   let m: RegExpExecArray | null;
   const pushText = (text: string) => {
@@ -253,6 +311,44 @@ export const renderRichText = (document?: RichTextDocument | null) => {
   return document.children.map(renderNode).join("");
 };
 
+// --- content (mixed rich-text + inline blocks) -----------------------------
+
+export type ContentSegment = { kind: "richText"; doc: RichTextDocument } | { kind: "block"; block: ContentBlockNode };
+
+const isBlockNode = (node: ContentNode): node is ContentBlockNode => node.type === "block";
+
+/**
+ * Split a `content` document into an ordered list of segments: runs of prose
+ * (grouped into a RichTextDocument so the existing rich-text renderer can handle
+ * them) interleaved with inline component blocks. Used by ContentRenderer and the
+ * preview route to render mixed content while keeping block rendering in Astro.
+ */
+export const contentSegments = (document?: ContentDocument | null): ContentSegment[] => {
+  if (!document || document.type !== "root") return [];
+  const segments: ContentSegment[] = [];
+  let buffer: RichTextNode[] = [];
+  const flush = () => {
+    if (buffer.length > 0) {
+      segments.push({ kind: "richText", doc: { type: "root", children: buffer } });
+      buffer = [];
+    }
+  };
+  for (const node of document.children) {
+    if (isBlockNode(node)) {
+      flush();
+      segments.push({ kind: "block", block: node });
+    } else {
+      buffer.push(node as RichTextNode);
+    }
+  }
+  flush();
+  return segments;
+};
+
+/** Extract the inline component blocks from a content document, in order. */
+export const contentBlocks = (document?: ContentDocument | null): ContentBlockNode[] =>
+  document?.type === "root" ? document.children.filter(isBlockNode) : [];
+
 export const richTextToPlainText = (document?: RichTextDocument | null): string => {
   if (!document?.children) return "";
 
@@ -266,9 +362,45 @@ export const richTextToPlainText = (document?: RichTextDocument | null): string 
   return document.children.map(flatten).join("\n\n").trim();
 };
 
+// Pull readable strings out of a block's `fields` object (text values, nested arrays,
+// rich-text/json sub-fields) so block-only content still yields a usable plain-text summary.
+const extractFieldStrings = (value: unknown): string => {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.map(extractFieldStrings).filter(Boolean).join(" ");
+  if (typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => key !== "type")
+      .map(([, v]) => extractFieldStrings(v))
+      .filter(Boolean)
+      .join(" ");
+  }
+  return "";
+};
+
+/**
+ * Plain-text rendering of a `content` document: prose nodes flatten like rich text, and
+ * inline component blocks contribute the text of their fields (which richTextToPlainText
+ * would otherwise skip). Used for list previews and auto-excerpts.
+ */
+export const contentToPlainText = (document?: ContentDocument | null): string => {
+  if (!document?.children) return "";
+  return document.children
+    .map((node) =>
+      node.type === "block"
+        ? extractFieldStrings((node as ContentBlockNode).fields)
+        : richTextToPlainText({ type: "root", children: [node as RichTextNode] }),
+    )
+    .filter(Boolean)
+    .join("\n\n")
+    .trim();
+};
+
 export const serializeFieldValue = (field: FieldConfig, value: unknown): string => {
   if (value === null || value === undefined) return "";
   if (field.type === "richText") return richTextToPlainText(value as RichTextDocument);
+  if (field.type === "content") return contentToPlainText(value as ContentDocument);
   if (field.type === "array") return Array.isArray(value) ? value.map((item) => String(item ?? "")).join(", ") : "";
   if (field.type === "json" || field.type === "blocks") return JSON.stringify(value, null, 2);
   if (field.type === "boolean") return value ? "true" : "false";

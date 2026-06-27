@@ -45,6 +45,7 @@ const pick = (input: Record<string, unknown>, keys: string[]) =>
 
 const isJsonField = (field: FieldConfig) =>
   field.type === "richText" ||
+  field.type === "content" ||
   field.type === "array" ||
   field.type === "json" ||
   field.type === "blocks" ||
@@ -147,6 +148,7 @@ const coerceFieldValue = (field: FieldConfig, value: unknown): unknown => {
     case "blocks":
       return coerceJsonOrBlocks(field, value);
     case "richText":
+    case "content":
       return coerceRichText(value);
     default:
       return value;

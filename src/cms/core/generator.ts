@@ -26,6 +26,7 @@ const snakeCase = (value: string) =>
 
 const isJsonField = (field: FieldConfig) =>
   field.type === "richText" ||
+  field.type === "content" ||
   field.type === "array" ||
   field.type === "json" ||
   field.type === "blocks" ||
@@ -230,7 +231,8 @@ const zodTypeForField = (field: FieldConfig): string => {
   if (field.type === "select") return `z.enum([${field.options.map((option) => JSON.stringify(option)).join(", ")}])`;
   if (field.type === "relation") return field.hasMany ? "z.array(z.string())" : "z.string()";
   if (field.type === "array") return `z.array(${zodTypeForField(field.of)})`;
-  if (field.type === "richText") return "z.object({ type: z.literal('root'), children: z.array(z.any()) })";
+  if (field.type === "richText" || field.type === "content")
+    return "z.object({ type: z.literal('root'), children: z.array(z.any()) })";
   if (field.type === "json") return "z.record(z.unknown())";
   if (field.type === "blocks") {
     const variants = Object.entries(field.types).map(([blockType, fields]) => {
@@ -288,6 +290,7 @@ const typeForField = (field: FieldConfig): string => {
   if (field.type === "relation") return field.hasMany ? "string[]" : "string";
   if (field.type === "array") return `${typeForField(field.of)}[]`;
   if (field.type === "richText") return "RichTextDocument";
+  if (field.type === "content") return "ContentDocument";
   if (field.type === "json") return "Record<string, unknown>";
   if (field.type === "blocks") {
     const variants = Object.entries(field.types).map(([blockType, fields]) => {
@@ -306,7 +309,7 @@ const typeForField = (field: FieldConfig): string => {
 const generateTypesFile = (config: CMSConfig, coreImportPath: string): string => {
   const parts: string[] = [
     `// auto-generated — do not edit`,
-    `import type { RichTextDocument } from "${coreImportPath}";`,
+    `import type { RichTextDocument, ContentDocument } from "${coreImportPath}";`,
     ``,
     `export type CMSCollectionSlug = ${config.collections.map((collection) => JSON.stringify(collection.slug)).join(" | ")};`,
     ``,

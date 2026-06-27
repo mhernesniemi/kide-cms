@@ -75,11 +75,16 @@ export async function loadRelationOptions(
         };
       }
     }
-    if (field.type === "blocks" && field.types) {
-      for (const [typeName, typeFields] of Object.entries(field.types)) {
+    // Relations nested inside block types — both standalone `blocks` fields and inline
+    // blocks in a `content` field use the same `block:<field>:<type>:<subField>` key scheme.
+    // The parent field name keeps two block-bearing fields that share a block-type name
+    // (but target different collections) from colliding.
+    const blockTypes = field.type === "blocks" ? field.types : field.type === "content" ? field.blocks : null;
+    if (blockTypes) {
+      for (const [typeName, typeFields] of Object.entries(blockTypes)) {
         for (const [subFieldName, subField] of Object.entries(typeFields as Record<string, any>) as [string, any][]) {
           if (subField.type === "relation" && canRead(config, user, subField.collection)) {
-            const key = `block:${typeName}:${subFieldName}`;
+            const key = `block:${fieldName}:${typeName}:${subFieldName}`;
             if (!relationOptionsByField[key]) {
               const relatedDocs = await cmsRuntime[subField.collection].find(
                 { status: "any", limit: 100, sort: { field: "_updatedAt", direction: "desc" }, locale: defaultLocale },

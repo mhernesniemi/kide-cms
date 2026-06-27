@@ -1,0 +1,36 @@
+---
+import { contentSegments, renderRichText } from "@/cms/core";
+import type { ContentDocument } from "@/cms/core";
+
+const { content } = Astro.props as { content?: ContentDocument | null };
+
+// Discover custom block components from src/components/blocks/ — same convention as BlockRenderer.
+const customComponents = import.meta.glob<{ default: any }>("./blocks/*.astro", { eager: true });
+const componentMap: Record<string, any> = {};
+for (const [path, mod] of Object.entries(customComponents)) {
+  const filename = path.split("/").pop()?.replace(".astro", "") ?? "";
+  const typeName = filename.charAt(0).toLowerCase() + filename.slice(1);
+  componentMap[typeName] = mod.default;
+}
+
+const segments = contentSegments(content);
+---
+
+<div class="cms-content flex flex-col gap-6">
+  {
+    segments.map((segment) => {
+      if (segment.kind === "richText") {
+        return <div class="prose max-w-none" set:html={renderRichText(segment.doc)} />;
+      }
+
+      const type = segment.block.blockType;
+      const Component = componentMap[type];
+      if (!Component) {
+        throw new Error(
+          `No block component found for type "${type}". Add src/components/blocks/${type.charAt(0).toUpperCase() + type.slice(1)}.astro`,
+        );
+      }
+      return <Component type={type} {...segment.block.fields} />;
+    })
+  }
+</div>

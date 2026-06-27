@@ -108,9 +108,7 @@ describe("renderRichText", () => {
   it("adds target+rel only on external links", () => {
     const external = renderRichText({
       type: "root",
-      children: [
-        { type: "paragraph", children: [{ type: "text", value: "out", href: "https://example.com" }] },
-      ],
+      children: [{ type: "paragraph", children: [{ type: "text", value: "out", href: "https://example.com" }] }],
     });
     expect(external).toContain('target="_blank" rel="noopener noreferrer"');
 

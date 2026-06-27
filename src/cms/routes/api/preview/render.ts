@@ -4,6 +4,7 @@ import { loadRenderers } from "astro:container";
 import { getContainerRenderer } from "@astrojs/react/container-renderer";
 
 import BlockRenderer from "virtual:kide/block-renderer";
+import ContentRenderer from "virtual:kide/content-renderer";
 import { renderRichText, parseBlocks } from "@/cms/core";
 
 export const prerender = false;
@@ -27,6 +28,10 @@ export const POST: APIRoute = async ({ request }) => {
     const blocks = parseBlocks(data);
     const container = await getContainer();
     html = await container.renderToString(BlockRenderer, { props: { blocks } });
+  } else if (type === "content") {
+    const parsed = typeof data === "string" ? JSON.parse(data) : data;
+    const container = await getContainer();
+    html = await container.renderToString(ContentRenderer, { props: { content: parsed } });
   } else if (type === "richText") {
     const parsed = typeof data === "string" ? JSON.parse(data) : data;
     html = renderRichText(parsed) ?? "";

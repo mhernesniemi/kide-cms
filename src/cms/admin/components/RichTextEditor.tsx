@@ -32,7 +32,7 @@ import ImageBrowseDialog from "./ImageBrowseDialog";
 // CMS AST ↔ Tiptap JSON conversion
 // -----------------------------------------------
 
-type CmsNode = {
+export type CmsNode = {
   type: string;
   value?: string;
   level?: number;
@@ -43,12 +43,12 @@ type CmsNode = {
   [key: string]: unknown;
 };
 
-type CmsDocument = {
+export type CmsDocument = {
   type: "root";
   children: CmsNode[];
 };
 
-const cmsNodeToTiptap = (node: CmsNode): any => {
+export const cmsNodeToTiptap = (node: CmsNode): any => {
   if (node.type === "text") {
     const marks: any[] = [];
     if (node.bold) marks.push({ type: "bold" });
@@ -99,7 +99,7 @@ const cmsToTiptap = (doc: CmsDocument | null | undefined): any => {
   return { type: "doc", content: content.length > 0 ? content : [{ type: "paragraph" }] };
 };
 
-const tiptapNodeToCms = (node: any): CmsNode | null => {
+export const tiptapNodeToCms = (node: any): CmsNode | null => {
   if (node.type === "text") {
     const result: CmsNode = { type: "text", value: node.text ?? "" };
     if (node.marks) {
@@ -192,7 +192,37 @@ const ToolbarButton = ({
 // Link dialog
 // -----------------------------------------------
 
-function LinkDialog({
+export type LinkGroup = { label: string; items: Array<{ label: string; href: string }> };
+
+/** Fetch published pages + posts for the internal-link picker. Shared by editors. */
+export async function fetchLinkGroups(): Promise<LinkGroup[]> {
+  const [pagesRes, postsRes] = await Promise.all([
+    fetch("/api/cms/pages?status=published&limit=200").then((r) => (r.ok ? r.json() : { docs: [] })),
+    fetch("/api/cms/posts?status=published&limit=200").then((r) => (r.ok ? r.json() : { docs: [] })),
+  ]);
+  const groups: LinkGroup[] = [];
+  if (pagesRes.docs?.length) {
+    groups.push({
+      label: "Pages",
+      items: pagesRes.docs.map((p: Record<string, unknown>) => ({
+        label: String(p.title ?? p.slug),
+        href: `/${p.slug}`,
+      })),
+    });
+  }
+  if (postsRes.docs?.length) {
+    groups.push({
+      label: "Posts",
+      items: postsRes.docs.map((p: Record<string, unknown>) => ({
+        label: String(p.title ?? p.slug),
+        href: `/blog/${p.slug}`,
+      })),
+    });
+  }
+  return groups;
+}
+
+export function LinkDialog({
   open,
   onOpenChange,
   linkType,

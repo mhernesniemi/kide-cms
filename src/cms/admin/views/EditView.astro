@@ -548,23 +548,27 @@ const fieldSetTitle = (position: string) => (position === "sidebar" ? "Details" 
                               relationMeta={relationMetaByField[fieldName]}
                               menuLinkOptions={menuLinkOptions}
                             />
-                            {aiEnabled && sourceText && fieldDef.type !== "slug" && fieldDef.type !== "blocks" && (
-                              <div class="mt-1.5">
-                                <AiGenerateButton
-                                  client:load
-                                  endpoint="/api/cms/ai/translate"
-                                  payload={{
-                                    text: sourceText,
-                                    sourceLocale: defaultLocale,
-                                    targetLocale: selectedLocale,
-                                    fieldName,
-                                    fieldType,
-                                  }}
-                                  targetField={fieldName}
-                                  label={`Translate from ${defaultLocale.toUpperCase()}`}
-                                />
-                              </div>
-                            )}
+                            {aiEnabled &&
+                              sourceText &&
+                              fieldDef.type !== "slug" &&
+                              fieldDef.type !== "blocks" &&
+                              fieldDef.type !== "content" && (
+                                <div class="mt-1.5">
+                                  <AiGenerateButton
+                                    client:load
+                                    endpoint="/api/cms/ai/translate"
+                                    payload={{
+                                      text: sourceText,
+                                      sourceLocale: defaultLocale,
+                                      targetLocale: selectedLocale,
+                                      fieldName,
+                                      fieldType,
+                                    }}
+                                    targetField={fieldName}
+                                    label={`Translate from ${defaultLocale.toUpperCase()}`}
+                                  />
+                                </div>
+                              )}
                           </div>
                         );
                       })}

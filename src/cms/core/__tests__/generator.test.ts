@@ -26,6 +26,12 @@ const articles = defineCollection({
     related: fields.relation({ collection: "articles", hasMany: true }),
     tags: fields.array({ of: fields.text() }),
     meta: fields.json(),
+    article: fields.content({
+      blocks: {
+        callout: { text: fields.text({ required: true }) },
+        gallery: { images: fields.array({ of: fields.image() }) },
+      },
+    }),
     sections: fields.blocks({
       types: {
         hero: { heading: fields.text({ required: true }), image: fields.image() },
@@ -117,6 +123,11 @@ describe("generate", () => {
       expect(types).toContain("ArticlesDocument");
       expect(types).toContain("ArticlesInput");
       expect(types).toContain("WritersDocument");
+    });
+
+    it("maps content fields to ContentDocument", () => {
+      expect(types).toContain("ContentDocument");
+      expect(types).toContain("article?: ContentDocument;");
     });
 
     it("matches the golden snapshot", () => {
