@@ -5,7 +5,6 @@ import AdminCard from "@/cms/admin/components/AdminCard.astro";
 import AiGenerateButton from "@/cms/admin/components/AiGenerateButton";
 import DocumentActions from "@/cms/admin/components/DocumentActions";
 import DocumentLock from "@/cms/admin/components/DocumentLock";
-import DocumentsDataTable from "@/cms/admin/components/DocumentsDataTable";
 import LiveHeading from "@/cms/admin/components/LiveHeading";
 import UnsavedGuard from "@/cms/admin/components/UnsavedGuard";
 import FieldControl from "@/cms/admin/components/FieldControl.astro";
@@ -23,7 +22,6 @@ import {
 } from "@/cms/admin/lib/access";
 import {
   loadDocument,
-  loadFormSubmissions,
   loadMenuLinkOptions,
   loadParentFormTitle,
   loadRelationOptions,
@@ -99,13 +97,8 @@ const reverseRefs =
     ? await loadReverseRefs(collection, documentId, config, user, cmsRuntime, defaultLocale, runtimeContext)
     : [];
 
-// --- Forms-specific: tab + submissions list ---
-const isFormsEdit = collection.slug === "forms" && mode === "edit";
-const formTab = isFormsEdit && Astro.url.searchParams.get("tab") === "submissions" ? "submissions" : "edit";
-const { submissionRows, submissionCount } =
-  isFormsEdit && documentId
-    ? await loadFormSubmissions(documentId, defaultLocale, cmsRuntime, runtimeContext, formatDate)
-    : { submissionRows: [], submissionCount: 0 };
+// Submissions live in their own sidebar section now, not as a tab on the form.
+const formTab = "edit" as "edit" | "submissions";
 
 // --- Form-submissions-specific: custom read-only view ---
 const isSubmissionView = collection.slug === "form-submissions" && mode === "edit";
@@ -169,11 +162,11 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
   {
     isSubmissionView && doc?.form && (
       <a
-        href={`/admin/forms/${doc.form}?tab=submissions`}
+        href="/admin/form-submissions"
         class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-4 pt-6 text-sm lg:pt-8 lg:pr-8 lg:pl-12"
       >
         <ArrowLeft className="size-4" />
-        {parentFormTitle ? `${parentFormTitle} submissions` : "Back to submissions"}
+        Back to submissions
       </a>
     )
   }
@@ -336,55 +329,6 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
           {parentFormTitle && <Dot className="text-muted-foreground/70 size-5" />}
           <span>Submitted {formatDate(String(doc._createdAt ?? ""))}</span>
         </div>
-      )
-    }
-
-    {
-      isFormsEdit && (
-        <div class="flex gap-4 border-b">
-          <a
-            href={`/admin/forms/${documentId}`}
-            class:list={[
-              "-mb-px border-b-2 px-1 pb-2 text-sm",
-              formTab === "edit"
-                ? "border-primary font-medium"
-                : "text-muted-foreground hover:text-foreground border-transparent",
-            ]}
-          >
-            Fields
-          </a>
-          <a
-            href={`/admin/forms/${documentId}?tab=submissions`}
-            class:list={[
-              "-mb-px border-b-2 px-1 pb-2 text-sm",
-              formTab === "submissions"
-                ? "border-primary font-medium"
-                : "text-muted-foreground hover:text-foreground border-transparent",
-            ]}
-          >
-            Submissions{submissionCount > 0 ? ` (${submissionCount})` : ""}
-          </a>
-        </div>
-      )
-    }
-
-    {
-      isFormsEdit && formTab === "submissions" && (
-        <DocumentsDataTable
-          client:load
-          collectionSlug="form-submissions"
-          draftsEnabled={false}
-          labelField="submittedAt"
-          title="Submissions"
-          columns={[
-            { key: "submittedAt", label: "Submitted" },
-            { key: "status", label: "Status" },
-            { key: "summary", label: "Preview" },
-          ]}
-          data={submissionRows}
-          searchPlaceholder="Filter submissions..."
-          statusOptions={["new", "read", "archived"]}
-        />
       )
     }
 

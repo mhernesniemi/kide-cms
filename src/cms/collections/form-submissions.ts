@@ -5,6 +5,7 @@ export default defineCollection({
   labels: { singular: "Submission", plural: "Submissions" },
   labelField: "label",
   timestamps: true,
+  admin: { group: "Library", icon: "Inbox", weight: 45 },
   views: {
     list: { columns: ["label", "form", "_createdAt", "status"] },
   },

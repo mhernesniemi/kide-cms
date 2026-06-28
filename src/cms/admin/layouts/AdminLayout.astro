@@ -21,6 +21,7 @@ import {
   Database,
   Globe,
   Home,
+  Inbox,
   Key,
   Link,
   Link2,
@@ -50,6 +51,7 @@ const navIconMap: Record<string, any> = {
   Globe,
   Home,
   Image,
+  Inbox,
   Key,
   Layers,
   LayoutGrid,
@@ -141,8 +143,7 @@ try {
 }
 
 // Collections that should never appear as a top-level sidebar entry.
-// Submissions are viewed as a tab on the parent form's detail page.
-const hiddenFromSidebar = new Set(["form-submissions"]);
+const hiddenFromSidebar = new Set<string>();
 
 const visibleCollections = collectionEntries.filter(
   (c) => !hiddenFromSidebar.has(c.slug) && c.admin?.sidebar !== false,
@@ -208,10 +209,11 @@ for (const c of navCollections) {
     singularLabel: c.labels.singular,
     Icon: c.admin?.icon ? (navIconMap[c.admin.icon] ?? LayoutGrid) : (pinnedIcons[c.slug] ?? Layers),
     active: activeCollection === c.slug,
-    newHref: `/admin/${c.slug}/new`,
+    // Submissions are created by end users filling out forms, not added manually.
+    newHref: c.slug === "form-submissions" ? undefined : `/admin/${c.slug}/new`,
     weight: c.admin?.weight ?? fallbackWeightFor(c),
     group,
-    badge: c.slug === "forms" && unreadSubmissions > 0 ? unreadSubmissions : undefined,
+    badge: c.slug === "form-submissions" && unreadSubmissions > 0 ? unreadSubmissions : undefined,
   });
 }
 
