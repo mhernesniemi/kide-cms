@@ -140,7 +140,7 @@ type NavItem = {
   active: boolean;
   newHref?: string;
   weight: number;
-  group: "Content" | "Library" | "Settings" | "Custom";
+  group: "Content" | "Library" | "Team" | "Custom";
   badge?: number;
 };
 const navItems: NavItem[] = [];
@@ -193,7 +193,7 @@ for (const slug of pinnedOrder) {
       active: activeCollection === c.slug,
       newHref: `/admin/${c.slug}/new`,
       weight: 30,
-      group: slug === "users" ? "Settings" : "Library",
+      group: slug === "users" ? "Team" : "Library",
       badge: slug === "forms" && unreadSubmissions > 0 ? unreadSubmissions : undefined,
     });
   }
@@ -223,7 +223,7 @@ for (const item of customNav) {
 
 // Sort all items by weight (stable sort preserves order within same weight)
 navItems.sort((a, b) => a.weight - b.weight);
-const navGroupOrder: Array<NavItem["group"]> = ["Content", "Library", "Settings", "Custom"];
+const navGroupOrder: Array<NavItem["group"]> = ["Content", "Library", "Team", "Custom"];
 const navGroups = navGroupOrder
   .map((group) => ({ group, items: navItems.filter((item) => item.group === group) }))
   .filter((entry) => entry.items.length > 0);
