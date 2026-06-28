@@ -23,6 +23,7 @@ import {
   Home,
   Key,
   Link,
+  Link2,
   Lock,
   Mail,
   MessageSquare,
@@ -53,6 +54,7 @@ const navIconMap: Record<string, any> = {
   Layers,
   LayoutGrid,
   Link,
+  Link2,
   Lock,
   Mail,
   Menu,
@@ -119,7 +121,7 @@ type CollectionNavEntry = {
 const collectionEntries = collections as CollectionNavEntry[];
 const librarySlugs = new Set(["shared-sections", "taxonomies", "menus", "forms", "authors"]);
 const pinnedIcons: Record<string, any> = {
-  "shared-sections": Package,
+  "shared-sections": Link2,
   taxonomies: FolderTree,
   menus: Menu,
   forms: MessageSquare,

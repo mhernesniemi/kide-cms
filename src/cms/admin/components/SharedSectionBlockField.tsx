@@ -66,16 +66,13 @@ export default function SharedSectionBlockField({ name, value, types, blockRelat
       <input type="hidden" name="blockType" value={selectedType} />
       <input type="hidden" name={name} value={serialized} />
 
-      <div className="grid gap-2">
-        <label className="text-sm font-medium">Block type *</label>
-        <SelectField
-          name={`${name}_type`}
-          value={selectedType}
-          placeholder="Select a block type"
-          items={typeNames.map((typeName) => ({ value: typeName, label: humanize(typeName) }))}
-          onChange={changeType}
-        />
-      </div>
+      <SelectField
+        name={`${name}_type`}
+        value={selectedType}
+        placeholder="Select a block type"
+        items={typeNames.map((typeName) => ({ value: typeName, label: humanize(typeName) }))}
+        onChange={changeType}
+      />
 
       <div className="space-y-4 rounded-lg border px-4 py-4">
         {Object.entries(fieldsMeta).map(([fieldName, meta]) => (
