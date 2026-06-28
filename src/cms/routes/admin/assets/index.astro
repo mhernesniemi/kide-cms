@@ -6,6 +6,8 @@ import AdminLayout from "@/cms/admin/layouts/AdminLayout.astro";
 
 export const prerender = false;
 
+const ASSET_PAGE_SIZE = 24;
+
 const user = Astro.locals.user;
 const accessibleCollections = config.collections.filter((c) => {
   const rule = c.access?.read;
@@ -14,16 +16,28 @@ const accessibleCollections = config.collections.filter((c) => {
 });
 
 const currentFolderId = Astro.url.searchParams.get("folder") || null;
+const search = (Astro.url.searchParams.get("q") ?? "").trim();
+const requestedPage = Math.max(1, Number(Astro.url.searchParams.get("page") ?? "1"));
 
-// Get current folder details if we're inside one
+// Current folder (for the heading / breadcrumb trail).
 const currentFolder = currentFolderId ? await folders.findById(currentFolderId) : null;
 if (currentFolderId && !currentFolder) return Astro.redirect("/admin/assets");
 
-// Get subfolders and assets for current location
-const subfolders = await folders.findByParent(currentFolderId);
-const folderAssets = await assets.find({ limit: 100, folder: currentFolderId });
+// Every folder — the sticky sidebar renders the whole tree as drop targets.
+const allFolders = await folders.findAll();
 
-// Build breadcrumb trail
+// Assets in the current location, filtered by name and paginated.
+const total = await assets.count({ folder: currentFolderId, search });
+const totalPages = Math.max(1, Math.ceil(total / ASSET_PAGE_SIZE));
+const page = Math.min(requestedPage, totalPages);
+const folderAssets = await assets.find({
+  folder: currentFolderId,
+  search,
+  limit: ASSET_PAGE_SIZE,
+  offset: (page - 1) * ASSET_PAGE_SIZE,
+});
+
+// Breadcrumb trail up to the current folder.
 const breadcrumbs: Array<{ label: string; href: string; id: string }> = [];
 if (currentFolder) {
   let folder: typeof currentFolder | null = currentFolder;
@@ -35,8 +49,8 @@ if (currentFolder) {
   breadcrumbs.push(...chain);
 }
 
-// Serialize data for the React island
-const folderData = subfolders.map((f) => ({ _id: f._id, name: f.name }));
+// Serialize for the React island.
+const folderData = allFolders.map((f) => ({ _id: f._id, name: f.name, parent: f.parent ?? null }));
 const assetData = folderAssets.map((a) => ({
   _id: a._id,
   filename: a.filename,
@@ -59,5 +73,9 @@ const assetData = folderAssets.map((a) => ({
     assets={assetData}
     breadcrumbs={breadcrumbs}
     currentFolderId={currentFolderId}
+    search={search}
+    page={page}
+    totalPages={totalPages}
+    total={total}
   />
 </AdminLayout>

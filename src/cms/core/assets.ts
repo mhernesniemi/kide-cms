@@ -1,4 +1,4 @@
-import { desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, like, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { recordAudit, type AuditActor } from "./audit";
@@ -99,18 +99,17 @@ export const assets = {
     };
   },
 
-  async find(options: { limit?: number; offset?: number; folder?: string | null } = {}): Promise<AssetRecord[]> {
+  async find(
+    options: { limit?: number; offset?: number; folder?: string | null; search?: string } = {},
+  ): Promise<AssetRecord[]> {
     const db = await getDb();
     const schema = getSchema();
 
-    const condition =
-      options.folder !== undefined
-        ? options.folder === null
-          ? isNull(schema.cmsAssets.folder)
-          : eq(schema.cmsAssets.folder, options.folder)
-        : undefined;
-
-    let query = db.select().from(schema.cmsAssets).where(condition).orderBy(desc(schema.cmsAssets._createdAt));
+    let query = db
+      .select()
+      .from(schema.cmsAssets)
+      .where(buildAssetFilter(schema, options))
+      .orderBy(desc(schema.cmsAssets._createdAt));
     if (options.limit) query = query.limit(options.limit) as any;
     if (options.offset) query = query.offset(options.offset) as any;
 
@@ -184,13 +183,30 @@ export const assets = {
     return this.findById(id);
   },
 
-  async count(): Promise<number> {
+  async count(options: { folder?: string | null; search?: string } = {}): Promise<number> {
     const db = await getDb();
     const schema = getSchema();
-    const rows = await db.select({ count: sql<number>`count(*)` }).from(schema.cmsAssets);
+    const rows = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(schema.cmsAssets)
+      .where(buildAssetFilter(schema, options));
     return Number(rows[0]?.count ?? 0);
   },
 };
+
+// Shared WHERE builder for asset find/count: optional folder scope + filename search.
+function buildAssetFilter(schema: ReturnType<typeof getSchema>, options: { folder?: string | null; search?: string }) {
+  const conditions = [];
+  if (options.folder !== undefined) {
+    conditions.push(
+      options.folder === null ? isNull(schema.cmsAssets.folder) : eq(schema.cmsAssets.folder, options.folder),
+    );
+  }
+  if (options.search?.trim()) {
+    conditions.push(like(schema.cmsAssets.filename, `%${options.search.trim()}%`));
+  }
+  return conditions.length ? and(...conditions) : undefined;
+}
 
 export const folders = {
   async create(name: string, parent?: string | null): Promise<FolderRecord> {

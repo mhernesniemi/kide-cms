@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import {
+  ChevronLeft,
   ChevronRight,
   Folder,
   FolderPlus,
   GripVertical,
+  Images,
   ImagePlus,
   MoreHorizontal,
   Pencil,
+  Search,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -52,6 +55,7 @@ type AssetItem = {
 type FolderItem = {
   _id: string;
   name: string;
+  parent: string | null;
 };
 
 type Breadcrumb = {
@@ -65,7 +69,21 @@ type Props = {
   assets: AssetItem[];
   breadcrumbs: Breadcrumb[];
   currentFolderId: string | null;
+  search: string;
+  page: number;
+  totalPages: number;
+  total: number;
 };
+
+// Build a "/admin/assets" URL preserving folder + search, overriding what's passed.
+function assetsUrl(opts: { folder?: string | null; q?: string; page?: number }) {
+  const sp = new URLSearchParams();
+  if (opts.folder) sp.set("folder", opts.folder);
+  if (opts.q?.trim()) sp.set("q", opts.q.trim());
+  if (opts.page && opts.page > 1) sp.set("page", String(opts.page));
+  const qs = sp.toString();
+  return qs ? `/admin/assets?${qs}` : "/admin/assets";
+}
 
 // -----------------------------------------------
 // Draggable asset card
@@ -151,83 +169,64 @@ function DraggableAssetCard({
 }
 
 // -----------------------------------------------
-// Droppable folder card
+// Sidebar folder row (drop target + link)
 // -----------------------------------------------
 
-function DroppableFolder({
-  folder,
+function FolderRow({
+  folderId,
+  label,
+  href,
+  depth,
+  active,
+  Icon,
   onOpenMenu,
   menuActive,
 }: {
-  folder: FolderItem;
-  onOpenMenu: (folderId: string, folderName: string, rect: DOMRect) => void;
+  folderId: string | null;
+  label: string;
+  href: string;
+  depth: number;
+  active: boolean;
+  Icon: typeof Folder;
+  onOpenMenu?: (folderId: string, folderName: string, rect: DOMRect) => void;
   menuActive?: boolean;
 }) {
   const { isOver, setNodeRef } = useDroppable({
-    id: `folder-${folder._id}`,
-    data: { type: "folder", folderId: folder._id },
+    id: `folder-${folderId ?? "root"}`,
+    data: { type: "folder", folderId },
   });
 
   return (
-    <div ref={setNodeRef} className="group relative">
-      <a href={`/admin/assets?folder=${folder._id}`}>
-        <Card
-          className={cn(
-            "transition-shadow",
-            isOver ? "ring-foreground/40 bg-primary/8 ring-1" : "hover:ring-foreground/20 hover:ring-1",
-          )}
-        >
-          <CardContent className="flex items-center gap-3 py-3">
-            <Folder className="text-muted-foreground size-5" />
-            <span className="truncate text-sm font-medium">{folder.name}</span>
-          </CardContent>
-        </Card>
-      </a>
-      <div
+    <div ref={setNodeRef} className="group/row relative" style={{ paddingLeft: `${depth * 0.75}rem` }}>
+      <a
+        href={href}
         className={cn(
-          "absolute top-1/2 right-3 -translate-y-1/2 transition-opacity",
-          menuActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+          "flex items-center gap-2 rounded-md py-1.5 pr-7 pl-2 text-sm transition-colors",
+          active ? "bg-foreground/10 text-foreground font-medium" : "text-foreground/70 hover:bg-foreground/5",
+          isOver && "ring-primary bg-primary/10 text-foreground ring-1",
         )}
       >
+        <Icon className="text-muted-foreground size-4 shrink-0" />
+        <span className="truncate">{label}</span>
+      </a>
+      {onOpenMenu && folderId && (
         <button
           type="button"
           title="Folder options"
-          className="text-muted-foreground hover:text-foreground rounded-md p-1"
+          className={cn(
+            "text-muted-foreground hover:text-foreground absolute top-1/2 right-1 -translate-y-1/2 rounded p-1 transition-opacity",
+            menuActive ? "opacity-100" : "opacity-0 group-hover/row:opacity-100",
+          )}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            const rect = e.currentTarget.getBoundingClientRect();
-            onOpenMenu(folder._id, folder.name, rect);
+            onOpenMenu(folderId, label, e.currentTarget.getBoundingClientRect());
           }}
         >
           <MoreHorizontal className="size-4" />
         </button>
-      </div>
-    </div>
-  );
-}
-
-// -----------------------------------------------
-// Droppable breadcrumb
-// -----------------------------------------------
-
-function DroppableBreadcrumb({ href, folderId, label }: { href: string; folderId: string; label: string }) {
-  const { isOver, setNodeRef } = useDroppable({
-    id: `breadcrumb-${folderId}`,
-    data: { type: "folder", folderId: folderId || null },
-  });
-
-  return (
-    <a
-      ref={setNodeRef}
-      href={href}
-      className={cn(
-        "bg-muted/50 border-border hover:border-foreground/20 hover:text-foreground rounded-md border px-2.5 py-1 transition-colors",
-        isOver && "border-primary! bg-primary/12! text-foreground",
       )}
-    >
-      {label}
-    </a>
+    </div>
   );
 }
 
@@ -237,12 +236,12 @@ function DroppableBreadcrumb({ href, folderId, label }: { href: string; folderId
 
 function AssetDragOverlay({ asset }: { asset: AssetItem }) {
   return (
-    <div className="w-48" style={{ transform: "rotate(2deg) scale(0.95)" }}>
+    <div className="w-40" style={{ transform: "rotate(2deg) scale(0.95)" }}>
       <Card className="overflow-hidden pt-0 shadow-lg">
         <div className="relative">
           {asset.mimeType.startsWith("image/") ? (
             <div className="bg-muted/30 aspect-square w-full overflow-hidden">
-              <img src={asset.url} alt={asset.alt ?? asset.filename} className="size-full object-cover" />
+              <img src={thumbnail(asset.url)} alt={asset.alt ?? asset.filename} className="size-full object-cover" />
             </div>
           ) : (
             <div className="bg-muted/30 flex aspect-square items-center justify-center">
@@ -262,9 +261,19 @@ function AssetDragOverlay({ asset }: { asset: AssetItem }) {
 // Main component
 // -----------------------------------------------
 
-export default function AssetsGrid({ folders, assets, breadcrumbs, currentFolderId }: Props) {
+export default function AssetsGrid({
+  folders,
+  assets,
+  breadcrumbs,
+  currentFolderId,
+  search,
+  page,
+  totalPages,
+  total,
+}: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeAsset, setActiveAsset] = useState<AssetItem | null>(null);
+  const [query, setQuery] = useState(search);
 
   // Folder dialog state
   const [createOpen, setCreateOpen] = useState(false);
@@ -283,8 +292,42 @@ export default function AssetsGrid({ folders, assets, breadcrumbs, currentFolder
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
 
   const uploadFormRef = useRef<HTMLFormElement>(null);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  // Flatten the folder tree into depth-tagged rows for the sidebar.
+  const folderTree = useMemo(() => {
+    const byParent = new Map<string, FolderItem[]>();
+    for (const f of folders) {
+      const key = f.parent ?? "";
+      if (!byParent.has(key)) byParent.set(key, []);
+      byParent.get(key)!.push(f);
+    }
+    const rows: Array<{ folder: FolderItem; depth: number }> = [];
+    const walk = (parentKey: string, depth: number) => {
+      const children = (byParent.get(parentKey) ?? []).sort((a, b) => a.name.localeCompare(b.name));
+      for (const folder of children) {
+        rows.push({ folder, depth });
+        walk(folder._id, depth + 1);
+      }
+    };
+    walk("", 0);
+    return rows;
+  }, [folders]);
+
+  // --- Search (server-side, via the URL) ---
+
+  const runSearch = useCallback(
+    (value: string) => {
+      setQuery(value);
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+      searchTimer.current = setTimeout(() => {
+        window.location.assign(assetsUrl({ folder: currentFolderId, q: value }));
+      }, 350);
+    },
+    [currentFolderId],
+  );
 
   // --- Selection ---
 
@@ -320,12 +363,10 @@ export default function AssetsGrid({ folders, assets, breadcrumbs, currentFolder
     const dropData = over.data.current as { type: string; folderId: string | null } | undefined;
     if (!dropData || dropData.type !== "folder") return;
 
-    const targetFolderId = dropData.folderId;
-
     fetch(`/api/cms/assets/${assetId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ folder: targetFolderId || null }),
+      body: JSON.stringify({ folder: dropData.folderId || null }),
     }).then((res) => {
       if (res.ok) location.reload();
     });
@@ -411,8 +452,7 @@ export default function AssetsGrid({ folders, assets, breadcrumbs, currentFolder
     location.reload();
   }
 
-  const hasBreadcrumbs = breadcrumbs.length > 0;
-  const isEmpty = folders.length === 0 && assets.length === 0;
+  const folderName = breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : "All assets";
 
   return (
     <DndContext
@@ -422,130 +462,190 @@ export default function AssetsGrid({ folders, assets, breadcrumbs, currentFolder
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <section className="space-y-6">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Assets</h1>
-            {hasBreadcrumbs && (
-              <nav className="text-muted-foreground mt-2 flex items-center gap-1 text-sm">
-                <DroppableBreadcrumb href="/admin/assets" folderId="" label="All assets" />
-                {breadcrumbs.map((crumb) => (
-                  <span key={crumb.id} className="contents">
-                    <ChevronRight className="size-3.5" />
-                    <DroppableBreadcrumb href={crumb.href} folderId={crumb.id} label={crumb.label} />
-                  </span>
-                ))}
-              </nav>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {selectedIds.size > 0 ? (
-              <>
-                <span className="text-muted-foreground text-sm">{selectedIds.size} selected</span>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    resetDialogState();
-                    setBulkDeleteOpen(true);
-                  }}
+      <section className="px-4 py-6 lg:py-8 lg:pr-8 lg:pl-12">
+        <h1 className="mb-6 text-2xl font-semibold tracking-tight">Assets</h1>
+
+        <div className="grid gap-8 lg:grid-cols-[230px_minmax(0,1fr)]">
+          {/* ── Sticky sidebar: actions + folder tree (always-on drop targets) ── */}
+          <aside className="lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)] lg:self-start lg:overflow-y-auto">
+            <div className="space-y-4">
+              <label className={cn(buttonVariants({ size: "sm" }), "w-full cursor-pointer")}>
+                <Upload className="size-4" />
+                Upload
+                <form
+                  ref={uploadFormRef}
+                  method="post"
+                  action="/api/cms/assets/upload"
+                  encType="multipart/form-data"
+                  className="hidden"
                 >
-                  <Trash2 className="size-3.5" />
-                  Delete
-                </Button>
-                <Button variant="outline" size="sm" onClick={clearSelection}>
-                  Cancel
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setCreateName("");
-                    resetDialogState();
-                    setCreateOpen(true);
-                  }}
-                >
-                  <FolderPlus className="size-4" />
-                  New folder
-                </Button>
-                <label className={buttonVariants({ size: "sm" }) + " cursor-pointer"}>
-                  <Upload className="size-4" />
-                  Upload
-                  <form
-                    ref={uploadFormRef}
-                    method="post"
-                    action="/api/cms/assets/upload"
-                    encType="multipart/form-data"
-                    className="hidden"
+                  <input type="hidden" name="redirectTo" value={assetsUrl({ folder: currentFolderId })} />
+                  {currentFolderId && <input type="hidden" name="folder" value={currentFolderId} />}
+                  <input
+                    type="file"
+                    name="file"
+                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+                    required
+                    onChange={(e) => {
+                      if (e.target.value) uploadFormRef.current?.submit();
+                    }}
+                  />
+                </form>
+              </label>
+
+              <div>
+                <div className="mb-1 flex items-center justify-between px-2">
+                  <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Folders</span>
+                  <button
+                    type="button"
+                    title="New folder"
+                    className="text-muted-foreground hover:text-foreground rounded p-1"
+                    onClick={() => {
+                      setCreateName("");
+                      resetDialogState();
+                      setCreateOpen(true);
+                    }}
                   >
-                    <input type="hidden" name="redirectTo" value="/admin/assets" />
-                    {currentFolderId && <input type="hidden" name="folder" value={currentFolderId} />}
-                    <input
-                      type="file"
-                      name="file"
-                      accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
-                      required
-                      onChange={(e) => {
-                        if (e.target.value) uploadFormRef.current?.submit();
-                      }}
+                    <FolderPlus className="size-4" />
+                  </button>
+                </div>
+                <nav className="space-y-0.5">
+                  <FolderRow
+                    folderId={null}
+                    label="All assets"
+                    href={assetsUrl({})}
+                    depth={0}
+                    active={!currentFolderId}
+                    Icon={Images}
+                  />
+                  {folderTree.map(({ folder, depth }) => (
+                    <FolderRow
+                      key={folder._id}
+                      folderId={folder._id}
+                      label={folder.name}
+                      href={assetsUrl({ folder: folder._id })}
+                      depth={depth}
+                      active={currentFolderId === folder._id}
+                      Icon={Folder}
+                      onOpenMenu={openMenu}
+                      menuActive={menuOpen && activeFolderId === folder._id}
                     />
-                  </form>
-                </label>
-              </>
+                  ))}
+                </nav>
+              </div>
+            </div>
+          </aside>
+
+          {/* ── Main: search, grid, pagination ── */}
+          <div className="min-w-0 space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-muted-foreground min-w-0 text-sm">
+                <span className="text-foreground font-medium">{folderName}</span>
+                <span className="ml-2">
+                  {total} {total === 1 ? "item" : "items"}
+                </span>
+              </div>
+              <div className="relative w-full sm:w-72">
+                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input
+                  value={query}
+                  onChange={(e) => runSearch(e.target.value)}
+                  placeholder="Filter by name…"
+                  className="pl-9 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Selection toolbar */}
+            {selectedIds.size > 0 && (
+              <div className="bg-muted/40 flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                <span className="text-sm font-medium">{selectedIds.size} selected</span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      resetDialogState();
+                      setBulkDeleteOpen(true);
+                    }}
+                  >
+                    <Trash2 className="size-3.5" />
+                    Delete
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={clearSelection}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Grid or empty state */}
+            {assets.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                {assets.map((asset) => (
+                  <DraggableAssetCard
+                    key={asset._id}
+                    asset={asset}
+                    selected={selectedIds.has(asset._id)}
+                    onToggleSelect={() => toggleSelect(asset._id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-12">
+                  <div className="text-center">
+                    <ImagePlus className="text-muted-foreground/30 mx-auto size-12" />
+                    <p className="text-muted-foreground mt-3 text-sm">
+                      {search
+                        ? `No assets match “${search}”.`
+                        : currentFolderId
+                          ? "This folder is empty."
+                          : "No assets uploaded yet."}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-2">
+                <a
+                  href={assetsUrl({ folder: currentFolderId, q: search, page: page - 1 })}
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "sm" }),
+                    page <= 1 && "pointer-events-none opacity-50",
+                  )}
+                  aria-disabled={page <= 1}
+                >
+                  <ChevronLeft className="size-4" />
+                  Previous
+                </a>
+                <span className="text-muted-foreground px-2 text-sm">
+                  Page {page} of {totalPages}
+                </span>
+                <a
+                  href={assetsUrl({ folder: currentFolderId, q: search, page: page + 1 })}
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "sm" }),
+                    page >= totalPages && "pointer-events-none opacity-50",
+                  )}
+                  aria-disabled={page >= totalPages}
+                >
+                  Next
+                  <ChevronRight className="size-4" />
+                </a>
+              </div>
             )}
           </div>
         </div>
-
-        {/* Folders */}
-        {folders.length > 0 && (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-            {folders.map((folder) => (
-              <DroppableFolder
-                key={folder._id}
-                folder={folder}
-                onOpenMenu={openMenu}
-                menuActive={menuOpen && activeFolderId === folder._id}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Assets or empty state */}
-        {isEmpty ? (
-          <Card>
-            <CardContent className="py-12">
-              <div className="text-center">
-                <ImagePlus className="text-muted-foreground/30 mx-auto size-12" />
-                <p className="text-muted-foreground mt-3 text-sm">
-                  {currentFolderId ? "This folder is empty." : "No assets uploaded yet."}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          assets.length > 0 && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {assets.map((asset) => (
-                <DraggableAssetCard
-                  key={asset._id}
-                  asset={asset}
-                  selected={selectedIds.has(asset._id)}
-                  onToggleSelect={() => toggleSelect(asset._id)}
-                />
-              ))}
-            </div>
-          )
-        )}
       </section>
 
       {/* Drag overlay */}
       <DragOverlay dropAnimation={null}>{activeAsset && <AssetDragOverlay asset={activeAsset} />}</DragOverlay>
 
-      {/* Context menu */}
+      {/* Folder context menu */}
       {menuOpen && (
         <div
           className="bg-popover text-popover-foreground border-border fixed z-50 min-w-40 rounded-md border p-1 shadow-md"
