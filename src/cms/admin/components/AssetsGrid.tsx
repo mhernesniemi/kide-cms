@@ -465,9 +465,9 @@ export default function AssetsGrid({
       <section className="px-4 py-6 lg:py-8 lg:pr-8 lg:pl-12">
         <h1 className="mb-6 text-2xl font-semibold tracking-tight">Assets</h1>
 
-        <div className="grid gap-8 lg:grid-cols-[230px_minmax(0,1fr)]">
+        <div className="grid gap-8 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-0">
           {/* ── Sticky sidebar: actions + folder tree (always-on drop targets) ── */}
-          <aside className="lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)] lg:self-start lg:overflow-y-auto">
+          <aside className="lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)] lg:self-start lg:overflow-y-auto lg:pr-8">
             <div className="space-y-4">
               <label className={cn(buttonVariants({ size: "sm" }), "w-full cursor-pointer")}>
                 <Upload className="size-4" />
@@ -493,7 +493,7 @@ export default function AssetsGrid({
                 </form>
               </label>
 
-              <div>
+              <div className="border-t pt-4">
                 <div className="mb-1 flex items-center justify-between px-2">
                   <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Folders</span>
                   <button
@@ -537,8 +537,8 @@ export default function AssetsGrid({
           </aside>
 
           {/* ── Main: search, grid, pagination ── */}
-          <div className="min-w-0 space-y-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 space-y-4 lg:border-l lg:pl-8">
+            <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-muted-foreground min-w-0 text-sm">
                 <span className="text-foreground font-medium">{folderName}</span>
                 <span className="ml-2">
@@ -610,7 +610,7 @@ export default function AssetsGrid({
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-2">
+              <div className="flex items-center justify-center gap-2 border-t pt-5">
                 <a
                   href={assetsUrl({ folder: currentFolderId, q: search, page: page - 1 })}
                   className={cn(
@@ -648,7 +648,7 @@ export default function AssetsGrid({
       {/* Folder context menu */}
       {menuOpen && (
         <div
-          className="bg-popover text-popover-foreground border-border fixed z-50 min-w-40 rounded-md border p-1 shadow-md"
+          className="bg-popover text-popover-foreground fixed z-50 min-w-40 rounded-md border p-1 shadow-md"
           style={{ top: menuPos.top, left: menuPos.left }}
           onClick={(e) => e.stopPropagation()}
         >
