@@ -25,9 +25,7 @@ export default defineCollection({
         const firstValue = Object.values(submitted).find((v) => typeof v === "string" && v.trim()) as
           | string
           | undefined;
-        const preview = firstValue ? firstValue.slice(0, 40) : "Submission";
-        const ts = new Date().toISOString().slice(0, 16).replace("T", " ");
-        data.label = `${preview} — ${ts}`;
+        data.label = firstValue ? firstValue.slice(0, 40) : "Submission";
       }
       return data;
     },
