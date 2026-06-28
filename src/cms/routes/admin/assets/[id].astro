@@ -1,7 +1,8 @@
 ---
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 import AdminCard from "@/cms/admin/components/AdminCard.astro";
+import DocumentActions from "@/cms/admin/components/DocumentActions";
 import AiGenerateButton from "@/cms/admin/components/AiGenerateButton";
 import FocalPointSelector from "@/cms/admin/components/FocalPointSelector";
 import UnsavedGuard from "@/cms/admin/components/UnsavedGuard";
@@ -65,7 +66,7 @@ const folderItems = flattenByParent(
   activeCollection="assets"
   customNav={config.admin?.nav}
 >
-  <section class="space-y-6">
+  <section class="space-y-6 px-4 py-6 lg:py-8 lg:pr-8 lg:pl-12">
     <div class="flex items-start justify-between gap-4">
       <div>
         <a
@@ -83,13 +84,7 @@ const folderItems = flattenByParent(
       <button type="submit" form="asset-form" value="save" disabled class={buttonVariants({ variant: "outline" })}>
         Save
       </button>
-      <form method="post" action={`/api/cms/assets/${asset._id}`}>
-        <input type="hidden" name="_method" value="DELETE" />
-        <button type="submit" class={buttonVariants({ variant: "destructive" })}>
-          <Trash2 className="size-3.5" />
-          Delete
-        </button>
-      </form>
+      <DocumentActions client:load formId="asset-form" showDelete={true} />
     </div>
 
     <UnsavedGuard client:load formId="asset-form" isNew={false} isDraft={false} />

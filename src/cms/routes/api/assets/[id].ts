@@ -56,9 +56,10 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 
   const formData = new URLSearchParams(await request.text());
   const method = formData.get("_method");
+  const action = formData.get("_action");
   const actor = getActor(locals);
 
-  if (method === "DELETE") {
+  if (method === "DELETE" || action === "delete") {
     await assets.delete(id, { actor });
     return new Response(null, {
       status: 303,
@@ -66,7 +67,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     });
   }
 
-  const action = formData.get("_action");
   if (action === "update") {
     const alt = formData.get("alt");
     const folder = formData.get("folder");

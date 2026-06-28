@@ -261,16 +261,7 @@ function AssetDragOverlay({ asset }: { asset: AssetItem }) {
 // Main component
 // -----------------------------------------------
 
-export default function AssetsGrid({
-  folders,
-  assets,
-  breadcrumbs,
-  currentFolderId,
-  search,
-  page,
-  totalPages,
-  total,
-}: Props) {
+export default function AssetsGrid({ folders, assets, currentFolderId, search, page, totalPages }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeAsset, setActiveAsset] = useState<AssetItem | null>(null);
   const [query, setQuery] = useState(search);
@@ -452,8 +443,6 @@ export default function AssetsGrid({
     location.reload();
   }
 
-  const folderName = breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : "All assets";
-
   return (
     <DndContext
       sensors={sensors}
@@ -468,8 +457,59 @@ export default function AssetsGrid({
         <div className="grid gap-8 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-0">
           {/* ── Sticky sidebar: actions + folder tree (always-on drop targets) ── */}
           <aside className="lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)] lg:self-start lg:overflow-y-auto lg:pr-8">
-            <div className="space-y-4">
-              <label className={cn(buttonVariants({ size: "sm" }), "w-full cursor-pointer")}>
+            <div className="mb-1 flex items-center justify-between px-2">
+              <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Folders</span>
+              <button
+                type="button"
+                title="New folder"
+                className="text-muted-foreground hover:text-foreground rounded p-1"
+                onClick={() => {
+                  setCreateName("");
+                  resetDialogState();
+                  setCreateOpen(true);
+                }}
+              >
+                <FolderPlus className="size-4" />
+              </button>
+            </div>
+            <nav className="space-y-0.5">
+              <FolderRow
+                folderId={null}
+                label="All assets"
+                href={assetsUrl({})}
+                depth={0}
+                active={!currentFolderId}
+                Icon={Images}
+              />
+              {folderTree.map(({ folder, depth }) => (
+                <FolderRow
+                  key={folder._id}
+                  folderId={folder._id}
+                  label={folder.name}
+                  href={assetsUrl({ folder: folder._id })}
+                  depth={depth}
+                  active={currentFolderId === folder._id}
+                  Icon={Folder}
+                  onOpenMenu={openMenu}
+                  menuActive={menuOpen && activeFolderId === folder._id}
+                />
+              ))}
+            </nav>
+          </aside>
+
+          {/* ── Main: search, grid, pagination ── */}
+          <div className="min-w-0 space-y-4 lg:border-l lg:pl-8">
+            <div className="bg-background/90 sticky top-0 z-20 flex items-center justify-between gap-3 border-b pt-1 pb-4 backdrop-blur">
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input
+                  value={query}
+                  onChange={(e) => runSearch(e.target.value)}
+                  placeholder="Filter by name…"
+                  className="pl-9 text-sm"
+                />
+              </div>
+              <label className={cn(buttonVariants(), "shrink-0 cursor-pointer")}>
                 <Upload className="size-4" />
                 Upload
                 <form
@@ -492,68 +532,6 @@ export default function AssetsGrid({
                   />
                 </form>
               </label>
-
-              <div className="border-t pt-4">
-                <div className="mb-1 flex items-center justify-between px-2">
-                  <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Folders</span>
-                  <button
-                    type="button"
-                    title="New folder"
-                    className="text-muted-foreground hover:text-foreground rounded p-1"
-                    onClick={() => {
-                      setCreateName("");
-                      resetDialogState();
-                      setCreateOpen(true);
-                    }}
-                  >
-                    <FolderPlus className="size-4" />
-                  </button>
-                </div>
-                <nav className="space-y-0.5">
-                  <FolderRow
-                    folderId={null}
-                    label="All assets"
-                    href={assetsUrl({})}
-                    depth={0}
-                    active={!currentFolderId}
-                    Icon={Images}
-                  />
-                  {folderTree.map(({ folder, depth }) => (
-                    <FolderRow
-                      key={folder._id}
-                      folderId={folder._id}
-                      label={folder.name}
-                      href={assetsUrl({ folder: folder._id })}
-                      depth={depth}
-                      active={currentFolderId === folder._id}
-                      Icon={Folder}
-                      onOpenMenu={openMenu}
-                      menuActive={menuOpen && activeFolderId === folder._id}
-                    />
-                  ))}
-                </nav>
-              </div>
-            </div>
-          </aside>
-
-          {/* ── Main: search, grid, pagination ── */}
-          <div className="min-w-0 space-y-4 lg:border-l lg:pl-8">
-            <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-muted-foreground min-w-0 text-sm">
-                <span className="text-foreground font-medium">{folderName}</span>
-                <span className="ml-2">
-                  {total} {total === 1 ? "item" : "items"}
-                </span>
-              </div>
-              <div className="relative w-full sm:w-72">
-                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input
-                  value={query}
-                  onChange={(e) => runSearch(e.target.value)}
-                  placeholder="Filter by name…"
-                  className="pl-9 text-sm"
-                />
-              </div>
             </div>
 
             {/* Selection toolbar */}
