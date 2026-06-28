@@ -64,6 +64,7 @@ const activeCollection = route.kind === "recent" ? "recent" : (collectionSlug ??
         collection={collection}
         mode={route.kind}
         documentId={route.kind === "edit" ? route.documentId : undefined}
+        variant={collection.slug === "users" || collection.slug === "form-submissions" ? "record" : "editorial"}
       />
     )
   }
