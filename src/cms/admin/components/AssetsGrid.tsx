@@ -499,7 +499,7 @@ export default function AssetsGrid({ folders, assets, currentFolderId, search, p
 
           {/* ── Main: search, grid, pagination ── */}
           <div className="min-w-0 space-y-4 lg:border-l lg:pl-8">
-            <div className="bg-background/90 sticky top-0 z-20 flex items-center justify-between gap-3 border-b pt-1 pb-4 backdrop-blur">
+            <div className="bg-background/90 sticky top-0 z-20 flex items-center justify-between gap-3 pt-1 pb-4 backdrop-blur">
               <div className="relative w-full sm:max-w-xs">
                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
