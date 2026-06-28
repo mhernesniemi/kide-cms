@@ -177,6 +177,19 @@
   outline-offset: var(--focus-ring-offset);
 }
 
+/* Menus / selects / command palette: items show focus as a background highlight,
+   not the ring; and a popup trigger must not keep the ring while its popup is
+   open (base-ui re-focuses the trigger on pointer interaction, which would
+   otherwise trip :focus-visible). Keyboard focus on the trigger itself, when
+   closed, still gets the normal ring. */
+[data-slot="dropdown-menu-item"]:focus-visible,
+[data-slot="dropdown-menu-sub-trigger"]:focus-visible,
+[data-slot="select-item"]:focus-visible,
+[data-slot="command-item"]:focus-visible,
+[data-popup-open]:focus-visible {
+  outline: none;
+}
+
 /* ── Dark mode: native input controls, select arrow, focus ring ──── */
 .dark input::-webkit-calendar-picker-indicator {
   filter: invert(1);
