@@ -22,10 +22,11 @@
   --input: oklch(0.872 0.009 264);
   --ring: oklch(0.556 0.01 264);
 
-  /* Form-field focus — single source of truth. Change these two to restyle the
-     focus border + ring of every input / select / textarea / button / editor. */
-  --field-focus-border: color-mix(in oklch, var(--ring) 45%, transparent);
-  --field-focus-ring: color-mix(in oklch, var(--ring) 45%, transparent);
+  /* Focus ring — THE single place to control focus for the entire admin.
+     One universal rule (below) applies this to every focusable element. */
+  --focus-ring-color: color-mix(in oklch, var(--ring) 55%, transparent);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
 
   --chart-1: oklch(0.623 0.214 259.815);
   --chart-2: oklch(0.546 0.245 262.881);
@@ -76,10 +77,8 @@
   --input: oklch(0.36 0.012 265);
   --ring: oklch(0.6 0.006 265);
 
-  /* Dark uses the full (lighter) ring for the focus border so it keeps the same
-     contrast against the darker resting border as light mode does. */
-  --field-focus-border: var(--ring);
-  --field-focus-ring: color-mix(in oklch, var(--ring) 30%, transparent);
+  /* Dark uses a lighter ring so it keeps contrast against the darker surfaces. */
+  --focus-ring-color: color-mix(in oklch, var(--ring) 65%, transparent);
 
   --sidebar: oklch(0.175 0.014 265);
   --sidebar-foreground: oklch(0.96 0.004 265);
@@ -155,30 +154,27 @@
   }
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+   FOCUS — one universal rule for the whole admin.
+   Every focusable element (input, button, link, checkbox, radio, [tabindex],
+   contenteditable, …) gets the same ring automatically. There is nothing to
+   add per component. To restyle focus everywhere, change the three
+   --focus-ring-* vars at the top of this file. Nothing else sets focus styles.
+   ════════════════════════════════════════════════════════════════════════ */
 *:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Rich-text editor: the focusable element is the inner contenteditable, but we
+   want the ring around the whole bordered box. Ring the container instead, and
+   suppress it while a toolbar button has focus (the button shows its own ring). */
+.tiptap:focus-visible {
   outline: none;
 }
-
-/* ── Focus ring — the SINGLE source of focus styling. Components must not set
-   their own. Opt in via the element's data-slot, a plain <a>, or by adding
-   data-slot="editor" / "radio" / "button" to a custom element. Tunable through
-   the --field-focus-* vars. Skips read-only and aria-invalid fields, which keep
-   their own (non-focus) styling. ─────────────────────────────────────────── */
-[data-slot="input"]:not(:read-only):focus-visible:not([aria-invalid="true"]),
-[data-slot="textarea"]:not(:read-only):focus-visible:not([aria-invalid="true"]),
-[data-slot="select-trigger"]:focus-visible:not([aria-invalid="true"]),
-[data-slot="button"]:focus-visible:not([aria-invalid="true"]),
-[data-slot="dropdown-menu-trigger"]:focus-visible,
-[data-slot="editor"]:focus-within,
-a:focus-visible {
-  border-color: var(--field-focus-border);
-  box-shadow: 0 0 0 1px var(--field-focus-ring);
-}
-
-/* Ring only (no border tint) — checkbox/radio keep their state-driven border. */
-[data-slot="checkbox"]:focus-visible:not([aria-invalid="true"]),
-[data-slot="radio"]:focus-visible {
-  box-shadow: 0 0 0 1px var(--field-focus-ring);
+[data-slot="editor"]:focus-within:not(:has([data-slot="button"]:focus-visible)) {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /* ── Dark mode: native input controls, select arrow, focus ring ──── */

@@ -266,10 +266,11 @@ export default function DocumentActions({
               </label>
               <input
                 id="schedule-publish-at"
+                data-slot="input"
                 type="datetime-local"
                 value={publishAt}
                 onChange={(e) => setPublishAt(e.target.value)}
-                className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
+                className="border-input bg-background placeholder:text-muted-foreground flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors"
               />
             </div>
             <div className="grid gap-2">
@@ -278,10 +279,11 @@ export default function DocumentActions({
               </label>
               <input
                 id="schedule-unpublish-at"
+                data-slot="input"
                 type="datetime-local"
                 value={unpublishAt}
                 onChange={(e) => setUnpublishAt(e.target.value)}
-                className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
+                className="border-input bg-background placeholder:text-muted-foreground flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors"
               />
             </div>
           </div>

@@ -62,6 +62,7 @@ export type {
   WebhookEvent,
   WebhookContext,
   AdminFieldComponent,
+  CollectionAdminConfig,
   FieldCondition,
   SeedDocument,
   CollectionViewConfig,

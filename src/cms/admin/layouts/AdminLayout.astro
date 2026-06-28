@@ -3,6 +3,7 @@ import "virtual:kide/admin-css";
 import { cms } from "virtual:kide/api";
 
 import {
+  ChevronDown,
   Clock,
   FileText,
   FolderTree,
@@ -83,7 +84,12 @@ const {
   customNav = [],
 } = Astro.props as {
   title?: string;
-  collections?: Array<{ slug: string; labels: { singular: string; plural: string }; singleton?: boolean }>;
+  collections?: Array<{
+    slug: string;
+    labels: { singular: string; plural: string };
+    singleton?: boolean;
+    admin?: CollectionNavConfig;
+  }>;
   activeCollection?: string | null;
   embed?: boolean;
   customNav?: Array<{ label: string; href: string; icon?: string; weight?: number }>;
@@ -96,15 +102,24 @@ const toastStatus = Astro.url.searchParams.get("_toast") as "success" | "error" 
 const toastMessage =
   Astro.url.searchParams.get("_msg") ?? (toastStatus === "success" ? "Saved successfully" : "Something went wrong");
 
-// Build sidebar nav in explicit order:
-// 1. Content collections (alphabetical, shared icon)
-// 2. Singles
-// 3. Taxonomies, Menus, Forms, Authors, Users (pinned utility collections)
-// 4. Assets
+type CollectionNavConfig = {
+  group?: string;
+  sidebar?: boolean;
+  icon?: string;
+  weight?: number;
+};
 
-const pinnedOrder = ["taxonomies", "menus", "forms", "authors", "users"];
-const pinnedSlugs = new Set(pinnedOrder);
+type CollectionNavEntry = {
+  slug: string;
+  labels: { singular: string; plural: string };
+  singleton?: boolean;
+  admin?: CollectionNavConfig;
+};
+
+const collectionEntries = collections as CollectionNavEntry[];
+const librarySlugs = new Set(["shared-sections", "taxonomies", "menus", "forms", "authors"]);
 const pinnedIcons: Record<string, any> = {
+  "shared-sections": Package,
   taxonomies: FolderTree,
   menus: Menu,
   forms: MessageSquare,
@@ -127,10 +142,37 @@ try {
 // Submissions are viewed as a tab on the parent form's detail page.
 const hiddenFromSidebar = new Set(["form-submissions"]);
 
-const hasSingletons = collections.some((c) => c.singleton);
-const singletonSlugs = new Set(collections.filter((c) => c.singleton).map((c) => c.slug));
+const visibleCollections = collectionEntries.filter(
+  (c) => !hiddenFromSidebar.has(c.slug) && c.admin?.sidebar !== false,
+);
+const hasSingletons = visibleCollections.some((c) => c.singleton);
+const singletonSlugs = new Set(visibleCollections.filter((c) => c.singleton).map((c) => c.slug));
 const isActiveSingles =
   activeCollection === "singles" || (activeCollection !== null && singletonSlugs.has(activeCollection));
+
+const fallbackGroupFor = (collection: CollectionNavEntry) => {
+  if (collection.slug === "users") return "Team";
+  if (librarySlugs.has(collection.slug)) return "Library";
+  return "Content";
+};
+
+const fallbackWeightFor = (collection: CollectionNavEntry) => {
+  if (collection.slug === "shared-sections") return 5;
+  if (collection.slug === "taxonomies") return 20;
+  if (collection.slug === "menus") return 30;
+  if (collection.slug === "forms") return 40;
+  if (collection.slug === "authors") return 50;
+  if (collection.slug === "users") return 10;
+  return 10;
+};
+
+const groupWeightFor = (group: string) => {
+  if (group === "Content") return 0;
+  if (group === "Library") return 10;
+  if (group === "Team") return 20;
+  if (group === "Custom") return 100;
+  return 50;
+};
 
 type NavItem = {
   href: string;
@@ -140,7 +182,7 @@ type NavItem = {
   active: boolean;
   newHref?: string;
   weight: number;
-  group: "Content" | "Library" | "Team" | "Custom";
+  group: string;
   badge?: number;
 };
 const navItems: NavItem[] = [];
@@ -155,19 +197,19 @@ navItems.push({
   group: "Content",
 });
 
-const contentCollections = collections
-  .filter((c) => !c.singleton && !pinnedSlugs.has(c.slug) && !hiddenFromSidebar.has(c.slug))
-  .sort((a, b) => a.labels.plural.localeCompare(b.labels.plural));
-for (const c of contentCollections) {
+const navCollections = visibleCollections.filter((c) => !c.singleton);
+for (const c of navCollections) {
+  const group = c.admin?.group ?? fallbackGroupFor(c);
   navItems.push({
     href: `/admin/${c.slug}`,
     label: c.labels.plural,
     singularLabel: c.labels.singular,
-    Icon: c.slug === "shared-sections" ? Package : Layers,
+    Icon: c.admin?.icon ? (navIconMap[c.admin.icon] ?? LayoutGrid) : (pinnedIcons[c.slug] ?? Layers),
     active: activeCollection === c.slug,
     newHref: `/admin/${c.slug}/new`,
-    weight: 10,
-    group: "Content",
+    weight: c.admin?.weight ?? fallbackWeightFor(c),
+    group,
+    badge: c.slug === "forms" && unreadSubmissions > 0 ? unreadSubmissions : undefined,
   });
 }
 
@@ -180,23 +222,6 @@ if (hasSingletons) {
     weight: 20,
     group: "Content",
   });
-}
-
-for (const slug of pinnedOrder) {
-  const c = collections.find((col) => col.slug === slug);
-  if (c) {
-    navItems.push({
-      href: `/admin/${c.slug}`,
-      label: c.labels.plural,
-      singularLabel: c.labels.singular,
-      Icon: pinnedIcons[slug] ?? LayoutGrid,
-      active: activeCollection === c.slug,
-      newHref: `/admin/${c.slug}/new`,
-      weight: 30,
-      group: slug === "users" ? "Team" : "Library",
-      badge: slug === "forms" && unreadSubmissions > 0 ? unreadSubmissions : undefined,
-    });
-  }
 }
 
 navItems.push({
@@ -222,10 +247,17 @@ for (const item of customNav) {
 }
 
 // Sort all items by weight (stable sort preserves order within same weight)
-navItems.sort((a, b) => a.weight - b.weight);
-const navGroupOrder: Array<NavItem["group"]> = ["Content", "Library", "Team", "Custom"];
-const navGroups = navGroupOrder
-  .map((group) => ({ group, items: navItems.filter((item) => item.group === group) }))
+navItems.sort(
+  (a, b) => groupWeightFor(a.group) - groupWeightFor(b.group) || a.weight - b.weight || a.label.localeCompare(b.label),
+);
+const navGroups = [...new Set(navItems.map((item) => item.group))]
+  .sort((a, b) => groupWeightFor(a) - groupWeightFor(b) || a.localeCompare(b))
+  .map((group) => {
+    const items = navItems.filter((item) => item.group === group);
+    const active = items.some((item) => item.active);
+    const collapsed = !active && !["Content", "Library", "Team"].includes(group);
+    return { group, items, active, collapsed };
+  })
   .filter((entry) => entry.items.length > 0);
 ---
 
@@ -267,7 +299,8 @@ const navGroups = navGroupOrder
               <button
                 type="button"
                 data-cms-search-trigger
-                class="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground/90 flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:cursor-text focus-visible:border-(color:--field-focus-border) focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)"
+                data-slot="button"
+                class="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground/90 flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:cursor-text"
                 aria-label="Search content"
               >
                 <Search className="size-4 shrink-0 stroke-1" />
@@ -282,12 +315,18 @@ const navGroups = navGroupOrder
               </button>
             </div>
 
-            <nav class="flex-1 space-y-5 overflow-y-auto px-3 py-3">
-              {navGroups.map(({ group, items }) => (
-                <div class="space-y-1">
-                  <div class="text-muted-foreground/70 px-3 text-[11px] font-medium tracking-wide uppercase">
-                    {group}
-                  </div>
+            <nav class="flex-1 space-y-2 overflow-y-auto px-3 py-3">
+              {navGroups.map(({ group, items, active, collapsed }) => (
+                <details
+                  class="group/nav-section space-y-1"
+                  data-nav-group={group}
+                  data-active={active ? "true" : "false"}
+                  open={!collapsed}
+                >
+                  <summary class="text-muted-foreground/70 hover:text-foreground flex cursor-pointer list-none items-center justify-between rounded-md px-3 py-1 text-[11px] font-medium tracking-wide uppercase transition-colors marker:hidden [&::-webkit-details-marker]:hidden">
+                    <span>{group}</span>
+                    <ChevronDown className="size-3 transition-transform group-open/nav-section:rotate-180" />
+                  </summary>
                   {items.map((item) => (
                     <div
                       class={cn(
@@ -300,7 +339,7 @@ const navGroups = navGroupOrder
                       <a
                         href={item.href}
                         class={cn(
-                          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)",
+                          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm",
                           item.newHref && "pr-8",
                           item.active ? "text-accent-foreground" : "text-foreground/70 group-hover:text-foreground",
                         )}
@@ -317,14 +356,14 @@ const navGroups = navGroupOrder
                         <a
                           href={item.newHref}
                           title={`Add new ${(item.singularLabel ?? item.label).toLowerCase()}`}
-                          class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)"
+                          class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block"
                         >
                           <Plus className="size-3.5" />
                         </a>
                       )}
                     </div>
                   ))}
-                </div>
+                </details>
               ))}
             </nav>
             <div class="border-t px-3 pt-2 pb-2">
@@ -347,7 +386,8 @@ const navGroups = navGroupOrder
                   <button
                     type="button"
                     data-cms-search-trigger
-                    class="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors focus-visible:border-(color:--field-focus-border) focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)"
+                    data-slot="button"
+                    class="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors"
                     aria-label="Search content"
                   >
                     <Search className="size-4 shrink-0 stroke-1" />
@@ -355,12 +395,18 @@ const navGroups = navGroupOrder
                   </button>
                 </div>
 
-                <nav class="flex-1 space-y-5 overflow-y-auto px-3 py-3">
-                  {navGroups.map(({ group, items }) => (
-                    <div class="space-y-1">
-                      <div class="text-muted-foreground/70 px-3 text-[11px] font-medium tracking-wide uppercase">
-                        {group}
-                      </div>
+                <nav class="flex-1 space-y-2 overflow-y-auto px-3 py-3">
+                  {navGroups.map(({ group, items, active, collapsed }) => (
+                    <details
+                      class="group/nav-section space-y-1"
+                      data-nav-group={group}
+                      data-active={active ? "true" : "false"}
+                      open={!collapsed}
+                    >
+                      <summary class="text-muted-foreground/70 hover:text-foreground flex cursor-pointer list-none items-center justify-between rounded-md px-3 py-1 text-[11px] font-medium tracking-wide uppercase transition-colors marker:hidden [&::-webkit-details-marker]:hidden">
+                        <span>{group}</span>
+                        <ChevronDown className="size-3 transition-transform group-open/nav-section:rotate-180" />
+                      </summary>
                       {items.map((item) => (
                         <div
                           class={cn(
@@ -373,7 +419,7 @@ const navGroups = navGroupOrder
                           <a
                             href={item.href}
                             class={cn(
-                              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)",
+                              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm",
                               item.newHref && "pr-8",
                               item.active ? "text-accent-foreground" : "text-foreground/70 group-hover:text-foreground",
                             )}
@@ -390,14 +436,14 @@ const navGroups = navGroupOrder
                             <a
                               href={item.newHref}
                               title={`Add new ${(item.singularLabel ?? item.label).toLowerCase()}`}
-                              class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)"
+                              class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block"
                             >
                               <Plus className="size-3.5" />
                             </a>
                           )}
                         </div>
                       ))}
-                    </div>
+                    </details>
                   ))}
                 </nav>
                 <div class="border-t px-3 py-2">
@@ -422,6 +468,35 @@ const navGroups = navGroupOrder
     }
 
     {toastStatus && <Toast status={toastStatus} message={toastMessage} />}
+
+    {/* Persist collapsible sidebar groups locally. Active groups always open. */}
+    <script is:inline>
+      (function () {
+        var prefix = "cms-sidebar-group:";
+        document.querySelectorAll("details[data-nav-group]").forEach(function (el) {
+          var group = el.getAttribute("data-nav-group");
+          if (!group) return;
+          if (el.getAttribute("data-active") === "true") {
+            el.open = true;
+            return;
+          }
+          var stored = localStorage.getItem(prefix + group);
+          if (stored === "open") el.open = true;
+          if (stored === "closed") el.open = false;
+        });
+        document.addEventListener(
+          "toggle",
+          function (e) {
+            var el = e.target instanceof HTMLDetailsElement ? e.target : null;
+            if (!el || !el.matches("details[data-nav-group]")) return;
+            var group = el.getAttribute("data-nav-group");
+            if (!group) return;
+            localStorage.setItem(prefix + group, el.open ? "open" : "closed");
+          },
+          true,
+        );
+      })();
+    </script>
 
     {/* Wire sidebar search triggers to the CommandPalette */}
     <script is:inline>

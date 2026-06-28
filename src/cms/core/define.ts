@@ -160,6 +160,17 @@ export type CollectionViewConfig = {
   };
 };
 
+export type CollectionAdminConfig = {
+  /** Sidebar group label. Built-ins include Content, Library, and Team. */
+  group?: string;
+  /** Hide from the sidebar while keeping the collection available to APIs and relations. */
+  sidebar?: boolean;
+  /** Lucide icon name used in the sidebar. */
+  icon?: string;
+  /** Sort order inside the sidebar group. Lower values appear first. */
+  weight?: number;
+};
+
 export type SearchableConfig = boolean | { fields: string[] };
 
 export type CollectionConfig = {
@@ -178,6 +189,7 @@ export type CollectionConfig = {
   hooks?: CollectionHooks;
   fields: CollectionFieldMap;
   views?: CollectionViewConfig;
+  admin?: CollectionAdminConfig;
   seed?: SeedDocument[];
 };
 
