@@ -25,7 +25,7 @@
   /* Form-field focus — single source of truth. Change these two to restyle the
      focus border + ring of every input / select / textarea / button / editor. */
   --field-focus-border: color-mix(in oklch, var(--ring) 45%, transparent);
-  --field-focus-ring: color-mix(in oklch, var(--ring) 10%, transparent);
+  --field-focus-ring: color-mix(in oklch, var(--ring) 45%, transparent);
 
   --chart-1: oklch(0.623 0.214 259.815);
   --chart-2: oklch(0.546 0.245 262.881);

@@ -180,7 +180,7 @@ const ToolbarButton = ({
     disabled={disabled}
     title={title}
     className={cn(
-      "disabled:hover:text-muted-foreground inline-flex size-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:border-(color:--field-focus-border) focus-visible:ring-2 focus-visible:ring-(color:--field-focus-ring) disabled:opacity-50 disabled:hover:bg-transparent",
+      "disabled:hover:text-muted-foreground inline-flex size-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:border-(color:--field-focus-border) focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring) disabled:opacity-50 disabled:hover:bg-transparent",
       active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
     )}
   >
@@ -503,7 +503,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
   const minHeight = `${rows * 1.5}rem`;
 
   return (
-    <div className="border-input hover:border-foreground/20 overflow-hidden rounded-lg border transition-colors focus-within:border-(color:--field-focus-border) focus-within:ring-2 focus-within:ring-(color:--field-focus-ring)">
+    <div className="border-input hover:border-foreground/20 overflow-hidden rounded-lg border transition-colors focus-within:border-(color:--field-focus-border) focus-within:ring-1 focus-within:ring-(color:--field-focus-ring)">
       <input ref={hiddenRef} type="hidden" name={name} value={cmsJson} />
 
       {/* Toolbar */}
