@@ -250,7 +250,7 @@ navItems.sort((a, b) => a.weight - b.weight);
               <button
                 type="button"
                 data-cms-search-trigger
-                class="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground/90 flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:cursor-text"
+                class="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground/90 flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:cursor-text focus-visible:border-(color:--field-focus-border) focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)"
                 aria-label="Search content"
               >
                 <Search className="size-4 shrink-0 stroke-1" />
@@ -276,7 +276,7 @@ navItems.sort((a, b) => a.weight - b.weight);
                   <a
                     href={item.href}
                     class={cn(
-                      "flex items-center gap-3 px-3 py-2.5 text-sm",
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)",
                       item.newHref && "pr-8",
                       item.active ? "text-accent-foreground" : "text-foreground/70 group-hover:text-foreground",
                     )}
@@ -293,7 +293,7 @@ navItems.sort((a, b) => a.weight - b.weight);
                     <a
                       href={item.newHref}
                       title={`Add new ${(item.singularLabel ?? item.label).toLowerCase()}`}
-                      class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block"
+                      class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)"
                     >
                       <Plus className="size-3.5" />
                     </a>
@@ -321,7 +321,7 @@ navItems.sort((a, b) => a.weight - b.weight);
                   <button
                     type="button"
                     data-cms-search-trigger
-                    class="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors"
+                    class="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors focus-visible:border-(color:--field-focus-border) focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)"
                     aria-label="Search content"
                   >
                     <Search className="size-4 shrink-0 stroke-1" />
@@ -342,7 +342,7 @@ navItems.sort((a, b) => a.weight - b.weight);
                       <a
                         href={item.href}
                         class={cn(
-                          "flex items-center gap-3 px-3 py-2.5 text-sm",
+                          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)",
                           item.newHref && "pr-8",
                           item.active ? "text-accent-foreground" : "text-foreground/70 group-hover:text-foreground",
                         )}
@@ -359,7 +359,7 @@ navItems.sort((a, b) => a.weight - b.weight);
                         <a
                           href={item.newHref}
                           title={`Add new ${(item.singularLabel ?? item.label).toLowerCase()}`}
-                          class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block"
+                          class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)"
                         >
                           <Plus className="size-3.5" />
                         </a>
