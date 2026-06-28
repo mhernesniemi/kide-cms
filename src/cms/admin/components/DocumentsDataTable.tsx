@@ -237,6 +237,8 @@ export default function DocumentsDataTable({
                 column.key,
                 column.key === "_status"
                   ? getVisualStatus(entry)
+                  : column.key === "__usage"
+                    ? `${Number(entry.__usage ?? 0)} places`
                   : column.key === "_updatedAt" || column.key === "_createdAt"
                     ? formatDateClient(entry[column.key])
                     : String(entry[column.key] ?? "\u2014"),

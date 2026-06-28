@@ -22,6 +22,7 @@ export default defineCollection({
       admin: { position: "sidebar", help: "Send an email here on each submission (requires RESEND_API_KEY)." },
     }),
     fields: fields.blocks({
+      shared: false,
       types: {
         text: {
           name: fields.text({ required: true, admin: { help: "Field name used in form data (e.g. name)" } }),

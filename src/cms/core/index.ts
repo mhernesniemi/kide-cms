@@ -104,6 +104,19 @@ export type { AssetRecord, FolderRecord } from "./assets";
 export { parseBlocks, parseList, cacheTags } from "./content";
 export { renderRichText, createRichTextFromPlainText, richTextToPlainText, htmlToRichText } from "./richtext";
 export {
+  SHARED_BLOCK_TYPE,
+  SHARED_SECTIONS_COLLECTION,
+  extractSharedSectionRefsFromBlocks,
+  extractSharedSectionRefsFromContent,
+  extractSharedSectionRefsFromDocument,
+  getSharedBlockTypes,
+  getSharedSectionCacheTags,
+  getSharedSectionTagsFromBlocks,
+  isSharedBlockReference,
+  type SharedBlockReference,
+  type SharedSectionOption,
+} from "./shared-sections";
+export {
   cloneValue,
   slugify,
   escapeHtml,

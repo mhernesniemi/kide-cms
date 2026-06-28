@@ -14,7 +14,7 @@ import { buttonVariants } from "@/cms/admin/components/ui/button";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { isAiEnabled } from "virtual:kide/runtime";
-import { formatDate, getFieldSets, getLabelField } from "@/cms/core";
+import { formatDate, getFieldSets, getLabelField, getSharedBlockTypes } from "@/cms/core";
 import {
   getFormAction,
   getVisualStatus,
@@ -28,6 +28,8 @@ import {
   loadParentFormTitle,
   loadRelationOptions,
   loadReverseRefs,
+  loadSharedBlockRelationOptions,
+  loadSharedSectionOptions,
 } from "@/cms/admin/lib/edit-data";
 import EditScripts from "./edit/EditScripts.astro";
 import ReverseReferencesList from "./edit/ReverseReferencesList.astro";
@@ -85,6 +87,11 @@ const { relationOptionsByField, relationMetaByField } = await loadRelationOption
   defaultLocale,
   runtimeContext,
 );
+const sharedBlockTypes = getSharedBlockTypes(config);
+const [sharedBlockRelationOptions, sharedSectionOptions] = await Promise.all([
+  loadSharedBlockRelationOptions(config, user, cmsRuntime, defaultLocale, runtimeContext),
+  loadSharedSectionOptions(config, user, cmsRuntime, defaultLocale, runtimeContext),
+]);
 const menuLinkOptions =
   collection.slug === "menus" ? await loadMenuLinkOptions(config, user, cmsRuntime, defaultLocale, runtimeContext) : [];
 const reverseRefs =
@@ -474,6 +481,9 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
                             relationMeta={relationMetaByField[fieldName]}
                             menuLinkOptions={menuLinkOptions}
                             blockRelationOptions={blockRelationOptions}
+                            sharedBlockTypes={sharedBlockTypes}
+                            sharedBlockRelationOptions={sharedBlockRelationOptions}
+                            sharedSectionOptions={sharedSectionOptions}
                           />
                         ))}
                     </div>
@@ -498,6 +508,10 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
                                 relationOptions={relationOptionsByField[fieldName] ?? []}
                                 relationMeta={relationMetaByField[fieldName]}
                                 menuLinkOptions={menuLinkOptions}
+                                blockRelationOptions={blockRelationOptions}
+                                sharedBlockTypes={sharedBlockTypes}
+                                sharedBlockRelationOptions={sharedBlockRelationOptions}
+                                sharedSectionOptions={sharedSectionOptions}
                               />
                               {aiEnabled && fieldName === "seoDescription" && !isFieldReadOnly(fieldName) && (
                                 <div class="mt-1.5">
@@ -558,6 +572,10 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
                             relationOptions={relationOptionsByField[fieldName] ?? []}
                             relationMeta={relationMetaByField[fieldName]}
                             menuLinkOptions={menuLinkOptions}
+                            blockRelationOptions={blockRelationOptions}
+                            sharedBlockTypes={sharedBlockTypes}
+                            sharedBlockRelationOptions={sharedBlockRelationOptions}
+                            sharedSectionOptions={sharedSectionOptions}
                           />
                           {aiEnabled &&
                             sourceText &&

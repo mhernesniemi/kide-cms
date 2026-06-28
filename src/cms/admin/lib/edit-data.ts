@@ -1,4 +1,10 @@
-import { getLabelField } from "@/cms/core";
+import {
+  SHARED_SECTIONS_COLLECTION,
+  extractSharedSectionRefsFromDocument,
+  getLabelField,
+  getSharedBlockTypes,
+  type SharedSectionOption,
+} from "@/cms/core";
 import { canRead } from "./access";
 
 type User = { id: string; role?: string; email?: string } | null | undefined;
@@ -42,6 +48,25 @@ export type RelationOptions = {
   relationMetaByField: Record<string, RelationMeta>;
 };
 
+const loadRelationOptionList = async (
+  collectionSlug: string,
+  config: any,
+  cmsRuntime: CmsRuntime,
+  defaultLocale: string,
+  runtimeContext: RuntimeContext,
+) => {
+  const relatedDocs = await cmsRuntime[collectionSlug].find(
+    { status: "any", limit: 100, sort: { field: "_updatedAt", direction: "desc" }, locale: defaultLocale },
+    runtimeContext,
+  );
+  const relatedCollection = config.collections.find((c: any) => c.slug === collectionSlug);
+  const labelField = relatedCollection ? getLabelField(relatedCollection) : "title";
+  return relatedDocs.map((item: Record<string, unknown>) => ({
+    value: String(item._id),
+    label: String(item[labelField] ?? item.slug ?? item._id),
+  }));
+};
+
 /** Fetch relation option lists for top-level relation fields and any relations nested inside blocks. */
 export async function loadRelationOptions(
   collection: CollectionLike,
@@ -56,16 +81,14 @@ export async function loadRelationOptions(
 
   for (const [fieldName, field] of Object.entries(collection.fields) as [string, any][]) {
     if (field.type === "relation" && canRead(config, user, field.collection)) {
-      const relatedDocs = await cmsRuntime[field.collection].find(
-        { status: "any", limit: 100, sort: { field: "_updatedAt", direction: "desc" }, locale: defaultLocale },
+      const relatedCollection = config.collections.find((c: any) => c.slug === field.collection);
+      relationOptionsByField[fieldName] = await loadRelationOptionList(
+        field.collection,
+        config,
+        cmsRuntime,
+        defaultLocale,
         runtimeContext,
       );
-      const relatedCollection = config.collections.find((c: any) => c.slug === field.collection);
-      const relLabelField = relatedCollection ? getLabelField(relatedCollection) : "title";
-      relationOptionsByField[fieldName] = relatedDocs.map((item: Record<string, unknown>) => ({
-        value: String(item._id),
-        label: String(item[relLabelField] ?? item.slug ?? item._id),
-      }));
       if (relatedCollection) {
         relationMetaByField[fieldName] = {
           collectionSlug: field.collection,
@@ -86,16 +109,13 @@ export async function loadRelationOptions(
           if (subField.type === "relation" && canRead(config, user, subField.collection)) {
             const key = `block:${fieldName}:${typeName}:${subFieldName}`;
             if (!relationOptionsByField[key]) {
-              const relatedDocs = await cmsRuntime[subField.collection].find(
-                { status: "any", limit: 100, sort: { field: "_updatedAt", direction: "desc" }, locale: defaultLocale },
+              relationOptionsByField[key] = await loadRelationOptionList(
+                subField.collection,
+                config,
+                cmsRuntime,
+                defaultLocale,
                 runtimeContext,
               );
-              const blkRelCol = config.collections.find((c: any) => c.slug === subField.collection);
-              const blkLabelField = blkRelCol ? getLabelField(blkRelCol) : "title";
-              relationOptionsByField[key] = relatedDocs.map((item: Record<string, unknown>) => ({
-                value: String(item._id),
-                label: String(item[blkLabelField] ?? item.slug ?? item._id),
-              }));
             }
           }
         }
@@ -104,6 +124,140 @@ export async function loadRelationOptions(
   }
 
   return { relationOptionsByField, relationMetaByField };
+}
+
+export async function loadSharedBlockRelationOptions(
+  config: any,
+  user: User,
+  cmsRuntime: CmsRuntime,
+  defaultLocale: string,
+  runtimeContext: RuntimeContext,
+): Promise<Record<string, Array<{ value: string; label: string }>>> {
+  const relationOptions: Record<string, Array<{ value: string; label: string }>> = {};
+  const sharedBlockTypes = getSharedBlockTypes(config);
+
+  for (const [typeName, typeFields] of Object.entries(sharedBlockTypes)) {
+    for (const [fieldName, field] of Object.entries(typeFields) as [string, any][]) {
+      if (field.type !== "relation" || !canRead(config, user, field.collection)) continue;
+      relationOptions[`shared:${typeName}:${fieldName}`] = await loadRelationOptionList(
+        field.collection,
+        config,
+        cmsRuntime,
+        defaultLocale,
+        runtimeContext,
+      );
+    }
+  }
+
+  return relationOptions;
+}
+
+export async function loadSharedSectionOptions(
+  config: any,
+  user: User,
+  cmsRuntime: CmsRuntime,
+  defaultLocale: string,
+  runtimeContext: RuntimeContext,
+): Promise<SharedSectionOption[]> {
+  if (!config.collections.some((c: any) => c.slug === SHARED_SECTIONS_COLLECTION)) return [];
+  if (!canRead(config, user, SHARED_SECTIONS_COLLECTION)) return [];
+  const api = cmsRuntime[SHARED_SECTIONS_COLLECTION];
+  if (!api) return [];
+
+  const docs = await api.find(
+    { status: "any", limit: 500, sort: { field: "title", direction: "asc" }, locale: defaultLocale },
+    runtimeContext,
+  );
+
+  return docs.map((doc: Record<string, unknown>) => ({
+    id: String(doc._id),
+    title: String(doc.title ?? doc._id),
+    blockType: String(doc.blockType ?? (doc.block as Record<string, unknown> | undefined)?.type ?? ""),
+    status: String(doc._status ?? "draft"),
+  }));
+}
+
+export async function loadSharedSectionUsage(
+  sectionId: string,
+  config: any,
+  user: User,
+  cmsRuntime: CmsRuntime,
+  defaultLocale: string,
+  runtimeContext: RuntimeContext,
+): Promise<ReverseRef[]> {
+  const reverseRefs: ReverseRef[] = [];
+
+  for (const otherCollection of config.collections) {
+    if (otherCollection.slug === SHARED_SECTIONS_COLLECTION || !canRead(config, user, otherCollection.slug)) continue;
+    const hasSharedCapableField = Object.values(otherCollection.fields).some(
+      (field: any) => (field.type === "blocks" && field.shared !== false) || field.type === "content",
+    );
+    if (!hasSharedCapableField) continue;
+
+    const otherApi = cmsRuntime[otherCollection.slug];
+    if (!otherApi) continue;
+    const otherLabelField = getLabelField(otherCollection);
+
+    try {
+      const docs = await otherApi.find({ status: "any", limit: 500, locale: defaultLocale }, runtimeContext);
+      const matched = docs.filter((doc: Record<string, unknown>) =>
+        extractSharedSectionRefsFromDocument(otherCollection, doc).includes(sectionId),
+      );
+      if (matched.length > 0) {
+        reverseRefs.push({
+          collectionLabel: otherCollection.labels.plural,
+          collectionSlug: otherCollection.slug,
+          docs: matched.map((doc: Record<string, unknown>) => ({
+            _id: String(doc._id),
+            label: String(doc[otherLabelField] ?? doc.slug ?? doc._id),
+          })),
+        });
+      }
+    } catch {
+      // ignore individual collection failures
+    }
+  }
+
+  return reverseRefs;
+}
+
+export async function loadSharedSectionUsageCounts(
+  sectionIds: string[],
+  config: any,
+  user: User,
+  cmsRuntime: CmsRuntime,
+  defaultLocale: string,
+  runtimeContext: RuntimeContext,
+): Promise<Record<string, number>> {
+  const counts = Object.fromEntries(sectionIds.map((id) => [id, 0]));
+  const sectionIdSet = new Set(sectionIds);
+
+  if (sectionIds.length === 0) return counts;
+
+  for (const otherCollection of config.collections) {
+    if (otherCollection.slug === SHARED_SECTIONS_COLLECTION || !canRead(config, user, otherCollection.slug)) continue;
+    const hasSharedCapableField = Object.values(otherCollection.fields).some(
+      (field: any) => (field.type === "blocks" && field.shared !== false) || field.type === "content",
+    );
+    if (!hasSharedCapableField) continue;
+
+    const otherApi = cmsRuntime[otherCollection.slug];
+    if (!otherApi) continue;
+
+    try {
+      const docs = await otherApi.find({ status: "any", limit: 500, locale: defaultLocale }, runtimeContext);
+      for (const doc of docs as Array<Record<string, unknown>>) {
+        const refs = new Set(extractSharedSectionRefsFromDocument(otherCollection, doc));
+        for (const ref of refs) {
+          if (sectionIdSet.has(ref)) counts[ref] = (counts[ref] ?? 0) + 1;
+        }
+      }
+    } catch {
+      // ignore individual collection failures
+    }
+  }
+
+  return counts;
 }
 
 export type MenuLinkGroup = {
@@ -163,6 +317,10 @@ export async function loadReverseRefs(
   defaultLocale: string,
   runtimeContext: RuntimeContext,
 ): Promise<ReverseRef[]> {
+  if (collection.slug === SHARED_SECTIONS_COLLECTION) {
+    return loadSharedSectionUsage(documentId, config, user, cmsRuntime, defaultLocale, runtimeContext);
+  }
+
   const reverseRefs: ReverseRef[] = [];
   for (const otherCollection of config.collections) {
     if (otherCollection.slug === collection.slug || !canRead(config, user, otherCollection.slug)) continue;

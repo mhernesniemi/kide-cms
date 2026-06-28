@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
-import { getLabelField } from "@/cms/core";
+import { SHARED_SECTIONS_COLLECTION, extractSharedSectionRefsFromDocument, getLabelField } from "@/cms/core";
 
 export const prerender = false;
 
@@ -17,6 +17,36 @@ export const GET: APIRoute = async ({ params }) => {
   if (!collection) return Response.json({ refs: [] });
 
   const refs: Array<{ collection: string; label: string; count: number }> = [];
+
+  if (collectionSlug === SHARED_SECTIONS_COLLECTION) {
+    for (const otherCollection of config.collections) {
+      if (otherCollection.slug === SHARED_SECTIONS_COLLECTION) continue;
+      const hasSharedCapableField = Object.values(otherCollection.fields).some(
+        (field: any) => (field.type === "blocks" && field.shared !== false) || field.type === "content",
+      );
+      if (!hasSharedCapableField) continue;
+
+      const otherApi = cmsRuntime[otherCollection.slug];
+      if (!otherApi) continue;
+
+      try {
+        const allDocs = await otherApi.find({ status: "any", limit: 500 });
+        const count = allDocs.filter((doc: Record<string, unknown>) =>
+          extractSharedSectionRefsFromDocument(otherCollection, doc).includes(documentId),
+        ).length;
+
+        if (count > 0) {
+          refs.push({
+            collection: otherCollection.labels.plural,
+            label: getLabelField(otherCollection),
+            count,
+          });
+        }
+      } catch {}
+    }
+
+    return Response.json({ refs, total: refs.reduce((sum, r) => sum + r.count, 0) });
+  }
 
   for (const otherCollection of config.collections) {
     if (otherCollection.slug === collectionSlug) continue;

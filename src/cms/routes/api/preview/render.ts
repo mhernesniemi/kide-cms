@@ -27,11 +27,11 @@ export const POST: APIRoute = async ({ request }) => {
   if (type === "blocks") {
     const blocks = parseBlocks(data);
     const container = await getContainer();
-    html = await container.renderToString(BlockRenderer, { props: { blocks } });
+    html = await container.renderToString(BlockRenderer, { props: { blocks, status: "any" } });
   } else if (type === "content") {
     const parsed = typeof data === "string" ? JSON.parse(data) : data;
     const container = await getContainer();
-    html = await container.renderToString(ContentRenderer, { props: { content: parsed } });
+    html = await container.renderToString(ContentRenderer, { props: { content: parsed, status: "any" } });
   } else if (type === "richText") {
     const parsed = typeof data === "string" ? JSON.parse(data) : data;
     html = renderRichText(parsed) ?? "";

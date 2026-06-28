@@ -130,6 +130,8 @@ export type JsonFieldConfig = BaseFieldConfig<"json", unknown> & {
 
 export type BlocksFieldConfig = BaseFieldConfig<"blocks", Array<Record<string, unknown>>> & {
   types: Record<string, Record<string, FieldConfig>>;
+  /** Allow this block field to insert shared section references. Defaults to true. */
+  shared?: boolean;
 };
 
 export type FieldConfig =

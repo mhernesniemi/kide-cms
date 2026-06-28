@@ -1,8 +1,12 @@
 ---
-import { contentSegments, renderRichText } from "@/cms/core";
+import { cms } from "@/cms/.generated/api";
+import { SHARED_BLOCK_TYPE, contentSegments, renderRichText } from "@/cms/core";
 import type { ContentDocument } from "@/cms/core";
 
-const { content } = Astro.props as { content?: ContentDocument | null };
+const { content, status = "published" } = Astro.props as {
+  content?: ContentDocument | null;
+  status?: "published" | "any";
+};
 
 // Discover custom block components from src/components/blocks/ — same convention as BlockRenderer.
 const customComponents = import.meta.glob<{ default: any }>("./blocks/*.astro", { eager: true });
@@ -14,23 +18,64 @@ for (const [path, mod] of Object.entries(customComponents)) {
 }
 
 const segments = contentSegments(content);
+const cmsRuntime = cms as Record<string, any>;
+const resolvedSegments: Array<(typeof segments)[number] | { kind: "missingShared"; ref: string }> = [];
+
+for (const segment of segments) {
+  if (segment.kind === "richText") {
+    resolvedSegments.push(segment);
+    continue;
+  }
+
+  if (segment.block.blockType !== SHARED_BLOCK_TYPE) {
+    resolvedSegments.push(segment);
+    continue;
+  }
+
+  const ref = String(segment.block.fields?.ref ?? "");
+  const shared = ref ? await cmsRuntime["shared-sections"]?.findById(ref, { status }) : null;
+  const sharedBlock = shared?.block;
+  if (sharedBlock && typeof sharedBlock === "object") {
+    const block = sharedBlock as Record<string, unknown>;
+    const { type: _type, ...fields } = block;
+    resolvedSegments.push({
+      kind: "block",
+      block: {
+        type: "block",
+        blockType: String(_type ?? ""),
+        fields,
+      },
+    });
+  } else if (status === "any") {
+    resolvedSegments.push({ kind: "missingShared", ref });
+  }
+}
 ---
 
 <div class="cms-content flex flex-col gap-6">
   {
-    segments.map((segment) => {
+    resolvedSegments.map((segment) => {
       if (segment.kind === "richText") {
         return <div class="prose max-w-none" set:html={renderRichText(segment.doc)} />;
       }
 
+      if (segment.kind === "missingShared") {
+        return (
+          <div class="rounded-lg border border-dashed border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Shared section is unavailable.
+          </div>
+        );
+      }
+
       const type = segment.block.blockType;
+      const fields = segment.block.fields ?? {};
       const Component = componentMap[type];
       if (!Component) {
         throw new Error(
           `No block component found for type "${type}". Add src/components/blocks/${type.charAt(0).toUpperCase() + type.slice(1)}.astro`,
         );
       }
-      return <Component type={type} {...segment.block.fields} />;
+      return <Component type={type} {...fields} />;
     })
   }
 </div>

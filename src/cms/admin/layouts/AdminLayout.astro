@@ -140,6 +140,7 @@ type NavItem = {
   active: boolean;
   newHref?: string;
   weight: number;
+  group: "Content" | "Library" | "Settings" | "Custom";
   badge?: number;
 };
 const navItems: NavItem[] = [];
@@ -151,6 +152,7 @@ navItems.push({
   Icon: Clock,
   active: activeCollection === "recent",
   weight: 0,
+  group: "Content",
 });
 
 const contentCollections = collections
@@ -161,15 +163,23 @@ for (const c of contentCollections) {
     href: `/admin/${c.slug}`,
     label: c.labels.plural,
     singularLabel: c.labels.singular,
-    Icon: Layers,
+    Icon: c.slug === "shared-sections" ? Package : Layers,
     active: activeCollection === c.slug,
     newHref: `/admin/${c.slug}/new`,
     weight: 10,
+    group: "Content",
   });
 }
 
 if (hasSingletons) {
-  navItems.push({ href: "/admin/singles", label: "Singles", Icon: FileText, active: isActiveSingles, weight: 20 });
+  navItems.push({
+    href: "/admin/singles",
+    label: "Singles",
+    Icon: FileText,
+    active: isActiveSingles,
+    weight: 20,
+    group: "Content",
+  });
 }
 
 for (const slug of pinnedOrder) {
@@ -183,6 +193,7 @@ for (const slug of pinnedOrder) {
       active: activeCollection === c.slug,
       newHref: `/admin/${c.slug}/new`,
       weight: 30,
+      group: slug === "users" ? "Settings" : "Library",
       badge: slug === "forms" && unreadSubmissions > 0 ? unreadSubmissions : undefined,
     });
   }
@@ -194,6 +205,7 @@ navItems.push({
   Icon: Image,
   active: activeCollection === "assets",
   weight: 40,
+  group: "Library",
 });
 
 // Custom nav items from admin config
@@ -205,11 +217,16 @@ for (const item of customNav) {
     Icon: navIconMap[item.icon ?? ""] ?? LayoutGrid,
     active: currentPath === item.href || currentPath.startsWith(item.href + "/"),
     weight: item.weight ?? 50,
+    group: "Custom",
   });
 }
 
 // Sort all items by weight (stable sort preserves order within same weight)
 navItems.sort((a, b) => a.weight - b.weight);
+const navGroupOrder: Array<NavItem["group"]> = ["Content", "Library", "Settings", "Custom"];
+const navGroups = navGroupOrder
+  .map((group) => ({ group, items: navItems.filter((item) => item.group === group) }))
+  .filter((entry) => entry.items.length > 0);
 ---
 
 <!doctype html>
@@ -265,72 +282,13 @@ navItems.sort((a, b) => a.weight - b.weight);
               </button>
             </div>
 
-            <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-3">
-              {navItems.map((item) => (
-                <div
-                  class={cn(
-                    "group relative rounded-lg",
-                    item.active ? "bg-foreground/10 dark:bg-accent" : "hover:bg-foreground/5 dark:hover:bg-accent/60",
-                  )}
-                >
-                  <a
-                    href={item.href}
-                    class={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)",
-                      item.newHref && "pr-8",
-                      item.active ? "text-accent-foreground" : "text-foreground/70 group-hover:text-foreground",
-                    )}
-                  >
-                    <item.Icon className="size-4 shrink-0 stroke-1" />
-                    <span class="flex-1">{item.label}</span>
-                    {item.badge ? (
-                      <span class="text-muted-foreground/80 text-xs tabular-nums">
-                        {item.badge > 99 ? "99+" : item.badge} new
-                      </span>
-                    ) : null}
-                  </a>
-                  {item.newHref && (
-                    <a
-                      href={item.newHref}
-                      title={`Add new ${(item.singularLabel ?? item.label).toLowerCase()}`}
-                      class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)"
-                    >
-                      <Plus className="size-3.5" />
-                    </a>
-                  )}
-                </div>
-              ))}
-            </nav>
-            <div class="border-t px-3 pt-2 pb-2">
-              {user && (
-                <SidebarUserMenu
-                  client:load
-                  userName={user.name}
-                  userEmail={user.email}
-                  logoutAction="/api/cms/auth/logout"
-                />
-              )}
-            </div>
-          </aside>
-
-          <div class="min-w-0">
-            {/* ── Mobile header ────────────────────────────────────────── */}
-            <header class="bg-background/95 supports-backdrop-filter:bg-background/75 flex items-center gap-3 border-b px-4 py-3 backdrop-blur lg:hidden">
-              <MobileSidebar client:load>
-                <div class="px-3 pt-4 pb-1">
-                  <button
-                    type="button"
-                    data-cms-search-trigger
-                    class="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors focus-visible:border-(color:--field-focus-border) focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)"
-                    aria-label="Search content"
-                  >
-                    <Search className="size-4 shrink-0 stroke-1" />
-                    <span class="flex-1 text-left">Search…</span>
-                  </button>
-                </div>
-
-                <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-3">
-                  {navItems.map((item) => (
+            <nav class="flex-1 space-y-5 overflow-y-auto px-3 py-3">
+              {navGroups.map(({ group, items }) => (
+                <div class="space-y-1">
+                  <div class="text-muted-foreground/70 px-3 text-[11px] font-medium tracking-wide uppercase">
+                    {group}
+                  </div>
+                  {items.map((item) => (
                     <div
                       class={cn(
                         "group relative rounded-lg",
@@ -364,6 +322,81 @@ navItems.sort((a, b) => a.weight - b.weight);
                           <Plus className="size-3.5" />
                         </a>
                       )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </nav>
+            <div class="border-t px-3 pt-2 pb-2">
+              {user && (
+                <SidebarUserMenu
+                  client:load
+                  userName={user.name}
+                  userEmail={user.email}
+                  logoutAction="/api/cms/auth/logout"
+                />
+              )}
+            </div>
+          </aside>
+
+          <div class="min-w-0">
+            {/* ── Mobile header ────────────────────────────────────────── */}
+            <header class="bg-background/95 supports-backdrop-filter:bg-background/75 flex items-center gap-3 border-b px-4 py-3 backdrop-blur lg:hidden">
+              <MobileSidebar client:load>
+                <div class="px-3 pt-4 pb-1">
+                  <button
+                    type="button"
+                    data-cms-search-trigger
+                    class="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors focus-visible:border-(color:--field-focus-border) focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)"
+                    aria-label="Search content"
+                  >
+                    <Search className="size-4 shrink-0 stroke-1" />
+                    <span class="flex-1 text-left">Search…</span>
+                  </button>
+                </div>
+
+                <nav class="flex-1 space-y-5 overflow-y-auto px-3 py-3">
+                  {navGroups.map(({ group, items }) => (
+                    <div class="space-y-1">
+                      <div class="text-muted-foreground/70 px-3 text-[11px] font-medium tracking-wide uppercase">
+                        {group}
+                      </div>
+                      {items.map((item) => (
+                        <div
+                          class={cn(
+                            "group relative rounded-lg",
+                            item.active
+                              ? "bg-foreground/10 dark:bg-accent"
+                              : "hover:bg-foreground/5 dark:hover:bg-accent/60",
+                          )}
+                        >
+                          <a
+                            href={item.href}
+                            class={cn(
+                              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)",
+                              item.newHref && "pr-8",
+                              item.active ? "text-accent-foreground" : "text-foreground/70 group-hover:text-foreground",
+                            )}
+                          >
+                            <item.Icon className="size-4 shrink-0 stroke-1" />
+                            <span class="flex-1">{item.label}</span>
+                            {item.badge ? (
+                              <span class="text-muted-foreground/80 text-xs tabular-nums">
+                                {item.badge > 99 ? "99+" : item.badge} new
+                              </span>
+                            ) : null}
+                          </a>
+                          {item.newHref && (
+                            <a
+                              href={item.newHref}
+                              title={`Add new ${(item.singularLabel ?? item.label).toLowerCase()}`}
+                              class="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block focus-visible:ring-1 focus-visible:ring-(color:--field-focus-ring)"
+                            >
+                              <Plus className="size-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </nav>

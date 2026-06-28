@@ -7,6 +7,7 @@ import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { formatDate, formatFieldValue, getLabelField, getListColumns, humanize } from "@/cms/core";
 import { canWrite, getVisualStatus } from "@/cms/admin/lib/access";
+import { loadSharedSectionUsageCounts } from "@/cms/admin/lib/edit-data";
 
 type CollectionLike = {
   slug: string;
@@ -52,6 +53,17 @@ const [docs, totalDocs] = await Promise.all([
 const totalPages = Math.max(1, Math.ceil(totalDocs / PAGE_SIZE));
 
 const listColumns = getListColumns(collection, viewConfig.list);
+const sharedSectionUsageCounts =
+  collection.slug === "shared-sections"
+    ? await loadSharedSectionUsageCounts(
+        docs.map((entry: Record<string, unknown>) => String(entry._id)),
+        config,
+        user,
+        cmsRuntime as any,
+        defaultLocale,
+        runtimeContext,
+      )
+    : {};
 const tableRows = docs.map((entry: Record<string, unknown>) => ({
   id: String(entry._id),
   editHref: `/admin/${collection.slug}/${entry._id}`,
@@ -68,11 +80,13 @@ const tableRows = docs.map((entry: Record<string, unknown>) => ({
       column,
       column === "_status"
         ? getVisualStatus(entry)
-        : column === "_updatedAt" || column === "_createdAt"
-          ? formatDate(entry[column])
-          : column.startsWith("_")
-            ? String(entry[column] ?? "—")
-            : formatFieldValue(collection.fields[column], entry[column]),
+        : column === "__usage"
+          ? `${sharedSectionUsageCounts[String(entry._id)] ?? 0} places`
+          : column === "_updatedAt" || column === "_createdAt"
+            ? formatDate(entry[column])
+            : column.startsWith("_")
+              ? String(entry[column] ?? "—")
+              : formatFieldValue(collection.fields[column], entry[column]),
     ]),
   ),
 }));
@@ -102,7 +116,7 @@ const tableRows = docs.map((entry: Record<string, unknown>) => ({
     labelField={getLabelField(collection)}
     newHref={`/admin/${collection.slug}/new`}
     title={collection.labels.plural}
-    columns={listColumns.map((column) => ({ key: column, label: humanize(column) }))}
+    columns={listColumns.map((column) => ({ key: column, label: column === "__usage" ? "Used in" : humanize(column) }))}
     data={tableRows}
     searchPlaceholder={`Filter ${collection.labels.plural.toLowerCase()}...`}
     serverPagination={{

@@ -4,7 +4,7 @@ import BlockRenderer from "@/components/BlockRenderer.astro";
 import CmsForm from "@/components/CmsForm.astro";
 import type { PostsDocument } from "@/cms/.generated/types";
 import { cms } from "@/cms/.generated/api";
-import { parseBlocks } from "@/cms/core";
+import { getSharedSectionTagsFromBlocks, parseBlocks } from "@/cms/core";
 
 const isPreview = Astro.url.searchParams.has("preview");
 const page = await cms["front-page"].findOne({ status: isPreview ? "any" : "published" });
@@ -24,13 +24,19 @@ const posts = await cms.posts.find({
   limit: 10,
 });
 
-if (!isPreview) Astro.cache.set({ tags: ["front-page", "posts", "home"] });
+if (!isPreview) Astro.cache.set({ tags: ["front-page", "posts", "home", ...getSharedSectionTagsFromBlocks(blocks)] });
 ---
 
 <PublicLayout title="Kide CMS">
   <div class="mx-auto flex max-w-4xl gap-8 px-4 py-8">
     <main class="min-w-0 flex-1">
-      {blocks.length > 0 ? <BlockRenderer blocks={blocks} /> : <p class="text-gray-500">No content yet.</p>}
+      {
+        blocks.length > 0 ? (
+          <BlockRenderer blocks={blocks} status={isPreview ? "any" : "published"} />
+        ) : (
+          <p class="text-gray-500">No content yet.</p>
+        )
+      }
 
       <section class="mt-12 border-t pt-8">
         <h2 class="mb-4 text-xl font-semibold">Get in touch</h2>

@@ -198,7 +198,7 @@ export type ArticlesInput = {
   tags?: string[];
   meta?: Record<string, unknown>;
   article?: ContentDocument;
-  sections?: Array<{ type: "hero"; heading: string; image?: string; } | { type: "quote"; text?: string; attribution?: string; }>;
+  sections?: Array<{ type: "hero"; heading: string; image?: string; } | { type: "quote"; text?: string; attribution?: string; } | { type: "__shared"; ref: string; title?: string; blockType?: string }>;
 };
 
 export type ArticlesTranslationInput = {
@@ -265,6 +265,7 @@ export const ArticlesCreateSchema = z.object({
   meta: z.record(z.unknown()).optional(),
   article: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
   sections: z.array(z.discriminatedUnion("type", [
+    z.object({ type: z.literal("__shared"), ref: z.string(), title: z.string().optional(), blockType: z.string().optional() }),
     z.object({ type: z.literal("hero"), heading: z.string(), image: z.string().optional() }),
     z.object({ type: z.literal("quote"), text: z.string().optional(), attribution: z.string().optional() }),
   ])).optional(),
@@ -285,6 +286,7 @@ export const ArticlesUpdateSchema = z.object({
   meta: z.record(z.unknown()).optional(),
   article: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
   sections: z.array(z.discriminatedUnion("type", [
+    z.object({ type: z.literal("__shared"), ref: z.string(), title: z.string().optional(), blockType: z.string().optional() }),
     z.object({ type: z.literal("hero"), heading: z.string(), image: z.string().optional() }),
     z.object({ type: z.literal("quote"), text: z.string().optional(), attribution: z.string().optional() }),
   ])).optional(),

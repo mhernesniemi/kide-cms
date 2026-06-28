@@ -12,6 +12,7 @@ import BlockEditor from "./BlockEditor";
 import SlugField from "./SlugField";
 import CheckboxField from "./CheckboxField";
 import TaxonomySelect from "./TaxonomySelect";
+import SharedSectionBlockField from "./SharedSectionBlockField";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
@@ -35,6 +36,13 @@ type LinkOptionGroup = {
   items: Array<{ id: string; label: string; href: string }>;
 };
 
+type SharedSectionOption = {
+  id: string;
+  title: string;
+  blockType: string;
+  status?: string;
+};
+
 const {
   name,
   field,
@@ -44,6 +52,9 @@ const {
   readOnly = false,
   menuLinkOptions = [],
   blockRelationOptions = {},
+  sharedBlockTypes = {},
+  sharedBlockRelationOptions = {},
+  sharedSectionOptions = [],
 } = Astro.props as {
   name: string;
   field: FieldConfig;
@@ -53,6 +64,9 @@ const {
   readOnly?: boolean;
   menuLinkOptions?: LinkOptionGroup[];
   blockRelationOptions?: Record<string, RelationOption[]>;
+  sharedBlockTypes?: Record<string, Record<string, FieldConfig>>;
+  sharedBlockRelationOptions?: Record<string, RelationOption[]>;
+  sharedSectionOptions?: SharedSectionOption[];
 };
 
 const label = field.label ?? humanize(name);
@@ -73,7 +87,7 @@ const isTreeEditor =
   field.type === "json" && (field.admin?.component === "menu-items" || field.admin?.component === "taxonomy-terms");
 
 // Custom field component: if admin.component is set and not a built-in variant, look for user-provided component
-const builtInComponents = new Set(["radio", "taxonomy-select", "menu-items", "taxonomy-terms"]);
+const builtInComponents = new Set(["radio", "taxonomy-select", "menu-items", "taxonomy-terms", "shared-section-block"]);
 const CustomComponent =
   field.admin?.component && !builtInComponents.has(field.admin.component)
     ? (customFields[field.admin.component] ?? null)
@@ -81,31 +95,35 @@ const CustomComponent =
 
 // Build serializable block-types metadata for the BlockEditor (`blocks` field) and
 // the inline block inserter (`content` field). Both share the same block-type shape.
+const toBlockTypesMeta = (source: Record<string, Record<string, FieldConfig>> | null | undefined) =>
+  source
+    ? Object.fromEntries(
+        Object.entries(source).map(([typeName, typeFields]) => [
+          typeName,
+          Object.fromEntries(
+            Object.entries(typeFields).map(([fieldName, subField]) => [
+              fieldName,
+              {
+                type: subField.type,
+                label: subField.label,
+                required: subField.required,
+                options: "options" in subField ? subField.options : undefined,
+                from: "from" in subField ? subField.from : undefined,
+                admin: subField.admin,
+                defaultValue: subField.defaultValue,
+                of: "of" in subField && subField.of ? { type: subField.of.type } : undefined,
+                collection: "collection" in subField ? subField.collection : undefined,
+                hasMany: "hasMany" in subField ? subField.hasMany : undefined,
+              },
+            ]),
+          ),
+        ]),
+      )
+    : {};
+
 const blockTypesSource = field.type === "blocks" ? field.types : field.type === "content" ? field.blocks : null;
-const blockTypesMeta = blockTypesSource
-  ? Object.fromEntries(
-      Object.entries(blockTypesSource).map(([typeName, typeFields]) => [
-        typeName,
-        Object.fromEntries(
-          Object.entries(typeFields).map(([fieldName, subField]) => [
-            fieldName,
-            {
-              type: subField.type,
-              label: subField.label,
-              required: subField.required,
-              options: "options" in subField ? subField.options : undefined,
-              from: "from" in subField ? subField.from : undefined,
-              admin: subField.admin,
-              defaultValue: subField.defaultValue,
-              of: "of" in subField && subField.of ? { type: subField.of.type } : undefined,
-              collection: "collection" in subField ? subField.collection : undefined,
-              hasMany: "hasMany" in subField ? subField.hasMany : undefined,
-            },
-          ]),
-        ),
-      ]),
-    )
-  : {};
+const blockTypesMeta = toBlockTypesMeta(blockTypesSource);
+const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
 ---
 
 <div
@@ -324,8 +342,20 @@ const blockTypesMeta = blockTypesSource
           <TreeItemsEditor client:load name={name} value={serializedValue} variant="taxonomy" label={label} />
         )}
 
+        {field.type === "json" && field.admin?.component === "shared-section-block" && !readOnly && (
+          <SharedSectionBlockField
+            client:load
+            name={name}
+            value={serializedValue}
+            types={sharedBlockTypesMeta}
+            blockRelationOptions={sharedBlockRelationOptions}
+          />
+        )}
+
         {field.type === "json" &&
-          (field.admin?.component === "menu-items" || field.admin?.component === "taxonomy-terms") &&
+          (field.admin?.component === "menu-items" ||
+            field.admin?.component === "taxonomy-terms" ||
+            field.admin?.component === "shared-section-block") &&
           readOnly && (
             <Textarea
               className={controlClass}
@@ -344,6 +374,8 @@ const blockTypesMeta = blockTypesSource
             value={serializedValue}
             types={blockTypesMeta}
             blockRelationOptions={blockRelationOptions}
+            sharedSections={"shared" in field && field.shared === false ? [] : sharedSectionOptions}
+            sharedEnabled={!("shared" in field && field.shared === false)}
           />
         )}
 
@@ -373,7 +405,8 @@ const blockTypesMeta = blockTypesSource
         {((field.type === "array" && !("of" in field && field.of?.type === "text")) ||
           (field.type === "json" &&
             field.admin?.component !== "menu-items" &&
-            field.admin?.component !== "taxonomy-terms")) && (
+            field.admin?.component !== "taxonomy-terms" &&
+            field.admin?.component !== "shared-section-block")) && (
           <Textarea
             className={controlClass}
             id={name}

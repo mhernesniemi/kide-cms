@@ -2,15 +2,14 @@
 import PublicLayout from "@/layouts/PublicLayout.astro";
 import BlockRenderer from "@/components/BlockRenderer.astro";
 import { cms } from "@/cms/.generated/api";
-import { cacheTags, parseBlocks } from "@/cms/core";
+import { cacheTags, getSharedSectionTagsFromBlocks, parseBlocks } from "@/cms/core";
 
 const isPreview = Astro.url.searchParams.has("preview");
 const doc = await cms.pages.findOne({ slug: Astro.params.slug!, status: isPreview ? "any" : "published" });
 if (!doc) return Astro.redirect("/");
 
-if (!isPreview) Astro.cache.set({ tags: cacheTags("pages", doc._id) });
-
 const blocks = parseBlocks(doc.blocks);
+if (!isPreview) Astro.cache.set({ tags: [...cacheTags("pages", doc._id), ...getSharedSectionTagsFromBlocks(blocks)] });
 ---
 
 <PublicLayout title={doc.title}>
@@ -25,7 +24,7 @@ const blocks = parseBlocks(doc.blocks);
       )
     }
     <div data-cms="blocks">
-      <BlockRenderer blocks={blocks} />
+      <BlockRenderer blocks={blocks} status={isPreview ? "any" : "published"} />
     </div>
   </article>
 </PublicLayout>

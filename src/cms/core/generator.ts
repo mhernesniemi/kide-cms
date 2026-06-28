@@ -235,6 +235,9 @@ const zodTypeForField = (field: FieldConfig): string => {
     return "z.object({ type: z.literal('root'), children: z.array(z.any()) })";
   if (field.type === "json") return "z.record(z.unknown())";
   if (field.type === "blocks") {
+    const allowShared = field.shared !== false;
+    const sharedVariant =
+      'z.object({ type: z.literal("__shared"), ref: z.string(), title: z.string().optional(), blockType: z.string().optional() })';
     const variants = Object.entries(field.types).map(([blockType, fields]) => {
       const members = Object.entries(fields)
         .map(
@@ -244,9 +247,15 @@ const zodTypeForField = (field: FieldConfig): string => {
         .join(", ");
       return `z.object({ type: z.literal(${JSON.stringify(blockType)}), ${members} })`;
     });
-    if (variants.length === 0) return "z.array(z.record(z.unknown()))";
-    if (variants.length === 1) return `z.array(${variants[0]})`;
-    return `z.array(z.discriminatedUnion("type", [\n    ${variants.join(",\n    ")},\n  ]))`;
+    if (!allowShared) {
+      if (variants.length === 0) return "z.array(z.record(z.unknown()))";
+      if (variants.length === 1) return `z.array(${variants[0]})`;
+      return `z.array(z.discriminatedUnion("type", [\n    ${variants.join(",\n    ")},\n  ]))`;
+    }
+    if (variants.length === 0) return `z.array(${sharedVariant})`;
+    if (variants.length === 1)
+      return `z.array(z.discriminatedUnion("type", [\n    ${sharedVariant},\n    ${variants[0]},\n  ]))`;
+    return `z.array(z.discriminatedUnion("type", [\n    ${sharedVariant},\n    ${variants.join(",\n    ")},\n  ]))`;
   }
   return "z.unknown()";
 };
@@ -293,6 +302,8 @@ const typeForField = (field: FieldConfig): string => {
   if (field.type === "content") return "ContentDocument";
   if (field.type === "json") return "Record<string, unknown>";
   if (field.type === "blocks") {
+    const allowShared = field.shared !== false;
+    const sharedVariant = `{ type: "__shared"; ref: string; title?: string; blockType?: string }`;
     const variants = Object.entries(field.types).map(([blockType, fields]) => {
       const members = Object.entries(fields)
         .map(
@@ -301,7 +312,8 @@ const typeForField = (field: FieldConfig): string => {
         .join(" ");
       return `{ type: ${JSON.stringify(blockType)}; ${members} }`;
     });
-    return `Array<${variants.join(" | ")}>`;
+    const union = allowShared ? [...variants, sharedVariant] : variants;
+    return union.length > 0 ? `Array<${union.join(" | ")}>` : "Array<Record<string, unknown>>";
   }
   return "unknown";
 };

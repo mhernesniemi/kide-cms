@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { GripVertical, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ArrowUpRight, GripVertical, ChevronRight, Link2, Plus, Save, Trash2, Unlink } from "lucide-react";
 import { cn } from "../lib/utils";
 import {
   DndContext,
@@ -15,6 +15,8 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "./ui/button";
+import { buttonVariants } from "./ui/button";
+import SelectField from "./SelectField";
 import {
   SubField,
   blankBlockFields,
@@ -32,12 +34,25 @@ type Block = {
   [field: string]: unknown;
 };
 
+type SharedSectionOption = {
+  id: string;
+  title: string;
+  blockType: string;
+  status?: string;
+};
+
 type Props = {
   name: string;
   value?: string;
   types: BlockTypesMeta;
   blockRelationOptions?: Record<string, RelationOption[]>;
+  sharedSections?: SharedSectionOption[];
+  sharedEnabled?: boolean;
 };
+
+const SHARED_BLOCK_TYPE = "__shared";
+
+const isSharedBlock = (block: Block) => block.type === SHARED_BLOCK_TYPE && typeof block.ref === "string";
 
 function parseBlocks(value: string | undefined, types: BlockTypesMeta): Block[] {
   if (!value) return [];
@@ -70,8 +85,12 @@ function SortableBlock({
   onAutoFocused,
   onToggle,
   onRemove,
+  onDetach,
+  onSaveShared,
+  sharedEnabled,
   onUpdateField,
   getRelationOptions,
+  sharedSection,
 }: {
   block: Block;
   fieldsMeta: Record<string, SubFieldMeta>;
@@ -80,8 +99,12 @@ function SortableBlock({
   onAutoFocused?: () => void;
   onToggle: () => void;
   onRemove: () => void;
+  onDetach: () => void;
+  onSaveShared: () => void;
+  sharedEnabled: boolean;
   onUpdateField: (fieldName: string, value: unknown) => void;
   getRelationOptions: (blockType: string, fieldName: string) => RelationOption[];
+  sharedSection?: SharedSectionOption;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
@@ -103,7 +126,11 @@ function SortableBlock({
     transition,
   };
 
-  const preview = getPreviewText(block, fieldsMeta);
+  const shared = isSharedBlock(block);
+  const preview = shared
+    ? String(sharedSection?.title ?? block.title ?? "Shared section")
+    : getPreviewText(block, fieldsMeta);
+  const sharedBlockType = String(sharedSection?.blockType ?? block.blockType ?? "");
 
   return (
     <div
@@ -135,9 +162,18 @@ function SortableBlock({
           )}
         />
 
-        <span className="bg-secondary text-secondary-foreground rounded px-2 py-0.5 text-xs font-medium">
-          {humanize(block.type)}
+        <span
+          className={cn(
+            "rounded px-2 py-0.5 text-xs font-medium",
+            shared ? "bg-primary/10 text-primary border-primary/20 border" : "bg-secondary text-secondary-foreground",
+          )}
+        >
+          {shared ? "Shared" : humanize(block.type)}
         </span>
+
+        {shared && sharedBlockType && (
+          <span className="text-muted-foreground text-xs">{humanize(sharedBlockType)}</span>
+        )}
 
         {!isExpanded && preview && (
           <span className="text-muted-foreground group-hover/row:text-foreground/70 min-w-0 truncate text-sm transition-colors">
@@ -146,6 +182,22 @@ function SortableBlock({
         )}
 
         <div className="ml-auto flex shrink-0 items-center">
+          {(shared || sharedEnabled) && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title={shared ? "Detach shared section" : "Save as shared section"}
+              className="text-muted-foreground hover:text-foreground size-7"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (shared) onDetach();
+                else onSaveShared();
+              }}
+            >
+              {shared ? <Unlink className="size-3.5" /> : <Save className="size-3.5" />}
+            </Button>
+          )}
           <Button
             type="button"
             variant="ghost"
@@ -165,17 +217,42 @@ function SortableBlock({
       {/* Content */}
       {isExpanded && (
         <div ref={contentRef} className="space-y-4 border-t px-4 py-4">
-          {Object.entries(fieldsMeta).map(([fieldName, meta]) => (
-            <SubField
-              key={fieldName}
-              blockKey={block._key}
-              fieldName={fieldName}
-              meta={meta}
-              value={block[fieldName]}
-              onChange={(v) => onUpdateField(fieldName, v)}
-              relationOptions={meta.type === "relation" ? getRelationOptions(block.type, fieldName) : []}
-            />
-          ))}
+          {shared ? (
+            <div className="space-y-3">
+              <div>
+                <p className="font-medium">{preview}</p>
+                <p className="text-muted-foreground text-sm">
+                  Editing the source updates every page that uses this shared section.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={`/admin/shared-sections/${block.ref}`}
+                  target="_blank"
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  <ArrowUpRight className="size-3.5" />
+                  Edit source
+                </a>
+                <Button type="button" variant="outline" size="sm" onClick={onDetach}>
+                  <Unlink className="size-3.5" />
+                  Detach
+                </Button>
+              </div>
+            </div>
+          ) : (
+            Object.entries(fieldsMeta).map(([fieldName, meta]) => (
+              <SubField
+                key={fieldName}
+                blockKey={block._key}
+                fieldName={fieldName}
+                meta={meta}
+                value={block[fieldName]}
+                onChange={(v) => onUpdateField(fieldName, v)}
+                relationOptions={meta.type === "relation" ? getRelationOptions(block.type, fieldName) : []}
+              />
+            ))
+          )}
         </div>
       )}
     </div>
@@ -186,15 +263,27 @@ function SortableBlock({
 // Main editor
 // -----------------------------------------------
 
-export default function BlockEditor({ name, value, types, blockRelationOptions = {} }: Props) {
+export default function BlockEditor({
+  name,
+  value,
+  types,
+  blockRelationOptions = {},
+  sharedSections = [],
+  sharedEnabled = true,
+}: Props) {
   const [blocks, setBlocks] = useState<Block[]>(() => parseBlocks(value, types));
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
   const [newBlockKey, setNewBlockKey] = useState<string | null>(null);
+  const [localSharedSections, setLocalSharedSections] = useState<SharedSectionOption[]>(sharedSections);
   const savedExpandedRef = useRef<Set<string> | null>(null);
   const hiddenRef = useRef<HTMLInputElement>(null);
   const previewChannelRef = useRef<BroadcastChannel | null>(null);
 
   const typeNames = Object.keys(types);
+  const compatibleSharedSections = sharedEnabled
+    ? localSharedSections.filter((section) => !!types[section.blockType])
+    : [];
+  const sharedSectionsById = new Map(localSharedSections.map((section) => [section.id, section]));
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -258,6 +347,24 @@ export default function BlockEditor({ name, value, types, blockRelationOptions =
     [types, updateBlocks],
   );
 
+  const addSharedBlock = useCallback(
+    (sectionId: string) => {
+      const section = localSharedSections.find((item) => item.id === sectionId);
+      if (!section) return;
+      const newBlock: Block = {
+        _key: generateKey(),
+        type: SHARED_BLOCK_TYPE,
+        ref: section.id,
+        title: section.title,
+        blockType: section.blockType,
+      };
+      setNewBlockKey(newBlock._key);
+      updateBlocks((prev) => [...prev, newBlock]);
+      setExpandedKeys((prev) => new Set(prev).add(newBlock._key));
+    },
+    [localSharedSections, updateBlocks],
+  );
+
   const removeBlock = useCallback(
     (key: string) => {
       updateBlocks((prev) => prev.filter((b) => b._key !== key));
@@ -270,6 +377,82 @@ export default function BlockEditor({ name, value, types, blockRelationOptions =
       updateBlocks((prev) => prev.map((b) => (b._key === key ? { ...b, [fieldName]: fieldValue } : b)));
     },
     [updateBlocks],
+  );
+
+  const detachSharedBlock = useCallback(
+    async (key: string) => {
+      const block = blocks.find((item) => item._key === key);
+      if (!block || !isSharedBlock(block)) return;
+
+      const response = await fetch(`/api/cms/shared-sections/${block.ref}?status=any`, { credentials: "same-origin" });
+      if (!response.ok) {
+        window.alert("Could not load the shared section to detach.");
+        return;
+      }
+
+      const shared = (await response.json()) as { block?: Record<string, unknown>; title?: string };
+      if (!shared.block || typeof shared.block !== "object") {
+        window.alert("The shared section has no block content to detach.");
+        return;
+      }
+
+      updateBlocks((prev) =>
+        prev.map((item) => (item._key === key ? ({ _key: key, ...shared.block } as Block) : item)),
+      );
+    },
+    [blocks, updateBlocks],
+  );
+
+  const saveAsShared = useCallback(
+    async (key: string) => {
+      if (!sharedEnabled) return;
+      const block = blocks.find((item) => item._key === key);
+      if (!block || isSharedBlock(block)) return;
+
+      const title = window.prompt("Name this shared section", getPreviewText(block, types[block.type] ?? {}));
+      if (!title) return;
+
+      const { _key: _ignored, ...blockData } = block;
+      const response = await fetch("/api/cms/shared-sections", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          blockType: block.type,
+          block: blockData,
+          _status: "published",
+        }),
+      });
+
+      if (!response.ok) {
+        window.alert("Could not create the shared section.");
+        return;
+      }
+
+      const created = (await response.json()) as Record<string, unknown>;
+      const section: SharedSectionOption = {
+        id: String(created._id),
+        title: String(created.title ?? title),
+        blockType: String(created.blockType ?? block.type),
+        status: String(created._status ?? "published"),
+      };
+      setLocalSharedSections((prev) => [...prev, section]);
+      updateBlocks((prev) =>
+        prev.map((item) =>
+          item._key === key
+            ? {
+                _key: key,
+                type: SHARED_BLOCK_TYPE,
+                ref: section.id,
+                title: section.title,
+                blockType: section.blockType,
+              }
+            : item,
+        ),
+      );
+    },
+    [blocks, sharedEnabled, types, updateBlocks],
   );
 
   const toggleExpanded = useCallback((key: string) => {
@@ -302,7 +485,8 @@ export default function BlockEditor({ name, value, types, blockRelationOptions =
         <SortableContext items={blocks.map((b) => b._key)} strategy={verticalListSortingStrategy}>
           <div className="space-y-3">
             {blocks.map((block) => {
-              const fieldsMeta = types[block.type] ?? {};
+              const fieldsMeta = isSharedBlock(block) ? {} : (types[block.type] ?? {});
+              const sharedSection = isSharedBlock(block) ? sharedSectionsById.get(String(block.ref)) : undefined;
               return (
                 <SortableBlock
                   key={block._key}
@@ -313,10 +497,14 @@ export default function BlockEditor({ name, value, types, blockRelationOptions =
                   onAutoFocused={() => setNewBlockKey(null)}
                   onToggle={() => toggleExpanded(block._key)}
                   onRemove={() => removeBlock(block._key)}
+                  onDetach={() => detachSharedBlock(block._key)}
+                  onSaveShared={() => saveAsShared(block._key)}
+                  sharedEnabled={sharedEnabled}
                   onUpdateField={(fn, v) => updateField(block._key, fn, v)}
                   getRelationOptions={(blockType, fieldName) =>
                     blockRelationOptions[`block:${name}:${blockType}:${fieldName}`] ?? []
                   }
+                  sharedSection={sharedSection}
                 />
               );
             })}
@@ -340,6 +528,22 @@ export default function BlockEditor({ name, value, types, blockRelationOptions =
           </Button>
         ))}
       </div>
+
+      {compatibleSharedSections.length > 0 && (
+        <div className="flex max-w-sm items-center gap-2">
+          <Link2 className="text-muted-foreground size-4 shrink-0" />
+          <SelectField
+            name={`${name}_shared_insert`}
+            value=""
+            placeholder="Insert shared section..."
+            items={compatibleSharedSections.map((section) => ({
+              value: section.id,
+              label: `${section.title} (${humanize(section.blockType)})`,
+            }))}
+            onChange={addSharedBlock}
+          />
+        </div>
+      )}
     </div>
   );
 }

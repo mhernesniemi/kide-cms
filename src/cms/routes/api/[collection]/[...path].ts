@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
+import { loadSharedSectionUsageCounts } from "@/cms/admin/lib/edit-data";
 
 export const prerender = false;
 
@@ -240,6 +241,20 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
     cmsRuntime[collectionSlug].find(findOptions, ctx),
     cmsRuntime[collectionSlug].count({ where: findOptions.where, status: findOptions.status, locale, search }, ctx),
   ]);
+
+  if (collectionSlug === "shared-sections") {
+    const usageCounts = await loadSharedSectionUsageCounts(
+      docs.map((entry: Record<string, unknown>) => String(entry._id)),
+      config,
+      locals.user,
+      cmsRuntime,
+      config.locales?.default ?? "en",
+      ctx,
+    );
+    for (const entry of docs as Array<Record<string, unknown>>) {
+      entry.__usage = usageCounts[String(entry._id)] ?? 0;
+    }
+  }
 
   const page = Math.floor(offset / limit) + 1;
   const totalPages = Math.ceil(totalDocs / limit);
