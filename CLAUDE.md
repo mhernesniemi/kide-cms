@@ -77,6 +77,46 @@ After code changes, ALWAYS run:
 - Import the CMS library via the `@/cms/core` alias (tsconfig `@/*` → `./src/*`), not relative paths.
 - If you start dev server, remember to stop it when you're done.
 
+## Migrations & Bulk Import
+
+Guidance for importing external content (e.g. a WordPress dump) or running one-off bulk maintenance. Stay on the typed local API and keep re-runs idempotent.
+
+**1. Sync the schema (non-interactive).** After editing `collections/`, run:
+
+```bash
+pnpm cms:generate && pnpm cms:push
+```
+
+`cms:push` (`internals/push.ts`) applies the generated Drizzle schema to the local SQLite DB **without prompts** — `drizzle-kit push` needs a TTY and stalls on column rename/drop in scripts/CI. It treats ambiguous changes as drop+add and skips the lazily-created FTS `cms_search_index*` tables (same intent as `drizzle.config`'s `tablesFilter`). For Cloudflare D1, keep using `drizzle-kit push` / wrangler.
+
+**2. Bootstrap a standalone script.** Use the helper instead of wiring the runtime by hand:
+
+```ts
+// scripts/import.ts  →  node --import tsx scripts/import.ts
+import { createCmsContext } from "@/cms/internals/context";
+
+const { cms, assets, reindexAll, flush, dispose } = await createCmsContext();
+// … import work …
+await reindexAll(); // build search once, at the end
+await dispose(); // flush fire-and-forget tasks, then close the DB
+```
+
+**3. Bulk writes.** Pass a context flag to writes:
+
+- `{ _system: true }` — bypass access rules (server-side / migration ops).
+- `{ _skipSearch: true }` — skip the per-document search (re)indexing `create`/`deleteMany` would queue; call `reindexAll()` once afterwards. Always `await flush()` / `dispose()` before exit so queued search/audit tasks drain (don't `setTimeout`).
+- `createMany(items, ctx)` exists but runs documents sequentially (full per-doc path).
+
+**4. Wipe before re-import (idempotent).** `cms.<collection>.deleteMany(filter?, ctx)` removes all matching documents plus their translation/version/search rows; an empty filter clears the whole collection. It skips per-document `beforeDelete`/`afterDelete` hooks and webhooks unless the collection defines delete hooks (then it falls back to the per-doc path). Combine with caller-supplied deterministic `_id`s (`create({ _id, ... })`) so re-runs replace rather than duplicate.
+
+**5. Slugs.** `fields.slug` defaults to `unique: true`. Imported hierarchical or bilingual content often **reuses slugs** across parents/locales — set `fields.slug({ unique: false })` on those collections (uniqueness is global, not scoped by parent/locale).
+
+**6. Body content (`content` field).** A `content` value is `{ type: "root", children: [...] }` whose children interleave rich-text prose with inline component blocks `{ type: "block", blockType, fields }` (the stored discriminator is `"block"`, not the editor's `cmsBlock`). Build prose from HTML with `htmlToRichText(html)` (handles paragraph / heading / list / quote, and emits `{ type: "image", src, alt }` for `<img>`). The field stores any root document as-is — there is **no per-block validation** against the declared `blocks`, so the importer fully controls block shapes; declare the same block types on `fields.content({ blocks })` for the admin editor. Unknown block types render a placeholder in dev / nothing in prod (the renderers don't throw), so partially-migrated content never 500s.
+
+**7. Images / assets.** Image fields store the asset **storagePath string** (`/uploads/<id>.<ext>`). Upload originals with `assets.upload(new File([bytes], filename, { type: mime }), { alt })` and store the returned `storagePath`. `assets.upload` is **not** deduplicated — keep an external `sourceId → storagePath` map (e.g. under `/tmp`) so re-runs don't re-upload and so inline `<img>` `src` can be remapped to local assets.
+
+**8. Translations.** The base-locale row holds the canonical fields; add other locales with `cms.<collection>.upsertTranslation(id, locale, translatableFields)` (only `translatable: true` fields are stored per locale). Declare locales in `cms.config.ts` (`locales.default` + `locales.supported`).
+
 ## Stack
 
 Astro 6, React 19, Drizzle ORM (SQLite dev), Zod, Tiptap, shadcn/ui, Tailwind CSS v4, PBKDF2 auth, nanoid, Sharp (image optimization), pnpm, Node >=22.12.0

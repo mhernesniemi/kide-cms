@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, like, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, like, lte, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { recordAudit, type AuditActor } from "./audit";
@@ -33,7 +33,13 @@ type RuntimeContext = {
   cache?: {
     invalidate: (opts: { tags: string[] }) => void | Promise<void>;
   };
+  /** Bypass access rules (server-side / migration / system operations). */
   _system?: boolean;
+  /**
+   * Skip the fire-and-forget search (re)indexing this operation would trigger.
+   * Useful for bulk imports — index once afterwards with `reindexAll()`.
+   */
+  _skipSearch?: boolean;
 };
 
 type CMSOperation = "read" | "create" | "update" | "delete" | "publish" | "schedule";
@@ -540,7 +546,7 @@ export const createCms = (config: CMSConfig) => {
         const result = await this.findById(docId, {}, context);
         await collection.hooks?.afterCreate?.(result!, hookContext);
         auditContent("content.create", slug, docId, context);
-        syncSearch(config, collection, docId);
+        if (!context._skipSearch) syncSearch(config, collection, docId);
         dispatchWebhooks(config, "create", slug, result!, context.user);
         return result!;
       },
@@ -681,6 +687,56 @@ export const createCms = (config: CMSConfig) => {
         auditContent("content.delete", slug, id, context);
         removeSearch(collection, id);
         dispatchWebhooks(config, "delete", slug, existing, context.user);
+      },
+
+      /**
+       * Delete every document matching `filter` (equality on top-level columns;
+       * empty filter clears the whole collection), along with their translation,
+       * version and search-index rows. Returns the number of documents removed.
+       *
+       * Bulk path by design — per-document `beforeDelete`/`afterDelete` hooks and
+       * webhooks are NOT fired unless the collection defines delete hooks, in
+       * which case it falls back to the per-document `delete()` path. Intended for
+       * migrations/admin bulk actions; use `delete(id)` when you need full side
+       * effects on a single document.
+       */
+      async deleteMany(filter: Record<string, unknown> = {}, context: RuntimeContext = {}) {
+        const allowed = await canAccess(collection, "delete", context);
+        if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
+
+        const db = await getDb();
+        const tables = await getTableRefs(slug);
+
+        const conditions: any[] = [];
+        for (const [key, value] of Object.entries(filter)) {
+          if (key in tables.main) conditions.push(eq(tables.main[key], value));
+        }
+        let idQuery = db.select({ _id: tables.main._id }).from(tables.main);
+        if (conditions.length > 0) {
+          idQuery = idQuery.where(conditions.length === 1 ? conditions[0] : and(...conditions)) as any;
+        }
+        const ids = (await idQuery).map((row: { _id: string }) => String(row._id));
+        if (ids.length === 0) return 0;
+
+        // Fall back to the per-document path when delete hooks must run.
+        if (collection.hooks?.beforeDelete || collection.hooks?.afterDelete) {
+          for (const id of ids) await this.delete(id, context);
+          return ids.length;
+        }
+
+        const CHUNK = 200; // stay well under SQLite's bound-variable limit
+        for (let i = 0; i < ids.length; i += CHUNK) {
+          const chunk = ids.slice(i, i + CHUNK);
+          if (tables.translations)
+            await db.delete(tables.translations).where(inArray(tables.translations._entityId, chunk));
+          if (tables.versions) await db.delete(tables.versions).where(inArray(tables.versions._docId, chunk));
+          await db.delete(tables.main).where(inArray(tables.main._id, chunk));
+        }
+
+        if (!context._skipSearch) for (const id of ids) removeSearch(collection, id);
+        auditContent("content.deleteMany", slug, `${ids.length} document(s)`, context);
+        void context.cache?.invalidate({ tags: [slug] });
+        return ids.length;
       },
 
       async publish(id: string, context: RuntimeContext = {}) {

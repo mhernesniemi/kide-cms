@@ -240,3 +240,35 @@ describe("invites", () => {
     expect(await validateInvite(token)).toBeNull();
   });
 });
+
+// Runs last: the full-collection wipe clears authors/posts created above.
+describe("deleteMany", () => {
+  it("bulk-deletes documents matching a filter, leaving others", async () => {
+    await (cms as any).posts.create({ title: "Bulk A", category: "bulk-del" });
+    await (cms as any).posts.create({ title: "Bulk B", category: "bulk-del" });
+    await (cms as any).posts.create({ title: "Keep C", category: "keep-me" });
+
+    const removed = await (cms as any).posts.deleteMany({ category: "bulk-del" }, { _system: true });
+    expect(removed).toBe(2);
+
+    expect(await (cms as any).posts.find({ where: { category: "bulk-del" }, status: "any" })).toHaveLength(0);
+    expect(
+      (await (cms as any).posts.find({ where: { category: "keep-me" }, status: "any" })).length,
+    ).toBeGreaterThanOrEqual(1);
+  });
+
+  it("returns 0 when nothing matches", async () => {
+    expect(await (cms as any).posts.deleteMany({ category: "no-such-category" }, { _system: true })).toBe(0);
+  });
+
+  it("clears an entire collection (and its translations) when no filter is given", async () => {
+    await (cms as any).authors.create({ name: "Wipe One" });
+    await (cms as any).authors.create({ name: "Wipe Two" });
+    const before = await (cms as any).authors.find();
+    expect(before.length).toBeGreaterThanOrEqual(2);
+
+    const removed = await (cms as any).authors.deleteMany({}, { _system: true });
+    expect(removed).toBe(before.length);
+    expect(await (cms as any).authors.find()).toHaveLength(0);
+  });
+});

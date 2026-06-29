@@ -71,9 +71,22 @@ for (const segment of segments) {
       const fields = segment.block.fields ?? {};
       const Component = componentMap[type];
       if (!Component) {
-        throw new Error(
-          `No block component found for type "${type}". Add src/components/blocks/${type.charAt(0).toUpperCase() + type.slice(1)}.astro`,
-        );
+        // No component for this block type — degrade gracefully instead of
+        // crashing the page. Add src/components/blocks/<Type>.astro to render it.
+        if (import.meta.env.DEV) {
+          console.warn(
+            `[cms] No block component for type "${type}". Add src/components/blocks/${type.charAt(0).toUpperCase() + type.slice(1)}.astro`,
+          );
+          return (
+            <div
+              data-block-type={type}
+              class="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-500"
+            >
+              Unstyled block: <code>{type}</code>
+            </div>
+          );
+        }
+        return null;
       }
       return <Component type={type} {...fields} />;
     })
