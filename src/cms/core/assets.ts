@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { and, desc, eq, isNull, like, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
@@ -31,16 +32,30 @@ export type FolderRecord = {
 };
 
 export const assets = {
-  async upload(file: File, options?: { alt?: string; folder?: string }, context?: AssetContext): Promise<AssetRecord> {
+  async upload(
+    file: File,
+    options?: { alt?: string; folder?: string; dedupe?: boolean },
+    context?: AssetContext,
+  ): Promise<AssetRecord> {
     const db = await getDb();
     const schema = getSchema();
     const storage = getStorage();
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const hash = createHash("sha256").update(bytes).digest("hex");
+
+    // Content-hash dedupe — re-running a media import won't re-upload identical
+    // files. Returns the existing asset, so importers stay idempotent without an
+    // external id→storagePath map.
+    if (options?.dedupe) {
+      const existing = await this.findByHash(hash);
+      if (existing) return existing;
+    }
 
     const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
     const safeName = `${nanoid(12)}${ext}`;
     const storagePath = `/uploads/${safeName}`;
 
-    const bytes = new Uint8Array(await file.arrayBuffer());
     await storage.putFile(storagePath, bytes);
 
     // Capture intrinsic dimensions for rasters so consumers can prevent layout shift.
@@ -72,6 +87,7 @@ export const assets = {
       alt: options?.alt ?? null,
       folder,
       storagePath,
+      hash,
       _createdAt: createdAt,
     });
 
@@ -130,6 +146,15 @@ export const assets = {
     const db = await getDb();
     const schema = getSchema();
     const rows = await db.select().from(schema.cmsAssets).where(eq(schema.cmsAssets.storagePath, url)).limit(1);
+    if (rows.length === 0) return null;
+    const row = rows[0] as any;
+    return { ...row, url: row.storagePath };
+  },
+
+  async findByHash(hash: string): Promise<AssetRecord | null> {
+    const db = await getDb();
+    const schema = getSchema();
+    const rows = await db.select().from(schema.cmsAssets).where(eq(schema.cmsAssets.hash, hash)).limit(1);
     if (rows.length === 0) return null;
     const row = rows[0] as any;
     return { ...row, url: row.storagePath };

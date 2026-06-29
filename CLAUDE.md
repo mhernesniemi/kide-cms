@@ -36,7 +36,10 @@ pnpm format           # prettier --write .
 pnpm cms:generate     # regenerate src/cms/.generated/ from cms.config.ts
 pnpm cms:seed         # seed database with demo content
 pnpm cms:admin        # create an admin user from CLI
+pnpm cms:describe     # write .kide/model.json + MODEL.md (the migration model manifest)
 ```
+
+> **Migrating content in?** Read `AGENTS.md` (repo root) and run the `/migrate` skill. The short version: `pnpm cms:describe` → read `MODEL.md` → write an importer that matches the value shapes → `createCmsContext().load(items, { dryRun: true })` to validate → import → verify.
 
 ## Validation (IMPORTANT)
 
@@ -81,13 +84,18 @@ After code changes, ALWAYS run:
 
 Guidance for importing external content (e.g. a WordPress dump) or running one-off bulk maintenance. Stay on the typed local API and keep re-runs idempotent.
 
-**1. Sync the schema (non-interactive).** After editing `collections/`, run:
+**1. Sync the schema.** After editing `collections/`, run:
 
 ```bash
 pnpm cms:generate && pnpm cms:push
 ```
 
-`cms:push` (`internals/push.ts`) applies the generated Drizzle schema to the local SQLite DB **without prompts** — `drizzle-kit push` needs a TTY and stalls on column rename/drop in scripts/CI. It treats ambiguous changes as drop+add and skips the lazily-created FTS `cms_search_index*` tables (same intent as `drizzle.config`'s `tablesFilter`). For Cloudflare D1, keep using `drizzle-kit push` / wrangler.
+`cms:push` (`internals/push.ts`) applies the generated Drizzle schema to the local SQLite DB without a TTY for **additive** changes (new tables/columns) and skips the lazily-created FTS `cms_search_index*` tables (same intent as `drizzle.config`'s `tablesFilter`). A column **rename or drop** is ambiguous and drizzle-kit's resolver still needs a terminal — `cms:push` detects this and prints guidance: DROP the affected table first (data loss, fine for a dev DB you're repopulating) and re-run, or hand-write a migration. For Cloudflare D1, keep using `drizzle-kit push` / wrangler.
+
+During normal feature work you rarely run this by hand: `pnpm dev` already pushes on boot and re-pushes whenever `cms.config.ts` changes. `cms:push` is for when the dev server is **not** running. Two caveats when migrating:
+
+- **Stop the dev server first.** It holds the same `data/cms.db`; running `cms:push` or an import script alongside it can throw `SQLITE_BUSY` / "database is locked" (WAL allows concurrent readers, not two writers).
+- **Rename/drop is special.** The dev-start `drizzle-kit push --force` resolves an ambiguous rename as drop+add (data loss) when it has a TTY; `cms:push` can't resolve it headlessly and errors with guidance. Either DROP the affected table first (fine for a dev DB you're repopulating) and re-run, or — to preserve data across a rename/restructure — hand-write a migration (`pnpm db:generate` then edit the SQL).
 
 **2. Bootstrap a standalone script.** Use the helper instead of wiring the runtime by hand:
 
@@ -95,16 +103,16 @@ pnpm cms:generate && pnpm cms:push
 // scripts/import.ts  →  node --import tsx scripts/import.ts
 import { createCmsContext } from "@/cms/internals/context";
 
-const { cms, assets, reindexAll, flush, dispose } = await createCmsContext();
+const { cms, assets, reindex, flush, dispose } = await createCmsContext();
 // … import work …
-await reindexAll(); // build search once, at the end
+await reindex(); // build search once, at the end
 await dispose(); // flush fire-and-forget tasks, then close the DB
 ```
 
 **3. Bulk writes.** Pass a context flag to writes:
 
 - `{ _system: true }` — bypass access rules (server-side / migration ops).
-- `{ _skipSearch: true }` — skip the per-document search (re)indexing `create`/`deleteMany` would queue; call `reindexAll()` once afterwards. Always `await flush()` / `dispose()` before exit so queued search/audit tasks drain (don't `setTimeout`).
+- `{ _skipSearch: true }` — skip the per-document search (re)indexing `create`/`deleteMany` would queue; call `reindex()` once afterwards. Always `await flush()` / `dispose()` before exit so queued search/audit tasks drain (don't `setTimeout`).
 - `createMany(items, ctx)` exists but runs documents sequentially (full per-doc path).
 
 **4. Wipe before re-import (idempotent).** `cms.<collection>.deleteMany(filter?, ctx)` removes all matching documents plus their translation/version/search rows; an empty filter clears the whole collection. It skips per-document `beforeDelete`/`afterDelete` hooks and webhooks unless the collection defines delete hooks (then it falls back to the per-doc path). Combine with caller-supplied deterministic `_id`s (`create({ _id, ... })`) so re-runs replace rather than duplicate.
@@ -125,22 +133,22 @@ Astro 6, React 19, Drizzle ORM (SQLite dev), Zod, Tiptap, shadcn/ui, Tailwind CS
 
 All fields share base options: `label`, `description`, `required`, `defaultValue`, `indexed`, `unique`, `translatable`, `condition`, `admin`, `access`.
 
-| Field      | Type-specific options                                                                                                                                                                              |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `text`     | `maxLength?: number`                                                                                                                                                                               |
-| `slug`     | `from?: string` — field to auto-generate slug from                                                                                                                                                 |
-| `email`    | _(base only)_                                                                                                                                                                                      |
-| `number`   | _(base only)_                                                                                                                                                                                      |
-| `boolean`  | _(base only)_                                                                                                                                                                                      |
-| `date`     | _(base only)_                                                                                                                                                                                      |
-| `select`   | `options: string[]` **(required)**                                                                                                                                                                 |
-| `richText` | _(base only)_ — stored as JSON AST `{ type: "root", children: RichTextNode[] }`                                                                                                                    |
-| `content`  | `blocks: Record<string, Record<string, FieldConfig>>` **(required)**, `fullscreen?: boolean` — rich text with inline component blocks; stored as JSON AST whose children may include `block` nodes |
-| `image`    | _(base only)_ — stores asset reference                                                                                                                                                             |
-| `relation` | `collection: string` **(required)**, `hasMany?: boolean`                                                                                                                                           |
-| `array`    | `of: FieldConfig` **(required)** — field config for each item                                                                                                                                      |
-| `json`     | `schema?: string`                                                                                                                                                                                  |
-| `blocks`   | `types: Record<string, Record<string, FieldConfig>>` **(required)**                                                                                                                                |
+| Field      | Type-specific options                                                                                                                                                                                                                          |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text`     | `maxLength?: number`                                                                                                                                                                                                                           |
+| `slug`     | `from?: string` — field to auto-generate slug from                                                                                                                                                                                             |
+| `email`    | _(base only)_                                                                                                                                                                                                                                  |
+| `number`   | _(base only)_                                                                                                                                                                                                                                  |
+| `boolean`  | _(base only)_                                                                                                                                                                                                                                  |
+| `date`     | _(base only)_                                                                                                                                                                                                                                  |
+| `select`   | `options: string[]` **(required)**                                                                                                                                                                                                             |
+| `richText` | _(base only)_ — stored as JSON AST `{ type: "root", children: RichTextNode[] }`                                                                                                                                                                |
+| `content`  | `blocks: Record<string, Record<string, FieldConfig>>` **(required)**, `fullscreen?: boolean` — rich text with inline component blocks; stored as JSON AST whose children may include `block` nodes                                             |
+| `image`    | _(base only)_ — stores asset reference                                                                                                                                                                                                         |
+| `relation` | `collection: string` **(required)**, `hasMany?: boolean`                                                                                                                                                                                       |
+| `array`    | `of: FieldConfig` **(required)** — field config for each item                                                                                                                                                                                  |
+| `json`     | `schema?: string`; `itemFields?: Record<string, FieldConfig>` — with `admin.component: "repeater"`, renders a typed repeater (array of objects) whose rows use these named sub-fields (text/select/boolean/image/richText) instead of raw JSON |
+| `blocks`   | `types: Record<string, Record<string, FieldConfig>>` **(required)**                                                                                                                                                                            |
 
 `admin` sub-options: `component`, `placeholder`, `position` (`"content"` \| `"sidebar"`), `rows`, `help`, `hidden`.
 

@@ -33,6 +33,9 @@ public/uploads/
 # jetbrains setting folder
 .idea/
 .cms-cache/
-.claude/
+# Ignore local Claude settings, but keep committed agent skills (e.g. /migrate).
+.claude/*
+!.claude/skills/
+MODEL.md
 .wrangler/
 *.tgz

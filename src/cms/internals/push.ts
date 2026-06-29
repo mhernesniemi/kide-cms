@@ -1,10 +1,13 @@
 /**
- * Non-interactive schema sync for the local SQLite dev database.
+ * Schema sync for the local SQLite dev database, runnable from scripts/CI.
  *
- * Applies the generated Drizzle schema (`.generated/schema.ts`) to the database
- * WITHOUT drizzle-kit's interactive rename/drop prompt, so it is safe to run in
- * scripts and CI (the `drizzle-kit push` the dev server runs needs a TTY and
- * blocks on column renames/drops). Ambiguous changes are treated as drop + add.
+ * Applies the generated Drizzle schema (`.generated/schema.ts`) for **additive**
+ * changes (new tables / new columns) and FTS-safe diffs without a TTY — unlike
+ * `drizzle-kit push`, which the dev server shells out to and which needs a
+ * terminal. NOTE: a column **rename or drop** is ambiguous and drizzle-kit's
+ * resolver still requires a TTY (we surface a clear error below). For those,
+ * either DROP the affected table first (data loss — fine for a dev DB you're
+ * about to repopulate) and re-run, or hand-write a migration to preserve data.
  *
  *   pnpm cms:push                          # sync ./data/cms.db (or CMS_DATABASE_URL)
  *   pnpm cms:generate && pnpm cms:push     # after editing collections
@@ -27,16 +30,59 @@ const dbPath = process.env.CMS_DATABASE_URL ?? path.join(process.cwd(), "data", 
 // Mirror drizzle.config's `tablesFilter: ["!cms_search_index*"]` and skip those.
 const isSearchIndexStatement = (stmt: string) => /\bcms_search_index/i.test(stmt);
 
+// Tables to drop before pushing, so a column rename/drop becomes a non-interactive
+// CREATE (data loss — intended for a dev DB you're repopulating). Accepts a comma
+// list of collection slugs or table names; expands to the collection's
+// _translations/_versions tables too.
+//   RECREATE=pages,posts pnpm cms:push      (or --recreate=pages,posts)
+const parseRecreate = (): string[] => {
+  const arg = process.argv.find((a) => a.startsWith("--recreate="))?.slice("--recreate=".length);
+  const raw = process.env.RECREATE ?? arg ?? "";
+  const tables = new Set<string>();
+  for (const name of raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)) {
+    const base = name.startsWith("cms_") ? name : `cms_${name}`;
+    tables.add(base);
+    tables.add(`${base}_translations`);
+    tables.add(`${base}_versions`);
+  }
+  return [...tables];
+};
+
 async function main() {
   if (dbPath !== ":memory:") mkdirSync(path.dirname(path.resolve(dbPath)), { recursive: true });
 
   const sqlite = new Database(dbPath);
-  sqlite.pragma("foreign_keys = ON");
+  sqlite.pragma("foreign_keys = OFF"); // allow dropping referenced tables for --recreate
   const db = drizzle(sqlite);
+
+  const recreate = parseRecreate();
+  if (recreate.length) {
+    for (const t of recreate) sqlite.exec(`DROP TABLE IF EXISTS ${t}`);
+    console.log(`[cms:push] dropped for recreate: ${recreate.join(", ")}`);
+  }
 
   // pushSQLiteSchema().apply() assumes a libsql driver (calls .all() on DDL), so
   // execute the diff statements directly against better-sqlite3 instead.
-  const { statementsToExecute, hasDataLoss } = await pushSQLiteSchema({ ...schema }, db as never);
+  let diff;
+  try {
+    diff = await pushSQLiteSchema({ ...schema }, db as never);
+  } catch (error) {
+    sqlite.close();
+    if (/TTY|Interactive prompts/i.test((error as Error).message)) {
+      console.error(
+        "[cms:push] This change includes an ambiguous column rename/drop that drizzle-kit\n" +
+          "           can only resolve interactively (no TTY here). Either DROP the affected\n" +
+          "           table (data loss — fine for a dev DB you're repopulating) and re-run,\n" +
+          "           or hand-write a migration to preserve the data.",
+      );
+      process.exit(1);
+    }
+    throw error;
+  }
+  const { statementsToExecute, hasDataLoss } = diff;
   const statements = statementsToExecute.filter((stmt) => !isSearchIndexStatement(stmt));
 
   if (statements.length === 0) {

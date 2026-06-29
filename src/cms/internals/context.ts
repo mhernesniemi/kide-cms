@@ -15,10 +15,22 @@
  *   await dispose();  // flush + close the DB connection
  *
  * For bulk imports, pass `{ _system: true, _skipSearch: true }` to writes and
- * call `reindexAll()` once at the end instead of indexing per document.
+ * call `reindex()` once at the end instead of indexing per document.
  */
 import "./runtime"; // side effect: configureCmsRuntime()
-import { assets, closeDb, createCms, ensureSearchSchema, flushTasks, folders, getDb, reindexAll } from "@/cms/core";
+import {
+  assets,
+  closeDb,
+  createCms,
+  describeModel,
+  ensureSearchSchema,
+  flushTasks,
+  folders,
+  getDb,
+  importDocuments,
+  reindexAll,
+  type ImportItem,
+} from "@/cms/core";
 import config from "@/cms/cms.config";
 
 export const createCmsContext = async () => {
@@ -29,13 +41,18 @@ export const createCmsContext = async () => {
     cms,
     /** Drizzle instance for the dev SQLite database (escape hatch). */
     db,
-    /** Asset store: `assets.upload(file, { alt })`. */
+    /** Asset store: `assets.upload(file, { alt, dedupe })`. */
     assets,
     folders,
     /** The resolved CMS config. */
     config,
-    /** Rebuild the search index for all searchable collections. */
-    reindexAll,
+    /** Validate + create a batch of documents. Pass `{ dryRun: true }` for a report only. */
+    load: (items: ImportItem[], options?: { dryRun?: boolean; context?: Record<string, unknown> }) =>
+      importDocuments(cms as Record<string, any>, config, items, options),
+    /** The machine-readable content model (same as `.kide/model.json`). */
+    model: () => describeModel(config),
+    /** Rebuild the search index for all searchable collections (uses this config's locales). */
+    reindex: () => reindexAll(config.collections, config.locales?.supported ?? []),
     /** Create the FTS search schema if missing (call before indexing). */
     ensureSearchSchema,
     /** Await all fire-and-forget search/audit tasks queued so far. */

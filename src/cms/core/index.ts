@@ -15,6 +15,19 @@ export type { CmsRuntimeConfig, CmsStorageAdapter, CmsEmailAdapter } from "./run
 export { initSchema, getSchema, resetSchema } from "./schema";
 
 export {
+  FIELD_MODEL,
+  CONTENT_AST_SCHEMA,
+  describeField,
+  describeBlockTypes,
+  describeCollection,
+  describeModel,
+} from "./field-model";
+export type { FieldModelEntry } from "./field-model";
+
+export { validateDocument, importDocuments, renderModelMarkdown } from "./migrate";
+export type { ValidationIssue, ValidationResult, ImportItem, ImportReport } from "./migrate";
+
+export {
   fields,
   defineCollection,
   defineConfig,

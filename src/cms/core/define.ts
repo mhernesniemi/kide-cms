@@ -131,6 +131,13 @@ export type ArrayFieldConfig = BaseFieldConfig<"array", unknown[]> & {
 
 export type JsonFieldConfig = BaseFieldConfig<"json", unknown> & {
   schema?: string;
+  /**
+   * Typed repeater rows. When set together with `admin.component: "repeater"`,
+   * the block editor renders each array item as these named sub-fields (text,
+   * select, boolean, image, richText, …) instead of a flat string row. The
+   * value is stored as an array of objects keyed by these field names.
+   */
+  itemFields?: Record<string, FieldConfig>;
 };
 
 export type BlocksFieldConfig = BaseFieldConfig<"blocks", Array<Record<string, unknown>>> & {
@@ -359,6 +366,18 @@ export const fields = {
   richText: (options?: Omit<RichTextFieldConfig, "type">) => createField<RichTextFieldConfig>("richText", options),
   content: (options: Omit<ContentFieldConfig, "type">) => createField<ContentFieldConfig>("content", options),
   image: (options?: Omit<ImageFieldConfig, "type">) => createField<ImageFieldConfig>("image", options),
+  /** A brand-palette colour picker. Stored as a hex text string ('' = inherit). */
+  color: (options?: Omit<TextFieldConfig, "type">) =>
+    createField<TextFieldConfig>("text", {
+      ...(options ?? {}),
+      admin: { ...(options?.admin ?? {}), component: "color" },
+    }),
+  /** A structured link control. Stored as JSON { type, url, label, newTab }. */
+  link: (options?: Omit<JsonFieldConfig, "type">) =>
+    createField<JsonFieldConfig>("json", {
+      ...(options ?? {}),
+      admin: { ...(options?.admin ?? {}), component: "link" },
+    }),
   relation: (options: Omit<RelationFieldConfig, "type">) => createField<RelationFieldConfig>("relation", options),
   array: (options: Omit<ArrayFieldConfig, "type">) => createField<ArrayFieldConfig>("array", options),
   json: (options?: Omit<JsonFieldConfig, "type">) => createField<JsonFieldConfig>("json", options),

@@ -148,6 +148,7 @@ const generateSchemaFile = (config: CMSConfig): string => {
   alt: text("alt"),
   folder: text("folder"),
   storagePath: text("storage_path").notNull(),
+  hash: text("hash"),
   _createdAt: text("_created_at").notNull(),
 });`);
   parts.push("");

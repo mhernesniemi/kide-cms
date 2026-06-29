@@ -21,6 +21,8 @@ import { Textarea } from "./ui/textarea";
 import RichTextEditor from "./RichTextEditor";
 import ImagePicker from "./ImagePicker";
 import SelectField from "./SelectField";
+import ColorField from "./ColorField";
+import LinkField from "./LinkField";
 
 // -----------------------------------------------
 // Shared types — describe a block sub-field. Used by both the standalone
@@ -38,6 +40,8 @@ export type SubFieldMeta = {
   of?: { type: string };
   collection?: string;
   hasMany?: boolean;
+  /** Typed repeater row schema (json + admin.component "repeater"). */
+  itemFields?: Record<string, SubFieldMeta>;
 };
 
 export type BlockTypesMeta = Record<string, Record<string, SubFieldMeta>>;
@@ -276,6 +280,16 @@ export function SubFieldControl({
 }) {
   const strValue = value == null ? "" : String(value);
 
+  // Colour fields render a swatch picker regardless of their (text) storage type.
+  if (meta.admin?.component === "color") {
+    return <ColorField value={strValue} placeholder={meta.admin?.placeholder} onChange={onChange} />;
+  }
+
+  // Link fields render a structured URL + label + new-tab control.
+  if (meta.admin?.component === "link") {
+    return <LinkField value={value as never} onChange={onChange} />;
+  }
+
   switch (meta.type) {
     case "text":
     case "email":
@@ -369,7 +383,15 @@ export function SubFieldControl({
 
     case "json":
       if (meta.admin?.component === "repeater") {
-        return <RepeaterField fieldId={fieldId} value={value} onChange={onChange} />;
+        return (
+          <RepeaterField
+            blockKey={fieldId}
+            itemFields={meta.itemFields}
+            relationOptions={relationOptions}
+            value={value}
+            onChange={onChange}
+          />
+        );
       }
       return (
         <JsonTextarea fieldId={fieldId} rows={meta.admin?.rows ?? 5} value={value} fallback={{}} onChange={onChange} />
@@ -386,19 +408,22 @@ export function SubFieldControl({
 // Repeater (json + admin.component === "repeater")
 // -----------------------------------------------
 
-function getRepeaterPreview(item: Record<string, string>, fieldKeys: string[]): string {
+function getRepeaterPreview(item: Record<string, unknown>, fieldKeys: string[]): string {
   for (const key of fieldKeys) {
-    if (item[key]) {
-      const text = String(item[key]);
-      return text.length > 60 ? text.slice(0, 60) + "..." : text;
-    }
+    const v = item[key];
+    if (v == null || v === "" || typeof v === "object") continue;
+    const text = String(v);
+    if (text) return text.length > 60 ? text.slice(0, 60) + "..." : text;
   }
   return "";
 }
 
 function SortableRepeaterItem({
+  blockKey,
   item,
   fieldKeys,
+  itemFields,
+  relationOptions,
   index,
   isExpanded,
   autoFocus,
@@ -407,19 +432,22 @@ function SortableRepeaterItem({
   onRemove,
   onUpdate,
 }: {
-  item: Record<string, string>;
+  blockKey: string;
+  item: Record<string, unknown>;
   fieldKeys: string[];
+  itemFields?: Record<string, SubFieldMeta>;
+  relationOptions?: RelationOption[];
   index: number;
   isExpanded: boolean;
   autoFocus?: boolean;
   onAutoFocused?: () => void;
   onToggle: () => void;
   onRemove: () => void;
-  onUpdate: (key: string, val: string) => void;
+  onUpdate: (key: string, val: unknown) => void;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
-    id: item._key,
+    id: String(item._key),
   });
 
   useEffect(() => {
@@ -495,20 +523,36 @@ function SortableRepeaterItem({
       </div>
 
       {isExpanded && (
-        <div ref={contentRef} className="space-y-2 border-t px-4 py-3">
-          {fieldKeys.map((key) => (
-            <div key={key} className="grid gap-1">
-              <Label className="text-xs">{humanize(key)}</Label>
-              {key.includes("description") ||
-              key.includes("body") ||
-              key.includes("content") ||
-              key.includes("answer") ? (
-                <Textarea rows={3} value={item[key] ?? ""} onChange={(e) => onUpdate(key, e.target.value)} />
-              ) : (
-                <Input value={item[key] ?? ""} onChange={(e) => onUpdate(key, e.target.value)} />
-              )}
-            </div>
-          ))}
+        <div ref={contentRef} className="space-y-3 border-t px-4 py-3">
+          {itemFields
+            ? fieldKeys.map((key) => (
+                <SubField
+                  key={key}
+                  blockKey={`${blockKey}_${index}`}
+                  fieldName={key}
+                  meta={itemFields[key]}
+                  value={item[key]}
+                  onChange={(v) => onUpdate(key, v)}
+                  relationOptions={relationOptions}
+                />
+              ))
+            : fieldKeys.map((key) => (
+                <div key={key} className="grid gap-1">
+                  <Label className="text-xs">{humanize(key)}</Label>
+                  {key.includes("description") ||
+                  key.includes("body") ||
+                  key.includes("content") ||
+                  key.includes("answer") ? (
+                    <Textarea
+                      rows={3}
+                      value={String(item[key] ?? "")}
+                      onChange={(e) => onUpdate(key, e.target.value)}
+                    />
+                  ) : (
+                    <Input value={String(item[key] ?? "")} onChange={(e) => onUpdate(key, e.target.value)} />
+                  )}
+                </div>
+              ))}
         </div>
       )}
     </div>
@@ -526,14 +570,26 @@ function parseArray(value: unknown): unknown[] {
   return [];
 }
 
-function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; onChange: (value: unknown) => void }) {
+function RepeaterField({
+  blockKey,
+  itemFields,
+  relationOptions,
+  value,
+  onChange,
+}: {
+  blockKey: string;
+  itemFields?: Record<string, SubFieldMeta>;
+  relationOptions?: RelationOption[];
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
   const [newItemKey, setNewItemKey] = useState<string | null>(null);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
   const savedExpandedRef = useRef<Set<string> | null>(null);
-  const [items, setItems] = useState<Array<Record<string, string>>>(() => {
+  const [items, setItems] = useState<Array<Record<string, unknown>>>(() => {
     const raw = parseArray(value);
     return raw.map((item: unknown) => {
-      const obj = item as Record<string, string>;
+      const obj = (item ?? {}) as Record<string, unknown>;
       return obj._key ? obj : { ...obj, _key: generateKey() };
     });
   });
@@ -542,8 +598,12 @@ function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; o
     onChange(items);
   }, [items]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Detect fields from first item or default to title + description
-  const fieldKeys = items.length > 0 ? Object.keys(items[0]).filter((k) => k !== "_key") : ["title", "description"];
+  // Typed rows use the declared itemFields; legacy rows auto-detect string keys.
+  const fieldKeys = itemFields
+    ? Object.keys(itemFields)
+    : items.length > 0
+      ? Object.keys(items[0]).filter((k) => k !== "_key")
+      : ["title", "description"];
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -552,8 +612,14 @@ function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; o
 
   const addItem = () => {
     const key = generateKey();
-    const blank: Record<string, string> = { _key: key };
-    for (const k of fieldKeys) blank[k] = "";
+    const blank: Record<string, unknown> = { _key: key };
+    for (const k of fieldKeys) {
+      const fieldMeta = itemFields?.[k];
+      if (fieldMeta?.defaultValue !== undefined) blank[k] = fieldMeta.defaultValue;
+      else if (fieldMeta?.type === "boolean") blank[k] = false;
+      else if (fieldMeta?.type === "array") blank[k] = [];
+      else blank[k] = "";
+    }
     setNewItemKey(key);
     setItems((prev) => [...prev, blank]);
     setExpandedKeys((prev) => new Set(prev).add(key));
@@ -563,7 +629,7 @@ function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; o
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateItem = (index: number, key: string, val: string) => {
+  const updateItem = (index: number, key: string, val: unknown) => {
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [key]: val } : item)));
   };
 
@@ -604,17 +670,20 @@ function RepeaterField({ value, onChange }: { fieldId: string; value: unknown; o
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext items={items.map((item) => item._key)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={items.map((item) => String(item._key))} strategy={verticalListSortingStrategy}>
           {items.map((item, index) => (
             <SortableRepeaterItem
-              key={item._key ?? index}
+              key={String(item._key ?? index)}
+              blockKey={blockKey}
               item={item}
               fieldKeys={fieldKeys}
+              itemFields={itemFields}
+              relationOptions={relationOptions}
               index={index}
-              isExpanded={expandedKeys.has(item._key)}
+              isExpanded={expandedKeys.has(String(item._key))}
               autoFocus={newItemKey === item._key}
               onAutoFocused={() => setNewItemKey(null)}
-              onToggle={() => toggleExpanded(item._key)}
+              onToggle={() => toggleExpanded(String(item._key))}
               onRemove={() => removeItem(index)}
               onUpdate={(key, val) => updateItem(index, key, val)}
             />
