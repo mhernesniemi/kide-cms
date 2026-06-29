@@ -284,6 +284,44 @@ const navGroups = [...new Set(navItems.map((item) => item.group))]
         if (dark) document.documentElement.classList.add("dark");
       })();
     </script>
+    {
+      /* No-flash: if a content field was in fullscreen before a save reload, cover the
+        chrome until the editor re-enters fullscreen (see ContentEditor restore logic). */
+    }
+    <style is:global>
+      html.cms-fullscreen-restoring::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: var(--background);
+        z-index: 45;
+      }
+    </style>
+    <script is:inline>
+      (function () {
+        try {
+          var prefix = "cms-content-fullscreen:";
+          var path = location.pathname;
+          for (var i = 0; i < sessionStorage.length; i++) {
+            var k = sessionStorage.key(i);
+            if (
+              k &&
+              k.indexOf(prefix) === 0 &&
+              sessionStorage.getItem(k) === "1" &&
+              k.slice(prefix.length).indexOf(path + ":") === 0
+            ) {
+              var root = document.documentElement;
+              root.classList.add("cms-fullscreen-restoring");
+              // Safety net: never leave the cover up if the editor fails to mount.
+              setTimeout(function () {
+                root.classList.remove("cms-fullscreen-restoring");
+              }, 1500);
+              break;
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-background text-foreground min-h-screen antialiased">
     <CommandPalette client:load />

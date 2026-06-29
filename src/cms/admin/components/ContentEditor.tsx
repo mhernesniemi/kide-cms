@@ -233,6 +233,15 @@ export default function ContentEditor({
 }: Props) {
   const hiddenRef = useRef<HTMLInputElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Mirror of the real save button (rendered by EditView) so the fullscreen header
+  // can offer Save without duplicating any draft/publish logic.
+  const [saveLabel, setSaveLabel] = useState<string | null>(null);
+  const [saveDisabled, setSaveDisabled] = useState(false);
+  // Per-document, per-field key used to re-enter fullscreen after a save reload.
+  const restoreKey = useCallback(
+    () => `cms-content-fullscreen:${typeof window === "undefined" ? "" : window.location.pathname}:${name}`,
+    [name],
+  );
   const previewChannelRef = useRef<BroadcastChannel | null>(null);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkType, setLinkType] = useState<"internal" | "external">("internal");
@@ -342,20 +351,67 @@ export default function ContentEditor({
     return () => hidden.removeEventListener("cms:set-value", handler);
   });
 
-  // Fullscreen overlay: lock background scroll and exit on Escape.
+  // Find the document form's real save button and mirror its label + disabled state.
+  const findSaveButton = useCallback(() => {
+    const form = hiddenRef.current?.form;
+    if (!form?.id) return null;
+    return form.ownerDocument.querySelector<HTMLButtonElement>(
+      `button[type="submit"][form="${form.id}"][value="save"]`,
+    );
+  }, []);
+
+  useEffect(() => {
+    const btn = findSaveButton();
+    if (!btn) return;
+    setSaveLabel((btn.textContent || "Save").trim());
+    setSaveDisabled(btn.disabled);
+    const observer = new MutationObserver(() => setSaveDisabled(btn.disabled));
+    observer.observe(btn, { attributes: true, attributeFilter: ["disabled"] });
+    return () => observer.disconnect();
+  }, [findSaveButton]);
+
+  const triggerSave = () => {
+    const btn = findSaveButton();
+    if (btn && !btn.disabled) btn.click();
+  };
+
+  // Re-enter fullscreen after a save reload (flag set by the submit handler below).
+  useEffect(() => {
+    if (!fullscreen) return;
+    try {
+      if (sessionStorage.getItem(restoreKey()) === "1") {
+        sessionStorage.removeItem(restoreKey());
+        setIsFullscreen(true);
+      }
+    } catch {}
+  }, [fullscreen, restoreKey]);
+
+  // Fullscreen overlay: lock background scroll, exit on Escape, and survive the
+  // save reload — Cmd/Ctrl+S submits the form and navigates, so we flag the field
+  // to re-enter fullscreen on the next load instead of dropping out of the view.
   useEffect(() => {
     if (!isFullscreen) return;
+    // The overlay now covers the viewport — drop the pre-paint no-flash cover.
+    document.documentElement.classList.remove("cms-fullscreen-restoring");
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setIsFullscreen(false);
     };
     window.addEventListener("keydown", onKeyDown);
+    const form = hiddenRef.current?.form;
+    const onSubmit = () => {
+      try {
+        sessionStorage.setItem(restoreKey(), "1");
+      } catch {}
+    };
+    form?.addEventListener("submit", onSubmit);
     return () => {
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", onKeyDown);
+      form?.removeEventListener("submit", onSubmit);
     };
-  }, [isFullscreen]);
+  }, [isFullscreen, restoreKey]);
 
   const openLinkDialog = () => {
     if (!editor) return;
@@ -384,10 +440,17 @@ export default function ContentEditor({
       {isFullscreen && (
         <div className="bg-background flex items-center justify-between gap-3 border-b px-4 py-2.5">
           <span className="text-foreground text-sm font-medium">{label ?? humanize(name)}</span>
-          <Button type="button" variant="ghost" size="sm" className="gap-1.5" onClick={() => setIsFullscreen(false)}>
-            <Minimize2 className="size-4" />
-            Exit
-          </Button>
+          <div className="flex items-center gap-2">
+            {saveLabel && (
+              <Button type="button" variant="outline" size="sm" disabled={saveDisabled} onClick={triggerSave}>
+                {saveLabel}
+              </Button>
+            )}
+            <Button type="button" variant="ghost" size="sm" className="gap-1.5" onClick={() => setIsFullscreen(false)}>
+              <Minimize2 className="size-4" />
+              Exit
+            </Button>
+          </div>
         </div>
       )}
 

@@ -85,22 +85,22 @@ Astro 6, React 19, Drizzle ORM (SQLite dev), Zod, Tiptap, shadcn/ui, Tailwind CS
 
 All fields share base options: `label`, `description`, `required`, `defaultValue`, `indexed`, `unique`, `translatable`, `condition`, `admin`, `access`.
 
-| Field      | Type-specific options                                                           |
-| ---------- | ------------------------------------------------------------------------------- |
-| `text`     | `maxLength?: number`                                                            |
-| `slug`     | `from?: string` — field to auto-generate slug from                              |
-| `email`    | _(base only)_                                                                   |
-| `number`   | _(base only)_                                                                   |
-| `boolean`  | _(base only)_                                                                   |
-| `date`     | _(base only)_                                                                   |
-| `select`   | `options: string[]` **(required)**                                              |
-| `richText` | _(base only)_ — stored as JSON AST `{ type: "root", children: RichTextNode[] }` |
+| Field      | Type-specific options                                                                                                                                                                              |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text`     | `maxLength?: number`                                                                                                                                                                               |
+| `slug`     | `from?: string` — field to auto-generate slug from                                                                                                                                                 |
+| `email`    | _(base only)_                                                                                                                                                                                      |
+| `number`   | _(base only)_                                                                                                                                                                                      |
+| `boolean`  | _(base only)_                                                                                                                                                                                      |
+| `date`     | _(base only)_                                                                                                                                                                                      |
+| `select`   | `options: string[]` **(required)**                                                                                                                                                                 |
+| `richText` | _(base only)_ — stored as JSON AST `{ type: "root", children: RichTextNode[] }`                                                                                                                    |
 | `content`  | `blocks: Record<string, Record<string, FieldConfig>>` **(required)**, `fullscreen?: boolean` — rich text with inline component blocks; stored as JSON AST whose children may include `block` nodes |
-| `image`    | _(base only)_ — stores asset reference                                          |
-| `relation` | `collection: string` **(required)**, `hasMany?: boolean`                        |
-| `array`    | `of: FieldConfig` **(required)** — field config for each item                   |
-| `json`     | `schema?: string`                                                               |
-| `blocks`   | `types: Record<string, Record<string, FieldConfig>>` **(required)**             |
+| `image`    | _(base only)_ — stores asset reference                                                                                                                                                             |
+| `relation` | `collection: string` **(required)**, `hasMany?: boolean`                                                                                                                                           |
+| `array`    | `of: FieldConfig` **(required)** — field config for each item                                                                                                                                      |
+| `json`     | `schema?: string`                                                                                                                                                                                  |
+| `blocks`   | `types: Record<string, Record<string, FieldConfig>>` **(required)**                                                                                                                                |
 
 `admin` sub-options: `component`, `placeholder`, `position` (`"content"` \| `"sidebar"`), `rows`, `help`, `hidden`.
 
