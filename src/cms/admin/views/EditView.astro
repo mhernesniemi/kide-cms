@@ -147,10 +147,6 @@ const hasSidebarColumn =
   ) ||
     reverseRefs.length > 0);
 
-// The meta line (Created/Updated, or Submitted) renders just under the header and gives
-// the content a visual buffer. When it's absent (e.g. a new doc), add that gap manually.
-const hasMetaLine = (mode === "edit" && !!doc && !!collection.drafts) || (isSubmissionView && !!doc);
-
 const hasPreview = !!(mode === "edit" && (collection.preview || (collection.pathPrefix && doc?.slug)));
 const previewUrl = hasPreview
   ? typeof collection.preview === "string"
@@ -166,7 +162,7 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
 }
 ---
 
-<section class="space-y-1">
+<section class="space-y-14">
   {
     /* ── Sticky action bar ─────────────────────────────────────────────────
      Title + status on the left, primary actions on the right. Stays pinned so
@@ -174,28 +170,60 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
   }
   <div
     class:list={[
-      "border-b px-4 py-3 lg:py-4 lg:pr-8 lg:pl-12",
+      "border-b px-4 py-3 lg:py-4 lg:pr-8 lg:pl-8",
       variant === "editorial" && "bg-background/80 sticky top-0 z-30 backdrop-blur-md",
     ]}
   >
-    <div class="flex items-center justify-between gap-3">
-      <div class="flex min-w-0 items-center gap-2.5">
-        <h1 class="truncate text-lg font-semibold tracking-tight md:text-xl">
-          {mode === "new" && <LiveHeading client:load initial={`New ${collection.labels.singular}`} />}
-          {
-            mode === "edit" && (
-              <LiveHeading
-                client:load
-                initial={
-                  collection.singleton
-                    ? collection.labels.singular
-                    : String(doc?.[getLabelField(collection)] ?? doc?.slug ?? collection.labels.singular)
-                }
-              />
-            )
-          }
-        </h1>
-        {mode === "edit" && doc && collection.drafts && <StatusBadge status={getVisualStatus(doc)} styled />}
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <div class="flex items-center gap-2.5">
+          <h1 class="truncate text-lg font-semibold tracking-tight md:text-xl">
+            {mode === "new" && <LiveHeading client:load initial={`New ${collection.labels.singular}`} />}
+            {
+              mode === "edit" && (
+                <LiveHeading
+                  client:load
+                  initial={
+                    collection.singleton
+                      ? collection.labels.singular
+                      : String(doc?.[getLabelField(collection)] ?? doc?.slug ?? collection.labels.singular)
+                  }
+                />
+              )
+            }
+          </h1>
+          {mode === "edit" && doc && collection.drafts && <StatusBadge status={getVisualStatus(doc)} styled />}
+        </div>
+        {
+          mode === "edit" && doc && collection.drafts && (
+            <div class="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1 text-xs">
+              {doc._status === "scheduled" && doc._publishAt && (
+                <>
+                  <span>Publishes {formatDate(doc._publishAt)}</span>
+                  {doc._unpublishAt && (
+                    <>
+                      <Dot className="text-muted-foreground/70 size-4" />
+                      <span>Unpublishes {formatDate(doc._unpublishAt)}</span>
+                    </>
+                  )}
+                  <Dot className="text-muted-foreground/70 size-4" />
+                </>
+              )}
+              <span>Created {formatDate(doc._createdAt)}</span>
+              <Dot className="text-muted-foreground/70 size-4" />
+              <span>Updated {formatDate(doc._updatedAt)}</span>
+            </div>
+          )
+        }
+        {
+          isSubmissionView && doc && (
+            <div class="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1 text-xs">
+              {parentFormTitle && <span>{parentFormTitle}</span>}
+              {parentFormTitle && <Dot className="text-muted-foreground/70 size-4" />}
+              <span>Submitted {formatDate(String(doc._createdAt ?? ""))}</span>
+            </div>
+          )
+        }
       </div>
 
       {
@@ -300,39 +328,7 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
   </div>
 
   {/* Body — everything below the sticky bar, inset from the page edges */}
-  <div class="space-y-6 px-4 pb-8 lg:pr-8 lg:pb-12 lg:pl-12">
-    {/* Meta line — scrolls away under the sticky bar */}
-    {
-      mode === "edit" && doc && collection.drafts && (
-        <div class="text-muted-foreground flex flex-wrap items-center gap-x-1 text-xs">
-          {doc._status === "scheduled" && doc._publishAt && (
-            <>
-              <span>Publishes {formatDate(doc._publishAt)}</span>
-              {doc._unpublishAt && (
-                <>
-                  <Dot className="text-muted-foreground/70 size-5" />
-                  <span>Unpublishes {formatDate(doc._unpublishAt)}</span>
-                </>
-              )}
-              <Dot className="text-muted-foreground/70 size-5" />
-            </>
-          )}
-          <span>Created {formatDate(doc._createdAt)}</span>
-          <Dot className="text-muted-foreground/70 size-5" />
-          <span>Updated {formatDate(doc._updatedAt)}</span>
-        </div>
-      )
-    }
-    {
-      isSubmissionView && doc && (
-        <div class="text-muted-foreground flex flex-wrap items-center gap-x-1 text-xs">
-          {parentFormTitle && <span>{parentFormTitle}</span>}
-          {parentFormTitle && <Dot className="text-muted-foreground/70 size-5" />}
-          <span>Submitted {formatDate(String(doc._createdAt ?? ""))}</span>
-        </div>
-      )
-    }
-
+  <div class="space-y-6 px-4 pb-8 lg:pr-8 lg:pb-12 lg:pl-20">
     {
       formTab !== "submissions" && (
         <>
@@ -349,7 +345,7 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
               (doc?._status === "draft" || doc?._status === "scheduled" || (doc && getVisualStatus(doc) === "changed")),
             )}
           />
-          <div id="document-edit-area" class:list={[!hasMetaLine && "mt-12"]}>
+          <div id="document-edit-area">
             {collection.slug === "users" && mode === "edit" && Astro.url.searchParams.get("inviteToken") && (
               <AdminCard title={Astro.url.searchParams.get("emailSent") === "true" ? "Invitation sent" : "Invite link"}>
                 {Astro.url.searchParams.get("emailSent") === "true" ? (
@@ -374,7 +370,7 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
                 action={getFormAction(collection.slug, mode === "edit" ? documentId : undefined)}
                 class:list={[
                   "grid items-start gap-y-10",
-                  hasSidebarColumn ? "2xl:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] 2xl:gap-x-12" : "max-w-3xl",
+                  hasSidebarColumn ? "2xl:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] 2xl:gap-x-20" : "max-w-3xl",
                 ]}
               >
                 <input type="hidden" name="_action" value={mode === "new" ? "create" : "update"} />
