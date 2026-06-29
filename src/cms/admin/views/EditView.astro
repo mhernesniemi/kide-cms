@@ -230,14 +230,13 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
         formTab !== "submissions" && (
           <div class="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
             {hasPreview && previewUrl && !translationMode && (
-              <a
-                href={previewUrl}
-                target="_blank"
-                class="text-foreground/70 hover:text-foreground mr-1 flex items-center gap-1 rounded-sm text-sm transition-colors"
-              >
-                Preview
-                <ArrowUpRight className="size-4" />
-              </a>
+              <>
+                <a href={previewUrl} target="_blank" class={buttonVariants({ variant: "outline" })}>
+                  Preview
+                  <ArrowUpRight className="size-4" />
+                </a>
+                <div class="bg-border mx-1 h-6 w-px" />
+              </>
             )}
             {locales.length > 1 &&
               mode === "edit" &&
@@ -410,7 +409,7 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
                   ) : (
                     mainFieldSets.map((set) => {
                       const fields = (
-                        <div class:list={["grid", variant === "record" ? "gap-6" : "gap-7"]}>
+                        <div class:list={["grid", variant === "record" ? "gap-6" : "gap-8"]}>
                           {set.fields
                             .filter((fieldName) => collection.fields[fieldName] && !isFieldHidden(fieldName))
                             .map((fieldName) => (
