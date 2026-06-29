@@ -138,6 +138,10 @@ const mainFieldSets = primaryFieldSets.length > 0 ? primaryFieldSets : fieldSets
 const effectiveSidebarFieldSets =
   sidebarFieldSets.length > 0 ? sidebarFieldSets : fieldSets.slice(mainFieldSets.length);
 
+// Document metadata (created/updated, scheduled publish) shown at the bottom of
+// the sidebar under the label info.
+const hasDocMeta = Boolean(mode === "edit" && doc && collection.drafts);
+
 // Whether to render the right-hand sidebar column at all (avoids a stray sticky
 // border on collections with no sidebar fields and no incoming references).
 const hasSidebarColumn =
@@ -145,7 +149,8 @@ const hasSidebarColumn =
   (effectiveSidebarFieldSets.some((set) =>
     set.fields.some((fieldName) => collection.fields[fieldName] && !isFieldHidden(fieldName)),
   ) ||
-    reverseRefs.length > 0);
+    reverseRefs.length > 0 ||
+    hasDocMeta);
 
 const hasPreview = !!(mode === "edit" && (collection.preview || (collection.pathPrefix && doc?.slug)));
 const previewUrl = hasPreview
@@ -194,27 +199,6 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
           </h1>
           {mode === "edit" && doc && collection.drafts && <StatusBadge status={getVisualStatus(doc)} styled />}
         </div>
-        {
-          mode === "edit" && doc && collection.drafts && (
-            <div class="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1 text-xs">
-              {doc._status === "scheduled" && doc._publishAt && (
-                <>
-                  <span>Publishes {formatDate(doc._publishAt)}</span>
-                  {doc._unpublishAt && (
-                    <>
-                      <Dot className="text-muted-foreground/70 size-4" />
-                      <span>Unpublishes {formatDate(doc._unpublishAt)}</span>
-                    </>
-                  )}
-                  <Dot className="text-muted-foreground/70 size-4" />
-                </>
-              )}
-              <span>Created {formatDate(doc._createdAt)}</span>
-              <Dot className="text-muted-foreground/70 size-4" />
-              <span>Updated {formatDate(doc._updatedAt)}</span>
-            </div>
-          )
-        }
         {
           isSubmissionView && doc && (
             <div class="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1 text-xs">
@@ -482,6 +466,34 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
                         return variant === "record" ? <AdminCard title="Settings">{fields}</AdminCard> : fields;
                       })}
                       <ReverseReferencesList reverseRefs={reverseRefs} />
+                      {hasDocMeta && doc && (
+                        <AdminCard title="Info">
+                          <dl class="text-muted-foreground space-y-1.5 text-xs">
+                            {doc._status === "scheduled" && doc._publishAt && (
+                              <>
+                                <div class="flex justify-between gap-2">
+                                  <dt>Publishes</dt>
+                                  <dd class="text-foreground/80">{formatDate(doc._publishAt)}</dd>
+                                </div>
+                                {doc._unpublishAt && (
+                                  <div class="flex justify-between gap-2">
+                                    <dt>Unpublishes</dt>
+                                    <dd class="text-foreground/80">{formatDate(doc._unpublishAt)}</dd>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                            <div class="flex justify-between gap-2">
+                              <dt>Created</dt>
+                              <dd class="text-foreground/80">{formatDate(doc._createdAt)}</dd>
+                            </div>
+                            <div class="flex justify-between gap-2">
+                              <dt>Updated</dt>
+                              <dd class="text-foreground/80">{formatDate(doc._updatedAt)}</dd>
+                            </div>
+                          </dl>
+                        </AdminCard>
+                      )}
                     </div>
                   </div>
                 )}
