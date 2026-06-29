@@ -20,11 +20,13 @@ Kide is a code-first CMS inside Astro (collections in `src/cms/collections/`, lo
 
 ```bash
 pnpm cms:generate && pnpm cms:push     # sync schema (use --recreate=slug for renames/drops)
-node --import tsx scripts/your-import.ts   # see the skill /migrate for the script shape
+node --import tsx scripts/your-import.ts   # see MIGRATING.md for the importer recipe
 pnpm cms:reindex                       # build search (or context.reindex())
 ```
 
-A migration script bootstraps with `createCmsContext()` and uses `load()` (validate + create) — see `.claude/skills/migrate/SKILL.md`:
+**Full playbook + WordPress recipe: read [`MIGRATING.md`](./MIGRATING.md).** (Also available as the `/migrate` skill where project skills are loaded — but the file is the source of truth.)
+
+A migration script bootstraps with `createCmsContext()` and uses `load()` (validate + create):
 
 ```ts
 import { createCmsContext } from "@/cms/internals/context";
