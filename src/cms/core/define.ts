@@ -113,6 +113,11 @@ export type ContentDocument = {
 export type ContentFieldConfig = BaseFieldConfig<"content", ContentDocument> & {
   /** Component block types that can be embedded inline, same shape as `blocks`. */
   blocks: Record<string, Record<string, FieldConfig>>;
+  /**
+   * Show a button that expands the editor into a distraction-free fullscreen
+   * overlay (hides the sidemenu and every other field). Defaults to false.
+   */
+  fullscreen?: boolean;
 };
 
 export type RelationFieldConfig = BaseFieldConfig<"relation", string | string[]> & {

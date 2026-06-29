@@ -30,6 +30,7 @@ export default defineCollection({
     body: fields.content({
       translatable: true,
       admin: { rows: 14 },
+      fullscreen: true,
       blocks: {
         faq: {
           heading: fields.text(),

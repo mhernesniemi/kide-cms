@@ -95,6 +95,7 @@ All fields share base options: `label`, `description`, `required`, `defaultValue
 | `date`     | _(base only)_                                                                   |
 | `select`   | `options: string[]` **(required)**                                              |
 | `richText` | _(base only)_ — stored as JSON AST `{ type: "root", children: RichTextNode[] }` |
+| `content`  | `blocks: Record<string, Record<string, FieldConfig>>` **(required)**, `fullscreen?: boolean` — rich text with inline component blocks; stored as JSON AST whose children may include `block` nodes |
 | `image`    | _(base only)_ — stores asset reference                                          |
 | `relation` | `collection: string` **(required)**, `hasMany?: boolean`                        |
 | `array`    | `of: FieldConfig` **(required)** — field config for each item                   |

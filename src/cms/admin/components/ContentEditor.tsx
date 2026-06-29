@@ -6,7 +6,18 @@ import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { Bold, ChevronRight, GripVertical, Italic, Heading2, Heading3, Link as LinkIcon, Trash2 } from "lucide-react";
+import {
+  Bold,
+  ChevronRight,
+  GripVertical,
+  Italic,
+  Heading2,
+  Heading3,
+  Link as LinkIcon,
+  Maximize2,
+  Minimize2,
+  Trash2,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
 import {
@@ -202,14 +213,26 @@ const ToolbarButton = ({
 
 type Props = {
   name: string;
+  label?: string;
   initialValue?: string;
   rows?: number;
   types: BlockTypesMeta;
   blockRelationOptions?: Record<string, RelationOption[]>;
+  /** When true, show a button that expands the editor into a fullscreen overlay. */
+  fullscreen?: boolean;
 };
 
-export default function ContentEditor({ name, initialValue, rows = 14, types, blockRelationOptions = {} }: Props) {
+export default function ContentEditor({
+  name,
+  label,
+  initialValue,
+  rows = 14,
+  types,
+  blockRelationOptions = {},
+  fullscreen = false,
+}: Props) {
   const hiddenRef = useRef<HTMLInputElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const previewChannelRef = useRef<BroadcastChannel | null>(null);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkType, setLinkType] = useState<"internal" | "external">("internal");
@@ -319,6 +342,21 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
     return () => hidden.removeEventListener("cms:set-value", handler);
   });
 
+  // Fullscreen overlay: lock background scroll and exit on Escape.
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isFullscreen]);
+
   const openLinkDialog = () => {
     if (!editor) return;
     const href = editor.getAttributes("link").href ?? "";
@@ -334,56 +372,85 @@ export default function ContentEditor({ name, initialValue, rows = 14, types, bl
   return (
     <div
       data-slot="editor"
-      className="border-input hover:border-foreground/20 bg-muted/30 dark:bg-input/30 overflow-hidden rounded-lg border transition-colors"
+      className={cn(
+        isFullscreen
+          ? "bg-background fixed inset-0 z-50 flex flex-col"
+          : "border-input hover:border-foreground/20 bg-muted/30 dark:bg-input/30 relative overflow-hidden rounded-lg border transition-colors",
+      )}
     >
       <input ref={hiddenRef} type="hidden" name={name} value={cmsJson} />
 
+      {/* Fullscreen header — keeps the field title and an exit affordance in view */}
+      {isFullscreen && (
+        <div className="bg-background flex items-center justify-between gap-3 border-b px-4 py-2.5">
+          <span className="text-foreground text-sm font-medium">{label ?? humanize(name)}</span>
+          <Button type="button" variant="ghost" size="sm" className="gap-1.5" onClick={() => setIsFullscreen(false)}>
+            <Minimize2 className="size-4" />
+            Exit
+          </Button>
+        </div>
+      )}
+
+      {/* Enter-fullscreen affordance (inline mode only) */}
+      {fullscreen && !isFullscreen && (
+        <button
+          type="button"
+          title="Fullscreen"
+          onClick={() => setIsFullscreen(true)}
+          className="text-muted-foreground hover:text-foreground bg-background/70 hover:bg-background absolute top-2 right-2 z-10 rounded-md border p-1.5 backdrop-blur transition-colors"
+        >
+          <Maximize2 className="size-4" />
+        </button>
+      )}
+
       {/* Editor area */}
       {editor ? (
-        <>
-          {/* Selection toolbar — appears when text is highlighted */}
-          <BubbleMenu
-            editor={editor}
-            options={{ placement: "top" }}
-            shouldShow={({ editor: ed, from, to }) => from !== to && !ed.isActive(BLOCK_NODE_NAME)}
-            className="bg-popover flex items-center gap-0.5 rounded-md border p-1 shadow-md"
-          >
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleBold().run()}
-              active={editor.isActive("bold")}
-              title="Bold"
+        <div className={cn("min-w-0", isFullscreen && "flex-1 overflow-y-auto")}>
+          <div className={cn(isFullscreen && "mx-auto w-full max-w-3xl px-2 py-6")}>
+            {/* Selection toolbar — appears when text is highlighted */}
+            <BubbleMenu
+              editor={editor}
+              options={{ placement: "top" }}
+              shouldShow={({ editor: ed, from, to }) => from !== to && !ed.isActive(BLOCK_NODE_NAME)}
+              className="bg-popover flex items-center gap-0.5 rounded-md border p-1 shadow-md"
             >
-              <Bold className="size-4" />
-            </ToolbarButton>
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleItalic().run()}
-              active={editor.isActive("italic")}
-              title="Italic"
-            >
-              <Italic className="size-4" />
-            </ToolbarButton>
-            <div className="bg-border mx-0.5 h-5 w-px" />
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-              active={editor.isActive("heading", { level: 2 })}
-              title="Heading 2"
-            >
-              <Heading2 className="size-4" />
-            </ToolbarButton>
-            <ToolbarButton
-              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-              active={editor.isActive("heading", { level: 3 })}
-              title="Heading 3"
-            >
-              <Heading3 className="size-4" />
-            </ToolbarButton>
-            <div className="bg-border mx-0.5 h-5 w-px" />
-            <ToolbarButton onClick={openLinkDialog} active={editor.isActive("link")} title="Link">
-              <LinkIcon className="size-4" />
-            </ToolbarButton>
-          </BubbleMenu>
-          <EditorContent editor={editor} />
-        </>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleBold().run()}
+                active={editor.isActive("bold")}
+                title="Bold"
+              >
+                <Bold className="size-4" />
+              </ToolbarButton>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleItalic().run()}
+                active={editor.isActive("italic")}
+                title="Italic"
+              >
+                <Italic className="size-4" />
+              </ToolbarButton>
+              <div className="bg-border mx-0.5 h-5 w-px" />
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                active={editor.isActive("heading", { level: 2 })}
+                title="Heading 2"
+              >
+                <Heading2 className="size-4" />
+              </ToolbarButton>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+                active={editor.isActive("heading", { level: 3 })}
+                title="Heading 3"
+              >
+                <Heading3 className="size-4" />
+              </ToolbarButton>
+              <div className="bg-border mx-0.5 h-5 w-px" />
+              <ToolbarButton onClick={openLinkDialog} active={editor.isActive("link")} title="Link">
+                <LinkIcon className="size-4" />
+              </ToolbarButton>
+            </BubbleMenu>
+            <EditorContent editor={editor} />
+          </div>
+        </div>
       ) : (
         <div className="prose prose-sm max-w-none" style={{ minHeight, padding: "0.625rem 0.75rem" }} />
       )}

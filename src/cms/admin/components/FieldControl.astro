@@ -310,10 +310,12 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
           <ContentEditor
             client:load
             name={name}
+            label={label}
             initialValue={value ? JSON.stringify(value) : ""}
             rows={rows}
             types={blockTypesMeta}
             blockRelationOptions={blockRelationOptions}
+            fullscreen={field.fullscreen === true}
           />
         )}
 
