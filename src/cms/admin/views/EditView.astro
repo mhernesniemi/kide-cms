@@ -142,15 +142,16 @@ const effectiveSidebarFieldSets =
 // the sidebar under the label info.
 const hasDocMeta = Boolean(mode === "edit" && doc && collection.drafts);
 
+// Editable fields that live in the sidebar (slug, category, etc.). The meta
+// group (Referenced by / Info) only draws a top divider when these exist above it.
+const hasSidebarFields = effectiveSidebarFieldSets.some((set) =>
+  set.fields.some((fieldName) => collection.fields[fieldName] && !isFieldHidden(fieldName)),
+);
+const hasSidebarMeta = reverseRefs.length > 0 || hasDocMeta;
+
 // Whether to render the right-hand sidebar column at all (avoids a stray sticky
 // border on collections with no sidebar fields and no incoming references).
-const hasSidebarColumn =
-  !isSubmissionView &&
-  (effectiveSidebarFieldSets.some((set) =>
-    set.fields.some((fieldName) => collection.fields[fieldName] && !isFieldHidden(fieldName)),
-  ) ||
-    reverseRefs.length > 0 ||
-    hasDocMeta);
+const hasSidebarColumn = !isSubmissionView && (hasSidebarFields || hasSidebarMeta);
 
 const hasPreview = !!(mode === "edit" && (collection.preview || (collection.pathPrefix && doc?.slug)));
 const previewUrl = hasPreview
@@ -465,46 +466,55 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
                         );
                         return variant === "record" ? <AdminCard title="Settings">{fields}</AdminCard> : fields;
                       })}
-                      <ReverseReferencesList reverseRefs={reverseRefs} variant={variant} />
-                      {hasDocMeta &&
-                        doc &&
-                        (() => {
-                          const meta = (
-                            <dl class="text-muted-foreground grid gap-1 text-xs">
-                              {doc._status === "scheduled" && doc._publishAt && (
-                                <>
-                                  <div class="flex justify-between gap-2">
-                                    <dt>Publishes</dt>
-                                    <dd class="text-foreground/70">{formatDate(doc._publishAt)}</dd>
-                                  </div>
-                                  {doc._unpublishAt && (
-                                    <div class="flex justify-between gap-2">
-                                      <dt>Unpublishes</dt>
-                                      <dd class="text-foreground/70">{formatDate(doc._unpublishAt)}</dd>
-                                    </div>
+                      {hasSidebarMeta && (
+                        <div
+                          class:list={[
+                            variant === "record" ? "space-y-6" : "grid gap-6",
+                            variant !== "record" && hasSidebarFields && "border-t pt-6",
+                          ]}
+                        >
+                          <ReverseReferencesList reverseRefs={reverseRefs} variant={variant} />
+                          {hasDocMeta &&
+                            doc &&
+                            (() => {
+                              const meta = (
+                                <dl class="text-muted-foreground grid gap-1 text-xs">
+                                  {doc._status === "scheduled" && doc._publishAt && (
+                                    <>
+                                      <div class="flex justify-between gap-2">
+                                        <dt>Publishes</dt>
+                                        <dd class="text-foreground/70">{formatDate(doc._publishAt)}</dd>
+                                      </div>
+                                      {doc._unpublishAt && (
+                                        <div class="flex justify-between gap-2">
+                                          <dt>Unpublishes</dt>
+                                          <dd class="text-foreground/70">{formatDate(doc._unpublishAt)}</dd>
+                                        </div>
+                                      )}
+                                    </>
                                   )}
-                                </>
-                              )}
-                              <div class="flex justify-between gap-2">
-                                <dt>Created</dt>
-                                <dd class="text-foreground/70">{formatDate(doc._createdAt)}</dd>
-                              </div>
-                              <div class="flex justify-between gap-2">
-                                <dt>Updated</dt>
-                                <dd class="text-foreground/70">{formatDate(doc._updatedAt)}</dd>
-                              </div>
-                            </dl>
-                          );
+                                  <div class="flex justify-between gap-2">
+                                    <dt>Created</dt>
+                                    <dd class="text-foreground/70">{formatDate(doc._createdAt)}</dd>
+                                  </div>
+                                  <div class="flex justify-between gap-2">
+                                    <dt>Updated</dt>
+                                    <dd class="text-foreground/70">{formatDate(doc._updatedAt)}</dd>
+                                  </div>
+                                </dl>
+                              );
 
-                          return variant === "record" ? (
-                            <AdminCard title="Info">{meta}</AdminCard>
-                          ) : (
-                            <div class="grid gap-2 border-t pt-6">
-                              <span class="text-foreground/80 text-sm leading-none font-medium">Info</span>
-                              {meta}
-                            </div>
-                          );
-                        })()}
+                              return variant === "record" ? (
+                                <AdminCard title="Info">{meta}</AdminCard>
+                              ) : (
+                                <div class:list={["grid gap-2", reverseRefs.length > 0 && "border-t pt-6"]}>
+                                  <span class="text-foreground/80 text-sm leading-none font-medium">Info</span>
+                                  {meta}
+                                </div>
+                              );
+                            })()}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

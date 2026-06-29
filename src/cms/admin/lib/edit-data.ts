@@ -205,11 +205,13 @@ export async function loadSharedSectionUsage(
       );
       if (matched.length > 0) {
         reverseRefs.push({
-          collectionLabel: otherCollection.labels.plural,
+          collectionLabel: otherCollection.singleton ? "Singleton" : otherCollection.labels.plural,
           collectionSlug: otherCollection.slug,
           docs: matched.map((doc: Record<string, unknown>) => ({
             _id: String(doc._id),
-            label: String(doc[otherLabelField] ?? doc.slug ?? doc._id),
+            label: otherCollection.singleton
+              ? otherCollection.labels.singular
+              : String(doc[otherLabelField] ?? doc.slug ?? doc._id),
           })),
         });
       }
@@ -344,11 +346,13 @@ export async function loadReverseRefs(
           });
           if (matched.length > 0) {
             reverseRefs.push({
-              collectionLabel: otherCollection.labels.plural,
+              collectionLabel: otherCollection.singleton ? "Singleton" : otherCollection.labels.plural,
               collectionSlug: otherCollection.slug,
               docs: matched.map((r: Record<string, unknown>) => ({
                 _id: String(r._id),
-                label: String(r[otherLabelField] ?? r.slug ?? r._id),
+                label: otherCollection.singleton
+                  ? otherCollection.labels.singular
+                  : String(r[otherLabelField] ?? r.slug ?? r._id),
               })),
             });
           }
@@ -359,11 +363,13 @@ export async function loadReverseRefs(
           );
           if (refs.length > 0) {
             reverseRefs.push({
-              collectionLabel: otherCollection.labels.plural,
+              collectionLabel: otherCollection.singleton ? "Singleton" : otherCollection.labels.plural,
               collectionSlug: otherCollection.slug,
               docs: refs.map((r: Record<string, unknown>) => ({
                 _id: String(r._id),
-                label: String(r[otherLabelField] ?? r.slug ?? r._id),
+                label: otherCollection.singleton
+                  ? otherCollection.labels.singular
+                  : String(r[otherLabelField] ?? r.slug ?? r._id),
               })),
             });
           }
