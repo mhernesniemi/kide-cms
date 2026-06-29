@@ -465,35 +465,46 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
                         );
                         return variant === "record" ? <AdminCard title="Settings">{fields}</AdminCard> : fields;
                       })}
-                      <ReverseReferencesList reverseRefs={reverseRefs} />
-                      {hasDocMeta && doc && (
-                        <AdminCard title="Info">
-                          <dl class="text-muted-foreground space-y-1.5 text-xs">
-                            {doc._status === "scheduled" && doc._publishAt && (
-                              <>
-                                <div class="flex justify-between gap-2">
-                                  <dt>Publishes</dt>
-                                  <dd class="text-foreground/80">{formatDate(doc._publishAt)}</dd>
-                                </div>
-                                {doc._unpublishAt && (
+                      <ReverseReferencesList reverseRefs={reverseRefs} variant={variant} />
+                      {hasDocMeta &&
+                        doc &&
+                        (() => {
+                          const meta = (
+                            <dl class="text-muted-foreground grid gap-1 text-xs">
+                              {doc._status === "scheduled" && doc._publishAt && (
+                                <>
                                   <div class="flex justify-between gap-2">
-                                    <dt>Unpublishes</dt>
-                                    <dd class="text-foreground/80">{formatDate(doc._unpublishAt)}</dd>
+                                    <dt>Publishes</dt>
+                                    <dd class="text-foreground/70">{formatDate(doc._publishAt)}</dd>
                                   </div>
-                                )}
-                              </>
-                            )}
-                            <div class="flex justify-between gap-2">
-                              <dt>Created</dt>
-                              <dd class="text-foreground/80">{formatDate(doc._createdAt)}</dd>
+                                  {doc._unpublishAt && (
+                                    <div class="flex justify-between gap-2">
+                                      <dt>Unpublishes</dt>
+                                      <dd class="text-foreground/70">{formatDate(doc._unpublishAt)}</dd>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                              <div class="flex justify-between gap-2">
+                                <dt>Created</dt>
+                                <dd class="text-foreground/70">{formatDate(doc._createdAt)}</dd>
+                              </div>
+                              <div class="flex justify-between gap-2">
+                                <dt>Updated</dt>
+                                <dd class="text-foreground/70">{formatDate(doc._updatedAt)}</dd>
+                              </div>
+                            </dl>
+                          );
+
+                          return variant === "record" ? (
+                            <AdminCard title="Info">{meta}</AdminCard>
+                          ) : (
+                            <div class="grid gap-2 border-t pt-6">
+                              <span class="text-foreground/80 text-sm leading-none font-medium">Info</span>
+                              {meta}
                             </div>
-                            <div class="flex justify-between gap-2">
-                              <dt>Updated</dt>
-                              <dd class="text-foreground/80">{formatDate(doc._updatedAt)}</dd>
-                            </div>
-                          </dl>
-                        </AdminCard>
-                      )}
+                          );
+                        })()}
                     </div>
                   </div>
                 )}

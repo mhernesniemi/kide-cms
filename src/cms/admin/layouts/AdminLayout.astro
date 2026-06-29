@@ -327,9 +327,9 @@ const navGroups = [...new Set(navItems.map((item) => item.group))]
                   data-active={active ? "true" : "false"}
                   open={!collapsed}
                 >
-                  <summary class="text-muted-foreground/70 hover:text-foreground flex cursor-pointer list-none items-center justify-between rounded-md px-3 py-1 text-[11px] font-medium tracking-wide uppercase transition-colors marker:hidden [&::-webkit-details-marker]:hidden">
+                  <summary class="text-muted-foreground/80 hover:text-foreground flex cursor-pointer list-none items-center justify-between rounded-md px-3 py-1 text-[11px] font-medium tracking-wide uppercase transition-colors marker:hidden [&::-webkit-details-marker]:hidden">
                     <span>{group}</span>
-                    <ChevronDown className="size-3 transition-transform group-open/nav-section:rotate-180" />
+                    <ChevronDown className="size-3.5 transition-transform group-open/nav-section:rotate-180" />
                   </summary>
                   {items.map((item) => (
                     <div
