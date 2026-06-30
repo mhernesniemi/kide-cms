@@ -23,6 +23,7 @@ import ImagePicker from "./ImagePicker";
 import SelectField from "./SelectField";
 import ColorField from "./ColorField";
 import LinkField from "./LinkField";
+import YoutubeField from "./YoutubeField";
 
 // -----------------------------------------------
 // Shared types — describe a block sub-field. Used by both the standalone
@@ -288,6 +289,11 @@ export function SubFieldControl({
   // Link fields render a structured URL + label + new-tab control.
   if (meta.admin?.component === "link") {
     return <LinkField value={value as never} onChange={onChange} />;
+  }
+
+  // YouTube fields render a URL input with a thumbnail preview.
+  if (meta.admin?.component === "youtube") {
+    return <YoutubeField value={strValue} placeholder={meta.admin?.placeholder} onChange={(v) => onChange(v)} />;
   }
 
   switch (meta.type) {

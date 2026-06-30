@@ -1,0 +1,24 @@
+---
+import { getYoutubeId, youtubeEmbedUrl } from "@/cms/core/youtube";
+
+const { url } = Astro.props as { url?: string };
+const id = getYoutubeId(url ?? "");
+---
+
+{
+  id && (
+    <section>
+      <div class="aspect-video w-full overflow-hidden rounded-lg">
+        <iframe
+          src={youtubeEmbedUrl(id)}
+          title="YouTube video player"
+          class="h-full w-full"
+          loading="lazy"
+          style="border: 0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+        />
+      </div>
+    </section>
+  )
+}

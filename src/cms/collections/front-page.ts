@@ -34,6 +34,9 @@ export default defineCollection({
           heading: fields.text(),
           content: fields.richText(),
         },
+        youtube: {
+          url: fields.text({ required: true, admin: { component: "youtube", placeholder: "Paste a YouTube URL" } }),
+        },
         faq: {
           heading: fields.text(),
           items: fields.json({
