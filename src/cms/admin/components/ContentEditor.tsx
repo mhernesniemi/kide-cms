@@ -75,13 +75,22 @@ const tiptapToContent = (json: any): ContentDocument => ({
 // Inline block node view
 // -----------------------------------------------
 
+/** A block field counts as blank when it's falsy or an empty array/object. */
+function isBlankFieldValue(value: unknown): boolean {
+  return !value || (typeof value === "object" && Object.keys(value as object).length === 0);
+}
+
 function BlockNodeView(props: NodeViewProps) {
   const { node, updateAttributes, deleteNode, extension, selected } = props;
   const options = extension.options as BlockNodeOptions;
   const blockType = String(node.attrs.blockType ?? "");
   const fields = (node.attrs.fields ?? {}) as Record<string, unknown>;
   const fieldsMeta: Record<string, SubFieldMeta> = options.types[blockType] ?? {};
-  const [expanded, setExpanded] = useState(() => Object.keys(fields).every((k) => !fields[k]));
+  // A freshly-inserted block (every field still blank) starts expanded so it can be
+  // filled in; a block loaded with content starts collapsed. Treat empty arrays/objects
+  // as blank too — e.g. an image block defaults `images` to `[]`, which is truthy and
+  // would otherwise wrongly start the block collapsed.
+  const [expanded, setExpanded] = useState(() => Object.values(fields).every(isBlankFieldValue));
   // Stable per-node id so sub-field DOM ids/names stay unique across repeated blocks of
   // the same type (two FAQ blocks must not share input ids/labels).
   const fieldIdPrefix = useId();
@@ -312,22 +321,6 @@ export default function ContentEditor({
       attributes: {
         class: "prose prose-sm max-w-none text-base focus:outline-none py-3 px-5",
         style: `min-height: ${rows * 1.5}rem;`,
-      },
-      handleDOMEvents: {
-        mousedown(_view, event) {
-          const target = event.target as HTMLElement;
-          if (target.tagName === "A" || target.closest("a")) {
-            event.preventDefault();
-          }
-        },
-        click(_view, event) {
-          const target = event.target as HTMLElement;
-          if (target.tagName === "A" || target.closest("a")) {
-            event.preventDefault();
-            event.stopPropagation();
-            return true;
-          }
-        },
       },
     },
   });

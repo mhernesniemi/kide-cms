@@ -2,18 +2,16 @@
 import { parseList } from "@/cms/core";
 import CmsPicture from "@/components/CmsPicture.astro";
 
-const { images: rawImages } = Astro.props;
-const images = parseList<string>(rawImages);
+const { image, caption, images } = Astro.props as { image?: string; caption?: string; images?: unknown };
+// `image` is the current single-image shape; fall back to the first of the legacy `images` array.
+const src = image || parseList<string>(images)[0];
 ---
 
 {
-  images.length > 0 && (
-    <section>
-      <div class="grid gap-4">
-        {images.map((src) => (
-          <CmsPicture src={src} alt="" preset="content" loading="lazy" class="h-auto w-full rounded-lg" />
-        ))}
-      </div>
-    </section>
+  src && (
+    <figure>
+      <CmsPicture src={src} alt={caption ?? ""} preset="content" loading="lazy" class="h-auto w-full rounded-lg" />
+      {caption && <figcaption class="mt-2 text-sm text-gray-500">{caption}</figcaption>}
+    </figure>
   )
 }

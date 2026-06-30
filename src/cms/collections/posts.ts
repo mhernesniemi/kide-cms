@@ -39,7 +39,8 @@ export default defineCollection({
           }),
         },
         image: {
-          images: fields.array({ of: fields.image(), defaultValue: [] }),
+          image: fields.image(),
+          caption: fields.text({ admin: { placeholder: "Optional caption" } }),
         },
         youtube: {
           url: fields.text({ required: true, admin: { component: "youtube", placeholder: "Paste a YouTube URL" } }),
