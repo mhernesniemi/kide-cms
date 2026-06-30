@@ -64,7 +64,7 @@ posts: {
 - Tiptap rich text, block editor, real-time cross-tab live preview
 - Hierarchical taxonomies and menus
 - Role-based access control
-- Tag-based cache invalidation (Astro 6 route caching)
+- Tag-based cache invalidation (Astro 7 route caching)
 - Optional AI assistant (alt text, SEO, translations)
 
 ## Deploy Targets
@@ -76,4 +76,4 @@ Both are wired up by `create-kide-app`. The Cloudflare overlay lives in [`adapte
 
 ## Stack
 
-Astro 6, React 19, Drizzle ORM, SQLite/D1, Zod, Tiptap, shadcn/ui, Tailwind CSS v4
+Astro 7, React 19, Drizzle ORM, SQLite/D1, Zod, Tiptap, shadcn/ui, Tailwind CSS v4

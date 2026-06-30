@@ -1,6 +1,6 @@
 # Kide CMS
 
-Code-first, single-schema CMS built inside Astro 6. Runtime, admin UI, routes, and middleware all live inside `src/cms/`. No external package boundary — own your code.
+Code-first, single-schema CMS built inside Astro 7. Runtime, admin UI, routes, and middleware all live inside `src/cms/`. No external package boundary — own your code.
 
 ## Repo Structure
 
@@ -27,7 +27,16 @@ src/
 ## Commands
 
 ```bash
-pnpm dev              # start dev server (auto-generates schema + pushes DB)
+pnpm dev              # start dev server foreground (auto-generates schema + pushes DB)
+
+# Background dev server (Astro 7) — preferred when working as an agent: it blocks
+# until the server is ready (schema gen + DB push finish before it detaches), prints
+# the URL + PID, then detaches. A lockfile dedupes, so re-running returns the existing
+# instance instead of spawning a second writer on data/cms.db.
+pnpm exec astro dev --background    # start detached
+pnpm exec astro dev status          # is a server already running?
+pnpm exec astro dev logs --follow   # tail background server logs
+pnpm exec astro dev stop            # stop the background server
 pnpm build            # production build
 pnpm preview          # preview production build
 pnpm check            # astro check (types) + eslint (lint)
@@ -78,7 +87,7 @@ After code changes, ALWAYS run:
 - Routes in `src/cms/routes/` import app-specific code via `virtual:kide/*` modules (resolved by the integration's Vite aliases). Userland (`src/pages/`, `src/layouts/`, `src/components/`) imports directly via `@/cms/*` — virtual is the one-way core → user contract, don't use it in userland.
 - Use the `cn()` utility from `@/cms/admin/lib/utils` for conditional class names — never use template literal interpolation for className.
 - Import the CMS library via the `@/cms/core` alias (tsconfig `@/*` → `./src/*`), not relative paths.
-- If you start dev server, remember to stop it when you're done.
+- Prefer the Astro 7 **background dev server** (`pnpm exec astro dev --background`) over a foreground `pnpm dev`: it detaches once ready, dedupes via a lockfile, and is stoppable with `pnpm exec astro dev stop`. Either way, stop the server when you're done (`pnpm exec astro dev stop`, or kill the foreground process).
 
 ## Migrations & Bulk Import
 
@@ -94,7 +103,7 @@ pnpm cms:generate && pnpm cms:push
 
 During normal feature work you rarely run this by hand: `pnpm dev` already pushes on boot and re-pushes whenever `cms.config.ts` changes. `cms:push` is for when the dev server is **not** running. Two caveats when migrating:
 
-- **Stop the dev server first.** It holds the same `data/cms.db`; running `cms:push` or an import script alongside it can throw `SQLITE_BUSY` / "database is locked" (WAL allows concurrent readers, not two writers).
+- **Stop the dev server first.** It holds the same `data/cms.db`; running `cms:push` or an import script alongside it can throw `SQLITE_BUSY` / "database is locked" (WAL allows concurrent readers, not two writers). Check with `pnpm exec astro dev status` and stop it with `pnpm exec astro dev stop` before running `cms:push` or an importer.
 - **Rename/drop is special.** The dev-start `drizzle-kit push --force` resolves an ambiguous rename as drop+add (data loss) when it has a TTY; `cms:push` can't resolve it headlessly and errors with guidance. Either DROP the affected table first (fine for a dev DB you're repopulating) and re-run, or — to preserve data across a rename/restructure — hand-write a migration (`pnpm db:generate` then edit the SQL).
 
 **2. Bootstrap a standalone script.** Use the helper instead of wiring the runtime by hand:
@@ -127,7 +136,7 @@ await dispose(); // flush fire-and-forget tasks, then close the DB
 
 ## Stack
 
-Astro 6, React 19, Drizzle ORM (SQLite dev), Zod, Tiptap, shadcn/ui, Tailwind CSS v4, PBKDF2 auth, nanoid, Sharp (image optimization), pnpm, Node >=22.12.0
+Astro 7, React 19, Drizzle ORM (SQLite dev), Zod, Tiptap, shadcn/ui, Tailwind CSS v4, PBKDF2 auth, nanoid, Sharp (image optimization), pnpm, Node >=22.12.0
 
 ## Field Types
 
