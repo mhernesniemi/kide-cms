@@ -67,6 +67,7 @@ export type {
   DatabaseConfig,
   LocaleConfig,
   AdminConfig,
+  ColorOption,
   ImagePreset,
   ImagesConfig,
   AdminNavItem,

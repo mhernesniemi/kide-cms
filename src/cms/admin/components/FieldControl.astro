@@ -2,6 +2,7 @@
 import type { FieldConfig } from "@/cms/core";
 import { serializeFieldValue, humanize } from "@/cms/core";
 import { customFields } from "virtual:kide/custom-fields";
+import config from "virtual:kide/config";
 import ImagePicker from "./ImagePicker";
 import TreeItemsEditor from "./TreeItemsEditor";
 import RichTextEditor from "./RichTextEditor";
@@ -106,6 +107,8 @@ const CustomComponent =
 
 // Build serializable block-types metadata for the BlockEditor (`blocks` field) and
 // the inline block inserter (`content` field). Both share the same block-type shape.
+const colorPalette = config.admin?.colors ?? [];
+
 const toSubFieldMeta = (subField: FieldConfig): SubFieldMeta => ({
   type: subField.type,
   label: subField.label,
@@ -113,6 +116,7 @@ const toSubFieldMeta = (subField: FieldConfig): SubFieldMeta => ({
   options: "options" in subField ? subField.options : undefined,
   from: "from" in subField ? subField.from : undefined,
   admin: subField.admin,
+  colors: subField.admin?.component === "color" ? (subField.admin?.colors ?? colorPalette) : undefined,
   defaultValue: subField.defaultValue,
   of: "of" in subField && subField.of ? { type: subField.of.type } : undefined,
   collection: "collection" in subField ? subField.collection : undefined,
@@ -196,7 +200,13 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
         )}
 
         {field.type === "text" && field.admin?.component === "color" && !readOnly && (
-          <ColorField client:load name={name} value={serializedValue} placeholder={placeholder} />
+          <ColorField
+            client:load
+            name={name}
+            value={serializedValue}
+            placeholder={placeholder}
+            colors={field.admin?.colors ?? colorPalette}
+          />
         )}
 
         {(field.type === "text" || field.type === "email" || field.type === "date") &&

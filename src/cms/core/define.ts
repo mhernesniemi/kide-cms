@@ -20,6 +20,8 @@ export type AdminFieldComponent = {
   rows?: number;
   help?: string;
   hidden?: boolean;
+  /** Per-field colour palette for `fields.color()`; overrides the global `admin.colors`. */
+  colors?: ColorOption[];
 };
 
 export type FieldCondition = {
@@ -253,6 +255,9 @@ export type AdminRateLimitConfig = {
   windowMs?: number;
 };
 
+/** A named colour offered by `fields.color()` pickers. */
+export type ColorOption = { label: string; value: string };
+
 export type AdminConfig = {
   dateFormat?: string;
   nav?: AdminNavItem[];
@@ -260,6 +265,8 @@ export type AdminConfig = {
   rateLimit?: AdminRateLimitConfig;
   /** Webhooks fired on content events */
   webhooks?: WebhookConfig[];
+  /** Predefined palette offered by every `fields.color()` picker. */
+  colors?: ColorOption[];
 };
 
 export type ImagePreset = {
@@ -366,12 +373,17 @@ export const fields = {
   richText: (options?: Omit<RichTextFieldConfig, "type">) => createField<RichTextFieldConfig>("richText", options),
   content: (options: Omit<ContentFieldConfig, "type">) => createField<ContentFieldConfig>("content", options),
   image: (options?: Omit<ImageFieldConfig, "type">) => createField<ImageFieldConfig>("image", options),
-  /** A brand-palette colour picker. Stored as a hex text string ('' = inherit). */
-  color: (options?: Omit<TextFieldConfig, "type">) =>
-    createField<TextFieldConfig>("text", {
-      ...(options ?? {}),
-      admin: { ...(options?.admin ?? {}), component: "color" },
-    }),
+  /**
+   * A palette colour picker. Stored as a hex text string ('' = inherit). Editors choose
+   * from `admin.colors` in cms.config.ts, or a per-field `colors` palette passed here.
+   */
+  color: (options?: Omit<TextFieldConfig, "type"> & { colors?: ColorOption[] }) => {
+    const { colors, ...rest } = options ?? {};
+    return createField<TextFieldConfig>("text", {
+      ...rest,
+      admin: { ...(rest.admin ?? {}), component: "color", ...(colors ? { colors } : {}) },
+    });
+  },
   /** A structured link control. Stored as JSON { type, url, label, newTab }. */
   link: (options?: Omit<JsonFieldConfig, "type">) =>
     createField<JsonFieldConfig>("json", {

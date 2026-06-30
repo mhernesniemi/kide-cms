@@ -38,6 +38,8 @@ export type SubFieldMeta = {
   from?: string;
   admin?: { placeholder?: string; rows?: number; help?: string; component?: string };
   defaultValue?: unknown;
+  /** Predefined palette for `admin.component === "color"` sub-fields. */
+  colors?: { label: string; value: string }[];
   of?: { type: string };
   collection?: string;
   hasMany?: boolean;
@@ -281,9 +283,11 @@ export function SubFieldControl({
 }) {
   const strValue = value == null ? "" : String(value);
 
-  // Colour fields render a swatch picker regardless of their (text) storage type.
+  // Colour fields render a palette dropdown regardless of their (text) storage type.
   if (meta.admin?.component === "color") {
-    return <ColorField value={strValue} placeholder={meta.admin?.placeholder} onChange={onChange} />;
+    return (
+      <ColorField value={strValue} placeholder={meta.admin?.placeholder} colors={meta.colors} onChange={onChange} />
+    );
   }
 
   // Link fields render a structured URL + label + new-tab control.

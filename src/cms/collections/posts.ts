@@ -24,9 +24,6 @@ export default defineCollection({
       admin: { rows: 3 },
     }),
     image: fields.image(),
-    // Mixed prose + inline component blocks (Gutenberg / Lexical-style authoring).
-    // Stored as a rich-text AST whose children may include `block` nodes; rendered
-    // with <ContentRenderer> which interleaves prose and the block components below.
     body: fields.content({
       translatable: true,
       admin: { rows: 14 },
@@ -49,6 +46,10 @@ export default defineCollection({
     }),
     category: fields.text({
       admin: { component: "taxonomy-select", placeholder: "categories", position: "sidebar" },
+    }),
+    testColor: fields.color({
+      label: "Test colour",
+      admin: { position: "sidebar" },
     }),
     author: fields.relation({ collection: "authors", admin: { position: "sidebar" } }),
     seoDescription: fields.text({
