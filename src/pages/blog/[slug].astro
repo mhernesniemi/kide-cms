@@ -24,6 +24,7 @@ if (!isPreview) Astro.cache.set({ tags: cacheTags("posts", doc._id) });
           alt={doc.title}
           preset="banner"
           art={[{ media: "(max-width: 640px)", preset: "heroMobile" }]}
+          sizes="(max-width: 672px) 100vw, 640px"
           loading="eager"
           fetchpriority="high"
           class="mb-6 h-auto w-full rounded-lg"
