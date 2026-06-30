@@ -47,10 +47,6 @@ export default defineCollection({
     category: fields.text({
       admin: { component: "taxonomy-select", placeholder: "categories", position: "sidebar" },
     }),
-    testColor: fields.color({
-      label: "Test colour",
-      admin: { position: "sidebar" },
-    }),
     author: fields.relation({ collection: "authors", admin: { position: "sidebar" } }),
     seoDescription: fields.text({
       maxLength: 160,
