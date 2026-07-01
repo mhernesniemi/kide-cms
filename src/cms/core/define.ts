@@ -117,7 +117,8 @@ export type ContentFieldConfig = BaseFieldConfig<"content", ContentDocument> & {
   blocks: Record<string, Record<string, FieldConfig>>;
   /**
    * Show a button that expands the editor into a distraction-free fullscreen
-   * overlay (hides the sidemenu and every other field). Defaults to false.
+   * overlay (hides the sidemenu and every other field). Defaults to true; set
+   * `false` to hide the button.
    */
   fullscreen?: boolean;
 };
