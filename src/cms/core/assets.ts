@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, desc, eq, isNull, like, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, like, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { recordAudit, type AuditActor } from "./audit";
@@ -228,7 +228,9 @@ function buildAssetFilter(schema: ReturnType<typeof getSchema>, options: { folde
     );
   }
   if (options.search?.trim()) {
-    conditions.push(like(schema.cmsAssets.filename, `%${options.search.trim()}%`));
+    // Match the term against both the filename and the alt text.
+    const term = `%${options.search.trim()}%`;
+    conditions.push(or(like(schema.cmsAssets.filename, term), like(schema.cmsAssets.alt, term)));
   }
   return conditions.length ? and(...conditions) : undefined;
 }
@@ -283,6 +285,11 @@ export const folders = {
   async delete(id: string): Promise<void> {
     const db = await getDb();
     const schema = getSchema();
+    // Un-file assets in this folder so they resurface under "Unfiled" rather than
+    // pointing at a folder that no longer exists (which would orphan them).
+    await db.update(schema.cmsAssets).set({ folder: null }).where(eq(schema.cmsAssets.folder, id));
+    // Promote any direct subfolders to the top level so the tree stays reachable.
+    await db.update(schema.cmsAssetFolders).set({ parent: null }).where(eq(schema.cmsAssetFolders.parent, id));
     await db.delete(schema.cmsAssetFolders).where(eq(schema.cmsAssetFolders._id, id));
   },
 };

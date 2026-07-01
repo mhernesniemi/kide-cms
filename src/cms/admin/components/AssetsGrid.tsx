@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,6 +9,7 @@ import {
   GripVertical,
   Images,
   ImagePlus,
+  Inbox,
   MoreHorizontal,
   Pencil,
   Search,
@@ -68,17 +69,20 @@ type Props = {
   folders: FolderItem[];
   assets: AssetItem[];
   breadcrumbs: Breadcrumb[];
-  currentFolderId: string | null;
+  // Active sidebar scope: "all" | "unfiled" | folderId.
+  scope: string;
   search: string;
   page: number;
   totalPages: number;
   total: number;
+  pageSize: number;
 };
 
-// Build a "/admin/assets" URL preserving folder + search, overriding what's passed.
-function assetsUrl(opts: { folder?: string | null; q?: string; page?: number }) {
+// Build a "/admin/assets" URL for a sidebar scope ("all" | "unfiled" | folderId).
+// "all" is the bare route; "unfiled" and folder ids ride on the `folder` param.
+function assetsUrl(opts: { scope?: string; q?: string; page?: number }) {
   const sp = new URLSearchParams();
-  if (opts.folder) sp.set("folder", opts.folder);
+  if (opts.scope && opts.scope !== "all") sp.set("folder", opts.scope);
   if (opts.q?.trim()) sp.set("q", opts.q.trim());
   if (opts.page && opts.page > 1) sp.set("page", String(opts.page));
   const qs = sp.toString();
@@ -173,6 +177,9 @@ function DraggableAssetCard({
 // -----------------------------------------------
 
 function FolderRow({
+  dropId,
+  dropFolderId,
+  droppable = true,
   folderId,
   label,
   href,
@@ -182,7 +189,13 @@ function FolderRow({
   onOpenMenu,
   menuActive,
 }: {
-  folderId: string | null;
+  dropId: string;
+  // Folder value to move assets into when dropped here (null = unfiled/root).
+  dropFolderId: string | null;
+  // "All assets" is a view-only scope, not a drop target.
+  droppable?: boolean;
+  // Real folder id — enables the ⋯ options menu. null for "All"/"Unfiled".
+  folderId?: string | null;
   label: string;
   href: string;
   depth: number;
@@ -192,8 +205,9 @@ function FolderRow({
   menuActive?: boolean;
 }) {
   const { isOver, setNodeRef } = useDroppable({
-    id: `folder-${folderId ?? "root"}`,
-    data: { type: "folder", folderId },
+    id: `folder-${dropId}`,
+    data: { type: "folder", folderId: dropFolderId },
+    disabled: !droppable,
   });
 
   return (
@@ -203,7 +217,7 @@ function FolderRow({
         className={cn(
           "flex items-center gap-2 rounded-md py-1.5 pr-7 pl-2 text-sm transition-colors",
           active ? "bg-foreground/10 text-foreground" : "text-foreground/70 hover:bg-foreground/5",
-          isOver && "ring-primary bg-primary/10 text-foreground ring-1",
+          isOver && droppable && "ring-primary bg-primary/10 text-foreground ring-1",
         )}
       >
         <Icon className="text-muted-foreground size-4 shrink-0" />
@@ -261,10 +275,34 @@ function AssetDragOverlay({ asset }: { asset: AssetItem }) {
 // Main component
 // -----------------------------------------------
 
-export default function AssetsGrid({ folders, assets, currentFolderId, search, page, totalPages }: Props) {
+// Match the Cmd+K command palette: short debounce, abortable in-flight request,
+// keep the previous results visible while the next batch loads.
+const SEARCH_DEBOUNCE_MS = 150;
+
+export default function AssetsGrid({
+  folders,
+  assets: initialAssets,
+  scope,
+  search,
+  page: initialPage,
+  totalPages: initialTotalPages,
+  pageSize,
+}: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeAsset, setActiveAsset] = useState<AssetItem | null>(null);
   const [query, setQuery] = useState(search);
+
+  // Real folder id for the current scope (null for the "all"/"unfiled" scopes) —
+  // used for the upload target and the drag-drop reload.
+  const currentFolderId = scope === "all" || scope === "unfiled" ? null : scope;
+
+  // Live asset list: seeded from the SSR render, then updated in place by the
+  // debounced filter and client-side pagination (no full page reload).
+  const [items, setItems] = useState<AssetItem[]>(initialAssets);
+  const [page, setPage] = useState(initialPage);
+  const [totalPages, setTotalPages] = useState(initialTotalPages);
+  const [listLoading, setListLoading] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Folder dialog state
   const [createOpen, setCreateOpen] = useState(false);
@@ -283,7 +321,6 @@ export default function AssetsGrid({ folders, assets, currentFolderId, search, p
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
 
   const uploadFormRef = useRef<HTMLFormElement>(null);
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -307,18 +344,59 @@ export default function AssetsGrid({ folders, assets, currentFolderId, search, p
     return rows;
   }, [folders]);
 
-  // --- Search (server-side, via the URL) ---
+  // --- Live filter + pagination (client-side, mirrors the Cmd+K palette) ---
 
-  const runSearch = useCallback(
-    (value: string) => {
-      setQuery(value);
-      if (searchTimer.current) clearTimeout(searchTimer.current);
-      searchTimer.current = setTimeout(() => {
-        window.location.assign(assetsUrl({ folder: currentFolderId, q: value }));
-      }, 350);
+  // Translate the sidebar scope into the API's `folder` param:
+  //   "all" → omit (unscoped) · "unfiled" → "" (folder IS NULL) · id → that folder.
+  const scopeFolderParam = scope === "all" ? null : scope === "unfiled" ? "" : scope;
+
+  const fetchPage = useCallback(
+    async (nextPage: number, q: string) => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setListLoading(true);
+
+      const sp = new URLSearchParams();
+      sp.set("limit", String(pageSize));
+      sp.set("offset", String((nextPage - 1) * pageSize));
+      if (scopeFolderParam !== null) sp.set("folder", scopeFolderParam);
+      if (q.trim()) sp.set("q", q.trim());
+
+      try {
+        const res = await fetch(`/api/cms/assets?${sp.toString()}`, {
+          signal: controller.signal,
+          credentials: "same-origin",
+        });
+        if (!res.ok) {
+          setListLoading(false);
+          return;
+        }
+        const data = (await res.json()) as { items?: AssetItem[]; total?: number };
+        const nextTotalPages = Math.max(1, Math.ceil((data.total ?? 0) / pageSize));
+        setItems(Array.isArray(data.items) ? data.items : []);
+        setTotalPages(nextTotalPages);
+        setPage(Math.min(nextPage, nextTotalPages));
+        setListLoading(false);
+      } catch (err) {
+        // Ignore aborts (a newer keystroke superseded this request).
+        if ((err as { name?: string })?.name !== "AbortError") setListLoading(false);
+      }
     },
-    [currentFolderId],
+    [pageSize, scopeFolderParam],
   );
+
+  // Debounce the filter box: re-query from page 1 on every keystroke. Skip the
+  // initial mount — the SSR render already reflects the URL's `search`.
+  const didMount = useRef(false);
+  useEffect(() => {
+    if (!didMount.current) {
+      didMount.current = true;
+      return;
+    }
+    const timer = setTimeout(() => fetchPage(1, query), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query, fetchPage]);
 
   // --- Selection ---
 
@@ -337,11 +415,11 @@ export default function AssetsGrid({ folders, assets, currentFolderId, search, p
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      const asset = assets.find((a) => a._id === event.active.id);
+      const asset = items.find((a) => a._id === event.active.id);
       if (asset) setActiveAsset(asset);
       document.body.style.cursor = "grabbing";
     },
-    [assets],
+    [items],
   );
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -473,22 +551,37 @@ export default function AssetsGrid({ folders, assets, currentFolderId, search, p
               </button>
             </div>
             <nav className="space-y-0.5">
+              {/* View-only: shows every asset across all folders. Not a drop target. */}
               <FolderRow
-                folderId={null}
+                dropId="all"
+                dropFolderId={null}
+                droppable={false}
                 label="All assets"
-                href={assetsUrl({})}
+                href={assetsUrl({ scope: "all" })}
                 depth={0}
-                active={!currentFolderId}
+                active={scope === "all"}
                 Icon={Images}
+              />
+              {/* Assets not in any folder. Drop here to remove an asset from its folder. */}
+              <FolderRow
+                dropId="unfiled"
+                dropFolderId={null}
+                label="Unfiled"
+                href={assetsUrl({ scope: "unfiled" })}
+                depth={0}
+                active={scope === "unfiled"}
+                Icon={Inbox}
               />
               {folderTree.map(({ folder, depth }) => (
                 <FolderRow
                   key={folder._id}
+                  dropId={folder._id}
+                  dropFolderId={folder._id}
                   folderId={folder._id}
                   label={folder.name}
-                  href={assetsUrl({ folder: folder._id })}
+                  href={assetsUrl({ scope: folder._id })}
                   depth={depth}
-                  active={currentFolderId === folder._id}
+                  active={scope === folder._id}
                   Icon={Folder}
                   onOpenMenu={openMenu}
                   menuActive={menuOpen && activeFolderId === folder._id}
@@ -504,8 +597,8 @@ export default function AssetsGrid({ folders, assets, currentFolderId, search, p
                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
                   value={query}
-                  onChange={(e) => runSearch(e.target.value)}
-                  placeholder="Filter by name…"
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Filter by name or alt…"
                   className="pl-9 text-sm"
                 />
               </div>
@@ -519,7 +612,7 @@ export default function AssetsGrid({ folders, assets, currentFolderId, search, p
                   encType="multipart/form-data"
                   className="hidden"
                 >
-                  <input type="hidden" name="redirectTo" value={assetsUrl({ folder: currentFolderId })} />
+                  <input type="hidden" name="redirectTo" value={assetsUrl({ scope })} />
                   {currentFolderId && <input type="hidden" name="folder" value={currentFolderId} />}
                   <input
                     type="file"
@@ -557,10 +650,16 @@ export default function AssetsGrid({ folders, assets, currentFolderId, search, p
               </div>
             )}
 
-            {/* Grid or empty state */}
-            {assets.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-                {assets.map((asset) => (
+            {/* Grid or empty state. Keep the current grid visible while a new
+                filter/page loads (dimmed) to avoid an empty-then-fill flash. */}
+            {items.length > 0 ? (
+              <div
+                className={cn(
+                  "grid gap-4 transition-opacity sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4",
+                  listLoading && "opacity-60",
+                )}
+              >
+                {items.map((asset) => (
                   <DraggableAssetCard
                     key={asset._id}
                     asset={asset}
@@ -569,51 +668,53 @@ export default function AssetsGrid({ folders, assets, currentFolderId, search, p
                   />
                 ))}
               </div>
+            ) : listLoading ? (
+              <Card>
+                <CardContent className="text-muted-foreground py-12 text-center text-sm">Searching…</CardContent>
+              </Card>
             ) : (
               <Card>
                 <CardContent className="py-12">
                   <div className="text-center">
                     <ImagePlus className="text-muted-foreground/30 mx-auto size-12" />
                     <p className="text-muted-foreground mt-3 text-sm">
-                      {search
-                        ? `No assets match “${search}”.`
-                        : currentFolderId
-                          ? "This folder is empty."
-                          : "No assets uploaded yet."}
+                      {query.trim()
+                        ? `No assets match “${query.trim()}”.`
+                        : scope === "unfiled"
+                          ? "No unfiled assets."
+                          : scope === "all"
+                            ? "No assets uploaded yet."
+                            : "This folder is empty."}
                     </p>
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Pagination */}
+            {/* Pagination (client-side — keeps the active filter without a reload) */}
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 border-t pt-5">
-                <a
-                  href={assetsUrl({ folder: currentFolderId, q: search, page: page - 1 })}
-                  className={cn(
-                    buttonVariants({ variant: "outline", size: "sm" }),
-                    page <= 1 && "pointer-events-none opacity-50",
-                  )}
-                  aria-disabled={page <= 1}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fetchPage(page - 1, query)}
+                  disabled={page <= 1 || listLoading}
                 >
                   <ChevronLeft className="size-4" />
                   Previous
-                </a>
+                </Button>
                 <span className="text-muted-foreground px-2 text-sm">
                   Page {page} of {totalPages}
                 </span>
-                <a
-                  href={assetsUrl({ folder: currentFolderId, q: search, page: page + 1 })}
-                  className={cn(
-                    buttonVariants({ variant: "outline", size: "sm" }),
-                    page >= totalPages && "pointer-events-none opacity-50",
-                  )}
-                  aria-disabled={page >= totalPages}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fetchPage(page + 1, query)}
+                  disabled={page >= totalPages || listLoading}
                 >
                   Next
                   <ChevronRight className="size-4" />
-                </a>
+                </Button>
               </div>
             )}
           </div>
@@ -738,8 +839,8 @@ export default function AssetsGrid({ folders, assets, currentFolderId, search, p
           <DialogHeader>
             <DialogTitle>Delete folder</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &ldquo;{activeFolderName}&rdquo;? Assets in this folder will be moved to
-              root.
+              Are you sure you want to delete &ldquo;{activeFolderName}&rdquo;? Its assets move to Unfiled, and any
+              subfolders move to the top level.
             </DialogDescription>
           </DialogHeader>
           {error && <p className="text-destructive text-sm">{error}</p>}

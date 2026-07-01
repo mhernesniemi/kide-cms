@@ -15,23 +15,31 @@ const accessibleCollections = config.collections.filter((c) => {
   return rule({ user: user ?? null, doc: null, operation: "read", collection: c.slug });
 });
 
-const currentFolderId = Astro.url.searchParams.get("folder") || null;
+const folderParam = Astro.url.searchParams.get("folder");
+// Three sidebar scopes:
+//   absent    → "all"     → every asset across all folders (unscoped)
+//   "unfiled" → "unfiled" → assets not in any folder (folder IS NULL)
+//   "<id>"    → that folder
+const scope = !folderParam ? "all" : folderParam === "unfiled" ? "unfiled" : folderParam;
+// Map the scope to the core `folder` filter: undefined = unscoped, null = IS NULL, id = that folder.
+const folderScope = scope === "all" ? undefined : scope === "unfiled" ? null : scope;
+
 const search = (Astro.url.searchParams.get("q") ?? "").trim();
 const requestedPage = Math.max(1, Number(Astro.url.searchParams.get("page") ?? "1"));
 
-// Current folder (for the heading / breadcrumb trail).
-const currentFolder = currentFolderId ? await folders.findById(currentFolderId) : null;
-if (currentFolderId && !currentFolder) return Astro.redirect("/admin/assets");
+// Current folder (for the heading / breadcrumb trail) — only for a real folder scope.
+const currentFolder = typeof folderScope === "string" ? await folders.findById(folderScope) : null;
+if (typeof folderScope === "string" && !currentFolder) return Astro.redirect("/admin/assets");
 
 // Every folder — the sticky sidebar renders the whole tree as drop targets.
 const allFolders = await folders.findAll();
 
-// Assets in the current location, filtered by name and paginated.
-const total = await assets.count({ folder: currentFolderId, search });
+// Assets in the current scope, filtered by name and paginated.
+const total = await assets.count({ folder: folderScope, search });
 const totalPages = Math.max(1, Math.ceil(total / ASSET_PAGE_SIZE));
 const page = Math.min(requestedPage, totalPages);
 const folderAssets = await assets.find({
-  folder: currentFolderId,
+  folder: folderScope,
   search,
   limit: ASSET_PAGE_SIZE,
   offset: (page - 1) * ASSET_PAGE_SIZE,
@@ -72,10 +80,11 @@ const assetData = folderAssets.map((a) => ({
     folders={folderData}
     assets={assetData}
     breadcrumbs={breadcrumbs}
-    currentFolderId={currentFolderId}
+    scope={scope}
     search={search}
     page={page}
     totalPages={totalPages}
     total={total}
+    pageSize={ASSET_PAGE_SIZE}
   />
 </AdminLayout>

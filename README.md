@@ -81,6 +81,12 @@ Add it to Claude Code from your Kide project root:
 claude mcp add --transport stdio kide -- pnpm cms:mcp
 ```
 
+Add it to Codex from your Kide project root:
+
+```bash
+codex mcp add kide -- pnpm cms:mcp
+```
+
 Example MCP client config:
 
 ```json

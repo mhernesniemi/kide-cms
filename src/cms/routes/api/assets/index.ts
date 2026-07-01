@@ -14,10 +14,12 @@ export const GET: APIRoute = async ({ url }) => {
   const limit = url.searchParams.get("limit") ? Number(url.searchParams.get("limit")) : 50;
   const offset = url.searchParams.get("offset") ? Number(url.searchParams.get("offset")) : 0;
   const folderParam = url.searchParams.get("folder");
+  // folder scope: absent → undefined (every asset, unscoped) · "" → null (unfiled/root) · id → that folder
   const folder = folderParam !== null ? (folderParam === "" ? null : folderParam) : undefined;
+  const search = url.searchParams.get("q")?.trim() || undefined;
 
-  const items = await assets.find({ limit, offset, folder });
-  const total = await assets.count();
+  const items = await assets.find({ limit, offset, folder, search });
+  const total = await assets.count({ folder, search });
 
   return Response.json({ items, total });
 };
