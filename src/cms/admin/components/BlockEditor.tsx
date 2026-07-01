@@ -16,7 +16,8 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "./ui/button";
 import { buttonVariants } from "./ui/button";
-import SelectField from "./SelectField";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "./ui/command";
 import {
   SubField,
   blankBlockFields,
@@ -274,15 +275,16 @@ export default function BlockEditor({
   const [blocks, setBlocks] = useState<Block[]>(() => parseBlocks(value, types));
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
   const [newBlockKey, setNewBlockKey] = useState<string | null>(null);
+  const [sharedOpen, setSharedOpen] = useState(false);
   const [localSharedSections, setLocalSharedSections] = useState<SharedSectionOption[]>(sharedSections);
   const savedExpandedRef = useRef<Set<string> | null>(null);
   const hiddenRef = useRef<HTMLInputElement>(null);
   const previewChannelRef = useRef<BroadcastChannel | null>(null);
 
   const typeNames = Object.keys(types);
-  const compatibleSharedSections = sharedEnabled
-    ? localSharedSections.filter((section) => !!types[section.blockType])
-    : [];
+  // Any shared section can be inserted — it renders and is edited through its own block
+  // type, independent of the block types this field declares.
+  const insertableSharedSections = sharedEnabled ? localSharedSections : [];
   const sharedSectionsById = new Map(localSharedSections.map((section) => [section.id, section]));
 
   const sensors = useSensors(
@@ -527,23 +529,44 @@ export default function BlockEditor({
             {humanize(typeName)}
           </Button>
         ))}
-      </div>
 
-      {compatibleSharedSections.length > 0 && (
-        <div className="flex max-w-sm items-center gap-2">
-          <Link2 className="text-muted-foreground size-4 shrink-0" />
-          <SelectField
-            name={`${name}_shared_insert`}
-            value=""
-            placeholder="Insert shared section..."
-            items={compatibleSharedSections.map((section) => ({
-              value: section.id,
-              label: `${section.title} (${humanize(section.blockType)})`,
-            }))}
-            onChange={addSharedBlock}
-          />
-        </div>
-      )}
+        {/* Shared sections — same button shape, distinct colour, always last;
+            opens a searchable combobox popover to pick a section. */}
+        {insertableSharedSections.length > 0 && (
+          <Popover open={sharedOpen} onOpenChange={setSharedOpen}>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="outline" size="sm" className="text-foreground/70">
+                <Link2 className="mr-1 size-3.5" />
+                Shared section
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search shared sections…" />
+                <CommandList>
+                  <CommandEmpty>No shared sections found.</CommandEmpty>
+                  {insertableSharedSections.map((section) => (
+                    <CommandItem
+                      key={section.id}
+                      value={`${section.title} ${section.blockType}`}
+                      onSelect={() => {
+                        addSharedBlock(section.id);
+                        setSharedOpen(false);
+                      }}
+                      className="cursor-pointer px-3 py-2"
+                    >
+                      <span className="flex-1 truncate">{section.title}</span>
+                      <span className="text-muted-foreground ml-2 shrink-0 text-xs uppercase">
+                        {humanize(section.blockType)}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        )}
+      </div>
     </div>
   );
 }
