@@ -7,7 +7,7 @@ import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { formatDate, formatFieldValue, getLabelField, getListColumns, humanize } from "@/cms/core";
 import { canWrite, getVisualStatus } from "@/cms/admin/lib/access";
-import { loadSharedSectionUsageCounts } from "@/cms/admin/lib/edit-data";
+import { loadRelationOptionList, loadSharedSectionUsageCounts } from "@/cms/admin/lib/edit-data";
 
 type CollectionLike = {
   slug: string;
@@ -53,6 +53,23 @@ const [docs, totalDocs] = await Promise.all([
 const totalPages = Math.max(1, Math.ceil(totalDocs / PAGE_SIZE));
 
 const listColumns = getListColumns(collection, viewConfig.list);
+
+// Resolve relation columns to their related document labels (id → label) so the
+// table shows e.g. the form title instead of the raw relation id.
+const relationLabels: Record<string, string> = {};
+for (const column of listColumns) {
+  const field = collection.fields[column];
+  if (field?.type !== "relation") continue;
+  const options = await loadRelationOptionList(
+    field.collection,
+    config,
+    cmsRuntime as any,
+    defaultLocale,
+    runtimeContext,
+  );
+  for (const option of options) relationLabels[option.value] = option.label;
+}
+
 const sharedSectionUsageCounts =
   collection.slug === "shared-sections"
     ? await loadSharedSectionUsageCounts(
@@ -86,7 +103,7 @@ const tableRows = docs.map((entry: Record<string, unknown>) => ({
             ? formatDate(entry[column])
             : column.startsWith("_")
               ? String(entry[column] ?? "—")
-              : formatFieldValue(collection.fields[column], entry[column]),
+              : formatFieldValue(collection.fields[column], entry[column], relationLabels),
     ]),
   ),
 }));

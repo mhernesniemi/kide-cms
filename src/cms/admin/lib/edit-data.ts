@@ -48,7 +48,7 @@ export type RelationOptions = {
   relationMetaByField: Record<string, RelationMeta>;
 };
 
-const loadRelationOptionList = async (
+export const loadRelationOptionList = async (
   collectionSlug: string,
   config: any,
   cmsRuntime: CmsRuntime,
