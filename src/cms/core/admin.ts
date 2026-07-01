@@ -2,27 +2,81 @@ import type { CMSConfig, CollectionConfig, FieldConfig } from "./define";
 import { contentToPlainText, richTextToPlainText } from "./values";
 
 const DEFAULT_DATE_FORMAT = "en-US";
+const DEFAULT_DATE_OPTIONS: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+};
 
 let dateLocale = DEFAULT_DATE_FORMAT;
 let timeZone: string | undefined;
+let formatOptions: Intl.DateTimeFormatOptions = DEFAULT_DATE_OPTIONS;
+let datePattern: string | undefined;
 
 export const initDateFormat = (config: CMSConfig, nextTimeZone?: string) => {
   dateLocale = config.admin?.dateFormat ?? DEFAULT_DATE_FORMAT;
-  timeZone = nextTimeZone;
+  // A configured zone wins; otherwise fall back to the browser's zone (passed in per request).
+  timeZone = config.admin?.timeZone ?? nextTimeZone;
+  formatOptions = { ...DEFAULT_DATE_OPTIONS, ...config.admin?.dateTimeFormat };
+  datePattern = config.admin?.dateTimePattern;
+};
+
+// Extract zone-correct numeric parts once, then substitute pattern tokens against them.
+type DateParts = { year: string; month: string; day: string; hour: string; minute: string; second: string };
+
+const zoneParts = (date: Date, zone: string | undefined): DateParts => {
+  const parts: Record<string, string> = {};
+  for (const p of new Intl.DateTimeFormat("en-US", {
+    timeZone: zone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date)) {
+    if (p.type !== "literal") parts[p.type] = p.value;
+  }
+  return parts as unknown as DateParts;
+};
+
+const TOKEN_FNS: Record<string, (p: DateParts) => string> = {
+  yyyy: (p) => p.year,
+  yy: (p) => p.year.slice(-2),
+  MM: (p) => p.month,
+  M: (p) => String(Number(p.month)),
+  dd: (p) => p.day,
+  d: (p) => String(Number(p.day)),
+  HH: (p) => p.hour,
+  H: (p) => String(Number(p.hour)),
+  hh: (p) => String(((Number(p.hour) + 11) % 12) + 1).padStart(2, "0"),
+  h: (p) => String(((Number(p.hour) + 11) % 12) + 1),
+  mm: (p) => p.minute,
+  m: (p) => String(Number(p.minute)),
+  ss: (p) => p.second,
+  s: (p) => String(Number(p.second)),
+  a: (p) => (Number(p.hour) < 12 ? "AM" : "PM"),
+};
+
+const TOKEN_RE = /'([^']*)'|yyyy|yy|MM|M|dd|d|HH|H|hh|h|mm|m|ss|s|a/g;
+
+const formatWithPattern = (date: Date, pattern: string, zone: string | undefined): string => {
+  const p = zoneParts(date, zone);
+  return pattern.replace(TOKEN_RE, (match, quoted?: string) => {
+    if (quoted !== undefined) return quoted === "" ? "'" : quoted; // '' → literal apostrophe
+    return TOKEN_FNS[match]?.(p) ?? match;
+  });
 };
 
 export const formatDate = (value: unknown): string => {
   if (!value) return "—";
   const date = new Date(String(value));
   if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString(dateLocale, {
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone,
-  });
+  if (datePattern) return formatWithPattern(date, datePattern, timeZone);
+  return date.toLocaleString(dateLocale, { ...formatOptions, timeZone });
 };
 
 export type AdminRoute =

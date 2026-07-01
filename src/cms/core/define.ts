@@ -259,7 +259,22 @@ export type AdminRateLimitConfig = {
 export type ColorOption = { label: string; value: string };
 
 export type AdminConfig = {
+  /** BCP-47 locale for admin date/time display (e.g. "en-US", "en-GB", "fi-FI"). Default "en-US". */
   dateFormat?: string;
+  /** IANA time zone for admin date/time display (e.g. "Europe/Helsinki"). Overrides the browser's zone. */
+  timeZone?: string;
+  /**
+   * Overrides for how admin dates/times are rendered, merged over the defaults
+   * (numeric date + 2-digit hour/minute). Use e.g. `{ hour12: false }` for 24-hour time,
+   * `{ second: "2-digit" }` to show seconds, or `{ hour: undefined, minute: undefined }` for date-only.
+   */
+  dateTimeFormat?: Intl.DateTimeFormatOptions;
+  /**
+   * Explicit render pattern; when set it wins over `dateFormat`/`dateTimeFormat`.
+   * Tokens: `yyyy yy MM M dd d HH H hh h mm m ss s a`. Wrap literal text in single
+   * quotes, e.g. `"d.M.yyyy 'klo' HH:mm"` → `1.7.2026 klo 14:30`. `timeZone` still applies.
+   */
+  dateTimePattern?: string;
   nav?: AdminNavItem[];
   uploads?: AdminUploadConfig;
   rateLimit?: AdminRateLimitConfig;
