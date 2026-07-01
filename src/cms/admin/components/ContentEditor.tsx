@@ -174,7 +174,7 @@ function BlockNodeView(props: NodeViewProps) {
     <NodeViewWrapper
       className={cn(
         "bg-muted/20 my-3 overflow-hidden rounded-lg border",
-        selected && "ring-ring/50 border-ring ring-2",
+        selected && "border-ring bg-accent/40",
       )}
     >
       <div className="bg-muted/40 flex items-center gap-2 px-3 py-2 select-none" contentEditable={false}>

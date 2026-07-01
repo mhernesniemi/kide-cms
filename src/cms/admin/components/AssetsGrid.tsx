@@ -217,7 +217,7 @@ function FolderRow({
         className={cn(
           "flex items-center gap-2 rounded-md py-1.5 pr-7 pl-2 text-sm transition-colors",
           active ? "bg-foreground/10 text-foreground" : "text-foreground/70 hover:bg-foreground/5",
-          isOver && droppable && "ring-primary bg-primary/10 text-foreground ring-1",
+          isOver && droppable && "bg-primary/15 text-foreground",
         )}
       >
         <Icon className="text-muted-foreground size-4 shrink-0" />

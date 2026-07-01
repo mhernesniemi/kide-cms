@@ -69,47 +69,9 @@ posts: {
 
 ## Local MCP
 
-Run Kide as a local stdio MCP server for agent-assisted content editing:
+Kide ships a local stdio MCP server (`pnpm cms:mcp`) so agents like Claude Code and Codex can inspect collections and edit content through the same schema-aware API your server code uses — drafts by default, publishing always explicit.
 
-```bash
-pnpm cms:mcp
-```
-
-Add it to Claude Code from your Kide project root:
-
-```bash
-claude mcp add --transport stdio kide -- pnpm cms:mcp
-```
-
-Add it to Codex from your Kide project root:
-
-```bash
-codex mcp add kide -- pnpm cms:mcp
-```
-
-Example MCP client config:
-
-```json
-{
-  "mcpServers": {
-    "kide": {
-      "command": "pnpm",
-      "args": ["cms:mcp"],
-      "cwd": "/path/to/your-kide-project"
-    }
-  }
-}
-```
-
-The server exposes collection introspection, document list/get/count, draft-friendly create/update, explicit publish/unpublish/schedule, translations, and asset metadata tools. It also exposes the machine-readable content model as `kide://model`.
-
-By default MCP runs as an admin-like local actor so collection access rules still receive a user:
-
-```bash
-KIDE_MCP_USER_ID=mcp-local KIDE_MCP_USER_ROLE=editor KIDE_MCP_USER_EMAIL=editor@example.com pnpm cms:mcp
-```
-
-Auth collections are blocked for MCP mutations by default. Set `KIDE_MCP_ALLOW_AUTH_COLLECTIONS=true` only when you intentionally want agent access to auth-backed collections such as users.
+See the [MCP docs](https://docs.kide.dev/mcp/) for client setup (Claude Code, Codex, generic config), the access-rule actor, and safety defaults.
 
 ## Deploy Targets
 
