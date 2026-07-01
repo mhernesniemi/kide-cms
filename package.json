@@ -22,6 +22,7 @@
     "cms:reindex": "node --import tsx src/cms/internals/reindex.ts",
     "cms:push": "node --import tsx src/cms/internals/push.ts",
     "cms:describe": "node --import tsx src/cms/internals/describe.ts",
+    "cms:mcp": "node --import tsx src/cms/internals/mcp.ts",
     "db:generate": "pnpm cms:generate && drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"
@@ -34,6 +35,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-popover": "^1.1.15",
     "@tailwindcss/typography": "^0.5.19",
