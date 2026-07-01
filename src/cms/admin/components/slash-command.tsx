@@ -2,10 +2,12 @@ import { Extension, type Editor, type Range } from "@tiptap/core";
 import Suggestion, { type SuggestionOptions } from "@tiptap/suggestion";
 import { ReactRenderer } from "@tiptap/react";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ComponentType } from "react";
-import { Heading2, Heading3, List, ListOrdered, Quote, Blocks, type LucideProps } from "lucide-react";
+import { Heading2, Heading3, List, ListOrdered, Quote, Blocks, Link2, type LucideProps } from "lucide-react";
 import { cn } from "../lib/utils";
-import { insertBlockNode } from "./content-block-spec";
+import { insertBlockNode, SHARED_BLOCK_TYPE } from "./content-block-spec";
 import { blankBlockFields, humanize, type BlockTypesMeta } from "./block-fields";
+
+export type SharedSectionOption = { id: string; title: string; blockType: string; status?: string };
 
 // -----------------------------------------------
 // Slash command — Notion/Gutenberg-style "/" inserter for headings, lists, quotes
@@ -19,7 +21,7 @@ type SlashItem = {
   run: (editor: Editor, range: Range) => void;
 };
 
-const buildItems = (types: BlockTypesMeta, query: string): SlashItem[] => {
+const buildItems = (types: BlockTypesMeta, sharedSections: SharedSectionOption[], query: string): SlashItem[] => {
   const formatting: SlashItem[] = [
     {
       title: "Heading 2",
@@ -60,7 +62,15 @@ const buildItems = (types: BlockTypesMeta, query: string): SlashItem[] => {
     run: (e, r) => insertBlockNode(e, typeName, blankBlockFields(types[typeName] ?? {}), r),
   }));
 
-  const all = [...formatting, ...blocks];
+  const shared: SlashItem[] = sharedSections.map((section) => ({
+    title: section.title,
+    subtitle: `Shared section · ${humanize(section.blockType)}`,
+    icon: Link2,
+    run: (e, r) =>
+      insertBlockNode(e, SHARED_BLOCK_TYPE, { ref: section.id, title: section.title, blockType: section.blockType }, r),
+  }));
+
+  const all = [...formatting, ...blocks, ...shared];
   const q = query.trim().toLowerCase();
   return q ? all.filter((item) => item.title.toLowerCase().includes(q)) : all;
 };
@@ -145,13 +155,13 @@ SlashMenu.displayName = "SlashMenu";
 // Extension
 // -----------------------------------------------
 
-type SlashCommandOptions = { types: BlockTypesMeta };
+type SlashCommandOptions = { types: BlockTypesMeta; sharedSections: SharedSectionOption[] };
 
 export const SlashCommand = Extension.create<SlashCommandOptions>({
   name: "slashCommand",
 
   addOptions() {
-    return { types: {} };
+    return { types: {}, sharedSections: [] };
   },
 
   addProseMirrorPlugins() {
@@ -160,7 +170,7 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
       startOfLine: false,
       allowSpaces: false,
       command: ({ editor, range, props }) => props.run(editor, range),
-      items: ({ query }) => buildItems(this.options.types, query),
+      items: ({ query }) => buildItems(this.options.types, this.options.sharedSections, query),
       render: () => {
         let component: ReactRenderer<SlashMenuRef, SlashMenuProps> | null = null;
 

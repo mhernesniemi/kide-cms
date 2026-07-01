@@ -16,6 +16,10 @@ import type { BlockTypesMeta, RelationOption } from "./block-fields";
 // the schema and breaks text insertion. Use a distinct node name.
 export const BLOCK_NODE_NAME = "cmsBlock";
 
+// Discriminator for a shared-section reference block (mirrors core's SHARED_BLOCK_TYPE).
+// Kept here so client components avoid importing the server-side `@/cms/core` barrel.
+export const SHARED_BLOCK_TYPE = "__shared";
+
 export type BlockNodeOptions = {
   types: BlockTypesMeta;
   blockRelationOptions: Record<string, RelationOption[]>;

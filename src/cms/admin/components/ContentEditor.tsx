@@ -7,6 +7,7 @@ import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
+  ArrowUpRight,
   Bold,
   ChevronRight,
   GripVertical,
@@ -18,7 +19,7 @@ import {
   Minimize2,
   Trash2,
 } from "lucide-react";
-import { Button } from "./ui/button";
+import { Button, buttonVariants } from "./ui/button";
 import { cn } from "../lib/utils";
 import {
   LinkDialog,
@@ -29,8 +30,8 @@ import {
   type LinkGroup,
 } from "./RichTextEditor";
 import { SubField, humanize, type BlockTypesMeta, type RelationOption, type SubFieldMeta } from "./block-fields";
-import { blockNodeSpec, BLOCK_NODE_NAME, type BlockNodeOptions } from "./content-block-spec";
-import { SlashCommand } from "./slash-command";
+import { blockNodeSpec, BLOCK_NODE_NAME, SHARED_BLOCK_TYPE, type BlockNodeOptions } from "./content-block-spec";
+import { SlashCommand, type SharedSectionOption } from "./slash-command";
 
 // -----------------------------------------------
 // Content AST ↔ Tiptap JSON conversion
@@ -102,15 +103,22 @@ function BlockNodeView(props: NodeViewProps) {
   const getRelationOptions = (fieldName: string): RelationOption[] =>
     options.blockRelationOptions[`block:${options.fieldName}:${blockType}:${fieldName}`] ?? [];
 
-  const preview = (() => {
-    for (const [key, meta] of Object.entries(fieldsMeta)) {
-      if (meta.type === "text" && fields[key]) {
-        const text = String(fields[key]);
-        return text.length > 60 ? text.slice(0, 60) + "..." : text;
-      }
-    }
-    return "";
-  })();
+  const isShared = blockType === SHARED_BLOCK_TYPE;
+  const sharedTitle = String(fields.title ?? "Shared section");
+  const sharedRef = String(fields.ref ?? "");
+  const sharedType = String(fields.blockType ?? "");
+
+  const preview = isShared
+    ? sharedTitle
+    : (() => {
+        for (const [key, meta] of Object.entries(fieldsMeta)) {
+          if (meta.type === "text" && fields[key]) {
+            const text = String(fields[key]);
+            return text.length > 60 ? text.slice(0, 60) + "..." : text;
+          }
+        }
+        return "";
+      })();
 
   return (
     <NodeViewWrapper
@@ -136,9 +144,17 @@ function BlockNodeView(props: NodeViewProps) {
               expanded && "rotate-90",
             )}
           />
-          <span className="bg-secondary text-secondary-foreground rounded px-2 py-0.5 text-xs font-medium">
-            {humanize(blockType)}
+          <span
+            className={cn(
+              "rounded px-2 py-0.5 text-xs font-medium",
+              isShared
+                ? "bg-primary/10 text-primary border-primary/20 border"
+                : "bg-secondary text-secondary-foreground",
+            )}
+          >
+            {isShared ? "Shared" : humanize(blockType)}
           </span>
+          {isShared && sharedType && <span className="text-muted-foreground text-xs">{humanize(sharedType)}</span>}
         </button>
 
         {!expanded && preview && <span className="text-muted-foreground min-w-0 truncate text-sm">{preview}</span>}
@@ -157,20 +173,43 @@ function BlockNodeView(props: NodeViewProps) {
 
       {expanded && (
         <div className="space-y-4 border-t px-4 py-4" contentEditable={false}>
-          {Object.keys(fieldsMeta).length === 0 && (
-            <p className="text-muted-foreground text-sm">Unknown block type "{blockType}".</p>
+          {isShared ? (
+            <div className="space-y-3">
+              <div>
+                <p className="font-medium">{sharedTitle}</p>
+                <p className="text-muted-foreground text-sm">
+                  Editing the source updates every place that uses this shared section.
+                </p>
+              </div>
+              {sharedRef && (
+                <a
+                  href={`/admin/shared-sections/${sharedRef}`}
+                  target="_blank"
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  <ArrowUpRight className="size-3.5" />
+                  Edit source
+                </a>
+              )}
+            </div>
+          ) : (
+            <>
+              {Object.keys(fieldsMeta).length === 0 && (
+                <p className="text-muted-foreground text-sm">Unknown block type "{blockType}".</p>
+              )}
+              {Object.entries(fieldsMeta).map(([fieldName, meta]) => (
+                <SubField
+                  key={fieldName}
+                  blockKey={fieldIdPrefix}
+                  fieldName={fieldName}
+                  meta={meta}
+                  value={fields[fieldName]}
+                  onChange={(v) => updateField(fieldName, v)}
+                  relationOptions={meta.type === "relation" ? getRelationOptions(fieldName) : []}
+                />
+              ))}
+            </>
           )}
-          {Object.entries(fieldsMeta).map(([fieldName, meta]) => (
-            <SubField
-              key={fieldName}
-              blockKey={fieldIdPrefix}
-              fieldName={fieldName}
-              meta={meta}
-              value={fields[fieldName]}
-              onChange={(v) => updateField(fieldName, v)}
-              relationOptions={meta.type === "relation" ? getRelationOptions(fieldName) : []}
-            />
-          ))}
         </div>
       )}
     </NodeViewWrapper>
@@ -227,6 +266,8 @@ type Props = {
   rows?: number;
   types: BlockTypesMeta;
   blockRelationOptions?: Record<string, RelationOption[]>;
+  /** Shared sections offered by the `/` menu. */
+  sharedSections?: SharedSectionOption[];
   /** When true, show a button that expands the editor into a fullscreen overlay. */
   fullscreen?: boolean;
 };
@@ -238,6 +279,7 @@ export default function ContentEditor({
   rows = 14,
   types,
   blockRelationOptions = {},
+  sharedSections = [],
   fullscreen = false,
 }: Props) {
   const hiddenRef = useRef<HTMLInputElement>(null);
@@ -304,7 +346,7 @@ export default function ContentEditor({
         placeholder: ({ node }) => (node.type.name === "paragraph" ? "Type / for commands…" : ""),
       }),
       BlockNode.configure({ types, blockRelationOptions, fieldName: name }),
-      SlashCommand.configure({ types }),
+      SlashCommand.configure({ types, sharedSections }),
     ],
     content: contentToTiptap(parsedInitial),
     onUpdate: ({ editor }) => {
