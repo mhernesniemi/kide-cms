@@ -17,9 +17,13 @@ import {
   Link as LinkIcon,
   Maximize2,
   Minimize2,
+  Save,
   Trash2,
+  Unlink,
 } from "lucide-react";
 import { Button, buttonVariants } from "./ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Input } from "./ui/input";
 import { cn } from "../lib/utils";
 import {
   LinkDialog,
@@ -92,6 +96,8 @@ function BlockNodeView(props: NodeViewProps) {
   // as blank too — e.g. an image block defaults `images` to `[]`, which is truthy and
   // would otherwise wrongly start the block collapsed.
   const [expanded, setExpanded] = useState(() => Object.values(fields).every(isBlankFieldValue));
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [sharedName, setSharedName] = useState("");
   // Stable per-node id so sub-field DOM ids/names stay unique across repeated blocks of
   // the same type (two FAQ blocks must not share input ids/labels).
   const fieldIdPrefix = useId();
@@ -107,6 +113,50 @@ function BlockNodeView(props: NodeViewProps) {
   const sharedTitle = String(fields.title ?? "Shared section");
   const sharedRef = String(fields.ref ?? "");
   const sharedType = String(fields.blockType ?? "");
+
+  // Save this block as a reusable shared section, then turn it into a reference.
+  const openSaveDialog = () => {
+    setSharedName(preview || humanize(blockType));
+    setSaveDialogOpen(true);
+  };
+
+  const saveAsShared = async () => {
+    const title = sharedName.trim();
+    if (!title) return;
+    setSaveDialogOpen(false);
+    const res = await fetch("/api/cms/shared-sections", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, blockType, block: { type: blockType, ...fields }, _status: "published" }),
+    });
+    if (!res.ok) {
+      window.alert("Could not create the shared section.");
+      return;
+    }
+    const created = (await res.json()) as Record<string, unknown>;
+    updateAttributes({
+      blockType: SHARED_BLOCK_TYPE,
+      fields: { ref: String(created._id), title: String(created.title ?? title), blockType },
+    });
+  };
+
+  // Replace a shared reference with a local, editable copy of the source block.
+  const detach = async () => {
+    if (!sharedRef) return;
+    const res = await fetch(`/api/cms/shared-sections/${sharedRef}?status=any`, { credentials: "same-origin" });
+    if (!res.ok) {
+      window.alert("Could not load the shared section to detach.");
+      return;
+    }
+    const shared = (await res.json()) as { block?: Record<string, unknown> };
+    if (!shared.block || typeof shared.block !== "object") {
+      window.alert("The shared section has no block content to detach.");
+      return;
+    }
+    const { type, ...rest } = shared.block;
+    updateAttributes({ blockType: String(type ?? ""), fields: rest });
+  };
 
   const preview = isShared
     ? sharedTitle
@@ -159,16 +209,28 @@ function BlockNodeView(props: NodeViewProps) {
 
         {!expanded && preview && <span className="text-muted-foreground min-w-0 truncate text-sm">{preview}</span>}
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          title="Remove block"
-          className="text-muted-foreground hover:text-destructive ml-auto size-7"
-          onClick={() => deleteNode()}
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
+        <div className="ml-auto flex shrink-0 items-center">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            title={isShared ? "Detach shared section" : "Save as shared section"}
+            className="text-muted-foreground hover:text-foreground size-7"
+            onClick={() => (isShared ? detach() : openSaveDialog())}
+          >
+            {isShared ? <Unlink className="size-3.5" /> : <Save className="size-3.5" />}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            title="Remove block"
+            className="text-muted-foreground hover:text-destructive size-7"
+            onClick={() => deleteNode()}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
       </div>
 
       {expanded && (
@@ -212,6 +274,36 @@ function BlockNodeView(props: NodeViewProps) {
           )}
         </div>
       )}
+
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Save as shared section</DialogTitle>
+            <DialogDescription>Give this section a name so it can be reused on other pages.</DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              saveAsShared();
+            }}
+          >
+            <Input
+              value={sharedName}
+              onChange={(e) => setSharedName(e.target.value)}
+              placeholder="Section name"
+              autoFocus
+            />
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => setSaveDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!sharedName.trim()}>
+                Save
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </NodeViewWrapper>
   );
 }

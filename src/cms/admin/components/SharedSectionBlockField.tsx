@@ -18,21 +18,20 @@ type SharedBlock = {
 };
 
 function parseInitialBlock(value: string | undefined, types: BlockTypesMeta): SharedBlock {
-  const fallbackType = Object.keys(types)[0] ?? "";
-  const fallback = fallbackType ? { type: fallbackType, ...blankBlockFields(types[fallbackType] ?? {}) } : { type: "" };
-  if (!value) return fallback;
+  // Default to no selection — the editor must actively choose a block type.
+  if (!value) return { type: "" };
 
   try {
     const parsed = JSON.parse(value) as Record<string, unknown>;
-    const type = String(parsed.type ?? fallbackType);
-    if (!type) return fallback;
+    const type = String(parsed.type ?? "");
+    if (!type) return { type: "" };
     return {
       type,
       ...blankBlockFields(types[type] ?? {}),
       ...parsed,
     };
   } catch {
-    return fallback;
+    return { type: "" };
   }
 }
 
@@ -74,19 +73,21 @@ export default function SharedSectionBlockField({ name, value, types, blockRelat
         onChange={changeType}
       />
 
-      <div className="space-y-4 rounded-lg border px-4 py-4">
-        {Object.entries(fieldsMeta).map(([fieldName, meta]) => (
-          <SubField
-            key={fieldName}
-            blockKey={`shared_${selectedType}`}
-            fieldName={fieldName}
-            meta={meta}
-            value={block[fieldName]}
-            onChange={(v) => updateField(fieldName, v)}
-            relationOptions={meta.type === "relation" ? relationOptionsFor(fieldName) : []}
-          />
-        ))}
-      </div>
+      {selectedType && Object.keys(fieldsMeta).length > 0 && (
+        <div className="space-y-4 rounded-lg border px-4 py-4">
+          {Object.entries(fieldsMeta).map(([fieldName, meta]) => (
+            <SubField
+              key={fieldName}
+              blockKey={`shared_${selectedType}`}
+              fieldName={fieldName}
+              meta={meta}
+              value={block[fieldName]}
+              onChange={(v) => updateField(fieldName, v)}
+              relationOptions={meta.type === "relation" ? relationOptionsFor(fieldName) : []}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
