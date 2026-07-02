@@ -29,6 +29,7 @@ type RuntimeContext = {
     id: string;
     role?: string;
     email?: string;
+    [key: string]: unknown;
   } | null;
   cache?: {
     invalidate: (opts: { tags: string[] }) => void | Promise<void>;
@@ -332,14 +333,34 @@ export const createCms = (config: CMSConfig) => {
       return rest;
     };
 
+    const applyPublishedSnapshot = (row: Record<string, unknown>, status: FindOptions["status"]) => {
+      const doc = deserializeFromDb(collection, row);
+      if (status === "published" && typeof row._published === "string") {
+        try {
+          const snapshot = JSON.parse(row._published);
+          for (const key of Object.keys(collection.fields)) {
+            if (key in snapshot) doc[key] = snapshot[key];
+          }
+        } catch {}
+      }
+      return doc;
+    };
+
+    const filterReadableDocs = async (docs: Array<Record<string, unknown>>, context: RuntimeContext) => {
+      if (!collection.access?.read || context._system) return docs;
+      const filtered: Array<Record<string, unknown>> = [];
+      for (const doc of docs) {
+        if (await canAccess(collection, "read", context, doc)) filtered.push(doc);
+      }
+      return filtered;
+    };
+
     return {
       async find(options: FindOptions = {}, context: RuntimeContext = {}) {
-        const allowed = await canAccess(collection, "read", context);
-        if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
-
         const db = await getDb();
         const tables = await getTableRefs(slug);
         const status = options.status ?? (collection.drafts ? "published" : "any");
+        const filterAfterReadAccess = !!collection.access?.read && !context._system;
 
         const conditions: any[] = [];
         if (status !== "any" && collection.drafts) {
@@ -377,22 +398,21 @@ export const createCms = (config: CMSConfig) => {
           }
         }
 
-        if (options.limit) query = query.limit(options.limit) as any;
-        if (options.offset) query = query.offset(options.offset) as any;
+        if (!filterAfterReadAccess) {
+          if (options.limit) query = query.limit(options.limit) as any;
+          if (options.offset) query = query.offset(options.offset) as any;
+        }
 
         const rows = await query;
-        const docs = rows.map((row: Record<string, unknown>) => {
-          const doc = deserializeFromDb(collection, row);
-          if (status === "published" && typeof row._published === "string") {
-            try {
-              const snapshot = JSON.parse(row._published);
-              for (const key of Object.keys(collection.fields)) {
-                if (key in snapshot) doc[key] = snapshot[key];
-              }
-            } catch {}
-          }
-          return doc;
-        });
+        let docs = await filterReadableDocs(
+          rows.map((row: Record<string, unknown>) => applyPublishedSnapshot(row, status)),
+          context,
+        );
+        if (filterAfterReadAccess) {
+          const start = options.offset ?? 0;
+          const end = options.limit ? start + options.limit : undefined;
+          docs = docs.slice(start, end);
+        }
 
         if (tables.translations && (options.locale || config.locales)) {
           const docIds = docs.map((doc: Record<string, unknown>) => String(doc._id));
@@ -875,9 +895,6 @@ export const createCms = (config: CMSConfig) => {
       },
 
       async count(filter: Omit<FindOptions, "limit" | "offset" | "sort"> = {}, context: RuntimeContext = {}) {
-        const allowed = await canAccess(collection, "read", context);
-        if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
-
         const db = await getDb();
         const tables = await getTableRefs(slug);
         const status = filter.status ?? (collection.drafts ? "published" : "any");
@@ -903,6 +920,19 @@ export const createCms = (config: CMSConfig) => {
           if (searchConditions.length > 0) {
             conditions.push(or(...searchConditions)!);
           }
+        }
+
+        if (collection.access?.read && !context._system) {
+          let rowsQuery = db.select().from(tables.main);
+          if (conditions.length > 0) {
+            rowsQuery = rowsQuery.where(conditions.length === 1 ? conditions[0] : and(...conditions)) as any;
+          }
+          const rows = await rowsQuery;
+          const docs = await filterReadableDocs(
+            rows.map((row: Record<string, unknown>) => applyPublishedSnapshot(row, status)),
+            context,
+          );
+          return docs.length;
         }
 
         let query = db.select({ total: sql<number>`count(*)` }).from(tables.main);

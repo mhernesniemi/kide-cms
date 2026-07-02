@@ -94,6 +94,18 @@ export type SessionUser = {
   email: string;
   name: string;
   role: string;
+  [key: string]: unknown;
+};
+
+const parseSessionValue = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("[") && !trimmed.startsWith("{")) return value;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
 };
 
 export const getSessionUser = async (request: Request): Promise<SessionUser | null> => {
@@ -114,7 +126,13 @@ export const getSessionUser = async (request: Request): Promise<SessionUser | nu
   if (userRows.length === 0) return null;
 
   const user = userRows[0] as Record<string, unknown>;
+  const publicFields = Object.fromEntries(
+    Object.entries(user)
+      .filter(([key]) => key !== "_id" && key !== "password")
+      .map(([key, value]) => [key, parseSessionValue(value)]),
+  );
   return {
+    ...publicFields,
     id: String(user._id),
     email: String(user.email),
     name: String(user.name),

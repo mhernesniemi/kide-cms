@@ -2,6 +2,8 @@
 
 Kide is a code-first CMS inside Astro (collections in `src/cms/collections/`, local SQLite in dev). If you're an agent **importing content from another CMS** (WordPress, Payload, Contentful, …), read this first — it removes the guesswork that makes migrations fail on the first try.
 
+> **Upgrading the vendored Kide core instead?** Run `pnpm cms:upgrade <target-tag>` first, then read `.kide/upgrade/<from>-to-<to>/agent-instructions.md`. The packet is agent-agnostic: use it with Codex, Claude, Cursor, or manually. Preserve project-specific collections, adapters, migrations, public pages, and custom components unless the packet shows an upstream change that clearly belongs in this client.
+
 ## The contract: don't reverse-engineer the codebase
 
 1. **Generate the model manifest, then read it.**

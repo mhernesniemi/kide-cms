@@ -46,9 +46,12 @@ pnpm cms:generate     # regenerate src/cms/.generated/ from cms.config.ts
 pnpm cms:seed         # seed database with demo content
 pnpm cms:admin        # create an admin user from CLI
 pnpm cms:describe     # write .kide/model.json + MODEL.md (the migration model manifest)
+pnpm cms:upgrade      # in scaffolded client projects: prepare/apply a release-tag core upgrade packet
 ```
 
 > **Migrating content in?** Read `AGENTS.md` (repo root) and run the `/migrate` skill. The short version: `pnpm cms:describe` → read `MODEL.md` → write an importer that matches the value shapes → `createCmsContext().load(items, { dryRun: true })` to validate → import → verify.
+
+> **Upgrading a scaffolded client project?** Run `pnpm cms:upgrade <target-tag>` from the client project. It reads `.kide-version`, writes `.kide/upgrade/<from>-to-<to>/`, applies only managed runtime paths when the worktree is clean, and leaves project-sensitive files in `careful-review.patch`. Claude/Codex/Cursor should read `agent-instructions.md` from that packet and finish the merge from there. If no local agent exists, the packet is still complete for manual review.
 
 ## Validation (IMPORTANT)
 

@@ -31,6 +31,7 @@ export {
   fields,
   defineCollection,
   defineConfig,
+  withSite,
   getCollectionMap,
   getDefaultLocale,
   getTranslatableFieldNames,
@@ -85,6 +86,7 @@ export type {
   CollectionAccess,
   HookContext,
   CollectionHooks,
+  WithSiteOptions,
 } from "./define";
 
 export { createCms } from "./api";

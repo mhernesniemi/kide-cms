@@ -11,6 +11,7 @@ import {
   getTranslatableFieldNames,
   hasRole,
   isStructuralField,
+  withSite,
 } from "../define";
 
 const makeCollection = (overrides: Partial<Parameters<typeof defineCollection>[0]> = {}) =>
@@ -111,5 +112,31 @@ describe("hasRole", () => {
     expect(await rule({ user: { id: "1", role: "admin" }, operation: "read", collection: "x" })).toBe(true);
     expect(await rule({ user: { id: "1", role: "viewer" }, operation: "read", collection: "x" })).toBe(false);
     expect(await rule({ user: null, operation: "read", collection: "x" })).toBe(false);
+  });
+});
+
+describe("withSite", () => {
+  it("adds a required site relation in the sidebar", () => {
+    const collection = withSite(makeCollection());
+    expect(collection.fields.site).toMatchObject({
+      type: "relation",
+      collection: "sites",
+      required: true,
+      admin: { position: "sidebar" },
+    });
+    expect(collection.fields.name).toMatchObject({ type: "text" });
+  });
+
+  it("supports custom field and collection names", () => {
+    const collection = withSite(makeCollection(), { field: "workspace", collection: "workspaces", required: false });
+    expect(collection.fields.workspace).toMatchObject({
+      type: "relation",
+      collection: "workspaces",
+      required: false,
+    });
+  });
+
+  it("fails loudly when the target field already exists", () => {
+    expect(() => withSite(makeCollection({ fields: { site: fields.text() } }))).toThrow(/already exists/);
   });
 });

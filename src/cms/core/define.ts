@@ -314,6 +314,7 @@ export type AccessContext = {
     id: string;
     role?: string;
     email?: string;
+    [key: string]: unknown;
   } | null;
   doc?: Record<string, unknown> | null;
   operation: string;
@@ -414,6 +415,37 @@ export const fields = {
 
 export const defineCollection = (collection: CollectionConfig): CollectionConfig => collection;
 export const defineConfig = (config: CMSConfig): CMSConfig => config;
+
+export type WithSiteOptions = {
+  /** Field name added to the collection. Defaults to "site". */
+  field?: string;
+  /** Site collection slug. Defaults to "sites". */
+  collection?: string;
+  /** Whether every document must choose a site. Defaults to true. */
+  required?: boolean;
+  /** Override admin options for the injected relation field. */
+  admin?: AdminFieldComponent;
+};
+
+export const withSite = (collection: CollectionConfig, options: WithSiteOptions = {}): CollectionConfig => {
+  const fieldName = options.field ?? "site";
+
+  if (collection.fields[fieldName]) {
+    throw new Error(`withSite() cannot add "${fieldName}" to "${collection.slug}" because that field already exists.`);
+  }
+
+  return {
+    ...collection,
+    fields: {
+      [fieldName]: fields.relation({
+        collection: options.collection ?? "sites",
+        required: options.required ?? true,
+        admin: { position: "sidebar", ...(options.admin ?? {}) },
+      }),
+      ...collection.fields,
+    },
+  };
+};
 
 export const getCollectionMap = (config: CMSConfig) =>
   Object.fromEntries(config.collections.map((collection) => [collection.slug, collection]));
