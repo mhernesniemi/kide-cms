@@ -8,6 +8,7 @@
  * agent.
  */
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   copyFileSync,
   existsSync,
@@ -57,6 +58,28 @@ type AgentInfo = {
   id: "claude" | "codex" | "cursor";
   label: string;
   command: string;
+};
+
+type FileCheckpoint = {
+  exists: boolean;
+  sha256?: string;
+  size?: number;
+};
+
+type BackupEntry = {
+  file: string;
+  existed: boolean;
+  backupSha256?: string;
+  backupSize?: number;
+  afterAttempt?: FileCheckpoint & { at?: string };
+};
+
+type BackupManifest = {
+  createdAt?: string;
+  backedUp?: string[];
+  missing?: string[];
+  entries?: BackupEntry[];
+  [key: string]: unknown;
 };
 
 const DEFAULT_REPO = "https://github.com/mhernesniemi/kide-cms.git";
@@ -153,14 +176,17 @@ const parseAgent = (value: string): Args["agent"] => {
 
 const trimSlashes = (value: string) => value.replace(/^\/+|\/+$/g, "");
 
-const run = (command: string, args: string[], options: { cwd?: string; input?: string } = {}) =>
+const runRaw = (command: string, args: string[], options: { cwd?: string; input?: string } = {}) =>
   execFileSync(command, args, {
     cwd: options.cwd,
     input: options.input,
     encoding: "utf-8",
     maxBuffer: 1024 * 1024 * 100,
     stdio: ["pipe", "pipe", "pipe"],
-  }).trim();
+  });
+
+const run = (command: string, args: string[], options: { cwd?: string; input?: string } = {}) =>
+  runRaw(command, args, options).trim();
 
 const tryRun = (command: string, args: string[], options: { cwd?: string } = {}) => {
   try {
@@ -222,7 +248,7 @@ const listChangedFiles = (repoDir: string, fromCommit: string, toCommit: string)
 
 const diffForPaths = (repoDir: string, fromCommit: string, toCommit: string, files: string[]) => {
   if (files.length === 0) return "";
-  return run("git", ["diff", "--binary", fromCommit, toCommit, "--", ...files], { cwd: repoDir });
+  return runRaw("git", ["diff", "--binary", fromCommit, toCommit, "--", ...files], { cwd: repoDir });
 };
 
 const changedFilesJson = (repoDir: string, fromCommit: string, toCommit: string) => {
@@ -272,6 +298,15 @@ const relativeToCwd = (cwd: string, file: string) => path.relative(cwd, file) ||
 
 const sanitizeId = (value: string) => value.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
 
+const sha256 = (file: string) => createHash("sha256").update(readFileSync(file)).digest("hex");
+
+const checkpoint = (file: string): FileCheckpoint => {
+  if (!existsSync(file)) return { exists: false };
+  const stat = statSync(file);
+  if (!stat.isFile()) return { exists: true };
+  return { exists: true, sha256: sha256(file), size: stat.size };
+};
+
 const choosePacketDir = (cwd: string, fromRef: string, targetRef: string) => {
   const root = path.join(cwd, ".kide", "upgrade");
   mkdirSync(root, { recursive: true });
@@ -291,11 +326,13 @@ const backupFiles = (cwd: string, packetDir: string, files: string[]) => {
   mkdirSync(backupDir, { recursive: true });
   const backedUp: string[] = [];
   const missing: string[] = [];
+  const entries: BackupEntry[] = [];
 
   for (const file of files) {
     const source = path.join(cwd, file);
     if (!existsSync(source)) {
       missing.push(file);
+      entries.push({ file, existed: false });
       continue;
     }
     const stat = statSync(source);
@@ -304,10 +341,32 @@ const backupFiles = (cwd: string, packetDir: string, files: string[]) => {
     mkdirSync(path.dirname(destination), { recursive: true });
     copyFileSync(source, destination);
     backedUp.push(file);
+    const state = checkpoint(source);
+    entries.push({ file, existed: true, backupSha256: state.sha256, backupSize: state.size });
   }
 
-  writeFileSync(path.join(backupDir, "manifest.json"), `${JSON.stringify({ backedUp, missing }, null, 2)}\n`);
+  writeFileSync(
+    path.join(backupDir, "manifest.json"),
+    `${JSON.stringify({ createdAt: new Date().toISOString(), backedUp, missing, entries }, null, 2)}\n`,
+  );
   return { backedUp, missing };
+};
+
+const recordBackupAttemptState = (cwd: string, packetDir: string) => {
+  const manifestPath = path.join(packetDir, "backup", "manifest.json");
+  if (!existsSync(manifestPath)) return;
+
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as BackupManifest;
+  const entries = manifest.entries ?? [
+    ...(manifest.backedUp ?? []).map((file) => ({ file, existed: true })),
+    ...(manifest.missing ?? []).map((file) => ({ file, existed: false })),
+  ];
+  const at = new Date().toISOString();
+  manifest.entries = entries.map((entry) => ({
+    ...entry,
+    afterAttempt: { ...checkpoint(path.join(cwd, entry.file)), at },
+  }));
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 };
 
 const isGitRepo = (cwd: string) => tryRun("git", ["rev-parse", "--is-inside-work-tree"], { cwd }).ok;
@@ -386,7 +445,7 @@ const renderPlan = (input: {
     "- `managed-runtime.patch` contains paths Kide can usually merge automatically.",
     "- `careful-review.patch` contains project-sensitive files such as package/config/collections/adapters.",
     "- `full-release.patch` contains the complete upstream diff for reference.",
-    "- `backup/` contains copies of local files touched by the managed patch before it was applied.",
+    "- `backup/` contains restorable snapshots of local files touched by the managed patch.",
     "",
     "## Next steps",
     "",
@@ -395,6 +454,7 @@ const renderPlan = (input: {
     "3. Review `package.json` and `pnpm-lock.yaml` changes from `careful-review.patch`; run `pnpm install` if dependencies changed.",
     "4. Run `pnpm cms:generate`, `pnpm check`, and `pnpm test`.",
     "5. Commit the upgrade together with the updated `.kide-version`.",
+    "6. If you want to abandon this upgrade attempt, run `pnpm cms:restore`.",
     "",
     "## Managed files",
     "",
@@ -581,6 +641,7 @@ async function main() {
       } else {
         applyError = result.stderr.trim() || result.stdout.trim() || "git apply --3way failed";
       }
+      recordBackupAttemptState(cwd, packetDir);
     }
 
     const detectedAgents = detectAgents();

@@ -23,6 +23,7 @@
     "cms:push": "node --import tsx src/cms/internals/push.ts",
     "cms:describe": "node --import tsx src/cms/internals/describe.ts",
     "cms:upgrade": "node --import tsx src/cms/internals/upgrade.ts",
+    "cms:restore": "node --import tsx src/cms/internals/restore.ts",
     "cms:mcp": "node --import tsx src/cms/internals/mcp.ts",
     "db:generate": "pnpm cms:generate && drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
