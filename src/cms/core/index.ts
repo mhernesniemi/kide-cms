@@ -39,9 +39,11 @@ export {
   getCollectionLabel,
   getLabelField,
   hasRole,
+  isCollaborationEnabled,
 } from "./define";
 export type {
   CMSConfig,
+  CollaborationConfig,
   CollectionConfig,
   CollectionFieldMap,
   FieldConfig,
@@ -161,6 +163,8 @@ export { acquireLock, releaseLock } from "./locks";
 
 export { recordAudit, pruneAuditLog, auditRequestMeta } from "./audit";
 export type { AuditEvent, AuditActor } from "./audit";
+export { collaboration, REVIEW_STATES, isReviewState } from "./collaboration";
+export type { ReviewState, CollaborationState, CommentRecord, ActivityRecord } from "./collaboration";
 
 export {
   search,

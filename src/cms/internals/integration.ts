@@ -211,6 +211,10 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         });
         injectRoute({ pattern: "/api/cms/assets/[id]", entrypoint: "./src/cms/routes/api/assets/[id].ts" });
         injectRoute({ pattern: "/api/cms/assets", entrypoint: "./src/cms/routes/api/assets/index.ts" });
+        injectRoute({
+          pattern: "/api/cms/collaboration",
+          entrypoint: "./src/cms/routes/api/collaboration/index.ts",
+        });
         injectRoute({ pattern: "/api/cms/ai/alt-text", entrypoint: "./src/cms/routes/api/ai/alt-text.ts" });
         injectRoute({ pattern: "/api/cms/ai/seo", entrypoint: "./src/cms/routes/api/ai/seo.ts" });
         injectRoute({ pattern: "/api/cms/ai/translate", entrypoint: "./src/cms/routes/api/ai/translate.ts" });

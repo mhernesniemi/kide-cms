@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowUpRight, Dot } from "lucide-react";
 
 import AdminCard from "@/cms/admin/components/AdminCard.astro";
 import AiGenerateButton from "@/cms/admin/components/AiGenerateButton";
+import CollaborationReviewBar from "@/cms/admin/components/CollaborationReviewBar";
 import DocumentActions from "@/cms/admin/components/DocumentActions";
 import DocumentLock from "@/cms/admin/components/DocumentLock";
 import LiveHeading from "@/cms/admin/components/LiveHeading";
@@ -12,8 +13,9 @@ import { StatusBadge } from "@/cms/admin/components/ui/badge";
 import { buttonVariants } from "@/cms/admin/components/ui/button";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
-import { isAiEnabled } from "virtual:kide/runtime";
-import { formatDate, getFieldSets, getLabelField, getSharedBlockTypes } from "@/cms/core";
+import { isAiEnabled, collaboration } from "virtual:kide/runtime";
+import { loadCollaborationData } from "@/cms/admin/lib/collaboration";
+import { formatDate, getFieldSets, getLabelField, getSharedBlockTypes, isCollaborationEnabled } from "@/cms/core";
 import {
   getFormAction,
   getVisualStatus,
@@ -166,6 +168,21 @@ const blockRelationOptions: Record<string, Array<{ value: string; label: string 
 for (const [key, opts] of Object.entries(relationOptionsByField)) {
   if (key.startsWith("block:")) blockRelationOptions[key] = opts;
 }
+
+// Editorial collaboration UI — gated behind config.collaboration.enabled. Shown
+// on normal document edits only (not submissions or the translation form).
+const showCollab = isCollaborationEnabled(config) && mode === "edit" && !isSubmissionView && !translationMode;
+const collabData =
+  showCollab && documentId
+    ? await loadCollaborationData({
+        collaboration,
+        cmsRuntime,
+        runtimeContext,
+        collection: collection.slug,
+        documentId,
+        currentUser: user,
+      })
+    : null;
 ---
 
 <section class="space-y-14">
@@ -313,6 +330,32 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
 
   {/* Body — everything below the sticky bar, inset from the page edges */}
   <div class="space-y-6 px-4 pb-8 lg:pr-8 lg:pb-12 lg:pl-20">
+    {
+      /* Collaboration review strip. Margins live on this wrapper, which only
+        renders when collaboration is enabled, so non-collab edit views are
+        untouched. The body already sits 3.5rem (section space-y-14) below the
+        header, so -mt-6 trims the top gap to ~2rem and mb-8 balances the bottom.
+        lg:-ml-12 pulls it to the header's left edge (full width). */
+    }
+    {
+      showCollab && collabData && documentId && (
+        <div class="-mt-6 mb-8 lg:-ml-12">
+          <CollaborationReviewBar
+            client:load
+            collection={collection.slug}
+            documentId={documentId}
+            reviewState={collabData.reviewState}
+            assignee={collabData.assignee}
+            assignableUsers={collabData.assignableUsers}
+            comments={collabData.comments}
+            activity={collabData.activity}
+            collaborators={collabData.collaborators}
+            currentUser={collabData.currentUser}
+            isAdmin={collabData.isAdmin}
+          />
+        </div>
+      )
+    }
     {
       formTab !== "submissions" && (
         <>

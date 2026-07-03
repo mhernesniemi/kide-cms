@@ -123,7 +123,7 @@ const generateVersionsTable = (collection: CollectionConfig): string | null => {
 const generateSchemaFile = (config: CMSConfig): string => {
   const parts: string[] = [
     `// auto-generated — do not edit`,
-    `import { sqliteTable, text, integer, real, unique, index } from "drizzle-orm/sqlite-core";`,
+    `import { sqliteTable, text, integer, real, unique, index, primaryKey } from "drizzle-orm/sqlite-core";`,
     ``,
   ];
 
@@ -198,6 +198,30 @@ const generateSchemaFile = (config: CMSConfig): string => {
   timestampIdx: index("audit_timestamp_idx").on(table.timestamp),
   actorIdx: index("audit_actor_idx").on(table.actorId),
   resourceIdx: index("audit_resource_idx").on(table.resourceType, table.resourceCollection, table.resourceId),
+}));`);
+  parts.push("");
+  parts.push(`export const cmsCollaboration = sqliteTable("cms_collaboration", {
+  collection: text("collection").notNull(),
+  documentId: text("document_id").notNull(),
+  reviewState: text("review_state").notNull(),
+  assignee: text("assignee"),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.collection, table.documentId] }),
+}));`);
+  parts.push("");
+  parts.push(`export const cmsComments = sqliteTable("cms_comments", {
+  _id: text("_id").primaryKey(),
+  collection: text("collection").notNull(),
+  documentId: text("document_id").notNull(),
+  field: text("field"),
+  body: text("body").notNull(),
+  authorId: text("author_id"),
+  authorEmail: text("author_email"),
+  resolved: integer("resolved", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at").notNull(),
+}, (table) => ({
+  docIdx: index("comments_doc_idx").on(table.collection, table.documentId),
 }));`);
   parts.push("");
 

@@ -301,11 +301,18 @@ export type ImagesConfig = {
   presets?: Record<string, ImagePreset>;
 };
 
+export type CollaborationConfig = {
+  // Editorial collaboration (review workflow, assignees, comments, activity).
+  // Off unless explicitly enabled — surfaces extra admin UI and list columns.
+  enabled?: boolean;
+};
+
 export type CMSConfig = {
   database?: DatabaseConfig;
   locales?: LocaleConfig;
   admin?: AdminConfig;
   images?: ImagesConfig;
+  collaboration?: CollaborationConfig;
   collections: CollectionConfig[];
 };
 
@@ -415,6 +422,8 @@ export const fields = {
 
 export const defineCollection = (collection: CollectionConfig): CollectionConfig => collection;
 export const defineConfig = (config: CMSConfig): CMSConfig => config;
+
+export const isCollaborationEnabled = (config: CMSConfig): boolean => config.collaboration?.enabled === true;
 
 export type WithSiteOptions = {
   /** Field name added to the collection. Defaults to "site". */

@@ -15,6 +15,13 @@
       "when": 1782661710166,
       "tag": "0001_lovely_newton_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782661710167,
+      "tag": "0002_collaboration",
+      "breakpoints": true
     }
   ]
 }
