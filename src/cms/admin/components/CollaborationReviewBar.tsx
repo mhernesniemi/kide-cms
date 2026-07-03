@@ -280,8 +280,8 @@ export default function CollaborationReviewBar(props: Props) {
           </div>
 
           {tab === "comments" && (
-            <>
-              <ul className="flex-1 divide-y overflow-y-auto">
+            <div className="flex-1 overflow-y-auto">
+              <ul className="divide-y">
                 {comments.length === 0 && (
                   <li className="text-muted-foreground px-4 py-8 text-center text-sm">No comments yet.</li>
                 )}
@@ -311,7 +311,7 @@ export default function CollaborationReviewBar(props: Props) {
                   </li>
                 ))}
               </ul>
-              <div className="flex items-center gap-2 border-t px-4 py-3">
+              <div className="bg-background sticky bottom-0 flex items-center gap-2 border-t px-4 py-3">
                 <MessageSquarePlus className="text-muted-foreground size-4 shrink-0" />
                 <input
                   type="text"
@@ -325,7 +325,7 @@ export default function CollaborationReviewBar(props: Props) {
                   className="border-input bg-background w-full rounded-md border px-3 py-1.5 text-sm outline-none"
                 />
               </div>
-            </>
+            </div>
           )}
 
           {tab === "activity" && (
