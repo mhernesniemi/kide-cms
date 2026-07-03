@@ -9,7 +9,7 @@ export default defineCollection({
   searchable: true,
   versions: { max: 20 },
   views: {
-    list: { columns: ["title", "category", "_status", "_updatedAt"] },
+    list: { columns: ["title", "_status", "_updatedAt"] },
   },
   fields: {
     title: fields.text({
