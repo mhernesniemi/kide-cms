@@ -14,36 +14,21 @@ type Props = {
   collection: string;
   documentId: string;
   reviewState: ReviewState;
-  assignee: CollabUser | null;
+  editor: CollabUser | null;
   assignableUsers: CollabUser[];
   comments: CollabComment[];
   activity: CollabActivity[];
-  collaborators: CollabUser[];
   currentUser: CollabUser | null;
-  // Admins can review any document; otherwise the reviewer is the assignee.
-  isAdmin: boolean;
+  // Whether the current user can approve / request changes (role-based).
+  canApprove: boolean;
 };
 
-function Avatar({
-  initials,
-  color,
-  size = "size-7",
-  ring = false,
-  title,
-}: {
-  initials: string;
-  color: string;
-  size?: string;
-  ring?: boolean;
-  title?: string;
-}) {
+function Avatar({ initials, color, size = "size-6" }: { initials: string; color: string; size?: string }) {
   return (
     <span
-      title={title}
       className={cn(
         color,
         size,
-        ring && "ring-background ring-2",
         "inline-flex shrink-0 items-center justify-center rounded-full text-[11px] font-medium text-white!",
       )}
     >
@@ -53,10 +38,10 @@ function Avatar({
 }
 
 export default function CollaborationReviewBar(props: Props) {
-  const { collection, documentId, assignableUsers, activity, currentUser } = props;
+  const { collection, documentId, assignableUsers, activity, currentUser, canApprove } = props;
 
   const [reviewState, setReviewState] = useState<ReviewState>(props.reviewState);
-  const [assignee, setAssignee] = useState<CollabUser | null>(props.assignee);
+  const [editor, setEditor] = useState<CollabUser | null>(props.editor);
   const [comments, setComments] = useState<CollabComment[]>(props.comments);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"comments" | "activity">("comments");
@@ -93,16 +78,22 @@ export default function CollaborationReviewBar(props: Props) {
     }
   };
 
-  const changeAssignee = async (userId: string) => {
-    const prev = assignee;
-    const next = assignableUsers.find((u) => u.id === userId) ?? null;
-    setAssignee(next);
+  const changeEditor = async (userId: string) => {
+    const prev = editor;
+    setEditor(assignableUsers.find((u) => u.id === userId) ?? null);
     try {
-      await post({ action: "setAssignee", assignee: userId || null });
+      await post({ action: "setEditor", editor: userId || null });
     } catch (err) {
-      setAssignee(prev);
+      setEditor(prev);
       window.alert(err instanceof Error ? err.message : "Could not update assignee.");
     }
+  };
+
+  const commentInputRef = useRef<HTMLInputElement>(null);
+  const openComments = (focus = false) => {
+    setTab("comments");
+    setOpen(true);
+    if (focus) setTimeout(() => commentInputRef.current?.focus(), 60);
   };
 
   const submitComment = async () => {
@@ -138,34 +129,13 @@ export default function CollaborationReviewBar(props: Props) {
     }
   };
 
-  // The review handoff: assign to the reviewer + move to "ready for review".
-  const requestReview = async (reviewerId: string) => {
-    const prevAssignee = assignee;
-    const prevState = reviewState;
-    setAssignee(assignableUsers.find((u) => u.id === reviewerId) ?? null);
-    setReviewState("ready_for_review");
-    try {
-      await post({ action: "requestReview", reviewer: reviewerId });
-    } catch (err) {
-      setAssignee(prevAssignee);
-      setReviewState(prevState);
-      window.alert(err instanceof Error ? err.message : "Could not request review.");
-    }
-  };
-
   const meta = REVIEW_STATE_META[reviewState];
-  const commentInputRef = useRef<HTMLInputElement>(null);
-  const openComments = (focus = false) => {
-    setTab("comments");
-    setOpen(true);
-    if (focus) setTimeout(() => commentInputRef.current?.focus(), 60);
-  };
+  const canEdit = reviewState === "in_progress" || reviewState === "changes_requested";
 
   return (
     <>
-      {/* Full-width review strip */}
       <div className="bg-muted/30 flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border px-4 py-2.5">
-        {/* Zone 1 — Review workflow: status → the action for this stage */}
+        {/* Left — review status + the action for this stage */}
         <div className="flex flex-wrap items-center gap-2.5">
           {reviewState === "changes_requested" ? (
             <button
@@ -195,53 +165,55 @@ export default function CollaborationReviewBar(props: Props) {
 
           {currentUser && <div className="bg-border mx-0.5 h-5 w-px" />}
 
-          {/* In progress / Changes requested → hand off to a reviewer */}
-          {currentUser && (reviewState === "in_progress" || reviewState === "changes_requested") && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                disabled={busy}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
-              >
-                Request review
-                <ChevronDown className="size-3.5 opacity-60" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="min-w-52">
-                <div className="text-muted-foreground px-2 py-1.5 text-xs">Request review from…</div>
-                {assignableUsers.map((u) => (
-                  <DropdownMenuItem key={u.id} onClick={() => requestReview(u.id)}>
-                    <Avatar initials={u.initials} color={u.color} size="size-5" />
-                    <span className="flex-1">{u.name}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {/* Editor submits for review — saves the draft AND flips the state
+              (a submit on the document form, so unsaved edits are persisted). */}
+          {currentUser && canEdit && (
+            <button
+              type="submit"
+              form="document-form"
+              name="_intent"
+              value="submit-review"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              Submit for review
+            </button>
           )}
 
-          {/* Ready for review → the reviewer decides */}
-          {currentUser && reviewState === "ready_for_review" && (
-            <>
+          {/* Ready for review → approvers decide, others can withdraw */}
+          {reviewState === "ready_for_review" &&
+            (canApprove ? (
+              <>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    changeState("changes_requested");
+                    openComments(true);
+                  }}
+                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-muted-foreground")}
+                >
+                  Request changes
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => changeState("approved")}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  <Check className="size-4" />
+                  Approve
+                </button>
+              </>
+            ) : currentUser ? (
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => {
-                  changeState("changes_requested");
-                  openComments(true);
-                }}
+                onClick={() => changeState("in_progress")}
                 className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-muted-foreground")}
               >
-                Request changes
+                Withdraw
               </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => changeState("approved")}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                <Check className="size-4" />
-                Approve
-              </button>
-            </>
-          )}
+            ) : null)}
 
           {/* Approved → reopen for more work */}
           {currentUser && reviewState === "approved" && (
@@ -256,34 +228,36 @@ export default function CollaborationReviewBar(props: Props) {
           )}
         </div>
 
-        {/* Zone 2 — People & discussion: who owns the page + comments */}
-        <div className="flex flex-wrap items-center gap-4">
+        {/* Right — assignee + comments */}
+        <div className="flex flex-wrap items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger
               disabled={busy || !currentUser}
-              className="hover:bg-foreground/5 flex items-center gap-2 rounded-md px-1.5 py-1 outline-none disabled:opacity-60"
+              className="hover:bg-foreground/5 flex items-center gap-1.5 rounded-md px-1.5 py-1 outline-none disabled:opacity-60"
             >
-              {assignee ? (
-                <>
-                  <span className="text-muted-foreground text-xs">Assigned to</span>
-                  <Avatar initials={assignee.initials} color={assignee.color} size="size-6" />
-                  <span className="text-sm font-medium">{assignee.name}</span>
-                </>
-              ) : (
-                <span className="text-muted-foreground text-sm">Unassigned</span>
-              )}
+              <span className="text-muted-foreground text-xs">Assignee</span>
+              {editor && <Avatar initials={editor.initials} color={editor.color} />}
+              <span className={cn("text-sm", editor ? "font-medium" : "text-muted-foreground")}>
+                {editor?.name ?? "none"}
+              </span>
               <ChevronDown className="text-muted-foreground size-3.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-48">
-              <DropdownMenuItem onClick={() => assignee && changeAssignee("")}>
+              {currentUser && editor?.id !== currentUser.id && (
+                <DropdownMenuItem onClick={() => changeEditor(currentUser.id)}>
+                  <Avatar initials={currentUser.initials} color={currentUser.color} size="size-5" />
+                  <span className="flex-1">Assign to me</span>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => changeEditor("")}>
                 <span className="text-muted-foreground flex-1">Unassigned</span>
-                {!assignee && <Check className="text-muted-foreground size-3.5" />}
+                {!editor && <Check className="text-muted-foreground size-3.5" />}
               </DropdownMenuItem>
               {assignableUsers.map((u) => (
-                <DropdownMenuItem key={u.id} onClick={() => u.id !== assignee?.id && changeAssignee(u.id)}>
+                <DropdownMenuItem key={u.id} onClick={() => changeEditor(u.id)}>
                   <Avatar initials={u.initials} color={u.color} size="size-5" />
                   <span className="flex-1">{u.name}</span>
-                  {assignee?.id === u.id && <Check className="text-muted-foreground size-3.5" />}
+                  {editor?.id === u.id && <Check className="text-muted-foreground size-3.5" />}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -303,12 +277,12 @@ export default function CollaborationReviewBar(props: Props) {
       {/* Comments / Activity drawer */}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-md">
-          <SheetTitle className="sr-only">Review, comments and activity</SheetTitle>
+          <SheetTitle className="sr-only">Comments and activity</SheetTitle>
 
           <div className="flex border-b pr-12">
             {(["comments", "activity"] as const).map((id) => {
               const Icon = id === "comments" ? MessageSquare : Clock;
-              const active = tab === id;
+              const isActive = tab === id;
               return (
                 <button
                   key={id}
@@ -316,7 +290,7 @@ export default function CollaborationReviewBar(props: Props) {
                   onClick={() => setTab(id)}
                   className={cn(
                     "-mb-px flex items-center gap-1.5 border-b-2 px-4 py-3 text-xs font-medium capitalize transition-colors",
-                    active
+                    isActive
                       ? "border-foreground text-foreground"
                       : "text-muted-foreground hover:text-foreground border-transparent",
                   )}
@@ -341,7 +315,7 @@ export default function CollaborationReviewBar(props: Props) {
                 )}
                 {comments.map((c) => (
                   <li key={c.id} className="flex gap-3 px-4 py-3">
-                    <Avatar initials={c.author.initials} color={c.author.color} />
+                    <Avatar initials={c.author.initials} color={c.author.color} size="size-7" />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span className="text-sm font-medium">{c.author.name}</span>
@@ -389,7 +363,7 @@ export default function CollaborationReviewBar(props: Props) {
               {activity.map((a, i) => (
                 <li key={i} className="flex gap-3">
                   <div className="flex flex-col items-center">
-                    <Avatar initials={a.actor.initials} color={a.actor.color} size="size-6" />
+                    <Avatar initials={a.actor.initials} color={a.actor.color} />
                     {i < activity.length - 1 && <GitCommitVertical className="text-border mt-1 size-4" />}
                   </div>
                   <div className="min-w-0 flex-1 pt-0.5">

@@ -307,10 +307,12 @@ export type CollaborationCollection = string | { slug: string; requireApproval?:
 
 export type CollaborationConfig = {
   // Default publish gate for the listed collections. When true, publishing a
-  // draft-enabled document is blocked until its review is "approved" (admins
+  // draft-enabled document is blocked until its review is "approved" (approvers
   // bypass). A per-collection entry can override this.
   requireApproval?: boolean;
-  // Which collections get editorial collaboration (review workflow, assignees,
+  // User roles allowed to approve / request changes. Defaults to ["admin"].
+  approverRoles?: string[];
+  // Which collections get editorial collaboration (review workflow, assignee,
   // comments, activity). Presence in this list is the on switch — a collection
   // absent from it has no review UI, list columns, or gate.
   collections?: CollaborationCollection[];
@@ -326,6 +328,13 @@ export const resolveCollaboration = (config: CMSConfig, collectionSlug: string):
   if (!entry) return { enabled: false, requireApproval: false };
   const override = typeof entry === "object" ? entry.requireApproval : undefined;
   return { enabled: true, requireApproval: override ?? collab?.requireApproval ?? false };
+};
+
+// Whether a user role can approve content (approve / request changes) and bypass
+// the publish gate. Defaults to admins only.
+export const isApprover = (config: CMSConfig, role: string | null | undefined): boolean => {
+  const roles = config.collaboration?.approverRoles ?? ["admin"];
+  return !!role && roles.includes(role);
 };
 
 export type CMSConfig = {

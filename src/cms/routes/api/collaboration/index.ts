@@ -50,19 +50,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const state = await collaboration.setReviewState(collection, id, (body as any).reviewState, actor);
         return Response.json({ state });
       }
-      case "requestReview": {
-        const reviewer = (body as any).reviewer;
-        const state = await collaboration.requestReview(collection, id, reviewer ? String(reviewer) : null, actor);
-        return Response.json({ state });
-      }
-      case "setAssignee": {
-        const assignee = (body as any).assignee;
-        const state = await collaboration.setAssignee(
-          collection,
-          id,
-          assignee === null || assignee === "" ? null : String(assignee),
-          actor,
-        );
+      case "setEditor": {
+        const editor = (body as any).editor;
+        const state = await collaboration.setEditor(collection, id, editor ? String(editor) : null, actor);
         return Response.json({ state });
       }
       case "addComment": {

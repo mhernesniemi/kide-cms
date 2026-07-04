@@ -3,7 +3,7 @@ import type { APIRoute } from "astro";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { collaboration } from "virtual:kide/runtime";
-import { resolveCollaboration } from "@/cms/core";
+import { isApprover, resolveCollaboration } from "@/cms/core";
 import { loadSharedSectionUsageCounts } from "@/cms/admin/lib/edit-data";
 
 export const prerender = false;
@@ -11,7 +11,7 @@ export const prerender = false;
 const cmsRuntime = cms as Record<string, any> & { meta: typeof cms.meta };
 
 // Editorial gate: when the collection requires approval, publishing/scheduling a
-// draft-enabled document is blocked until its review is approved. Admins bypass.
+// draft-enabled document is blocked until its review is approved. Approvers bypass.
 const publishAllowed = async (
   collection: { slug: string; drafts?: boolean },
   documentId: string,
@@ -19,7 +19,7 @@ const publishAllowed = async (
 ): Promise<boolean> => {
   const { enabled, requireApproval } = resolveCollaboration(config, collection.slug);
   if (!enabled || !requireApproval || !collection.drafts) return true;
-  if (locals.user?.role === "admin") return true;
+  if (isApprover(config, locals.user?.role)) return true;
   const { reviewState } = await collaboration.getState(collection.slug, documentId);
   return reviewState === "approved";
 };
@@ -153,6 +153,10 @@ const handleHtmlMutation = async (
           data._unpublishAt ? String(data._unpublishAt) : null,
           ctx,
         );
+      } else if (intent === "submit-review" && resolveCollaboration(config, collectionSlug).enabled) {
+        // Save the draft (above) and move the review to "ready for review".
+        const actor = locals.user ? { id: locals.user.id, email: locals.user.email, role: locals.user.role } : null;
+        await collaboration.submitForReview(collectionSlug, documentId, actor);
       }
       const msg = blocked
         ? `Saved — needs review approval before publishing`
@@ -162,9 +166,11 @@ const handleHtmlMutation = async (
             ? `${name} unpublished`
             : intent === "schedule"
               ? `${name} scheduled`
-              : collection.drafts
-                ? `${name} saved as draft`
-                : `${name} saved`;
+              : intent === "submit-review"
+                ? `Saved and submitted for review`
+                : collection.drafts
+                  ? `${name} saved as draft`
+                  : `${name} saved`;
       return redirect(redirectTo, { status: blocked ? "error" : "success", msg });
     }
 

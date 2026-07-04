@@ -79,28 +79,28 @@ for (const column of listColumns) {
   for (const option of options) relationLabels[option.value] = option.label;
 }
 
-// Collaboration columns (review state + assignee) — only for collections in the
+// Collaboration columns (review state + editor) — only for collections in the
 // collaboration list that also support drafts. Not sortable (non-DB columns).
 const collabListColumns =
-  resolveCollaboration(config, collection.slug).enabled && collection.drafts ? ["__review", "__assignee"] : [];
+  resolveCollaboration(config, collection.slug).enabled && collection.drafts ? ["__review", "__editor"] : [];
 const displayColumns = [...listColumns, ...collabListColumns];
 
-// Batch-load review state + assignee for the listed documents.
-let collabStates: Record<string, { reviewState: string; assignee: string | null }> = {};
+// Batch-load review state + editor for the listed documents.
+let collabStates: Record<string, { reviewState: string; editor: string | null }> = {};
 const collabUserNames: Record<string, string> = {};
 if (collabListColumns.length > 0) {
   collabStates = await collaboration.getStatesForDocs(
     collection.slug,
     docs.map((entry: Record<string, unknown>) => String(entry._id)),
   );
-  const assigneeIds = [
+  const editorIds = [
     ...new Set(
       Object.values(collabStates)
-        .map((s) => s.assignee)
+        .map((s) => s.editor)
         .filter((id): id is string => Boolean(id)),
     ),
   ];
-  if (assigneeIds.length > 0) {
+  if (editorIds.length > 0) {
     const users = await cmsRuntime.users?.find({ status: "any", limit: 100 }, runtimeContext).catch(() => []);
     for (const u of users ?? []) collabUserNames[String(u._id)] = String(u.name ?? u.email ?? u._id);
   }
@@ -135,9 +135,9 @@ const tableRows = docs.map((entry: Record<string, unknown>) => ({
         ? REVIEW_STATE_META[
             (collabStates[String(entry._id)]?.reviewState ?? "in_progress") as keyof typeof REVIEW_STATE_META
           ].label
-        : column === "__assignee"
-          ? collabStates[String(entry._id)]?.assignee
-            ? (collabUserNames[collabStates[String(entry._id)]!.assignee!] ?? "—")
+        : column === "__editor"
+          ? collabStates[String(entry._id)]?.editor
+            ? (collabUserNames[collabStates[String(entry._id)]!.editor!] ?? "—")
             : "Unassigned"
           : column === "_status"
             ? getVisualStatus(entry)
@@ -184,8 +184,8 @@ const tableRows = docs.map((entry: Record<string, unknown>) => ({
           ? "Used in"
           : column === "__review"
             ? "Review"
-            : column === "__assignee"
-              ? "Assignee"
+            : column === "__editor"
+              ? "Editor"
               : humanize(column),
       sortable: !column.startsWith("__"),
     }))}

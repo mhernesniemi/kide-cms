@@ -15,7 +15,14 @@ import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { isAiEnabled, collaboration } from "virtual:kide/runtime";
 import { loadCollaborationData } from "@/cms/admin/lib/collaboration";
-import { formatDate, getFieldSets, getLabelField, getSharedBlockTypes, resolveCollaboration } from "@/cms/core";
+import {
+  formatDate,
+  getFieldSets,
+  getLabelField,
+  getSharedBlockTypes,
+  isApprover,
+  resolveCollaboration,
+} from "@/cms/core";
 import {
   getFormAction,
   getVisualStatus,
@@ -190,7 +197,7 @@ const collabData =
 // (no review yet) count as unapproved.
 const requireApproval = collab.enabled && collab.requireApproval && !!collection.drafts && !isSubmissionView;
 const publishBlocked =
-  requireApproval && user?.role !== "admin" && (collabData?.reviewState ?? "in_progress") !== "approved";
+  requireApproval && !isApprover(config, user?.role) && (collabData?.reviewState ?? "in_progress") !== "approved";
 ---
 
 <section class="space-y-14">
@@ -364,13 +371,12 @@ const publishBlocked =
             collection={collection.slug}
             documentId={documentId}
             reviewState={collabData.reviewState}
-            assignee={collabData.assignee}
+            editor={collabData.editor}
             assignableUsers={collabData.assignableUsers}
             comments={collabData.comments}
             activity={collabData.activity}
-            collaborators={collabData.collaborators}
             currentUser={collabData.currentUser}
-            isAdmin={collabData.isAdmin}
+            canApprove={isApprover(config, user?.role)}
           />
         </div>
       )

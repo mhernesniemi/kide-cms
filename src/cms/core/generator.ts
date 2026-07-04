@@ -204,7 +204,7 @@ const generateSchemaFile = (config: CMSConfig): string => {
   collection: text("collection").notNull(),
   documentId: text("document_id").notNull(),
   reviewState: text("review_state").notNull(),
-  assignee: text("assignee"),
+  editor: text("editor"),
   updatedAt: text("updated_at").notNull(),
 }, (table) => ({
   pk: primaryKey({ columns: [table.collection, table.documentId] }),

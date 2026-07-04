@@ -12,7 +12,9 @@ export type ReviewState = (typeof REVIEW_STATES)[number];
 
 const DEFAULT_STATE: ReviewState = "in_progress";
 
-export type CollaborationState = { reviewState: ReviewState; assignee: string | null };
+// The editor owns the content. Approval is role-based (see isApprover), not a
+// per-document assignment.
+export type CollaborationState = { reviewState: ReviewState; editor: string | null };
 
 export type CommentRecord = {
   _id: string;
@@ -37,7 +39,7 @@ export const isReviewState = (value: unknown): value is ReviewState => REVIEW_ST
 
 const rowToState = (row: any): CollaborationState => ({
   reviewState: isReviewState(row?.reviewState) ? row.reviewState : DEFAULT_STATE,
-  assignee: row?.assignee ?? null,
+  editor: row?.editor ?? null,
 });
 
 // Insert or update the single collaboration row for a document (composite PK).
@@ -47,15 +49,15 @@ const upsertState = async (collection: string, documentId: string, patch: Partia
   const current = await collaboration.getState(collection, documentId);
   const next: CollaborationState = {
     reviewState: patch.reviewState ?? current.reviewState,
-    assignee: patch.assignee !== undefined ? patch.assignee : current.assignee,
+    editor: patch.editor !== undefined ? patch.editor : current.editor,
   };
   const now = new Date().toISOString();
   await db
     .insert(schema.cmsCollaboration)
-    .values({ collection, documentId, reviewState: next.reviewState, assignee: next.assignee, updatedAt: now })
+    .values({ collection, documentId, reviewState: next.reviewState, editor: next.editor, updatedAt: now })
     .onConflictDoUpdate({
       target: [schema.cmsCollaboration.collection, schema.cmsCollaboration.documentId],
-      set: { reviewState: next.reviewState, assignee: next.assignee, updatedAt: now },
+      set: { reviewState: next.reviewState, editor: next.editor, updatedAt: now },
     });
   return next;
 };
@@ -94,6 +96,21 @@ export const collaboration = {
     return result;
   },
 
+  // Every document a user is the editor of, across all collections. The caller
+  // resolves titles/permissions.
+  async assignedTo(
+    userId: string,
+  ): Promise<Array<{ collection: string; documentId: string; reviewState: ReviewState }>> {
+    const db = await getDb();
+    const schema = getSchema();
+    const rows = await db.select().from(schema.cmsCollaboration).where(eq(schema.cmsCollaboration.editor, userId));
+    return (rows as any[]).map((r) => ({
+      collection: String(r.collection),
+      documentId: String(r.documentId),
+      reviewState: isReviewState(r.reviewState) ? r.reviewState : DEFAULT_STATE,
+    }));
+  },
+
   async setReviewState(
     collection: string,
     documentId: string,
@@ -112,17 +129,12 @@ export const collaboration = {
     return next;
   },
 
-  // The review handoff: assign the document to the reviewer and move it to
-  // "ready for review" in one step (single-assignee model — the assignee is
-  // whoever currently holds the document).
-  async requestReview(
-    collection: string,
-    documentId: string,
-    reviewer: string | null,
-    actor: AuditActor,
-  ): Promise<CollaborationState> {
+  // Editor submits for review: move to "ready for review", capturing the acting
+  // user as editor if the document doesn't have one yet.
+  async submitForReview(collection: string, documentId: string, actor: AuditActor): Promise<CollaborationState> {
+    const current = await collaboration.getState(collection, documentId);
     const next = await upsertState(collection, documentId, {
-      assignee: reviewer || null,
+      editor: current.editor ?? actor?.id ?? null,
       reviewState: "ready_for_review",
     });
     await recordAudit({
@@ -135,15 +147,15 @@ export const collaboration = {
     return next;
   },
 
-  async setAssignee(
+  async setEditor(
     collection: string,
     documentId: string,
-    assignee: string | null,
+    editor: string | null,
     actor: AuditActor,
   ): Promise<CollaborationState> {
-    const next = await upsertState(collection, documentId, { assignee: assignee || null });
+    const next = await upsertState(collection, documentId, { editor: editor || null });
     await recordAudit({
-      action: assignee ? "collab.assign" : "collab.unassign",
+      action: editor ? "collab.editor.set" : "collab.editor.clear",
       resourceType: "content",
       resourceCollection: collection,
       resourceId: documentId,

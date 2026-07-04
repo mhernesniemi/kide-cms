@@ -40,6 +40,7 @@ export {
   getLabelField,
   hasRole,
   resolveCollaboration,
+  isApprover,
 } from "./define";
 export type {
   CMSConfig,

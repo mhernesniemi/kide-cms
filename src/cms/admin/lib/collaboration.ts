@@ -16,13 +16,11 @@ export type CollabActivity = { actor: CollabUser; text: string; time: string };
 
 export type CollaborationData = {
   reviewState: ReviewState;
-  assignee: CollabUser | null;
+  editor: CollabUser | null;
   assignableUsers: CollabUser[];
   comments: CollabComment[];
   activity: CollabActivity[];
-  collaborators: CollabUser[];
   currentUser: CollabUser | null;
-  isAdmin: boolean;
 };
 
 const PALETTE = [
@@ -79,11 +77,11 @@ export const REVIEW_STATE_META: Record<ReviewState, { label: string; badge: stri
 // Map an audit-log action to a human sentence fragment for the activity feed.
 const ACTION_LABELS: Record<string, string> = {
   "collab.review.in_progress": "moved this to In progress",
-  "collab.review.ready_for_review": "requested review",
+  "collab.review.ready_for_review": "submitted for review",
   "collab.review.changes_requested": "requested changes",
   "collab.review.approved": "approved this",
-  "collab.assign": "changed the assignee",
-  "collab.unassign": "cleared the assignee",
+  "collab.editor.set": "changed the assignee",
+  "collab.editor.clear": "cleared the assignee",
   "collab.comment": "commented",
   "collab.comment.resolve": "resolved a comment",
   "collab.comment.reopen": "reopened a comment",
@@ -114,7 +112,7 @@ const relativeTime = (input: string | number): string => {
 };
 
 type CollabModule = {
-  getState: (collection: string, id: string) => Promise<{ reviewState: ReviewState; assignee: string | null }>;
+  getState: (collection: string, id: string) => Promise<{ reviewState: ReviewState; editor: string | null }>;
   listComments: (collection: string, id: string) => Promise<any[]>;
   getActivity: (collection: string, id: string) => Promise<any[]>;
 };
@@ -170,27 +168,12 @@ export async function loadCollaborationData(opts: {
     time: relativeTime(a.timestamp),
   }));
 
-  // Collaborators = assignee + distinct comment authors (best-effort "who's involved"
-  // until live presence exists).
-  const collaborators: CollabUser[] = [];
-  const seen = new Set<string>();
-  const pushUser = (u: CollabUser | null) => {
-    if (!u || !u.id || seen.has(u.id)) return;
-    seen.add(u.id);
-    collaborators.push(u);
-  };
-  const assignee = state.assignee ? toUser(state.assignee) : null;
-  pushUser(assignee);
-  for (const c of resolvedComments) pushUser(c.author);
-
   return {
     reviewState: state.reviewState,
-    assignee,
+    editor: state.editor ? toUser(state.editor) : null,
     assignableUsers: (users ?? []).map((u) => toUser(String(u._id), String(u.email ?? ""))),
     comments: resolvedComments,
     activity: resolvedActivity,
-    collaborators: collaborators.slice(0, 5),
     currentUser: currentUser ? toUser(currentUser.id, currentUser.email) : null,
-    isAdmin: currentUser?.role === "admin",
   };
 }
