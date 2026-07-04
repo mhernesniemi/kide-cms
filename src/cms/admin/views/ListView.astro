@@ -13,7 +13,7 @@ import {
   getLabelField,
   getListColumns,
   humanize,
-  isCollaborationEnabled,
+  resolveCollaboration,
 } from "@/cms/core";
 import { canWrite, getVisualStatus } from "@/cms/admin/lib/access";
 import { loadRelationOptionList, loadSharedSectionUsageCounts } from "@/cms/admin/lib/edit-data";
@@ -79,10 +79,10 @@ for (const column of listColumns) {
   for (const option of options) relationLabels[option.value] = option.label;
 }
 
-// Collaboration columns (review state + assignee) — only when the feature is
-// enabled, and only on draft-enabled content collections. Values are placeholder
-// until the collaboration store lands; they are not sortable (non-DB columns).
-const collabListColumns = isCollaborationEnabled(config) && collection.drafts ? ["__review", "__assignee"] : [];
+// Collaboration columns (review state + assignee) — only for collections in the
+// collaboration list that also support drafts. Not sortable (non-DB columns).
+const collabListColumns =
+  resolveCollaboration(config, collection.slug).enabled && collection.drafts ? ["__review", "__assignee"] : [];
 const displayColumns = [...listColumns, ...collabListColumns];
 
 // Batch-load review state + assignee for the listed documents.

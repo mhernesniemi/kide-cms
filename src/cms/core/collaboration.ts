@@ -112,6 +112,29 @@ export const collaboration = {
     return next;
   },
 
+  // The review handoff: assign the document to the reviewer and move it to
+  // "ready for review" in one step (single-assignee model — the assignee is
+  // whoever currently holds the document).
+  async requestReview(
+    collection: string,
+    documentId: string,
+    reviewer: string | null,
+    actor: AuditActor,
+  ): Promise<CollaborationState> {
+    const next = await upsertState(collection, documentId, {
+      assignee: reviewer || null,
+      reviewState: "ready_for_review",
+    });
+    await recordAudit({
+      action: "collab.review.ready_for_review",
+      resourceType: "content",
+      resourceCollection: collection,
+      resourceId: documentId,
+      actor,
+    });
+    return next;
+  },
+
   async setAssignee(
     collection: string,
     documentId: string,

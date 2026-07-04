@@ -1,5 +1,5 @@
 ---
-import { ArrowLeft, ArrowUpRight, Dot } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Dot, Lock } from "lucide-react";
 
 import AdminCard from "@/cms/admin/components/AdminCard.astro";
 import AiGenerateButton from "@/cms/admin/components/AiGenerateButton";
@@ -15,7 +15,7 @@ import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { isAiEnabled, collaboration } from "virtual:kide/runtime";
 import { loadCollaborationData } from "@/cms/admin/lib/collaboration";
-import { formatDate, getFieldSets, getLabelField, getSharedBlockTypes, isCollaborationEnabled } from "@/cms/core";
+import { formatDate, getFieldSets, getLabelField, getSharedBlockTypes, resolveCollaboration } from "@/cms/core";
 import {
   getFormAction,
   getVisualStatus,
@@ -169,9 +169,10 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
   if (key.startsWith("block:")) blockRelationOptions[key] = opts;
 }
 
-// Editorial collaboration UI — gated behind config.collaboration.enabled. Shown
-// on normal document edits only (not submissions or the translation form).
-const showCollab = isCollaborationEnabled(config) && mode === "edit" && !isSubmissionView && !translationMode;
+// Editorial collaboration UI — shown only for collections in the collaboration
+// list, and only on normal document edits (not submissions or the translation form).
+const collab = resolveCollaboration(config, collection.slug);
+const showCollab = collab.enabled && mode === "edit" && !isSubmissionView && !translationMode;
 const collabData =
   showCollab && documentId
     ? await loadCollaborationData({
@@ -183,6 +184,13 @@ const collabData =
         currentUser: user,
       })
     : null;
+
+// Publish gate: when collaboration.requireApproval is on, non-admins can't
+// publish a draft-enabled document until its review is approved. New documents
+// (no review yet) count as unapproved.
+const requireApproval = collab.enabled && collab.requireApproval && !!collection.drafts && !isSubmissionView;
+const publishBlocked =
+  requireApproval && user?.role !== "admin" && (collabData?.reviewState ?? "in_progress") !== "approved";
 ---
 
 <section class="space-y-14">
@@ -282,25 +290,36 @@ const collabData =
                       ? "Save draft"
                       : "Save"}
                 </button>
-                {collection.drafts && (
-                  <button
-                    class={buttonVariants({ variant: "publish" })}
-                    type="submit"
-                    form="document-form"
-                    name="_intent"
-                    value="publish"
-                    disabled={
-                      mode === "edit" &&
-                      !(
-                        doc?._status === "draft" ||
-                        doc?._status === "scheduled" ||
-                        (doc && getVisualStatus(doc) === "changed")
-                      )
-                    }
-                  >
-                    Publish
-                  </button>
-                )}
+                {collection.drafts &&
+                  (publishBlocked ? (
+                    <button
+                      class={buttonVariants({ variant: "outline" })}
+                      type="button"
+                      disabled
+                      title="Publish unlocks once the review is approved"
+                    >
+                      <Lock className="size-3.5" />
+                      Needs approval
+                    </button>
+                  ) : (
+                    <button
+                      class={buttonVariants({ variant: "publish" })}
+                      type="submit"
+                      form="document-form"
+                      name="_intent"
+                      value="publish"
+                      disabled={
+                        mode === "edit" &&
+                        !(
+                          doc?._status === "draft" ||
+                          doc?._status === "scheduled" ||
+                          (doc && getVisualStatus(doc) === "changed")
+                        )
+                      }
+                    >
+                      Publish
+                    </button>
+                  ))}
               </>
             )}
             {mode === "edit" && !translationMode && documentId && (

@@ -301,10 +301,31 @@ export type ImagesConfig = {
   presets?: Record<string, ImagePreset>;
 };
 
+// A collection opts into collaboration by appearing in `collections` — either as a
+// bare slug, or as an object that overrides the group defaults for that collection.
+export type CollaborationCollection = string | { slug: string; requireApproval?: boolean };
+
 export type CollaborationConfig = {
-  // Editorial collaboration (review workflow, assignees, comments, activity).
-  // Off unless explicitly enabled — surfaces extra admin UI and list columns.
-  enabled?: boolean;
+  // Default publish gate for the listed collections. When true, publishing a
+  // draft-enabled document is blocked until its review is "approved" (admins
+  // bypass). A per-collection entry can override this.
+  requireApproval?: boolean;
+  // Which collections get editorial collaboration (review workflow, assignees,
+  // comments, activity). Presence in this list is the on switch — a collection
+  // absent from it has no review UI, list columns, or gate.
+  collections?: CollaborationCollection[];
+};
+
+export type ResolvedCollaboration = { enabled: boolean; requireApproval: boolean };
+
+// Resolve collaboration settings for a single collection: whether it's enabled,
+// and whether publishing requires approval (per-collection override → group default).
+export const resolveCollaboration = (config: CMSConfig, collectionSlug: string): ResolvedCollaboration => {
+  const collab = config.collaboration;
+  const entry = collab?.collections?.find((c) => (typeof c === "string" ? c : c.slug) === collectionSlug);
+  if (!entry) return { enabled: false, requireApproval: false };
+  const override = typeof entry === "object" ? entry.requireApproval : undefined;
+  return { enabled: true, requireApproval: override ?? collab?.requireApproval ?? false };
 };
 
 export type CMSConfig = {
@@ -422,8 +443,6 @@ export const fields = {
 
 export const defineCollection = (collection: CollectionConfig): CollectionConfig => collection;
 export const defineConfig = (config: CMSConfig): CMSConfig => config;
-
-export const isCollaborationEnabled = (config: CMSConfig): boolean => config.collaboration?.enabled === true;
 
 export type WithSiteOptions = {
   /** Field name added to the collection. Defaults to "site". */

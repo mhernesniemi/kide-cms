@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Check, ChevronDown, Clock, GitCommitVertical, MessageSquare, MessageSquarePlus } from "lucide-react";
 
 import { cn } from "../lib/utils";
@@ -53,7 +53,7 @@ function Avatar({
 }
 
 export default function CollaborationReviewBar(props: Props) {
-  const { collection, documentId, assignableUsers, activity, currentUser, isAdmin } = props;
+  const { collection, documentId, assignableUsers, activity, currentUser } = props;
 
   const [reviewState, setReviewState] = useState<ReviewState>(props.reviewState);
   const [assignee, setAssignee] = useState<CollabUser | null>(props.assignee);
@@ -138,68 +138,122 @@ export default function CollaborationReviewBar(props: Props) {
     }
   };
 
-  const meta = REVIEW_STATE_META[reviewState];
-  const openComments = () => {
-    setTab("comments");
-    setOpen(true);
+  // The review handoff: assign to the reviewer + move to "ready for review".
+  const requestReview = async (reviewerId: string) => {
+    const prevAssignee = assignee;
+    const prevState = reviewState;
+    setAssignee(assignableUsers.find((u) => u.id === reviewerId) ?? null);
+    setReviewState("ready_for_review");
+    try {
+      await post({ action: "requestReview", reviewer: reviewerId });
+    } catch (err) {
+      setAssignee(prevAssignee);
+      setReviewState(prevState);
+      window.alert(err instanceof Error ? err.message : "Could not request review.");
+    }
   };
 
-  // The assignee owns the content work; reviewing is an admin capability for now.
-  const isReviewer = isAdmin;
-
-  type WorkflowAction = { label: string; next: ReviewState; variant: "outline" | "ghost"; approve?: boolean };
-  const actions: WorkflowAction[] = (() => {
-    if (!currentUser) return [];
-    switch (reviewState) {
-      case "in_progress":
-        return [{ label: "Request review", next: "ready_for_review", variant: "outline" }];
-      case "changes_requested":
-        return [{ label: "Resume editing", next: "in_progress", variant: "outline" }];
-      case "ready_for_review":
-        return isReviewer
-          ? [
-              { label: "Request changes", next: "changes_requested", variant: "ghost" },
-              { label: "Approve", next: "approved", variant: "outline", approve: true },
-            ]
-          : [{ label: "Withdraw", next: "in_progress", variant: "ghost" }];
-      case "approved":
-        return [{ label: "Reopen", next: "in_progress", variant: "ghost" }];
-      default:
-        return [];
-    }
-  })();
+  const meta = REVIEW_STATE_META[reviewState];
+  const commentInputRef = useRef<HTMLInputElement>(null);
+  const openComments = (focus = false) => {
+    setTab("comments");
+    setOpen(true);
+    if (focus) setTimeout(() => commentInputRef.current?.focus(), 60);
+  };
 
   return (
     <>
       {/* Full-width review strip */}
       <div className="bg-muted/30 flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border px-4 py-2.5">
-        {/* Zone 1 — Review workflow: status → whose turn → the action you own */}
+        {/* Zone 1 — Review workflow: status → the action for this stage */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-              meta.badge,
-            )}
-          >
-            <span className={cn("size-1.5 rounded-full", meta.dot)} />
-            {meta.label}
-          </span>
-          {actions.length > 0 && <div className="bg-border mx-0.5 h-5 w-px" />}
-          {actions.map((action) => (
+          {reviewState === "changes_requested" ? (
             <button
-              key={action.label}
               type="button"
-              disabled={busy}
-              onClick={() => changeState(action.next)}
+              onClick={() => openComments()}
+              title="View the requested changes"
               className={cn(
-                buttonVariants({ variant: action.variant, size: "sm" }),
-                action.variant === "ghost" && "text-muted-foreground",
+                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-80",
+                meta.badge,
               )}
             >
-              {action.approve && <Check className="size-4" />}
-              {action.label}
+              <span className={cn("size-1.5 rounded-full", meta.dot)} />
+              {meta.label}
+              <MessageSquare className="size-3 opacity-70" />
             </button>
-          ))}
+          ) : (
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
+                meta.badge,
+              )}
+            >
+              <span className={cn("size-1.5 rounded-full", meta.dot)} />
+              {meta.label}
+            </span>
+          )}
+
+          {currentUser && <div className="bg-border mx-0.5 h-5 w-px" />}
+
+          {/* In progress / Changes requested → hand off to a reviewer */}
+          {currentUser && (reviewState === "in_progress" || reviewState === "changes_requested") && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                disabled={busy}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+              >
+                Request review
+                <ChevronDown className="size-3.5 opacity-60" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-52">
+                <div className="text-muted-foreground px-2 py-1.5 text-xs">Request review from…</div>
+                {assignableUsers.map((u) => (
+                  <DropdownMenuItem key={u.id} onClick={() => requestReview(u.id)}>
+                    <Avatar initials={u.initials} color={u.color} size="size-5" />
+                    <span className="flex-1">{u.name}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Ready for review → the reviewer decides */}
+          {currentUser && reviewState === "ready_for_review" && (
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  changeState("changes_requested");
+                  openComments(true);
+                }}
+                className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-muted-foreground")}
+              >
+                Request changes
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => changeState("approved")}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                <Check className="size-4" />
+                Approve
+              </button>
+            </>
+          )}
+
+          {/* Approved → reopen for more work */}
+          {currentUser && reviewState === "approved" && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => changeState("in_progress")}
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-muted-foreground")}
+            >
+              Reopen
+            </button>
+          )}
         </div>
 
         {/* Zone 2 — People & discussion: who owns the page + comments */}
@@ -237,7 +291,7 @@ export default function CollaborationReviewBar(props: Props) {
 
           <button
             type="button"
-            onClick={openComments}
+            onClick={() => openComments()}
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-muted-foreground gap-1.5")}
           >
             <MessageSquare className="size-4" />
@@ -314,6 +368,7 @@ export default function CollaborationReviewBar(props: Props) {
               <div className="bg-background sticky bottom-0 flex items-center gap-2 border-t px-4 py-3">
                 <MessageSquarePlus className="text-muted-foreground size-4 shrink-0" />
                 <input
+                  ref={commentInputRef}
                   type="text"
                   value={draft}
                   disabled={busy || !currentUser}

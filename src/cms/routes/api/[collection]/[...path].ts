@@ -2,11 +2,27 @@ import type { APIRoute } from "astro";
 
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
+import { collaboration } from "virtual:kide/runtime";
+import { resolveCollaboration } from "@/cms/core";
 import { loadSharedSectionUsageCounts } from "@/cms/admin/lib/edit-data";
 
 export const prerender = false;
 
 const cmsRuntime = cms as Record<string, any> & { meta: typeof cms.meta };
+
+// Editorial gate: when the collection requires approval, publishing/scheduling a
+// draft-enabled document is blocked until its review is approved. Admins bypass.
+const publishAllowed = async (
+  collection: { slug: string; drafts?: boolean },
+  documentId: string,
+  locals: App.Locals,
+): Promise<boolean> => {
+  const { enabled, requireApproval } = resolveCollaboration(config, collection.slug);
+  if (!enabled || !requireApproval || !collection.drafts) return true;
+  if (locals.user?.role === "admin") return true;
+  const { reviewState } = await collaboration.getState(collection.slug, documentId);
+  return reviewState === "approved";
+};
 
 const getSegments = (path: string | undefined) => (path ?? "").split("/").filter(Boolean);
 
@@ -96,9 +112,11 @@ const handleHtmlMutation = async (
   try {
     if (action === "create") {
       const created = await collectionApi.create(data, ctx);
-      if (collection.drafts && intent === "publish") {
+      const wantsGoLive = collection.drafts && (intent === "publish" || (intent === "schedule" && data._publishAt));
+      const blocked = wantsGoLive && !(await publishAllowed(collection, created._id, locals));
+      if (collection.drafts && intent === "publish" && !blocked) {
         await collectionApi.publish(created._id, ctx);
-      } else if (collection.drafts && intent === "schedule" && data._publishAt) {
+      } else if (collection.drafts && intent === "schedule" && data._publishAt && !blocked) {
         await collectionApi.schedule(
           created._id,
           String(data._publishAt),
@@ -106,13 +124,14 @@ const handleHtmlMutation = async (
           ctx,
         );
       }
-      const msg =
-        intent === "publish"
+      const msg = blocked
+        ? `${name} saved as draft — needs review approval before publishing`
+        : intent === "publish"
           ? `${name} created and published`
           : intent === "schedule"
             ? `${name} scheduled`
             : `${name} created`;
-      return redirect(`/admin/${collectionSlug}/${created._id}`, { status: "success", msg });
+      return redirect(`/admin/${collectionSlug}/${created._id}`, { status: blocked ? "error" : "success", msg });
     }
 
     if (!documentId) {
@@ -121,11 +140,13 @@ const handleHtmlMutation = async (
 
     if (action === "update") {
       await collectionApi.update(documentId, data, ctx);
-      if (collection.drafts && intent === "publish") {
+      const wantsGoLive = collection.drafts && (intent === "publish" || (intent === "schedule" && data._publishAt));
+      const blocked = wantsGoLive && !(await publishAllowed(collection, documentId, locals));
+      if (collection.drafts && intent === "publish" && !blocked) {
         await collectionApi.publish(documentId, ctx);
       } else if (collection.drafts && intent === "unpublish") {
         await collectionApi.unpublish(documentId, ctx);
-      } else if (collection.drafts && intent === "schedule" && data._publishAt) {
+      } else if (collection.drafts && intent === "schedule" && data._publishAt && !blocked) {
         await collectionApi.schedule(
           documentId,
           String(data._publishAt),
@@ -133,8 +154,9 @@ const handleHtmlMutation = async (
           ctx,
         );
       }
-      const msg =
-        intent === "publish"
+      const msg = blocked
+        ? `Saved — needs review approval before publishing`
+        : intent === "publish"
           ? `${name} published`
           : intent === "unpublish"
             ? `${name} unpublished`
@@ -143,7 +165,7 @@ const handleHtmlMutation = async (
               : collection.drafts
                 ? `${name} saved as draft`
                 : `${name} saved`;
-      return redirect(redirectTo, { status: "success", msg });
+      return redirect(redirectTo, { status: blocked ? "error" : "success", msg });
     }
 
     if (action === "delete") {
@@ -152,6 +174,9 @@ const handleHtmlMutation = async (
     }
 
     if (action === "publish") {
+      if (!(await publishAllowed(collection, documentId, locals))) {
+        return redirect(redirectTo, { status: "error", msg: `${name} needs review approval before publishing` });
+      }
       await collectionApi.publish(documentId, ctx);
       return redirect(redirectTo, { status: "success", msg: `${name} published` });
     }
@@ -280,6 +305,9 @@ export const POST: APIRoute = async ({ params, request, locals, cache }) => {
   const collectionApi = cmsRuntime[collectionSlug];
 
   if (pathAction === "publish" && documentId) {
+    if (!(await publishAllowed(getCollection(collectionSlug), documentId, locals))) {
+      return Response.json({ error: "Needs review approval before publishing." }, { status: 403 });
+    }
     return Response.json(await collectionApi.publish(documentId, ctx));
   }
 
@@ -288,6 +316,9 @@ export const POST: APIRoute = async ({ params, request, locals, cache }) => {
   }
 
   if (pathAction === "schedule" && documentId) {
+    if (!(await publishAllowed(getCollection(collectionSlug), documentId, locals))) {
+      return Response.json({ error: "Needs review approval before scheduling." }, { status: 403 });
+    }
     const body = await request.json();
     return Response.json(await collectionApi.schedule(documentId, body.publishAt, body.unpublishAt ?? null, ctx));
   }

@@ -1,10 +1,11 @@
 import type { APIRoute } from "astro";
 import config from "virtual:kide/config";
 import { collaboration } from "virtual:kide/runtime";
+import { resolveCollaboration } from "@/cms/core";
 
 export const prerender = false;
 
-const enabled = config.collaboration?.enabled === true;
+const isEnabled = (collection: string) => resolveCollaboration(config, collection).enabled;
 
 const getActor = (locals: App.Locals) => {
   const user = locals.user;
@@ -16,10 +17,10 @@ const notFound = () => Response.json({ error: "Not found." }, { status: 404 });
 // GET /api/cms/collaboration?collection=<slug>&id=<docId>
 // Returns the full collaboration snapshot for one document.
 export const GET: APIRoute = async ({ url }) => {
-  if (!enabled) return notFound();
   const collection = url.searchParams.get("collection");
   const id = url.searchParams.get("id");
   if (!collection || !id) return Response.json({ error: "collection and id are required." }, { status: 400 });
+  if (!isEnabled(collection)) return notFound();
 
   const [state, comments, activity] = await Promise.all([
     collaboration.getState(collection, id),
@@ -31,7 +32,6 @@ export const GET: APIRoute = async ({ url }) => {
 
 // POST /api/cms/collaboration  { collection, id, action, ...payload }
 export const POST: APIRoute = async ({ request, locals }) => {
-  if (!enabled) return notFound();
   const actor = getActor(locals);
   if (!actor) return Response.json({ error: "Authentication required." }, { status: 401 });
 
@@ -42,11 +42,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (typeof collection !== "string" || typeof id !== "string" || typeof action !== "string") {
     return Response.json({ error: "collection, id and action are required." }, { status: 400 });
   }
+  if (!isEnabled(collection)) return notFound();
 
   try {
     switch (action) {
       case "setReviewState": {
         const state = await collaboration.setReviewState(collection, id, (body as any).reviewState, actor);
+        return Response.json({ state });
+      }
+      case "requestReview": {
+        const reviewer = (body as any).reviewer;
+        const state = await collaboration.requestReview(collection, id, reviewer ? String(reviewer) : null, actor);
         return Response.json({ state });
       }
       case "setAssignee": {

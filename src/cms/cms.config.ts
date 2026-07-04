@@ -16,8 +16,9 @@ export default defineConfig({
     default: "en",
     supported: ["en"],
   },
-  // Editorial collaboration is off by default; enabled here for local dev. Remove
-  // this block (or set enabled: false) to ship a project without it.
-  collaboration: { enabled: true },
+  collaboration: {
+    requireApproval: false,
+    collections: ["pages", { slug: "posts", requireApproval: true }],
+  },
   collections: [users, authors, posts, taxonomies, menus, frontPage, pages, sharedSections, forms, formSubmissions],
 });

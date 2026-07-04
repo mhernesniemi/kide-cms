@@ -39,11 +39,13 @@ export {
   getCollectionLabel,
   getLabelField,
   hasRole,
-  isCollaborationEnabled,
+  resolveCollaboration,
 } from "./define";
 export type {
   CMSConfig,
   CollaborationConfig,
+  CollaborationCollection,
+  ResolvedCollaboration,
   CollectionConfig,
   CollectionFieldMap,
   FieldConfig,
