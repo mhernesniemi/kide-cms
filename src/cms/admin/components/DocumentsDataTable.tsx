@@ -782,12 +782,7 @@ export default function DocumentsDataTable({
                     .map((cell) => (
                       <TableCell
                         key={cell.id}
-                        className={cn(
-                          // Let long values (e.g. titles) wrap across lines instead of
-                          // forcing one very wide row.
-                          "align-top break-words whitespace-normal",
-                          cell.column.id === "select" && "w-10",
-                        )}
+                        className={cn("align-middle whitespace-nowrap", cell.column.id === "select" && "w-10")}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
