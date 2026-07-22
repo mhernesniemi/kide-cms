@@ -1,7 +1,6 @@
 import type { ReviewState } from "@/cms/core";
 
-// Shared display helpers for the collaboration UI (edit strip + list columns).
-// Turns raw collaboration records into render-ready data: avatars, labels, times.
+// Display helpers for the collaboration UI (edit strip + list columns).
 
 export type CollabUser = { id: string; name: string; initials: string; color: string };
 export type CollabComment = {

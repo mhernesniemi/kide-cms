@@ -1,4 +1,7 @@
 import { defineMiddleware } from "astro:middleware";
+import { resolveAdminAuth } from "@/cms/core";
+import type { SessionUser } from "@/cms/core";
+import config from "virtual:kide/config";
 import { getSessionUser } from "virtual:kide/runtime";
 import { getDb } from "virtual:kide/db";
 
@@ -6,6 +9,17 @@ let hasUsers: boolean | null = null;
 
 export const resetUserCache = () => {
   hasUsers = null;
+};
+
+const normalizeCustomUser = (value: Record<string, unknown> | null): SessionUser | null => {
+  if (!value || typeof value.id !== "string" || typeof value.email !== "string") return null;
+  return {
+    ...value,
+    id: value.id,
+    email: value.email,
+    name: typeof value.name === "string" ? value.name : value.email,
+    role: typeof value.role === "string" ? value.role : "viewer",
+  };
 };
 
 export const onRequest = defineMiddleware(async (context, next) => {
@@ -16,6 +30,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isAdminApiRoute = pathname.startsWith("/api/cms");
   const isLoginPage = pathname === "/admin/login";
   const isLoginApi = pathname === "/api/cms/auth/login";
+  const isForgotPasswordPage = pathname === "/admin/forgot-password";
+  const isForgotPasswordApi = pathname === "/api/cms/auth/forgot-password";
+  const isResetPasswordPage = pathname === "/admin/reset-password";
+  const isResetPasswordApi = pathname === "/api/cms/auth/reset-password";
+  const isSsoAuthApi = pathname.startsWith("/api/cms/auth/sso/");
   const isSetupPage = pathname === "/admin/setup";
   const isSetupApi = pathname === "/api/cms/auth/setup";
   const isInvitePage = pathname === "/admin/invite";
@@ -76,11 +95,29 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Always allow login page, login API, and cron endpoint (has its own auth)
   const isCronApi = pathname === "/api/cms/cron/publish";
   const isFormSubmit = pathname.startsWith("/api/cms/forms/submit/");
-  if (isLoginPage || isLoginApi || isSetupApi || isCronApi || isInvitePage || isInviteApi || isFormSubmit) {
+  if (
+    isLoginPage ||
+    isLoginApi ||
+    isForgotPasswordPage ||
+    isForgotPasswordApi ||
+    isResetPasswordPage ||
+    isResetPasswordApi ||
+    isSsoAuthApi ||
+    isSetupApi ||
+    isCronApi ||
+    isInvitePage ||
+    isInviteApi ||
+    isFormSubmit
+  ) {
     return addSecurityHeaders(await next());
   }
 
-  const user = await getSessionUser(context.request);
+  const auth = resolveAdminAuth(config);
+  const customProvider = config.admin?.auth?.provider;
+  const user =
+    auth.provider === "custom" && typeof customProvider === "object"
+      ? normalizeCustomUser(await customProvider.getSession(context.request))
+      : await getSessionUser(context.request);
 
   if (!user) {
     // API routes → 401

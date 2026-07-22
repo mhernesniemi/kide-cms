@@ -31,6 +31,39 @@ export const sendInviteEmail = async (to: string, inviteUrl: string): Promise<bo
   }
 };
 
+export const sendPasswordResetEmail = async (to: string, resetUrl: string): Promise<boolean> => {
+  const apiKey = import.meta.env.RESEND_API_KEY;
+  if (!apiKey) return false;
+
+  const from = import.meta.env.RESEND_FROM_EMAIL ?? "Kide CMS <noreply@example.com>";
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to,
+        subject: "Reset your Kide CMS password",
+        html: `
+          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+            <h2 style="font-size: 20px;">Reset your password</h2>
+            <p>Use the link below to choose a new password for your Kide CMS account:</p>
+            <p><a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; background: #0d9488; color: white; text-decoration: none; border-radius: 6px;">Reset password</a></p>
+            <p style="color: #666; font-size: 13px;">This link expires in 1 hour. If you didn't request this, you can safely ignore it.</p>
+          </div>
+        `,
+      }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+};
+
 export const sendFormSubmissionEmail = async (
   to: string,
   formTitle: string,

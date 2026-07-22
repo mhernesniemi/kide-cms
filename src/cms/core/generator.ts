@@ -182,6 +182,14 @@ const generateSchemaFile = (config: CMSConfig): string => {
   usedAt: text("used_at"),
 });`);
   parts.push("");
+  parts.push(`export const cmsPasswordResets = sqliteTable("cms_password_resets", {
+  _id: text("_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: text("expires_at").notNull(),
+  usedAt: text("used_at"),
+});`);
+  parts.push("");
   parts.push(`export const cmsAuditLog = sqliteTable("cms_audit_log", {
   _id: text("_id").primaryKey(),
   timestamp: integer("timestamp").notNull(),

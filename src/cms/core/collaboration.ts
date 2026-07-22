@@ -5,15 +5,13 @@ import { recordAudit, type AuditActor } from "./audit";
 import { getDb } from "./runtime";
 import { getSchema } from "./schema";
 
-// Editorial review states. `in_progress` is the implicit default when a document
-// has no collaboration row yet.
+// `in_progress` is the default before any collaboration row exists.
 export const REVIEW_STATES = ["in_progress", "ready_for_review", "changes_requested", "approved"] as const;
 export type ReviewState = (typeof REVIEW_STATES)[number];
 
 const DEFAULT_STATE: ReviewState = "in_progress";
 
-// The editor owns the content. Approval is role-based (see isApprover), not a
-// per-document assignment.
+// Approval is role-based (see isApprover), not per-document.
 export type CollaborationState = { reviewState: ReviewState; editor: string | null };
 
 export type CommentRecord = {
@@ -42,7 +40,6 @@ const rowToState = (row: any): CollaborationState => ({
   editor: row?.editor ?? null,
 });
 
-// Insert or update the single collaboration row for a document (composite PK).
 const upsertState = async (collection: string, documentId: string, patch: Partial<CollaborationState>) => {
   const db = await getDb();
   const schema = getSchema();
@@ -96,8 +93,7 @@ export const collaboration = {
     return result;
   },
 
-  // Every document a user is the editor of, across all collections. The caller
-  // resolves titles/permissions.
+  // Docs this user is the editor of, across collections.
   async assignedTo(
     userId: string,
   ): Promise<Array<{ collection: string; documentId: string; reviewState: ReviewState }>> {
@@ -129,8 +125,7 @@ export const collaboration = {
     return next;
   },
 
-  // Editor submits for review: move to "ready for review", capturing the acting
-  // user as editor if the document doesn't have one yet.
+  // Submit for review; claim editor if unset.
   async submitForReview(collection: string, documentId: string, actor: AuditActor): Promise<CollaborationState> {
     const current = await collaboration.getState(collection, documentId);
     const next = await upsertState(collection, documentId, {

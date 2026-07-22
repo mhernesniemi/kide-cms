@@ -256,6 +256,77 @@ export type AdminRateLimitConfig = {
   windowMs?: number;
 };
 
+export type AdminAuthPasswordConfig = {
+  /** Enable email/password sign-in. Default true. */
+  enabled?: boolean;
+  /** Enable forgot-password reset flow. Default true for local/better-auth providers. */
+  forgotPassword?: boolean;
+  /** Require or expose email verification in auth providers that support it. Default false. */
+  emailVerification?: boolean;
+};
+
+export type AdminAuthMfaConfig = {
+  /** Enable authenticator-app TOTP where supported by the auth provider. */
+  totp?: boolean;
+  /** Enable single-use recovery codes where supported by the auth provider. */
+  backupCodes?: boolean;
+  /** Enable passkey/WebAuthn sign-in where supported by the auth provider. */
+  passkeys?: boolean;
+};
+
+export type AdminAuthSsoProviderConfig = {
+  /** Stable provider id used in URLs, e.g. "azure" or "okta". */
+  id: string;
+  /** Human label shown on the login screen. */
+  label: string;
+  /** Protocol/backend used by the auth provider. */
+  type: "oidc" | "saml" | "oauth" | "workos" | "custom";
+  /** OIDC issuer/discovery URL, SAML entity ID, or broker-specific issuer. */
+  issuer?: string;
+  clientId?: string;
+  clientSecret?: string;
+  /** Optional explicit authorization URL for custom/broker flows. */
+  authorizationUrl?: string;
+  /** Optional callback URL override. Defaults to Kide's callback route. */
+  callbackUrl?: string;
+  scopes?: string[];
+  /** Restrict JIT sign-in/provisioning to these email domains. */
+  allowedDomains?: string[];
+  /** Default Kide role for newly provisioned users. */
+  role?: string;
+  /** Provider-specific options passed through to the selected auth backend. */
+  options?: Record<string, unknown>;
+};
+
+export type AdminCustomAuthProvider = {
+  kind: "custom";
+  getSession: (request: Request) => Promise<Record<string, unknown> | null>;
+  loginUrl?: string;
+  logoutUrl?: string;
+};
+
+export type AdminAuthConfig = {
+  /**
+   * Auth backend. "local" keeps Kide's built-in session/password flow.
+   * "better-auth" is the batteries-included backend for MFA, passkeys, OIDC/SAML,
+   * and forgot-password flows. "workos" and "custom" are escape hatches.
+   */
+  provider?: "local" | "better-auth" | "workos" | AdminCustomAuthProvider;
+  password?: AdminAuthPasswordConfig;
+  mfa?: AdminAuthMfaConfig;
+  sso?: {
+    providers?: AdminAuthSsoProviderConfig[];
+  };
+  workos?: {
+    clientId?: string;
+    apiKey?: string;
+    organizationId?: string;
+    defaultRole?: string;
+  };
+  /** Escape hatch for provider-specific options, e.g. raw Better Auth config. */
+  advanced?: Record<string, unknown>;
+};
+
 /** A named colour offered by `fields.color()` pickers. */
 export type ColorOption = { label: string; value: string };
 
@@ -279,6 +350,7 @@ export type AdminConfig = {
   nav?: AdminNavItem[];
   uploads?: AdminUploadConfig;
   rateLimit?: AdminRateLimitConfig;
+  auth?: AdminAuthConfig;
   /** Webhooks fired on content events */
   webhooks?: WebhookConfig[];
   /** Predefined palette offered by every `fields.color()` picker. */

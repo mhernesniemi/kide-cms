@@ -1,7 +1,6 @@
 ---
 import PublicLayout from "@/layouts/PublicLayout.astro";
 import BlockRenderer from "@/components/BlockRenderer.astro";
-import CmsForm from "@/components/CmsForm.astro";
 import type { PostsDocument } from "@/cms/.generated/types";
 import { cms } from "@/cms/.generated/api";
 import { getSharedSectionTagsFromBlocks, parseBlocks } from "@/cms/core";
@@ -37,11 +36,6 @@ if (!isPreview) Astro.cache.set({ tags: ["front-page", "posts", "home", ...getSh
           <p class="text-gray-500">No content yet.</p>
         )
       }
-
-      <section class="mt-12 border-t pt-8">
-        <h2 class="mb-4 text-xl font-semibold">Get in touch</h2>
-        <CmsForm slug="formi" context={{ pageTitle: "Home", pageUrl: Astro.url.pathname }} />
-      </section>
     </main>
 
     <aside class="hidden w-64 shrink-0 lg:block">

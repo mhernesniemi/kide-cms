@@ -42,6 +42,8 @@ export {
   resolveCollaboration,
   isApprover,
 } from "./define";
+export { customAuth, getSsoProvider, resolveAdminAuth } from "./auth-config";
+export type { ResolvedAdminAuthConfig } from "./auth-config";
 export type {
   CMSConfig,
   CollaborationConfig,
@@ -73,6 +75,11 @@ export type {
   DatabaseConfig,
   LocaleConfig,
   AdminConfig,
+  AdminAuthConfig,
+  AdminAuthMfaConfig,
+  AdminAuthPasswordConfig,
+  AdminAuthSsoProviderConfig,
+  AdminCustomAuthProvider,
   ColorOption,
   ImagePreset,
   ImagesConfig,
@@ -114,6 +121,9 @@ export {
   createInvite,
   validateInvite,
   consumeInvite,
+  createPasswordReset,
+  validatePasswordReset,
+  consumePasswordReset,
   SESSION_COOKIE_NAME,
   setSessionCookie,
   clearSessionCookie,

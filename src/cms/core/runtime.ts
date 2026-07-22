@@ -6,6 +6,7 @@ export type CmsStorageAdapter = {
 
 export type CmsEmailAdapter = {
   sendInviteEmail: (to: string, inviteUrl: string) => Promise<boolean>;
+  sendPasswordResetEmail?: (to: string, resetUrl: string) => Promise<boolean>;
   isEmailConfigured: () => boolean;
 };
 
