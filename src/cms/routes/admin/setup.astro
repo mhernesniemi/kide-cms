@@ -60,15 +60,37 @@ const errorMessage =
             <form method="post" action="/api/cms/auth/setup" class="grid gap-4">
               <div class="grid gap-2">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" name="name" type="text" placeholder="Your name" required autoFocus />
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  placeholder="Your name"
+                  autoComplete="off"
+                  required
+                  autoFocus
+                />
               </div>
               <div class="grid gap-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" placeholder="admin@example.com" required />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="admin@example.com"
+                  autoComplete="off"
+                  required
+                />
               </div>
               <div class="grid gap-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type="password" placeholder="Min 8 characters" required />
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Min 8 characters"
+                  autoComplete="new-password"
+                  required
+                />
               </div>
               <div class="grid gap-2">
                 <Label htmlFor="confirmPassword">Confirm password</Label>
@@ -77,6 +99,7 @@ const errorMessage =
                   name="confirmPassword"
                   type="password"
                   placeholder="Repeat password"
+                  autoComplete="new-password"
                   required
                 />
               </div>

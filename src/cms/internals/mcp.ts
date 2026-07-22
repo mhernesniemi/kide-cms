@@ -104,7 +104,8 @@ server.registerTool(
   "kide_describe_collection",
   {
     title: "Describe collection",
-    description: "Return the schema, field value shapes, translatable fields, and publishing settings for a collection.",
+    description:
+      "Return the schema, field value shapes, translatable fields, and publishing settings for a collection.",
     inputSchema: {
       collection: z.string().min(1),
     },
@@ -116,7 +117,8 @@ server.registerTool(
   "kide_list_documents",
   {
     title: "List documents",
-    description: "List documents in a collection with optional filters, search, sort, locale, status, limit, and offset.",
+    description:
+      "List documents in a collection with optional filters, search, sort, locale, status, limit, and offset.",
     inputSchema: {
       collection: z.string().min(1),
       where: jsonObjectSchema.optional(),
