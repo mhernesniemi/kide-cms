@@ -780,8 +780,9 @@ export default function DocumentsDataTable({
                         key={cell.id}
                         className={cn(
                           // Let long values (e.g. titles) wrap across lines instead of
-                          // forcing one very wide row.
-                          "align-top break-words whitespace-normal",
+                          // forcing one very wide row. Every column centers vertically,
+                          // including a wrapped multi-line title, for a consistent row.
+                          "align-middle break-words whitespace-normal",
                           cell.column.id === "select" && "w-10",
                         )}
                       >

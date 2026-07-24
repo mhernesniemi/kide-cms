@@ -74,6 +74,13 @@ const imgWidth = base.widths[Math.floor(base.widths.length / 2)] ?? base.widths[
 const ratio = parseRatio(base.aspect) ?? (asset?.width && asset?.height ? asset.width / asset.height : undefined);
 const imgHeight = ratio ? Math.round(imgWidth / ratio) : undefined;
 const imgSrc = isUpload ? cmsImage(src, imgWidth, "webp", { aspect: base.aspect, focalX, focalY }) : src;
+
+// The server only crops (and honors the focal point) for presets with an
+// aspect; anything else is resize-only. When a caller then crops in the
+// browser via `object-cover`, CSS defaults to centering — so always carry
+// the focal point through as object-position too. Harmless when nothing
+// crops; keeps every render focal-aware regardless of preset.
+const focalStyle = focalX != null && focalY != null ? `object-position: ${focalX}% ${focalY}%` : undefined;
 ---
 
 {
@@ -90,6 +97,7 @@ const imgSrc = isUpload ? cmsImage(src, imgWidth, "webp", { aspect: base.aspect,
         loading={loading}
         fetchpriority={fetchpriority}
         class={className}
+        style={focalStyle}
       />
     </picture>
   ) : (

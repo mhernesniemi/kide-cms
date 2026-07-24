@@ -54,6 +54,12 @@ pnpm cms:restore      # restore files from the latest upgrade backup
 
 > **Upgrading a scaffolded client project?** Run `pnpm cms:upgrade <target-tag>` from the client project. It reads `.kide-version`, writes `.kide/upgrade/<from>-to-<to>/`, applies only managed runtime paths when the worktree is clean, and leaves project-sensitive files in `careful-review.patch`. Claude/Codex/Cursor should read `agent-instructions.md` from that packet and finish the merge from there. If no local agent exists, the packet is still complete for manual review. To abandon an upgrade attempt, run `pnpm cms:restore` or preview with `pnpm cms:restore --dry-run`.
 
+## Deployment
+
+The default adapter (`node({ mode: "standalone" })`) serves built assets with no compression — fine when a CDN or reverse proxy (Cloudflare, Vercel, nginx) sits in front and handles gzip/brotli itself. If you're deploying straight onto a bare VM/Node process with nothing in front, that gap is real: uncompressed CSS/JS bundles cost real mobile Lighthouse performance score (seen ~70 vs ~92 in one project after fixing).
+
+Fix: switch to `node({ mode: "middleware" })` and wrap the exported `handler` in a tiny Express server with `compression()` + `express.static` (long `Cache-Control: immutable` on hashed `_astro/*` assets). This is also the pattern this adapter's own test suite uses (see its `express`/`fastify` devDependencies) — it's not a workaround, it's the intended integration point for custom middleware. Keep `standalone` mode as the default for new projects; only make this switch when the actual deploy target has no compression layer of its own.
+
 ## Validation (IMPORTANT)
 
 After code changes, ALWAYS run:
