@@ -45,6 +45,8 @@ import {
   findItemDepth,
   canIndent,
   canOutdent,
+  canAddChild,
+  MENU_MAX_DEPTH,
 } from "./tree-utils";
 
 // --- Types ---
@@ -116,6 +118,7 @@ function SortableTreeItem({
 // --- Main component ---
 
 export default function TreeItemsEditor({ name, value, variant, label, linkOptions = [] }: Props) {
+  const maxDepth = variant === "menu" ? MENU_MAX_DEPTH : undefined;
   const [items, setItems] = React.useState<TreeItem[]>(() => parseItems(value));
   const [editing, setEditing] = React.useState<EditState | null>(null);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -271,6 +274,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
   };
 
   const addChildItem = (parentId: string) => {
+    if (!canAddChild(items, parentId, maxDepth)) return;
     saveOrDiscardEdit();
     const newItem = createBlankItem();
     setItems((prev) => {
@@ -313,6 +317,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
   };
 
   const indentItem = (id: string) => {
+    if (!canIndent(items, id, maxDepth)) return;
     setItems((prev) => {
       const next = cloneItems(prev);
       const doIndent = (list: TreeItem[]): boolean => {
@@ -568,7 +573,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
                         className="size-7"
                         title="Indent"
                         onClick={() => indentItem(item.id)}
-                        disabled={!canIndent(items, item.id)}
+                        disabled={!canIndent(items, item.id, maxDepth)}
                       >
                         <Indent className="size-3.5" />
                       </Button>
@@ -588,6 +593,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
                         className="size-7"
                         title="Add child"
                         onClick={() => addChildItem(item.id)}
+                        disabled={!canAddChild(items, item.id, maxDepth)}
                       >
                         <Plus className="size-3.5" />
                       </Button>

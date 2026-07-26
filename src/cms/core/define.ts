@@ -242,6 +242,29 @@ export type WebhookConfig = {
   payload?: (doc: Record<string, unknown>, context: WebhookContext) => any;
 };
 
+/** Durable task handler. Throw to retry with backoff; return to complete. */
+export type TaskHandler = (payload: unknown, context: { config: CMSConfig }) => void | Promise<void>;
+
+export type TaskScheduleConfig = {
+  /** Task type to enqueue — must have a handler in `integrations.tasks`. */
+  task: string;
+  /** Payload passed to the handler; also part of the schedule's identity. */
+  payload?: unknown;
+  /** Minimum minutes between runs, evaluated on each cron tick. */
+  everyMinutes: number;
+};
+
+export type IntegrationsConfig = {
+  /**
+   * Handlers for durable background tasks (cms_outbox), keyed by task type.
+   * Inbound webhooks arrive as `webhook.<provider>` tasks. Delivery is
+   * at-least-once — handlers must tolerate re-runs.
+   */
+  tasks?: Record<string, TaskHandler>;
+  /** Recurring tasks enqueued by the `/api/cms/cron/tasks` tick. */
+  schedules?: TaskScheduleConfig[];
+};
+
 export type AdminUploadConfig = {
   /** Allowed MIME types (default: images, PDF, video) */
   allowedTypes?: string[];
@@ -306,6 +329,7 @@ export type CMSConfig = {
   locales?: LocaleConfig;
   admin?: AdminConfig;
   images?: ImagesConfig;
+  integrations?: IntegrationsConfig;
   collections: CollectionConfig[];
 };
 
@@ -354,6 +378,14 @@ export type CollectionHooks = {
     context: HookContext,
   ) => Record<string, unknown> | Promise<Record<string, unknown>>;
   afterUpdate?: (doc: Record<string, unknown>, context: HookContext) => void | Promise<void>;
+  /** Runs on `upsertTranslation`, which writes translatable fields directly and does not
+   * go through `beforeCreate`/`beforeUpdate` — validate/transform translated field values here. */
+  beforeUpsertTranslation?: (
+    data: Record<string, unknown>,
+    locale: string,
+    existing: Record<string, unknown>,
+    context: HookContext,
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>;
   beforeDelete?: (doc: Record<string, unknown>, context: HookContext) => void | Promise<void>;
   afterDelete?: (doc: Record<string, unknown>, context: HookContext) => void | Promise<void>;
   beforePublish?: (

@@ -8,6 +8,7 @@ import { getCollectionMap, getTranslatableFieldNames, isStructuralField } from "
 import { getDb, trackTask } from "./runtime";
 import { getSchema } from "./schema";
 import { indexDocument, isCollectionSearchable, removeDocument } from "./search";
+import { drainTasks, enqueueTask, pruneTasks, tickSchedules, type EnqueueTaskOptions } from "./tasks";
 import { cloneValue, createRichTextFromPlainText, slugify } from "./values";
 import { dispatchWebhooks } from "./webhooks";
 
@@ -1011,7 +1012,12 @@ export const createCms = (config: CMSConfig) => {
         const translatableFields = getTranslatableFieldNames(collection);
         const translatedValues = prepareIncomingData(collection, data, locale, existing);
         const filtered = pick(translatedValues, translatableFields);
-        const serialized = serializeForDb(collection, filtered);
+
+        const hookContext = getHookContext(collection, "update", context);
+        const transformedFiltered = collection.hooks?.beforeUpsertTranslation
+          ? await collection.hooks.beforeUpsertTranslation(filtered, locale, existing, hookContext)
+          : filtered;
+        const serialized = serializeForDb(collection, transformedFiltered);
 
         const existingTranslation = await db
           .select()
@@ -1133,6 +1139,12 @@ export const createCms = (config: CMSConfig) => {
 
         return { published, unpublished };
       },
+    },
+    tasks: {
+      enqueue: (type: string, payload?: unknown, options?: EnqueueTaskOptions) => enqueueTask(type, payload, options),
+      drain: (limit?: number) => drainTasks(config, limit),
+      tick: () => tickSchedules(config),
+      prune: (olderThanMs?: number) => pruneTasks(olderThanMs),
     },
   };
 };

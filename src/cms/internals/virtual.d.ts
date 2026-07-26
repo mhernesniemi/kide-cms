@@ -8,7 +8,7 @@ declare module "virtual:kide/config" {
 }
 
 declare module "virtual:kide/api" {
-  const cms: Record<string, any> & { meta: any; scheduled: any };
+  const cms: Record<string, any> & { meta: any; scheduled: any; tasks: any };
   export { cms };
 }
 
@@ -49,6 +49,7 @@ declare module "virtual:kide/runtime" {
     indexDocument,
     removeDocument,
     reindexAll,
+    readEnv,
   } from "@/cms/core";
 }
 

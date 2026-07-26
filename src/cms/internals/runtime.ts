@@ -30,6 +30,7 @@ import {
   streamAltText,
   streamSeoDescription,
   streamTranslation,
+  readEnv,
 } from "@/cms/core";
 
 import * as schema from "../.generated/schema";
@@ -87,4 +88,5 @@ export {
   streamAltText,
   streamSeoDescription,
   streamTranslation,
+  readEnv,
 };

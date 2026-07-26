@@ -215,6 +215,11 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         injectRoute({ pattern: "/api/cms/ai/seo", entrypoint: "./src/cms/routes/api/ai/seo.ts" });
         injectRoute({ pattern: "/api/cms/ai/translate", entrypoint: "./src/cms/routes/api/ai/translate.ts" });
         injectRoute({ pattern: "/api/cms/cron/publish", entrypoint: "./src/cms/routes/api/cron/publish.ts" });
+        injectRoute({ pattern: "/api/cms/cron/tasks", entrypoint: "./src/cms/routes/api/cron/tasks.ts" });
+        injectRoute({
+          pattern: "/api/cms/webhooks/[provider]",
+          entrypoint: "./src/cms/routes/api/webhooks/[provider].ts",
+        });
         injectRoute({
           pattern: "/api/cms/forms/submit/[slug]",
           entrypoint: "./src/cms/routes/api/forms/submit/[slug].ts",
@@ -301,10 +306,28 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
 
           const configFilePath = path.join(root, configPath.replace(/\/?$/, ".ts"));
           let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+          // macOS fs.watch on a single file also fires for sibling writes in the
+          // same directory tree — including the generator's own .generated/*
+          // output, which would loop regeneration forever. Only act when the
+          // config file's content actually changed.
+          let lastConfigContent: string | null = null;
+          try {
+            lastConfigContent = readFileSync(configFilePath, "utf-8");
+          } catch {
+            /* watch still registers; first event will populate it */
+          }
 
           watch(configFilePath, () => {
             if (debounceTimer) clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
+              let content: string;
+              try {
+                content = readFileSync(configFilePath, "utf-8");
+              } catch {
+                return;
+              }
+              if (content === lastConfigContent) return;
+              lastConfigContent = content;
               console.log("  [cms] Config changed, regenerating...");
               try {
                 runGenerator(root, generatorPath);
@@ -330,7 +353,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         content = content.replace(
           /export\s*\{\s*(\w+)\s+as\s+default\s*\}/,
           (_, name) =>
-            `const _astroWorker = ${name};\nexport default {\n  fetch: (...args) => _astroWorker.fetch(...args),\n  async scheduled(event, env, ctx) {\n    const headers = env.CRON_SECRET ? { Authorization: "Bearer " + env.CRON_SECRET } : {};\n    const res = await _astroWorker.fetch(new Request("https://dummy/api/cms/cron/publish", { headers }), env, ctx);\n    if (!res.ok) console.error("Cron publish failed:", res.status, await res.text());\n    else console.log("Cron publish:", await res.text());\n  }\n};`,
+            `const _astroWorker = ${name};\nexport default {\n  fetch: (...args) => _astroWorker.fetch(...args),\n  async scheduled(event, env, ctx) {\n    const headers = env.CRON_SECRET ? { Authorization: "Bearer " + env.CRON_SECRET } : {};\n    for (const path of ["/api/cms/cron/publish", "/api/cms/cron/tasks"]) {\n      const res = await _astroWorker.fetch(new Request("https://dummy" + path, { headers }), env, ctx);\n      if (!res.ok) console.error("Cron " + path + " failed:", res.status, await res.text());\n      else console.log("Cron " + path + ":", await res.text());\n    }\n  }\n};`,
         );
         writeFileSync(entryPath, content);
       },

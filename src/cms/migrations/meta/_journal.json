@@ -15,6 +15,13 @@
       "when": 1782661710166,
       "tag": "0001_lovely_newton_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784965296791,
+      "tag": "0002_graceful_cannonball",
+      "breakpoints": true
     }
   ]
 }

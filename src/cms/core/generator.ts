@@ -200,6 +200,23 @@ const generateSchemaFile = (config: CMSConfig): string => {
   resourceIdx: index("audit_resource_idx").on(table.resourceType, table.resourceCollection, table.resourceId),
 }));`);
   parts.push("");
+  parts.push(`export const cmsOutbox = sqliteTable("cms_outbox", {
+  _id: text("_id").primaryKey(),
+  type: text("type").notNull(),
+  payload: text("payload"),
+  status: text("status").notNull().default("pending"),
+  attempts: integer("attempts").notNull().default(0),
+  maxAttempts: integer("max_attempts").notNull().default(5),
+  nextAttemptAt: integer("next_attempt_at").notNull(),
+  dedupeKey: text("dedupe_key"),
+  lastError: text("last_error"),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => ({
+  dueIdx: index("outbox_due_idx").on(table.status, table.nextAttemptAt),
+  dedupeIdx: index("outbox_dedupe_idx").on(table.dedupeKey),
+}));`);
+  parts.push("");
 
   const tableExports: string[] = [];
   for (const collection of config.collections) {

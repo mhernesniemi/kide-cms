@@ -68,6 +68,9 @@ export type {
   DatabaseConfig,
   LocaleConfig,
   AdminConfig,
+  IntegrationsConfig,
+  TaskHandler,
+  TaskScheduleConfig,
   ColorOption,
   ImagePreset,
   ImagesConfig,
@@ -91,6 +94,9 @@ export type {
 
 export { createCms } from "./api";
 export type { FindOptions } from "./api";
+
+export { enqueueTask, drainTasks, tickSchedules, pruneTasks } from "./tasks";
+export type { EnqueueTaskOptions, DrainResult } from "./tasks";
 
 export type CustomFieldProps = {
   name: string;

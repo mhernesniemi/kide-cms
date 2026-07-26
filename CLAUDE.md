@@ -60,6 +60,14 @@ The default adapter (`node({ mode: "standalone" })`) serves built assets with no
 
 Fix: switch to `node({ mode: "middleware" })` and wrap the exported `handler` in a tiny Express server with `compression()` + `express.static` (long `Cache-Control: immutable` on hashed `_astro/*` assets). This is also the pattern this adapter's own test suite uses (see its `express`/`fastify` devDependencies) — it's not a workaround, it's the intended integration point for custom middleware. Keep `standalone` mode as the default for new projects; only make this switch when the actual deploy target has no compression layer of its own.
 
+## Integrations (durable tasks)
+
+`src/cms/core/tasks.ts` implements a transactional-outbox task queue: the `cms_outbox` table is the queue, `enqueueTask()` is an INSERT, and `drainTasks()` claims due rows with an optimistic lease (CAS on `attempts`) and runs handlers registered in `cms.config.ts` under `integrations.tasks`. Handler contract: **throw to retry** (backoff `30s × 2^(n-1)`, `failed` after `maxAttempts`, default 5), **return to complete**. Delivery is at-least-once — handlers must tolerate re-runs. Recurring work goes in `integrations.schedules` (`{ task, payload?, everyMinutes }`), evaluated on each tick.
+
+Triggering: `GET/POST /api/cms/cron/tasks` (guarded by `Bearer ${CRON_SECRET}`, open when unset) runs tick → drain → prune. Point an external cron (or a `setInterval` in a long-lived Node server) at it; on Cloudflare the synthesized Worker `scheduled()` handler already hits it. Inbound webhooks: `POST /api/cms/webhooks/[provider]` verifies an HMAC-SHA256 hex signature (`x-webhook-signature`, secret from env `WEBHOOK_SECRET_<PROVIDER>`; hyphens map to underscores) and enqueues a `webhook.<provider>` task — register a handler of that name to consume it. Userland API: `cms.tasks.enqueue/drain/tick/prune`.
+
+Keep provider-specific code (API clients, sync logic, read models) in the app (`src/lib/`), not in `src/cms/core/` — the CMS layer stays provider-neutral.
+
 ## Validation (IMPORTANT)
 
 After code changes, ALWAYS run:

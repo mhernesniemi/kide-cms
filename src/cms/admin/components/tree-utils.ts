@@ -70,7 +70,11 @@ export function findItemDepth(items: TreeItem[], id: string, depth = 0): number 
   return -1;
 }
 
-export function canIndent(items: TreeItem[], id: string): boolean {
+/** Menu items render as root → section → link (see SiteHeader.tsx); a 4th level
+ * is accepted by the JSON field but never rendered, so the editor caps depth here. */
+export const MENU_MAX_DEPTH = 2;
+
+export function canIndent(items: TreeItem[], id: string, maxDepth?: number): boolean {
   const check = (list: TreeItem[]): boolean => {
     for (let i = 0; i < list.length; i++) {
       if (list[i].id === id) return i > 0;
@@ -78,9 +82,17 @@ export function canIndent(items: TreeItem[], id: string): boolean {
     }
     return false;
   };
-  return check(items);
+  if (!check(items)) return false;
+  if (maxDepth === undefined) return true;
+  // Indenting nests the item one level under its previous sibling.
+  return findItemDepth(items, id) + 1 <= maxDepth;
 }
 
 export function canOutdent(items: TreeItem[], id: string): boolean {
   return findItemDepth(items, id) > 0;
+}
+
+export function canAddChild(items: TreeItem[], id: string, maxDepth?: number): boolean {
+  if (maxDepth === undefined) return true;
+  return findItemDepth(items, id) < maxDepth;
 }

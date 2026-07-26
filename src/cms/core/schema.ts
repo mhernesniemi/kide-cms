@@ -6,6 +6,7 @@ type SchemaModule = {
   cmsLocks: any;
   cmsInvites: any;
   cmsAuditLog: any;
+  cmsOutbox: any;
   [key: string]: any;
 };
 
