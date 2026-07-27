@@ -28,6 +28,7 @@ import {
   type RelationOption,
   type SubFieldMeta,
 } from "./block-fields";
+import type { LinkOptionGroup } from "./InternalLinkPicker";
 
 type Block = {
   _key: string;
@@ -47,6 +48,7 @@ type Props = {
   value?: string;
   types: BlockTypesMeta;
   blockRelationOptions?: Record<string, RelationOption[]>;
+  linkOptions?: LinkOptionGroup[];
   sharedSections?: SharedSectionOption[];
   sharedEnabled?: boolean;
 };
@@ -91,6 +93,7 @@ function SortableBlock({
   sharedEnabled,
   onUpdateField,
   getRelationOptions,
+  linkOptions = [],
   sharedSection,
 }: {
   block: Block;
@@ -105,6 +108,7 @@ function SortableBlock({
   sharedEnabled: boolean;
   onUpdateField: (fieldName: string, value: unknown) => void;
   getRelationOptions: (blockType: string, fieldName: string) => RelationOption[];
+  linkOptions?: LinkOptionGroup[];
   sharedSection?: SharedSectionOption;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
@@ -251,6 +255,7 @@ function SortableBlock({
                 value={block[fieldName]}
                 onChange={(v) => onUpdateField(fieldName, v)}
                 relationOptions={meta.type === "relation" ? getRelationOptions(block.type, fieldName) : []}
+                linkOptions={linkOptions}
               />
             ))
           )}
@@ -269,6 +274,7 @@ export default function BlockEditor({
   value,
   types,
   blockRelationOptions = {},
+  linkOptions = [],
   sharedSections = [],
   sharedEnabled = true,
 }: Props) {
@@ -506,6 +512,7 @@ export default function BlockEditor({
                   getRelationOptions={(blockType, fieldName) =>
                     blockRelationOptions[`block:${name}:${blockType}:${fieldName}`] ?? []
                   }
+                  linkOptions={linkOptions}
                   sharedSection={sharedSection}
                 />
               );

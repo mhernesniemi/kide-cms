@@ -191,6 +191,23 @@ describe("translations", () => {
     expect(finnish?.description).toBe("Suomeksi");
     expect(finnish?.name).toBe("Translated"); // non-translatable field untouched
   });
+
+  it("findOne matches translated values of translatable fields per locale", async () => {
+    const post = await (cms as any).posts.create({ title: "Localized lookup", slug: "localized-lookup" });
+    await (cms as any).posts.upsertTranslation(post._id, "fi", { title: "Lokalisoitu haku", slug: "lokalisoitu-haku" });
+
+    // The translated slug resolves under its locale.
+    const byFiSlug = await (cms as any).posts.findOne({ slug: "lokalisoitu-haku", locale: "fi", status: "any" });
+    expect(byFiSlug?._id).toBe(post._id);
+
+    // The base slug still resolves for a locale with no translation…
+    const byBaseSlug = await (cms as any).posts.findOne({ slug: "localized-lookup", locale: "en", status: "any" });
+    expect(byBaseSlug?._id).toBe(post._id);
+
+    // …but not under a locale whose translation overrides the value.
+    const crossLocale = await (cms as any).posts.findOne({ slug: "localized-lookup", locale: "fi", status: "any" });
+    expect(crossLocale).toBeNull();
+  });
 });
 
 describe("versions", () => {

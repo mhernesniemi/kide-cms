@@ -344,6 +344,7 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
             rows={rows}
             types={blockTypesMeta}
             blockRelationOptions={blockRelationOptions}
+            linkOptions={menuLinkOptions}
             sharedSections={sharedSectionOptions}
             fullscreen={field.fullscreen !== false}
           />
@@ -386,7 +387,7 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
         )}
 
         {field.type === "json" && field.admin?.component === "link" && !readOnly && (
-          <LinkField client:load name={name} value={serializedValue} />
+          <LinkField client:load name={name} value={serializedValue} linkOptions={menuLinkOptions} />
         )}
 
         {field.type === "json" &&
@@ -411,6 +412,7 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
             value={serializedValue}
             types={blockTypesMeta}
             blockRelationOptions={blockRelationOptions}
+            linkOptions={menuLinkOptions}
             sharedSections={"shared" in field && field.shared === false ? [] : sharedSectionOptions}
             sharedEnabled={!("shared" in field && field.shared === false)}
           />

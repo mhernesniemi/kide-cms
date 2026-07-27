@@ -23,6 +23,7 @@ import ImagePicker from "./ImagePicker";
 import SelectField from "./SelectField";
 import ColorField from "./ColorField";
 import LinkField from "./LinkField";
+import type { LinkOptionGroup } from "./InternalLinkPicker";
 import YoutubeField from "./YoutubeField";
 
 // -----------------------------------------------
@@ -99,6 +100,7 @@ export function SubField({
   value,
   onChange,
   relationOptions = [],
+  linkOptions = [],
 }: {
   blockKey: string;
   fieldName: string;
@@ -106,6 +108,7 @@ export function SubField({
   value: unknown;
   onChange: (value: unknown) => void;
   relationOptions?: RelationOption[];
+  linkOptions?: LinkOptionGroup[];
 }) {
   const label = meta.label ?? humanize(fieldName);
   const fieldId = `${blockKey}_${fieldName}`;
@@ -123,6 +126,7 @@ export function SubField({
         value={value}
         onChange={onChange}
         relationOptions={relationOptions}
+        linkOptions={linkOptions}
       />
     </div>
   );
@@ -274,12 +278,14 @@ export function SubFieldControl({
   value,
   onChange,
   relationOptions = [],
+  linkOptions = [],
 }: {
   fieldId: string;
   meta: SubFieldMeta;
   value: unknown;
   onChange: (value: unknown) => void;
   relationOptions?: RelationOption[];
+  linkOptions?: LinkOptionGroup[];
 }) {
   const strValue = value == null ? "" : String(value);
 
@@ -292,7 +298,7 @@ export function SubFieldControl({
 
   // Link fields render a structured URL + label + new-tab control.
   if (meta.admin?.component === "link") {
-    return <LinkField value={value as never} onChange={onChange} />;
+    return <LinkField value={value as never} onChange={onChange} linkOptions={linkOptions} />;
   }
 
   // YouTube fields render a URL input with a thumbnail preview.
@@ -398,6 +404,7 @@ export function SubFieldControl({
             blockKey={fieldId}
             itemFields={meta.itemFields}
             relationOptions={relationOptions}
+            linkOptions={linkOptions}
             value={value}
             onChange={onChange}
           />
@@ -434,6 +441,7 @@ function SortableRepeaterItem({
   fieldKeys,
   itemFields,
   relationOptions,
+  linkOptions,
   index,
   isExpanded,
   autoFocus,
@@ -447,6 +455,7 @@ function SortableRepeaterItem({
   fieldKeys: string[];
   itemFields?: Record<string, SubFieldMeta>;
   relationOptions?: RelationOption[];
+  linkOptions?: LinkOptionGroup[];
   index: number;
   isExpanded: boolean;
   autoFocus?: boolean;
@@ -544,6 +553,7 @@ function SortableRepeaterItem({
                   value={item[key]}
                   onChange={(v) => onUpdate(key, v)}
                   relationOptions={relationOptions}
+                  linkOptions={linkOptions}
                 />
               ))
             : fieldKeys.map((key) => (
@@ -584,12 +594,14 @@ function RepeaterField({
   blockKey,
   itemFields,
   relationOptions,
+  linkOptions,
   value,
   onChange,
 }: {
   blockKey: string;
   itemFields?: Record<string, SubFieldMeta>;
   relationOptions?: RelationOption[];
+  linkOptions?: LinkOptionGroup[];
   value: unknown;
   onChange: (value: unknown) => void;
 }) {
@@ -689,6 +701,7 @@ function RepeaterField({
               fieldKeys={fieldKeys}
               itemFields={itemFields}
               relationOptions={relationOptions}
+              linkOptions={linkOptions}
               index={index}
               isExpanded={expandedKeys.has(String(item._key))}
               autoFocus={newItemKey === item._key}

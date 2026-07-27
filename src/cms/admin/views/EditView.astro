@@ -98,8 +98,9 @@ const [sharedBlockRelationOptions, sharedSectionOptions] = await Promise.all([
   loadSharedBlockRelationOptions(config, user, cmsRuntime, defaultLocale, runtimeContext),
   loadSharedSectionOptions(config, user, cmsRuntime, defaultLocale, runtimeContext),
 ]);
-const menuLinkOptions =
-  collection.slug === "menus" ? await loadMenuLinkOptions(config, user, cmsRuntime, defaultLocale, runtimeContext) : [];
+// Loaded for every collection: menu trees and any link field (standalone or
+// inside blocks) offer the same internal-document picker.
+const menuLinkOptions = await loadMenuLinkOptions(config, user, cmsRuntime, defaultLocale, runtimeContext);
 const reverseRefs =
   mode === "edit" && documentId
     ? await loadReverseRefs(collection, documentId, config, user, cmsRuntime, defaultLocale, runtimeContext)

@@ -34,6 +34,7 @@ import {
   type LinkGroup,
 } from "./RichTextEditor";
 import { SubField, humanize, type BlockTypesMeta, type RelationOption, type SubFieldMeta } from "./block-fields";
+import type { LinkOptionGroup } from "./InternalLinkPicker";
 import { blockNodeSpec, BLOCK_NODE_NAME, SHARED_BLOCK_TYPE, type BlockNodeOptions } from "./content-block-spec";
 import { SlashCommand, type SharedSectionOption } from "./slash-command";
 
@@ -265,6 +266,7 @@ function BlockNodeView(props: NodeViewProps) {
                   value={fields[fieldName]}
                   onChange={(v) => updateField(fieldName, v)}
                   relationOptions={meta.type === "relation" ? getRelationOptions(fieldName) : []}
+                  linkOptions={options.linkOptions ?? []}
                 />
               ))}
             </>
@@ -355,6 +357,7 @@ type Props = {
   rows?: number;
   types: BlockTypesMeta;
   blockRelationOptions?: Record<string, RelationOption[]>;
+  linkOptions?: LinkOptionGroup[];
   /** Shared sections offered by the `/` menu. */
   sharedSections?: SharedSectionOption[];
   /** When true, show a button that expands the editor into a fullscreen overlay. */
@@ -368,6 +371,7 @@ export default function ContentEditor({
   rows = 14,
   types,
   blockRelationOptions = {},
+  linkOptions = [],
   sharedSections = [],
   fullscreen = false,
 }: Props) {
@@ -434,7 +438,7 @@ export default function ContentEditor({
         showOnlyCurrent: true,
         placeholder: ({ node }) => (node.type.name === "paragraph" ? "Type / for commands…" : ""),
       }),
-      BlockNode.configure({ types, blockRelationOptions, fieldName: name }),
+      BlockNode.configure({ types, blockRelationOptions, linkOptions, fieldName: name }),
       SlashCommand.configure({ types, sharedSections }),
     ],
     content: contentToTiptap(parsedInitial),

@@ -1,6 +1,7 @@
 import { mergeAttributes, isNodeSelection, type Editor } from "@tiptap/core";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import type { BlockTypesMeta, RelationOption } from "./block-fields";
+import type { LinkOptionGroup } from "./InternalLinkPicker";
 
 /**
  * Schema/serialization spec for the inline `content` block node — kept free of React
@@ -23,6 +24,7 @@ export const SHARED_BLOCK_TYPE = "__shared";
 export type BlockNodeOptions = {
   types: BlockTypesMeta;
   blockRelationOptions: Record<string, RelationOption[]>;
+  linkOptions?: LinkOptionGroup[];
   /** Name of the `content` field this editor belongs to — namespaces relation-option keys. */
   fieldName: string;
 };

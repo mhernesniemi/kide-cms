@@ -368,8 +368,20 @@ export const createCms = (config: CMSConfig) => {
           conditions.push(eq(tables.main._status, status));
         }
         if (options.where) {
+          const translatableFields = new Set(getTranslatableFieldNames(collection));
           for (const [key, value] of Object.entries(options.where)) {
-            if (key in tables.main) {
+            if (!(key in tables.main)) continue;
+            if (options.locale && tables.translations && translatableFields.has(key)) {
+              // Translatable fields live in the translations table for non-default
+              // locales: match the effective (overlaid) value — the translation when
+              // one exists for this locale, the main-table value otherwise. Without
+              // this, e.g. findOne({ slug, locale: "en" }) can never match a
+              // translated slug.
+              const tr = tables.translations;
+              conditions.push(
+                sql`(EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale} AND ${tr[key]} = ${value}) OR (${tables.main[key]} = ${value} AND NOT EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale} AND ${tr[key]} IS NOT NULL)))`,
+              );
+            } else {
               conditions.push(eq(tables.main[key], value));
             }
           }
