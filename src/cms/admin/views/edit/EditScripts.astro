@@ -1,7 +1,32 @@
 ---
 // Client-side glue for the edit form: conditional field visibility, autofocus on new,
-// AJAX form submit (so validation errors surface as toasts without losing form state).
+// AJAX form submit (so validation errors surface as toasts without losing form state),
+// and collapsible field-group state persistence.
 ---
+
+<script is:inline>
+  // Collapsible field groups remember their open/closed state per collection
+  // and group in localStorage, so a folded section stays folded across visits.
+  (function () {
+    document.querySelectorAll("details[data-fieldset-key]").forEach(function (el) {
+      var key = "kide:fieldset:" + el.getAttribute("data-fieldset-key");
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === "open") el.open = true;
+        else if (saved === "closed") el.open = false;
+      } catch (e) {
+        /* no localStorage — schema default stays */
+      }
+      el.addEventListener("toggle", function () {
+        try {
+          localStorage.setItem(key, el.open ? "open" : "closed");
+        } catch (e) {
+          /* ignore */
+        }
+      });
+    });
+  })();
+</script>
 
 <script is:inline>
   (function () {

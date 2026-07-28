@@ -102,6 +102,21 @@ describe("getFieldGroups", () => {
 
   it("returns one ungrouped run when no field declares a group", () => {
     const runs = getFieldGroups(collection, ["intro", "extra"]);
-    expect(runs).toEqual([{ group: undefined, fields: ["intro", "extra"] }]);
+    expect(runs).toEqual([{ group: undefined, collapsible: undefined, fields: ["intro", "extra"] }]);
+  });
+
+  it("merges string and object group forms by label and carries collapsible", () => {
+    const mixed = {
+      ...collection,
+      fields: {
+        a: fields.text({ admin: { group: { label: "Stats", collapsible: "collapsed" as const } } }),
+        b: fields.text({ admin: { group: "Stats" } }),
+        c: fields.text({ admin: { group: { label: "CTA", collapsible: true } } }),
+      },
+    };
+    expect(getFieldGroups(mixed, ["a", "b", "c"])).toEqual([
+      { group: "Stats", collapsible: "collapsed", fields: ["a", "b"] },
+      { group: "CTA", collapsible: true, fields: ["c"] },
+    ]);
   });
 });

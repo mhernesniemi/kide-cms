@@ -155,17 +155,24 @@ export const getListColumns = (collection: CollectionConfig, viewConfig?: { colu
 
 /**
  * Partition an ordered field list into consecutive runs sharing the same
- * `admin.group`. Runs with a group render as a titled panel in the edit form;
- * ungrouped runs render as loose fields. Order is preserved, so grouping is
- * purely presentational and opt-in per field.
+ * `admin.group` label. Runs with a group render as a titled panel in the edit
+ * form (collapsible when any field in the run declares it); ungrouped runs
+ * render as loose fields. Order is preserved, so grouping is purely
+ * presentational and opt-in per field.
  */
 export const getFieldGroups = (collection: CollectionConfig, fieldNames: string[]) => {
-  const runs: Array<{ group?: string; fields: string[] }> = [];
+  const runs: Array<{ group?: string; collapsible?: boolean | "collapsed"; fields: string[] }> = [];
   for (const fieldName of fieldNames) {
-    const group = collection.fields[fieldName]?.admin?.group;
+    const raw = collection.fields[fieldName]?.admin?.group;
+    const group = typeof raw === "object" ? raw.label : raw;
+    const collapsible = typeof raw === "object" ? raw.collapsible : undefined;
     const last = runs[runs.length - 1];
-    if (last && last.group === group) last.fields.push(fieldName);
-    else runs.push({ group, fields: [fieldName] });
+    if (last && last.group === group) {
+      last.fields.push(fieldName);
+      last.collapsible ??= collapsible;
+    } else {
+      runs.push({ group, collapsible, fields: [fieldName] });
+    }
   }
   return runs;
 };

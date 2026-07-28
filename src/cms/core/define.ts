@@ -20,8 +20,13 @@ export type AdminFieldComponent = {
   rows?: number;
   help?: string;
   hidden?: boolean;
-  /** Titled section in the edit form: consecutive fields sharing a group render inside one framed panel. */
-  group?: string;
+  /**
+   * Titled section in the edit form: consecutive fields sharing a group render
+   * inside one framed panel. The object form makes the panel collapsible —
+   * `collapsible: true` starts open, `"collapsed"` starts closed. Fields in
+   * the same run may mix forms; the first collapsible declaration wins.
+   */
+  group?: string | { label: string; collapsible?: boolean | "collapsed" };
   /** Per-field colour palette for `fields.color()`; overrides the global `admin.colors`. */
   colors?: ColorOption[];
 };
