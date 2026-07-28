@@ -590,7 +590,7 @@ function parseArray(value: unknown): unknown[] {
   return [];
 }
 
-function RepeaterField({
+export function RepeaterField({
   blockKey,
   itemFields,
   relationOptions,

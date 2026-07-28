@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { initDateFormat, formatDate } from "../admin";
+import { getFieldGroups, initDateFormat, formatDate } from "../admin";
 import type { CMSConfig } from "../define";
+import { fields } from "../define";
 
 const base: CMSConfig = { collections: [] };
 // 14:30 UTC on 1 Jul 2026.
@@ -73,5 +74,34 @@ describe("formatDate", () => {
       });
       expect(formatDate(D)).toBe("2026-07-01 14:30");
     });
+  });
+});
+
+describe("getFieldGroups", () => {
+  const collection = {
+    slug: "landing",
+    labels: { singular: "Landing", plural: "Landings" },
+    fields: {
+      intro: fields.text(),
+      statValue: fields.text({ admin: { group: "Stats" } }),
+      statLabel: fields.text({ admin: { group: "Stats" } }),
+      ctaHeading: fields.text({ admin: { group: "CTA" } }),
+      extra: fields.text(),
+    },
+  };
+
+  it("partitions ordered fields into consecutive runs by admin.group", () => {
+    const runs = getFieldGroups(collection, ["intro", "statValue", "statLabel", "ctaHeading", "extra"]);
+    expect(runs).toEqual([
+      { group: undefined, fields: ["intro"] },
+      { group: "Stats", fields: ["statValue", "statLabel"] },
+      { group: "CTA", fields: ["ctaHeading"] },
+      { group: undefined, fields: ["extra"] },
+    ]);
+  });
+
+  it("returns one ungrouped run when no field declares a group", () => {
+    const runs = getFieldGroups(collection, ["intro", "extra"]);
+    expect(runs).toEqual([{ group: undefined, fields: ["intro", "extra"] }]);
   });
 });

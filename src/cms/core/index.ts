@@ -159,6 +159,7 @@ export {
   humanize,
   formatFieldValue,
   getListColumns,
+  getFieldGroups,
   getFieldSets,
 } from "./admin";
 export type { AdminRoute } from "./admin";

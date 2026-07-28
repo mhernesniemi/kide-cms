@@ -153,6 +153,23 @@ export const getListColumns = (collection: CollectionConfig, viewConfig?: { colu
   return collection.drafts ? [firstField, "_status", "_updatedAt"] : [firstField, "_updatedAt"];
 };
 
+/**
+ * Partition an ordered field list into consecutive runs sharing the same
+ * `admin.group`. Runs with a group render as a titled panel in the edit form;
+ * ungrouped runs render as loose fields. Order is preserved, so grouping is
+ * purely presentational and opt-in per field.
+ */
+export const getFieldGroups = (collection: CollectionConfig, fieldNames: string[]) => {
+  const runs: Array<{ group?: string; fields: string[] }> = [];
+  for (const fieldName of fieldNames) {
+    const group = collection.fields[fieldName]?.admin?.group;
+    const last = runs[runs.length - 1];
+    if (last && last.group === group) last.fields.push(fieldName);
+    else runs.push({ group, fields: [fieldName] });
+  }
+  return runs;
+};
+
 export const getFieldSets = (collection: CollectionConfig) => {
   const allFields = Object.keys(collection.fields).filter((fieldName) => !collection.fields[fieldName].admin?.hidden);
   const contentFields = allFields.filter((fieldName) => collection.fields[fieldName].admin?.position !== "sidebar");

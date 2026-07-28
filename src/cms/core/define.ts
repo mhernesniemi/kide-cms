@@ -20,6 +20,8 @@ export type AdminFieldComponent = {
   rows?: number;
   help?: string;
   hidden?: boolean;
+  /** Titled section in the edit form: consecutive fields sharing a group render inside one framed panel. */
+  group?: string;
   /** Per-field colour palette for `fields.color()`; overrides the global `admin.colors`. */
   colors?: ColorOption[];
 };

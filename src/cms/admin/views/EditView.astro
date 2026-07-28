@@ -13,7 +13,7 @@ import { buttonVariants } from "@/cms/admin/components/ui/button";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { isAiEnabled } from "virtual:kide/runtime";
-import { formatDate, getFieldSets, getLabelField, getSharedBlockTypes } from "@/cms/core";
+import { formatDate, getFieldGroups, getFieldSets, getLabelField, getSharedBlockTypes } from "@/cms/core";
 import {
   getFormAction,
   getVisualStatus,
@@ -394,25 +394,38 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
                     </AdminCard>
                   ) : (
                     mainFieldSets.map((set) => {
+                      const visibleFields = set.fields.filter(
+                        (fieldName) => collection.fields[fieldName] && !isFieldHidden(fieldName),
+                      );
+                      const renderField = (fieldName: string) => (
+                        <FieldControl
+                          name={fieldName}
+                          field={collection.fields[fieldName]}
+                          value={getCurrentValue(fieldName)}
+                          readOnly={isFieldReadOnly(fieldName)}
+                          relationOptions={relationOptionsByField[fieldName] ?? []}
+                          relationMeta={relationMetaByField[fieldName]}
+                          menuLinkOptions={menuLinkOptions}
+                          blockRelationOptions={blockRelationOptions}
+                          sharedBlockTypes={sharedBlockTypes}
+                          sharedBlockRelationOptions={sharedBlockRelationOptions}
+                          sharedSectionOptions={sharedSectionOptions}
+                        />
+                      );
                       const fields = (
                         <div class:list={["grid", variant === "record" ? "gap-6" : "gap-8"]}>
-                          {set.fields
-                            .filter((fieldName) => collection.fields[fieldName] && !isFieldHidden(fieldName))
-                            .map((fieldName) => (
-                              <FieldControl
-                                name={fieldName}
-                                field={collection.fields[fieldName]}
-                                value={getCurrentValue(fieldName)}
-                                readOnly={isFieldReadOnly(fieldName)}
-                                relationOptions={relationOptionsByField[fieldName] ?? []}
-                                relationMeta={relationMetaByField[fieldName]}
-                                menuLinkOptions={menuLinkOptions}
-                                blockRelationOptions={blockRelationOptions}
-                                sharedBlockTypes={sharedBlockTypes}
-                                sharedBlockRelationOptions={sharedBlockRelationOptions}
-                                sharedSectionOptions={sharedSectionOptions}
-                              />
-                            ))}
+                          {getFieldGroups(collection, visibleFields).map((run) =>
+                            run.group ? (
+                              <section class="overflow-hidden rounded-lg border">
+                                <h3 class="bg-muted/40 text-foreground/80 border-b px-4 py-2.5 text-sm font-medium">
+                                  {run.group}
+                                </h3>
+                                <div class="grid gap-6 p-4">{run.fields.map(renderField)}</div>
+                              </section>
+                            ) : (
+                              run.fields.map(renderField)
+                            ),
+                          )}
                         </div>
                       );
                       return variant === "record" ? (
