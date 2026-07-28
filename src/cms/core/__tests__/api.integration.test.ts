@@ -289,3 +289,10 @@ describe("deleteMany", () => {
     expect(await (cms as any).authors.find()).toHaveLength(0);
   });
 });
+
+describe("createCms config guard", () => {
+  it("diagnoses a partially-evaluated config (module cycle) instead of crashing cryptically", () => {
+    expect(() => createCms(undefined as never)).toThrow(/module cycle/);
+    expect(() => createCms({} as never)).toThrow(/module cycle/);
+  });
+});

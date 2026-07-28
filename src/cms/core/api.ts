@@ -296,6 +296,17 @@ const getTableRefs = async (collectionSlug: string) => {
 };
 
 export const createCms = (config: CMSConfig) => {
+  // A partially-evaluated config here means a module cycle: cms.config.ts
+  // statically imported a module that itself imports the generated API (which
+  // imports cms.config.ts back). Fail with a diagnosis instead of a cryptic
+  // "reading 'collections'" crash at first use.
+  if (!config?.collections) {
+    throw new Error(
+      "createCms received an incomplete config — usually a module cycle: cms.config.ts statically imports " +
+        "a module that uses the generated cms API. Register such code lazily instead, e.g. " +
+        '"my.task": () => import("@/lib/handler").then((mod) => mod.run()).',
+    );
+  }
   const collectionMap = getCollectionMap(config);
 
   const createCollectionApi = (slug: string) => {

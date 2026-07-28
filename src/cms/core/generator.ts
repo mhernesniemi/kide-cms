@@ -407,7 +407,7 @@ const generateApiFile = (
   const apiTypes = config.collections
     .map((collection) => {
       const baseName = pascalCase(collection.slug);
-      const ctx = `context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null }`;
+      const ctx = `context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }`;
       const apiKey = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(collection.slug) ? collection.slug : `"${collection.slug}"`;
       return `  ${apiKey}: {
     find(options?: import("${coreImportPath}").FindOptions, ${ctx}): Promise<${baseName}Document[]>;

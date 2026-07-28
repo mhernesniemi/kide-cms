@@ -68,6 +68,8 @@ Triggering: `GET/POST /api/cms/cron/tasks` (guarded by `Bearer ${CRON_SECRET}`, 
 
 Keep provider-specific code (API clients, sync logic, read models) in the app (`src/lib/`), not in `src/cms/core/` — the CMS layer stays provider-neutral.
 
+**Handlers that use the generated cms API must be registered with a dynamic import** — e.g. `"my.task": () => import("@/lib/handler").then((mod) => mod.run())`. A static import creates a module cycle (cms.config.ts → handler → generated api → cms.config.ts); `createCms` fails fast with a diagnosis when this happens.
+
 ## Validation (IMPORTANT)
 
 After code changes, ALWAYS run:
