@@ -247,8 +247,14 @@ const zodTypeForField = (field: FieldConfig): string => {
   if (field.type === "number") return "z.number()";
   if (field.type === "boolean") return "z.boolean()";
   if (field.type === "select") return `z.enum([${field.options.map((option) => JSON.stringify(option)).join(", ")}])`;
-  if (field.type === "relation") return field.hasMany ? "z.array(z.string())" : "z.string()";
-  if (field.type === "array") return `z.array(${zodTypeForField(field.of)})`;
+  if (field.type === "relation") {
+    if (!field.hasMany) return "z.string()";
+    return field.maxItems ? `z.array(z.string()).max(${field.maxItems})` : "z.array(z.string())";
+  }
+  if (field.type === "array") {
+    const inner = `z.array(${zodTypeForField(field.of)})`;
+    return field.maxItems ? `${inner}.max(${field.maxItems})` : inner;
+  }
   if (field.type === "richText" || field.type === "content")
     return "z.object({ type: z.literal('root'), children: z.array(z.any()) })";
   if (field.type === "json") return "z.record(z.unknown())";

@@ -278,8 +278,8 @@ export const ArticlesCreateSchema = z.object({
   body: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
   cover: z.string().optional(),
   author: z.string().optional(),
-  related: z.array(z.string()).optional(),
-  tags: z.array(z.string()).optional(),
+  related: z.array(z.string()).max(4).optional(),
+  tags: z.array(z.string()).max(8).optional(),
   meta: z.record(z.unknown()).optional(),
   article: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
   sections: z.array(z.discriminatedUnion("type", [
@@ -299,8 +299,8 @@ export const ArticlesUpdateSchema = z.object({
   body: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
   cover: z.string().optional(),
   author: z.string().optional(),
-  related: z.array(z.string()).optional(),
-  tags: z.array(z.string()).optional(),
+  related: z.array(z.string()).max(4).optional(),
+  tags: z.array(z.string()).max(8).optional(),
   meta: z.record(z.unknown()).optional(),
   article: z.object({ type: z.literal('root'), children: z.array(z.any()) }).optional(),
   sections: z.array(z.discriminatedUnion("type", [

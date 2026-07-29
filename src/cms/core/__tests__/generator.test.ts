@@ -23,8 +23,8 @@ const articles = defineCollection({
     body: fields.richText({ translatable: true }),
     cover: fields.image(),
     author: fields.relation({ collection: "writers" }),
-    related: fields.relation({ collection: "articles", hasMany: true }),
-    tags: fields.array({ of: fields.text() }),
+    related: fields.relation({ collection: "articles", hasMany: true, maxItems: 4 }),
+    tags: fields.array({ of: fields.text(), maxItems: 8 }),
     meta: fields.json(),
     article: fields.content({
       blocks: {

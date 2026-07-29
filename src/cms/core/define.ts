@@ -133,10 +133,14 @@ export type ContentFieldConfig = BaseFieldConfig<"content", ContentDocument> & {
 export type RelationFieldConfig = BaseFieldConfig<"relation", string | string[]> & {
   collection: string;
   hasMany?: boolean;
+  /** Maximum number of selected documents (hasMany only) — enforced on save and in the admin picker. */
+  maxItems?: number;
 };
 
 export type ArrayFieldConfig = BaseFieldConfig<"array", unknown[]> & {
   of: FieldConfig;
+  /** Maximum number of items — enforced on save. */
+  maxItems?: number;
 };
 
 export type JsonFieldConfig = BaseFieldConfig<"json", unknown> & {
@@ -148,6 +152,8 @@ export type JsonFieldConfig = BaseFieldConfig<"json", unknown> & {
    * value is stored as an array of objects keyed by these field names.
    */
   itemFields?: Record<string, FieldConfig>;
+  /** Maximum number of items when the value is an array (e.g. repeater rows) — enforced on save. */
+  maxItems?: number;
 };
 
 export type BlocksFieldConfig = BaseFieldConfig<"blocks", Array<Record<string, unknown>>> & {

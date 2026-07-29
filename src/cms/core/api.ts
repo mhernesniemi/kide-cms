@@ -206,6 +206,15 @@ const prepareIncomingData = (
     if (isEmptyValue(candidate)) throw new Error(`Field "${fieldName}" is required.`);
   }
 
+  for (const [fieldName, field] of Object.entries(collection.fields)) {
+    const maxItems = "maxItems" in field ? field.maxItems : undefined;
+    if (!maxItems) continue;
+    const candidate = data[fieldName] ?? existing?.[fieldName];
+    if (Array.isArray(candidate) && candidate.length > maxItems) {
+      throw new Error(`Field "${fieldName}" allows at most ${maxItems} item${maxItems === 1 ? "" : "s"}.`);
+    }
+  }
+
   return data;
 };
 

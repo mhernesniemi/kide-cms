@@ -1,7 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronsUpDown, Plus, X } from "lucide-react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Check, ChevronsUpDown, GripVertical, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "./ui/button";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "./ui/command";
@@ -15,16 +26,69 @@ type Props = {
   name: string;
   value?: string;
   hasMany?: boolean;
+  maxItems?: number;
   options: Option[];
   collectionSlug: string;
   collectionLabel: string;
   labelField?: string;
 };
 
+/**
+ * One selected document as a full-width draggable row — hasMany order is data,
+ * so it is editable. Mirrors the repeater's row anatomy (grip, #index, remove)
+ * for a consistent, easy-to-grab drag target.
+ */
+function SortableRow({
+  id,
+  index,
+  label,
+  onRemove,
+}: {
+  id: string;
+  index: number;
+  label: string;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        "bg-background flex items-center gap-2 rounded-lg border px-3 py-2",
+        isDragging && "z-10 opacity-90 shadow-lg",
+      )}
+    >
+      <button
+        type="button"
+        ref={setActivatorNodeRef}
+        className="text-muted-foreground/50 hover:text-muted-foreground -ml-1 cursor-grab touch-none rounded p-1 transition-colors active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <span className="text-muted-foreground text-xs font-medium">#{index + 1}</span>
+      <span className="min-w-0 flex-1 truncate text-sm">{label}</span>
+      <button
+        type="button"
+        title="Remove"
+        onClick={onRemove}
+        className="text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
+      >
+        <Trash2 className="size-4" />
+      </button>
+    </div>
+  );
+}
+
 export default function RelationField({
   name,
   value: initialValue,
   hasMany = false,
+  maxItems,
   options: initialOptions,
   collectionSlug,
   collectionLabel,
@@ -57,15 +121,21 @@ export default function RelationField({
 
   const getLabel = useCallback((id: string) => options.find((o) => o.value === id)?.label ?? id, [options]);
 
+  const atMax = hasMany && maxItems !== undefined && selected.length >= maxItems;
+
   const displayLabel = useMemo(() => {
     if (selected.length === 0) return "";
-    if (hasMany) return `${selected.length} selected`;
+    if (hasMany) return maxItems ? `${selected.length}/${maxItems} selected` : `${selected.length} selected`;
     return getLabel(selected[0]);
-  }, [selected, hasMany, getLabel]);
+  }, [selected, hasMany, maxItems, getLabel]);
 
   const selectItem = (id: string) => {
     if (hasMany) {
-      setSelected((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]));
+      setSelected((prev) => {
+        if (prev.includes(id)) return prev.filter((v) => v !== id);
+        if (maxItems !== undefined && prev.length >= maxItems) return prev;
+        return [...prev, id];
+      });
     } else {
       setSelected((prev) => (prev[0] === id ? [] : [id]));
       setOpen(false);
@@ -74,6 +144,16 @@ export default function RelationField({
 
   const remove = (id: string) => {
     setSelected((prev) => prev.filter((v) => v !== id));
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setSelected((prev) => arrayMove(prev, prev.indexOf(String(active.id)), prev.indexOf(String(over.id))));
   };
 
   // Listen for postMessage from embedded iframe after successful save
@@ -112,26 +192,17 @@ export default function RelationField({
     <div className="space-y-2">
       <input ref={hiddenRef} type="hidden" name={name} value={hiddenValue} />
 
-      {/* Selected items (hasMany chips) */}
+      {/* Selected items (hasMany rows) — drag to reorder; the stored order is the render order */}
       {hasMany && selected.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {selected.map((id) => (
-            <span
-              key={id}
-              className="bg-secondary text-secondary-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-sm"
-            >
-              {getLabel(id)}
-              <button
-                type="button"
-                title="Remove"
-                onClick={() => remove(id)}
-                className="text-muted-foreground hover:text-foreground -mr-0.5 rounded p-0.5"
-              >
-                <X className="size-3" />
-              </button>
-            </span>
-          ))}
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={selected} strategy={verticalListSortingStrategy}>
+            <div className="grid gap-2">
+              {selected.map((id, index) => (
+                <SortableRow key={id} id={id} index={index} label={getLabel(id)} onRemove={() => remove(id)} />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Combobox */}
@@ -156,7 +227,12 @@ export default function RelationField({
             <CommandList>
               <CommandEmpty>No results found.</CommandEmpty>
               {options.map((o) => (
-                <CommandItem key={o.value} value={o.label} onSelect={() => selectItem(o.value)}>
+                <CommandItem
+                  key={o.value}
+                  value={o.label}
+                  onSelect={() => selectItem(o.value)}
+                  className={cn(atMax && !selected.includes(o.value) && "opacity-40")}
+                >
                   <Check className={cn("ml-1 size-4", selected.includes(o.value) ? "opacity-100" : "opacity-0")} />
                   {o.label}
                 </CommandItem>
