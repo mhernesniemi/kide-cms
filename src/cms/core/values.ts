@@ -253,16 +253,39 @@ export const htmlToRichText = (html: string | null | undefined): RichTextDocumen
   return { type: "root", children };
 };
 
+const SAFE_URL_SCHEMES = new Set(["http:", "https:", "mailto:", "tel:"]);
+
+/**
+ * Rich text is authored data, so a stored `javascript:` href would execute in every
+ * visitor's browser — and in the admin's own preview. Escaping doesn't help: the payload
+ * contains no HTML-special characters. Allow only known-safe schemes; relative URLs
+ * (`/path`, `#anchor`, `?q=`) carry no scheme and are always fine.
+ */
+const safeUrl = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/^[/#?]/.test(trimmed)) return trimmed;
+  try {
+    const { protocol } = new URL(trimmed, "https://example.invalid");
+    return SAFE_URL_SCHEMES.has(protocol) ? trimmed : null;
+  } catch {
+    return null;
+  }
+};
+
 const renderNode = (node: RichTextNode): string => {
   if (node.type === "text") {
     let content = escapeHtml(String(node.value ?? ""));
     if (node.bold) content = `<strong>${content}</strong>`;
     if (node.italic) content = `<em>${content}</em>`;
     if (node.href) {
-      const href = escapeHtml(String(node.href));
-      const isExternal = String(node.href).startsWith("http://") || String(node.href).startsWith("https://");
-      const target = isExternal ? ' target="_blank" rel="noopener noreferrer"' : "";
-      content = `<a href="${href}"${target}>${content}</a>`;
+      const safeHref = safeUrl(String(node.href));
+      if (safeHref) {
+        const href = escapeHtml(safeHref);
+        const isExternal = safeHref.startsWith("http://") || safeHref.startsWith("https://");
+        const target = isExternal ? ' target="_blank" rel="noopener noreferrer"' : "";
+        content = `<a href="${href}"${target}>${content}</a>`;
+      }
     }
     return content;
   }
@@ -300,7 +323,9 @@ const renderNode = (node: RichTextNode): string => {
       const fallback = escapeHtml(cmsImage(src, 1024));
       return `<picture><source type="image/avif" srcset="${avif}" sizes="${sizes}" /><source type="image/webp" srcset="${webp}" sizes="${sizes}" /><img src="${fallback}" alt="${alt}" loading="lazy" class="h-auto max-w-full rounded-lg" /></picture>`;
     }
-    return `<img src="${escapeHtml(src)}" alt="${alt}" loading="lazy" class="max-w-full rounded-lg" />`;
+    const safeSrc = safeUrl(src);
+    if (!safeSrc) return "";
+    return `<img src="${escapeHtml(safeSrc)}" alt="${alt}" loading="lazy" class="max-w-full rounded-lg" />`;
   }
 
   return "";

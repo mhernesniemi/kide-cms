@@ -5,7 +5,9 @@ type User = { id: string; role?: string; email?: string } | null | undefined;
 export function canRead(config: CMSConfig, user: User, slug: string): boolean {
   const c = config.collections.find((col) => col.slug === slug);
   const rule = c?.access?.read;
-  if (!rule) return true;
+  // Mirrors the auth-collection defaults in core/api.ts: non-admins reach their own
+  // row only, so the list still opens (filtered to themselves) rather than vanishing.
+  if (!rule) return c?.auth ? !!user : true;
   // Access rules are synchronous in practice; cast to unwrap the boolean | Promise<boolean> return type.
   return rule({ user: user ?? null, doc: null, operation: "read", collection: slug }) as boolean;
 }
@@ -13,7 +15,7 @@ export function canRead(config: CMSConfig, user: User, slug: string): boolean {
 export function canWrite(config: CMSConfig, user: User, slug: string): boolean {
   const c = config.collections.find((col) => col.slug === slug);
   const rule = c?.access?.create;
-  if (!rule) return true;
+  if (!rule) return c?.auth ? user?.role === "admin" : true;
   return rule({ user: user ?? null, doc: null, operation: "create", collection: slug }) as boolean;
 }
 

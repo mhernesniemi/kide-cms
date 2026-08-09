@@ -1,8 +1,10 @@
+import { readEnv } from "@/cms/core";
+
 export const sendInviteEmail = async (to: string, inviteUrl: string): Promise<boolean> => {
-  const apiKey = import.meta.env.RESEND_API_KEY;
+  const apiKey = readEnv("RESEND_API_KEY");
   if (!apiKey) return false;
 
-  const from = import.meta.env.RESEND_FROM_EMAIL ?? "Kide CMS <noreply@example.com>";
+  const from = readEnv("RESEND_FROM_EMAIL") ?? "Kide CMS <noreply@example.com>";
 
   try {
     const response = await fetch("https://api.resend.com/emails", {
@@ -36,10 +38,10 @@ export const sendFormSubmissionEmail = async (
   formTitle: string,
   data: Record<string, unknown>,
 ): Promise<boolean> => {
-  const apiKey = import.meta.env.RESEND_API_KEY;
+  const apiKey = readEnv("RESEND_API_KEY");
   if (!apiKey) return false;
 
-  const from = import.meta.env.RESEND_FROM_EMAIL ?? "Kide CMS <noreply@example.com>";
+  const from = readEnv("RESEND_FROM_EMAIL") ?? "Kide CMS <noreply@example.com>";
 
   const rows = Object.entries(data)
     .map(([k, v]) => {
@@ -74,4 +76,4 @@ export const sendFormSubmissionEmail = async (
   }
 };
 
-export const isEmailConfigured = (): boolean => !!import.meta.env.RESEND_API_KEY;
+export const isEmailConfigured = (): boolean => !!readEnv("RESEND_API_KEY");

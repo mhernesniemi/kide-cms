@@ -97,6 +97,39 @@ describe("renderRichText", () => {
     expect(html).toContain("&lt;script&gt;");
   });
 
+  it("drops links with an unsafe URL scheme, keeping the text", () => {
+    const link = (href: string) =>
+      renderRichText({
+        type: "root",
+        children: [{ type: "paragraph", children: [{ type: "text", value: "click", href }] }],
+      });
+
+    for (const href of ["javascript:alert(1)", "JavaScript:alert(1)", "data:text/html,<script>alert(1)</script>"]) {
+      expect(link(href)).toBe("<p>click</p>");
+    }
+  });
+
+  it("keeps links with a safe or relative URL", () => {
+    const link = (href: string) =>
+      renderRichText({
+        type: "root",
+        children: [{ type: "paragraph", children: [{ type: "text", value: "click", href }] }],
+      });
+
+    expect(link("https://example.com")).toContain('href="https://example.com"');
+    expect(link("/about")).toContain('href="/about"');
+    expect(link("#section")).toContain('href="#section"');
+    expect(link("mailto:hi@example.com")).toContain('href="mailto:hi@example.com"');
+  });
+
+  it("drops images with an unsafe URL scheme", () => {
+    const html = renderRichText({
+      type: "root",
+      children: [{ type: "image", src: "javascript:alert(1)", alt: "x" } as never],
+    });
+    expect(html).toBe("");
+  });
+
   it("applies bold and italic marks", () => {
     const html = renderRichText({
       type: "root",

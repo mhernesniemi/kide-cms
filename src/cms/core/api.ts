@@ -241,6 +241,24 @@ const deserializeFromDb = (collection: CollectionConfig, row: Record<string, unk
   return result;
 };
 
+/**
+ * Collections are default-allow, but an `auth` collection holds the credentials and
+ * roles that every other rule is evaluated against — leaving it open lets any signed-in
+ * account grant itself `admin`, overwrite another user's password, or delete accounts.
+ * So auth collections default to admin-only, with non-admins limited to their own row.
+ * An explicit `access` rule still wins; this only fills the gap when none is declared.
+ */
+const defaultAuthAccess = (operation: CMSOperation, context: RuntimeContext, doc?: Record<string, unknown> | null) => {
+  const user = context.user;
+  if (!user) return false;
+  if (user.role === "admin") return true;
+  if (operation === "read" || operation === "update") return !!doc && doc._id === user.id;
+  return false;
+};
+
+/** Auth collections have an implicit read rule, so reads need per-document filtering. */
+const hasReadRule = (collection: CollectionConfig) => !!collection.access?.read || !!collection.auth;
+
 const canAccess = async (
   collection: CollectionConfig,
   operation: CMSOperation,
@@ -249,8 +267,45 @@ const canAccess = async (
 ) => {
   if (context._system) return true;
   const rule = collection.access?.[operation];
-  if (!rule) return true;
-  return rule({ user: context.user ?? null, doc: doc ?? null, operation, collection: collection.slug });
+  if (rule) {
+    return rule({ user: context.user ?? null, doc: doc ?? null, operation, collection: collection.slug });
+  }
+  if (collection.auth) return defaultAuthAccess(operation, context, doc);
+  return true;
+};
+
+/**
+ * `role` decides what every access rule grants, and `password` is the credential itself.
+ * Neither may be written by a non-admin, and `password` only ever on your own record —
+ * enforced even when a custom collection rule opens up writes more broadly.
+ */
+const canWriteAuthField = (fieldName: string, context: RuntimeContext, doc?: Record<string, unknown> | null) => {
+  const user = context.user;
+  if (user?.role === "admin") return true;
+  if (fieldName === "role") return false;
+  return !!user && !!doc && doc._id === user.id;
+};
+
+/**
+ * Strip privileged auth fields the caller may not write. On create only `role` is
+ * privileged — setting a password on a brand-new account escalates nothing, whereas
+ * on update it would overwrite someone else's credential. A field carrying an explicit
+ * `access.update` rule is left to that rule instead.
+ */
+const stripProtectedAuthFields = (
+  collection: CollectionConfig,
+  data: Record<string, unknown>,
+  context: RuntimeContext,
+  operation: "create" | "update",
+  doc?: Record<string, unknown> | null,
+) => {
+  if (!collection.auth || context._system) return;
+  const protectedFields = operation === "create" ? ["role"] : ["role", "password"];
+  for (const fieldName of protectedFields) {
+    if (data[fieldName] === undefined) continue;
+    if (collection.fields[fieldName]?.access?.update) continue;
+    if (!canWriteAuthField(fieldName, context, doc)) delete data[fieldName];
+  }
 };
 
 const getHookContext = (collection: CollectionConfig, operation: string, context: RuntimeContext) => ({
@@ -368,7 +423,7 @@ export const createCms = (config: CMSConfig) => {
     };
 
     const filterReadableDocs = async (docs: Array<Record<string, unknown>>, context: RuntimeContext) => {
-      if (!collection.access?.read || context._system) return docs;
+      if (!hasReadRule(collection) || context._system) return docs;
       const filtered: Array<Record<string, unknown>> = [];
       for (const doc of docs) {
         if (await canAccess(collection, "read", context, doc)) filtered.push(doc);
@@ -381,7 +436,7 @@ export const createCms = (config: CMSConfig) => {
         const db = await getDb();
         const tables = await getTableRefs(slug);
         const status = options.status ?? (collection.drafts ? "published" : "any");
-        const filterAfterReadAccess = !!collection.access?.read && !context._system;
+        const filterAfterReadAccess = hasReadRule(collection) && !context._system;
 
         const conditions: any[] = [];
         if (status !== "any" && collection.drafts) {
@@ -554,6 +609,8 @@ export const createCms = (config: CMSConfig) => {
         const allowed = await canAccess(collection, "create", context);
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
 
+        stripProtectedAuthFields(collection, data, context, "create");
+
         const db = await getDb();
         const tables = await getTableRefs(slug);
         const hookContext = getHookContext(collection, "create", context);
@@ -642,6 +699,8 @@ export const createCms = (config: CMSConfig) => {
         const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
         const allowed = await canAccess(collection, "update", context, existing);
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
+
+        stripProtectedAuthFields(collection, data, context, "update", existing);
 
         const accessCtx = { user: context.user ?? null, doc: existing, operation: "update", collection: slug };
         for (const [fieldName, field] of Object.entries(collection.fields)) {
@@ -955,7 +1014,7 @@ export const createCms = (config: CMSConfig) => {
           }
         }
 
-        if (collection.access?.read && !context._system) {
+        if (hasReadRule(collection) && !context._system) {
           let rowsQuery = db.select().from(tables.main);
           if (conditions.length > 0) {
             rowsQuery = rowsQuery.where(conditions.length === 1 ? conditions[0] : and(...conditions)) as any;
