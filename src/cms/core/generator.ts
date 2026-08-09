@@ -425,12 +425,12 @@ const generateApiFile = (
     update(id: string, data: Partial<${baseName}Input>, ${ctx}): Promise<${baseName}Document>;
     delete(id: string, ${ctx}): Promise<void>;
     count(filter?: Omit<import("${coreImportPath}").FindOptions, "limit" | "offset" | "sort">, ${ctx}): Promise<number>;
-    versions(id: string): Promise<import("./types").StoredVersion[]>;
+    versions(id: string, ${ctx}): Promise<import("./types").StoredVersion[]>;
     restore(id: string, versionNumber: number, ${ctx}): Promise<${baseName}Document>;
     publish(id: string, ${ctx}): Promise<${baseName}Document>;
     unpublish(id: string, ${ctx}): Promise<${baseName}Document>;
     schedule(id: string, publishAt: string, unpublishAt?: string | null, ${ctx}): Promise<${baseName}Document>;
-    getTranslations(id: string): Promise<Record<string, ${baseName}TranslationInput>>;
+    getTranslations(id: string, ${ctx}): Promise<Record<string, ${baseName}TranslationInput>>;
     upsertTranslation(id: string, locale: string, data: ${baseName}TranslationInput, ${ctx}): Promise<${baseName}Document>;
   };`;
     })

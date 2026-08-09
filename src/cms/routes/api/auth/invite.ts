@@ -12,6 +12,7 @@ import {
   setSessionCookie,
   getSessionUser,
   recordAudit,
+  tokenReference,
 } from "virtual:kide/runtime";
 import { sendInviteEmail, isEmailConfigured } from "virtual:kide/email";
 
@@ -168,7 +169,7 @@ async function handleAccept(formData: FormData, request: Request) {
   void recordAudit({
     action: "auth.invite_accepted",
     resourceType: "invite",
-    resourceId: token,
+    resourceId: await tokenReference(token),
     actor: acceptedUser
       ? {
           id: String(acceptedUser._id),

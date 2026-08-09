@@ -14,11 +14,18 @@ const timingSafeEqual = (a: string, b: string) => {
  * only gate. Read it through `readEnv` rather than `import.meta.env`: the latter
  * is inlined at build time, which would bake the secret into `dist/` and leave
  * the check permanently disabled for anyone setting it in the deploy environment.
- * Unset means "deny" in a production build — dev is exempt so `pnpm dev` still works.
+ *
+ * Nothing in this module may touch `import.meta.env` at all, not even for `DEV`.
+ * Referencing it makes Vite emit the whole env object, and it fills in every key
+ * whose name appears as a string literal in the module — so `"CRON_SECRET"` above
+ * would be substituted with its build-time value and shipped inside `dist/`.
+ *
+ * Unset means "deny" unless we are explicitly in development, so a deploy that
+ * forgets NODE_ENV fails closed rather than open.
  */
 export const isAuthorized = (request: Request) => {
   const secret = readEnv("CRON_SECRET");
-  if (!secret) return import.meta.env.DEV === true;
+  if (!secret) return process.env.NODE_ENV === "development";
 
   const authHeader = request.headers.get("authorization") ?? "";
   return timingSafeEqual(authHeader, `Bearer ${secret}`);

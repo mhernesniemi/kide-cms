@@ -42,6 +42,15 @@ export type CropOptions = {
   focalY?: number | null;
 };
 
+// Height is caller-supplied and, unlike width, has no preset list to snap to. Left
+// unbounded it either burns CPU on an enormous render or makes sharp throw, which used to
+// fall through to serving the untransformed original.
+const MAX_HEIGHT = 4320;
+
+function clampHeight(height: number): number {
+  return Math.min(Math.max(1, Math.round(height)), MAX_HEIGHT);
+}
+
 function clampWidth(width: number): number {
   return ALLOWED_WIDTHS.reduce((prev, curr) => (Math.abs(curr - width) < Math.abs(prev - width) ? curr : prev));
 }
@@ -130,7 +139,7 @@ export async function transformImage(
     ? (options.format as Format)
     : "webp";
   const resolvedWidth = options.width ? clampWidth(options.width) : undefined;
-  const resolvedHeight = options.height ? Math.round(options.height) : undefined;
+  const resolvedHeight = options.height ? clampHeight(options.height) : undefined;
   const resolvedQuality = options.quality ?? 80;
   const crop = resolvedWidth != null && resolvedHeight != null;
   const focalX = crop && options.focalX != null ? Math.max(0, Math.min(100, options.focalX)) : null;
@@ -139,7 +148,7 @@ export async function transformImage(
   if (!existsSync(cacheDir)) mkdirSync(cacheDir, { recursive: true });
   const safeName = src.replace(/[^a-zA-Z0-9.-]/g, "_");
   const focalKey = crop ? `_f${focalX ?? "c"}-${focalY ?? "c"}` : "";
-  const cacheKey = `${safeName}_${resolvedWidth ?? 0}x${resolvedHeight ?? 0}${focalKey}.${resolvedFormat}`;
+  const cacheKey = `${safeName}_${resolvedWidth ?? 0}x${resolvedHeight ?? 0}${focalKey}_q${resolvedQuality}.${resolvedFormat}`;
   const cachePath = path.join(cacheDir, cacheKey);
 
   if (existsSync(cachePath)) {

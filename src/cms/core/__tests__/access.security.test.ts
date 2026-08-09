@@ -64,6 +64,8 @@ afterAll(() => {
 
 const readUser = (id: string) => cms.users.findById(id, { status: "any" }, system);
 
+const adminCtx = () => ({ user: { id: adminId, role: "admin", email: "admin@example.com" } });
+
 /** Reads bypass the API because it strips `password` from every auth-collection result. */
 const readPasswordHash = async (id: string) => {
   const rows = await db.select().from((generatedSchema as any).cmsTables.users.main);
@@ -122,5 +124,45 @@ describe("auth collections deny by default", () => {
   it("leaves non-auth collections default-allow", async () => {
     const post = await cms.posts.create({ title: "Anyone can write this" }, viewerCtx);
     expect(post._id).toBeTruthy();
+  });
+});
+
+describe("field-level access rules", () => {
+  // `pages.summary` declares access.read admin-only, `pages.seoDescription` access.update.
+  it("omits an unreadable field from find and findById", async () => {
+    const page = await cms.pages.create({ title: "Board Page", summary: "CONFIDENTIAL" }, system);
+
+    const asViewer = await cms.pages.findById(String(page._id), { status: "any" }, viewerCtx);
+    expect(asViewer.summary).toBeUndefined();
+    expect(asViewer.title).toBe("Board Page");
+
+    const listed = (await cms.pages.find({ status: "any" }, viewerCtx)).find((d: any) => d._id === page._id);
+    expect(listed.summary).toBeUndefined();
+
+    const asAdmin = await cms.pages.findById(String(page._id), { status: "any" }, adminCtx());
+    expect(asAdmin.summary).toBe("CONFIDENTIAL");
+  });
+
+  it("applies a field's update rule on create, not just on update", async () => {
+    const created = await cms.pages.create({ title: "No SEO For You", seoDescription: "injected" }, viewerCtx);
+    expect(created.seoDescription).toBeFalsy();
+
+    await cms.pages.update(String(created._id), { seoDescription: "still no" }, viewerCtx);
+    const after = await cms.pages.findById(String(created._id), { status: "any" }, system);
+    expect(after.seoDescription).toBeFalsy();
+  });
+});
+
+describe("version history and translations respect read access", () => {
+  it("denies both to a caller who cannot read the document", async () => {
+    await expect(cms.users.versions(adminId, viewerCtx)).rejects.toThrow(/Access denied/);
+    await expect(cms.users.getTranslations(adminId, viewerCtx)).rejects.toThrow(/Access denied/);
+  });
+
+  it("never exposes a password hash in a version snapshot", async () => {
+    const snapshots = await cms.users.versions(viewerId, system);
+    for (const entry of snapshots) {
+      expect(entry.snapshot?.password).toBeUndefined();
+    }
   });
 });

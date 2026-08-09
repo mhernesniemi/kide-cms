@@ -322,7 +322,7 @@ export const POST: APIRoute = async ({ params, request, locals, cache }) => {
     // Copy translations if the collection supports them
     if (collectionApi.getTranslations && collectionApi.upsertTranslation) {
       try {
-        const translations = await collectionApi.getTranslations(documentId);
+        const translations = await collectionApi.getTranslations(documentId, ctx);
         if (translations && typeof translations === "object") {
           for (const [locale, translationData] of Object.entries(translations)) {
             if (!translationData || typeof translationData !== "object") continue;

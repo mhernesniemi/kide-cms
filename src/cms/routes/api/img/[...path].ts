@@ -13,6 +13,8 @@ const MIME_TYPES: Record<string, string> = {
   ".svg": "image/svg+xml",
 };
 
+const INLINE_SAFE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif"]);
+
 const originalContentType = (src: string) =>
   MIME_TYPES[src.slice(src.lastIndexOf(".")).toLowerCase()] ?? "application/octet-stream";
 
@@ -49,10 +51,17 @@ export const GET: APIRoute = async ({ params, url }) => {
 
   const data = await getStorage().getFile(src);
   if (!data) return new Response("Not found", { status: 404 });
-  return new Response(data, {
-    headers: {
-      "Content-Type": originalContentType(src),
-      "Cache-Control": "public, max-age=31536000, immutable",
-    },
-  });
+
+  // This fallback streams the file untransformed, so its type is whatever the stored
+  // extension says. Raster images are safe to render inline; anything else (SVG above all,
+  // which runs script when rendered) is forced to download instead.
+  const contentType = originalContentType(src);
+  const headers: Record<string, string> = {
+    "Content-Type": contentType,
+    "Cache-Control": "public, max-age=31536000, immutable",
+    "X-Content-Type-Options": "nosniff",
+  };
+  if (!INLINE_SAFE_TYPES.has(contentType)) headers["Content-Disposition"] = "attachment";
+
+  return new Response(data, { headers });
 };

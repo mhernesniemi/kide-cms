@@ -45,6 +45,7 @@ declare module "virtual:kide/runtime" {
     recordAudit,
     pruneAuditLog,
     auditRequestMeta,
+    tokenReference,
     search,
     indexDocument,
     removeDocument,

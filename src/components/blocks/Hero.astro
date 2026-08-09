@@ -1,6 +1,12 @@
 ---
+import { safeUrl } from "@/cms/core";
+
 const { eyebrow, heading, body, ctaLabel, ctaHref } = Astro.props;
-const hasContent = Boolean(eyebrow || heading || body || (ctaLabel && ctaHref));
+// Astro escapes attribute values but does not reject URL schemes, so a stored
+// `javascript:` link would run on click. Block fields are editor-authored data —
+// treat any URL from them the same way rich-text links are treated.
+const href = ctaHref ? safeUrl(String(ctaHref)) : null;
+const hasContent = Boolean(eyebrow || heading || body || (ctaLabel && href));
 ---
 
 {
@@ -9,11 +15,8 @@ const hasContent = Boolean(eyebrow || heading || body || (ctaLabel && ctaHref));
       {eyebrow && <p class="mb-2 text-xs font-semibold tracking-wide text-teal-700 uppercase">{eyebrow}</p>}
       {heading && <h1 class="mb-3 text-3xl font-semibold">{heading}</h1>}
       {body && <p class="mb-4 text-gray-500">{body}</p>}
-      {ctaLabel && ctaHref && (
-        <a
-          href={String(ctaHref)}
-          class="mt-4 inline-block rounded-md bg-teal-700 px-4 py-2 text-sm text-white no-underline"
-        >
+      {ctaLabel && href && (
+        <a href={href} class="mt-4 inline-block rounded-md bg-teal-700 px-4 py-2 text-sm text-white no-underline">
           {ctaLabel}
         </a>
       )}

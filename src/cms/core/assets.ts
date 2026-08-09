@@ -31,6 +31,55 @@ export type FolderRecord = {
   _createdAt: string;
 };
 
+const EXTENSION_BY_MIME: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/gif": ".gif",
+  "image/webp": ".webp",
+  "image/avif": ".avif",
+  "image/svg+xml": ".svg",
+  "application/pdf": ".pdf",
+  "video/mp4": ".mp4",
+  "video/webm": ".webm",
+};
+
+// Extensions the server would hand back as active content. Uploads are served from the
+// same origin as the admin, so a file stored under one of these is script in the victim's
+// session, whatever its declared MIME type was.
+const ACTIVE_CONTENT_EXTENSIONS = new Set([
+  "html",
+  "htm",
+  "xhtml",
+  "shtml",
+  "xml",
+  "svg",
+  "js",
+  "mjs",
+  "cjs",
+  "php",
+  "phtml",
+  "asp",
+  "aspx",
+  "jsp",
+]);
+
+/**
+ * The stored extension decides the Content-Type the file is later served with, so it is
+ * derived from the verified MIME type rather than the uploader's filename. Taking it from
+ * the filename let a caller declare an allowed image type and still land a `.html` file.
+ */
+const storedExtension = (file: File): string => {
+  const known = EXTENSION_BY_MIME[file.type];
+  if (known) return known;
+
+  // Unknown type — only possible via a custom `admin.uploads.allowedTypes`. Keep a
+  // conservative version of the supplied extension rather than inventing one.
+  const raw = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".") + 1) : "";
+  const cleaned = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!cleaned || cleaned.length > 8 || ACTIVE_CONTENT_EXTENSIONS.has(cleaned)) return "";
+  return `.${cleaned}`;
+};
+
 export const assets = {
   async upload(
     file: File,
@@ -52,8 +101,7 @@ export const assets = {
       if (existing) return existing;
     }
 
-    const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
-    const safeName = `${nanoid(12)}${ext}`;
+    const safeName = `${nanoid(12)}${storedExtension(file)}`;
     const storagePath = `/uploads/${safeName}`;
 
     await storage.putFile(storagePath, bytes);

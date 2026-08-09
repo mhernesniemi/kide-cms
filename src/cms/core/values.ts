@@ -261,7 +261,7 @@ const SAFE_URL_SCHEMES = new Set(["http:", "https:", "mailto:", "tel:"]);
  * contains no HTML-special characters. Allow only known-safe schemes; relative URLs
  * (`/path`, `#anchor`, `?q=`) carry no scheme and are always fine.
  */
-const safeUrl = (value: string): string | null => {
+export const safeUrl = (value: string): string | null => {
   const trimmed = value.trim();
   if (!trimmed) return null;
   if (/^[/#?]/.test(trimmed)) return trimmed;

@@ -2,7 +2,14 @@ import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "virtual:kide/db";
-import { auditRequestMeta, createSession, recordAudit, setSessionCookie, verifyPassword } from "virtual:kide/runtime";
+import {
+  auditRequestMeta,
+  createSession,
+  recordAudit,
+  setSessionCookie,
+  tokenReference,
+  verifyPassword,
+} from "virtual:kide/runtime";
 import config from "virtual:kide/config";
 
 export const prerender = false;
@@ -120,7 +127,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   void recordAudit({
     action: "auth.login",
     resourceType: "session",
-    resourceId: session.token,
+    resourceId: await tokenReference(session.token),
     actor: {
       id: String(user._id),
       email: String(user.email ?? ""),

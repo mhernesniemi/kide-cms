@@ -30,6 +30,20 @@ export const auditRequestMeta = (request: Request) => ({
   userAgent: request.headers.get("user-agent"),
 });
 
+/**
+ * A one-way reference to a session or invite token. Audit rows are also emitted to the
+ * log stream, so storing the token itself made every `auth.login` row a replayable
+ * credential. The digest still correlates a login with its logout.
+ */
+export const tokenReference = async (token: string): Promise<string> => {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  const hex = [...new Uint8Array(digest)]
+    .slice(0, 8)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+  return `sha256:${hex}`;
+};
+
 export const recordAudit = async (event: AuditEvent): Promise<void> => {
   const row = {
     _id: nanoid(),

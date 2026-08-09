@@ -143,6 +143,7 @@ export {
   cloneValue,
   slugify,
   escapeHtml,
+  safeUrl,
   serializeFieldValue,
   contentSegments,
   contentBlocks,
@@ -166,7 +167,7 @@ export type { AdminRoute } from "./admin";
 
 export { acquireLock, releaseLock } from "./locks";
 
-export { recordAudit, pruneAuditLog, auditRequestMeta } from "./audit";
+export { recordAudit, pruneAuditLog, auditRequestMeta, tokenReference } from "./audit";
 export type { AuditEvent, AuditActor } from "./audit";
 
 export {

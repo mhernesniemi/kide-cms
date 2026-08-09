@@ -24,12 +24,12 @@ export const cms = createCms(config) as {
     update(id: string, data: Partial<ArticlesInput>, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
     delete(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<void>;
     count(filter?: Omit<import("@/cms/core").FindOptions, "limit" | "offset" | "sort">, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<number>;
-    versions(id: string): Promise<import("./types").StoredVersion[]>;
+    versions(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<import("./types").StoredVersion[]>;
     restore(id: string, versionNumber: number, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
     publish(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
     unpublish(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
     schedule(id: string, publishAt: string, unpublishAt?: string | null, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
-    getTranslations(id: string): Promise<Record<string, ArticlesTranslationInput>>;
+    getTranslations(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<Record<string, ArticlesTranslationInput>>;
     upsertTranslation(id: string, locale: string, data: ArticlesTranslationInput, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
   };
   writers: {
@@ -42,12 +42,12 @@ export const cms = createCms(config) as {
     update(id: string, data: Partial<WritersInput>, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
     delete(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<void>;
     count(filter?: Omit<import("@/cms/core").FindOptions, "limit" | "offset" | "sort">, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<number>;
-    versions(id: string): Promise<import("./types").StoredVersion[]>;
+    versions(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<import("./types").StoredVersion[]>;
     restore(id: string, versionNumber: number, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
     publish(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
     unpublish(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
     schedule(id: string, publishAt: string, unpublishAt?: string | null, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
-    getTranslations(id: string): Promise<Record<string, WritersTranslationInput>>;
+    getTranslations(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<Record<string, WritersTranslationInput>>;
     upsertTranslation(id: string, locale: string, data: WritersTranslationInput, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
   };
   meta: ReturnType<typeof createCms>["meta"];

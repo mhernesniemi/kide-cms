@@ -32,7 +32,7 @@ export async function loadDocument(
     requestedLocale === defaultLocale
       ? doc
       : await collectionApi.findById(documentId, { status: "any", locale: defaultLocale }, runtimeContext);
-  const versions = await collectionApi.versions(documentId);
+  const versions = await collectionApi.versions(documentId, runtimeContext);
   return { doc, baseDoc, versions };
 }
 

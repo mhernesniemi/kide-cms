@@ -1,0 +1,16 @@
+# Machine-generated — rewritten wholesale by drizzle-kit / cms:generate, never hand-edited.
+# Formatting these makes `pnpm format` dirty the worktree on every run.
+src/cms/.generated/
+src/cms/migrations/meta/
+
+# Package manager artifact.
+pnpm-lock.yaml
+
+# Build output, caches, and local data.
+dist/
+.astro/
+.wrangler/
+.cms-cache/
+.kide/
+data/
+public/uploads/

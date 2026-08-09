@@ -308,6 +308,53 @@ const stripProtectedAuthFields = (
   }
 };
 
+/**
+ * Drop incoming values for fields the caller may not write. Applied to `create` as well
+ * as `update`: a rule like `access: { update: hasRole("admin") }` reads as "only admins
+ * set this field", and enforcing it only on update let the same value through on create.
+ */
+const stripUnwritableFields = async (
+  collection: CollectionConfig,
+  data: Record<string, unknown>,
+  context: RuntimeContext,
+  doc: Record<string, unknown> | null,
+) => {
+  if (context._system) return;
+  const operation = doc ? "update" : "create";
+  const accessCtx = { user: context.user ?? null, doc, operation, collection: collection.slug };
+  for (const [fieldName, field] of Object.entries(collection.fields)) {
+    if (!field.access?.update || data[fieldName] === undefined) continue;
+    if (!(await field.access.update(accessCtx))) delete data[fieldName];
+  }
+};
+
+/**
+ * Remove fields the caller may not read. Field-level `access.read` previously only hid
+ * the input in the admin form while the API returned the value to anyone, so a rule that
+ * looked like a confidentiality boundary wasn't one. Unreadable fields are omitted
+ * entirely, matching how `password` is already handled.
+ */
+const stripUnreadableFields = async (
+  collection: CollectionConfig,
+  doc: Record<string, unknown>,
+  context: RuntimeContext,
+) => {
+  if (context._system) return doc;
+  const accessCtx = { user: context.user ?? null, doc, operation: "read", collection: collection.slug };
+  let result = doc;
+  for (const [fieldName, field] of Object.entries(collection.fields)) {
+    if (!field.access?.read || !(fieldName in result)) continue;
+    if (!(await field.access.read(accessCtx))) {
+      if (result === doc) result = { ...doc };
+      delete result[fieldName];
+    }
+  }
+  return result;
+};
+
+const collectionHasFieldReadRules = (collection: CollectionConfig) =>
+  Object.values(collection.fields).some((field) => !!field.access?.read);
+
 const getHookContext = (collection: CollectionConfig, operation: string, context: RuntimeContext) => ({
   user: context.user ?? null,
   operation,
@@ -407,6 +454,32 @@ export const createCms = (config: CMSConfig) => {
       if (!collection.auth) return doc;
       const { password: _password, ...rest } = doc;
       return rest;
+    };
+
+    const hasFieldReadRules = collectionHasFieldReadRules(collection);
+
+    /** Everything a document passes through on its way out of a read. */
+    const finalizeRead = async (doc: Record<string, unknown>, context: RuntimeContext) => {
+      const stripped = stripSensitiveFields(doc);
+      if (!hasFieldReadRules) return stripped;
+      return stripUnreadableFields(collection, stripped, context);
+    };
+
+    /**
+     * Guard for the document-scoped reads that don't go through `findById` — version
+     * history and translations. Both expose stored field values, so they need the same
+     * read rule; without this they were readable by anyone who knew the id.
+     */
+    const assertReadable = async (id: string, context: RuntimeContext) => {
+      if (context._system) return;
+      const db = await getDb();
+      const tables = await getTableRefs(slug);
+      const rows = await db.select().from(tables.main).where(eq(tables.main._id, id)).limit(1);
+      if (rows.length === 0) return;
+      const doc = deserializeFromDb(collection, rows[0] as Record<string, unknown>);
+      if (!(await canAccess(collection, "read", context, doc))) {
+        throw new Error(`Access denied for ${collection.slug}.`);
+      }
     };
 
     const applyPublishedSnapshot = (row: Record<string, unknown>, status: FindOptions["status"]) => {
@@ -529,16 +602,20 @@ export const createCms = (config: CMSConfig) => {
               return parsed;
             });
 
-            return docs.map((doc: Record<string, unknown>) => {
-              const docTranslations = parsedTranslations.filter(
-                (translation: Record<string, unknown>) => translation._entityId === doc._id,
-              );
-              return stripSensitiveFields(overlayLocale(doc, docTranslations, options.locale));
-            });
+            return Promise.all(
+              docs.map((doc: Record<string, unknown>) => {
+                const docTranslations = parsedTranslations.filter(
+                  (translation: Record<string, unknown>) => translation._entityId === doc._id,
+                );
+                return finalizeRead(overlayLocale(doc, docTranslations, options.locale), context);
+              }),
+            );
           }
         }
 
-        return docs.map((doc: Record<string, unknown>) => stripSensitiveFields(overlayLocale(doc, [], options.locale)));
+        return Promise.all(
+          docs.map((doc: Record<string, unknown>) => finalizeRead(overlayLocale(doc, [], options.locale), context)),
+        );
       },
 
       async findOne(
@@ -602,7 +679,7 @@ export const createCms = (config: CMSConfig) => {
           });
         }
 
-        return stripSensitiveFields(overlayLocale(doc, translations, options.locale));
+        return finalizeRead(overlayLocale(doc, translations, options.locale), context);
       },
 
       async create(data: Record<string, unknown>, context: RuntimeContext = {}) {
@@ -610,6 +687,7 @@ export const createCms = (config: CMSConfig) => {
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
 
         stripProtectedAuthFields(collection, data, context, "create");
+        await stripUnwritableFields(collection, data, context, null);
 
         const db = await getDb();
         const tables = await getTableRefs(slug);
@@ -701,14 +779,7 @@ export const createCms = (config: CMSConfig) => {
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
 
         stripProtectedAuthFields(collection, data, context, "update", existing);
-
-        const accessCtx = { user: context.user ?? null, doc: existing, operation: "update", collection: slug };
-        for (const [fieldName, field] of Object.entries(collection.fields)) {
-          if (field.access?.update && data[fieldName] !== undefined) {
-            const fieldAllowed = await field.access.update(accessCtx);
-            if (!fieldAllowed) delete data[fieldName];
-          }
-        }
+        await stripUnwritableFields(collection, data, context, existing);
 
         const hookContext = getHookContext(collection, "update", context);
         const preparedInput = prepareIncomingData(collection, data, undefined, existing);
@@ -798,7 +869,9 @@ export const createCms = (config: CMSConfig) => {
         await collection.hooks?.afterDelete?.(existing, hookContext);
         auditContent("content.delete", slug, id, context);
         removeSearch(collection, id);
-        dispatchWebhooks(config, "delete", slug, existing, context.user);
+        // Every other event dispatches the findById result, which is already stripped.
+        // `existing` is the raw row, so on an auth collection it still holds the password hash.
+        dispatchWebhooks(config, "delete", slug, stripSensitiveFields(existing), context.user);
       },
 
       /**
@@ -1036,7 +1109,8 @@ export const createCms = (config: CMSConfig) => {
         return Number((result[0] as any)?.total ?? 0);
       },
 
-      async versions(id: string) {
+      async versions(id: string, context: RuntimeContext = {}) {
+        await assertReadable(id, context);
         const tables = await getTableRefs(slug);
         if (!tables.versions) return [];
         const db = await getDb();
@@ -1045,11 +1119,16 @@ export const createCms = (config: CMSConfig) => {
           .from(tables.versions)
           .where(eq(tables.versions._docId, id))
           .orderBy(desc(tables.versions._version));
-        return rows.map((row: Record<string, unknown>) => ({
-          version: row._version as number,
-          createdAt: row._createdAt as string,
-          snapshot: typeof row._snapshot === "string" ? JSON.parse(row._snapshot) : row._snapshot,
-        }));
+        return rows.map((row: Record<string, unknown>) => {
+          const snapshot = typeof row._snapshot === "string" ? JSON.parse(row._snapshot) : row._snapshot;
+          return {
+            version: row._version as number,
+            createdAt: row._createdAt as string,
+            // Snapshots are taken from the raw row, so on an auth collection they carry
+            // the stored password hash. Strip it the same way reads do.
+            snapshot: snapshot && typeof snapshot === "object" ? stripSensitiveFields(snapshot) : snapshot,
+          };
+        });
       },
 
       async restore(id: string, versionNumber: number, context: RuntimeContext = {}) {
@@ -1059,7 +1138,8 @@ export const createCms = (config: CMSConfig) => {
         return this.update(id, version.snapshot, context);
       },
 
-      async getTranslations(id: string) {
+      async getTranslations(id: string, context: RuntimeContext = {}) {
+        await assertReadable(id, context);
         const tables = await getTableRefs(slug);
         if (!tables.translations) return {};
         const db = await getDb();
