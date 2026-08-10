@@ -5,6 +5,7 @@ type SchemaModule = {
   cmsSessions: any;
   cmsLocks: any;
   cmsInvites: any;
+  cmsRateLimits: any;
   cmsAuditLog: any;
   cmsOutbox: any;
   cmsCollaboration: any;

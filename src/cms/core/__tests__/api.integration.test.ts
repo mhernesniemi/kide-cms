@@ -12,7 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as generatedSchema from "@/cms/.generated/schema";
 import config from "@/cms/cms.config";
 import { createCms } from "../api";
-import { createInvite, consumeInvite, createSession, validateInvite, validateSession } from "../auth";
+import { createInvite, consumeInvite, createSession, hashToken, validateInvite, validateSession } from "../auth";
 import { configureCmsRuntime, resetCmsRuntime } from "../runtime";
 import { initSchema, resetSchema } from "../schema";
 
@@ -236,15 +236,32 @@ describe("sessions", () => {
   it("rejects and deletes expired sessions", async () => {
     const schema = generatedSchema as never as { cmsSessions: any };
     const past = new Date(Date.now() - 1000).toISOString();
-    await db.insert(schema.cmsSessions).values({ _id: "expired-token", userId: "user-2", expiresAt: past });
+    // Sessions are stored under SHA-256(token), never the raw token.
+    const idHash = await hashToken("expired-token");
+    await db.insert(schema.cmsSessions).values({ _id: idHash, userId: "user-2", expiresAt: past });
 
     expect(await validateSession("expired-token")).toBeNull();
     // Second lookup confirms the row was deleted, not just rejected
     const rows = await db
       .select()
       .from(schema.cmsSessions)
-      .where(eq((schema.cmsSessions as any)._id, "expired-token"));
+      .where(eq((schema.cmsSessions as any)._id, idHash));
     expect(rows).toHaveLength(0);
+  });
+
+  it("stores the session token only as a hash, never raw", async () => {
+    const schema = generatedSchema as never as { cmsSessions: any };
+    const { token } = await createSession("user-3");
+    const raw = await db
+      .select()
+      .from(schema.cmsSessions)
+      .where(eq((schema.cmsSessions as any)._id, token));
+    expect(raw).toHaveLength(0); // raw token is not the key
+    const hashed = await db
+      .select()
+      .from(schema.cmsSessions)
+      .where(eq((schema.cmsSessions as any)._id, await hashToken(token)));
+    expect(hashed).toHaveLength(1);
   });
 });
 

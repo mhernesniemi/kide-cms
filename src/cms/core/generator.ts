@@ -190,6 +190,15 @@ const generateSchemaFile = (config: CMSConfig): string => {
   usedAt: text("used_at"),
 });`);
   parts.push("");
+  parts.push(`export const cmsRateLimits = sqliteTable("cms_rate_limits", {
+  _id: text("_id").primaryKey(),
+  windowStart: integer("window_start").notNull(),
+  count: integer("count").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+}, (table) => ({
+  expiryIdx: index("rate_limits_expiry_idx").on(table.expiresAt),
+}));`);
+  parts.push("");
   parts.push(`export const cmsAuditLog = sqliteTable("cms_audit_log", {
   _id: text("_id").primaryKey(),
   timestamp: integer("timestamp").notNull(),

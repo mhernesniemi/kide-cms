@@ -4,12 +4,12 @@ import { eq } from "drizzle-orm";
 import { getDb } from "virtual:kide/db";
 import {
   auditRequestMeta,
+  hitRateLimit,
   consumePasswordReset,
   createSession,
   hashPassword,
   recordAudit,
   setSessionCookie,
-  validatePasswordReset,
 } from "virtual:kide/runtime";
 import { resolveAdminAuth } from "@/cms/core";
 import config from "virtual:kide/config";
@@ -22,9 +22,12 @@ const redirectWithError = (token: string, error: string) =>
     headers: { Location: `/admin/reset-password?token=${encodeURIComponent(token)}&error=${error}` },
   });
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   const auth = resolveAdminAuth(config);
   if (!auth.password.forgotPassword) return Response.json({ error: "Not found" }, { status: 404 });
+
+  const ipLimit = await hitRateLimit("reset:ip", clientAddress, { max: 10, windowMs: 15 * 60 * 1000 });
+  if (!ipLimit.ok) return redirectWithError("", "invalid");
 
   const formData = await request.formData();
   const token = String(formData.get("token") ?? "");
@@ -35,7 +38,11 @@ export const POST: APIRoute = async ({ request }) => {
   if (password !== confirmPassword) return redirectWithError(token, "password");
   if (password.length < 8) return redirectWithError(token, "short");
 
-  const reset = await validatePasswordReset(token);
+  // Hash before claiming the token: the token is single-use, so anything fallible must run
+  // before we burn it — otherwise a hashing failure would strand the account with a spent
+  // token. Consume is then the atomic single-winner gate against double-submit.
+  const hashedPassword = await hashPassword(password);
+  const reset = await consumePasswordReset(token);
   if (!reset) return redirectWithError(token, "invalid");
 
   const db = await getDb();
@@ -47,12 +54,10 @@ export const POST: APIRoute = async ({ request }) => {
   if (userRows.length === 0) return redirectWithError(token, "invalid");
 
   const user = userRows[0] as Record<string, unknown>;
-  const hashedPassword = await hashPassword(password);
   await db
     .update(tables.users.main)
     .set({ password: hashedPassword, _updatedAt: new Date().toISOString() })
     .where(eq(tables.users.main._id, reset.userId));
-  await consumePasswordReset(token);
   await db.delete(schema.cmsSessions).where(eq(schema.cmsSessions.userId, reset.userId));
 
   const session = await createSession(reset.userId);

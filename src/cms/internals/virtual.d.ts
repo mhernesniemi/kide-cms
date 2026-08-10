@@ -16,6 +16,7 @@ declare module "virtual:kide/schema" {
   const cmsTables: Record<string, { main: any; translations?: any }>;
   export const cmsSessions: any;
   export const cmsPasswordResets: any;
+  export const cmsRateLimits: any;
   export { cmsTables };
 }
 
@@ -26,6 +27,7 @@ declare module "virtual:kide/runtime" {
     destroySession,
     clearSessionCookie,
     verifyPassword,
+    hashToken,
     hashPassword,
     createSession,
     setSessionCookie,
@@ -57,6 +59,11 @@ declare module "virtual:kide/runtime" {
     removeDocument,
     reindexAll,
     readEnv,
+    peekRateLimit,
+    hitRateLimit,
+    recordRateLimit,
+    clearRateLimit,
+    pruneRateLimits,
     getEmail,
   } from "@/cms/core";
 }

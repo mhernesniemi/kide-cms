@@ -4,8 +4,8 @@ import { eq } from "drizzle-orm";
 import { getDb } from "virtual:kide/db";
 import {
   auditRequestMeta,
+  hitRateLimit,
   createInvite,
-  validateInvite,
   consumeInvite,
   hashPassword,
   createSession,
@@ -18,12 +18,12 @@ import { sendInviteEmail, isEmailConfigured } from "virtual:kide/email";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, url }) => {
+export const POST: APIRoute = async ({ request, url, clientAddress }) => {
   const formData = await request.formData();
   const action = String(formData.get("_action") ?? "create");
 
   if (action === "accept") {
-    return handleAccept(formData, request);
+    return handleAccept(formData, request, clientAddress);
   }
 
   return handleCreate(formData, url, request);
@@ -103,7 +103,7 @@ async function handleCreate(formData: FormData, url: URL, request: Request) {
   });
 }
 
-async function handleAccept(formData: FormData, request: Request) {
+async function handleAccept(formData: FormData, request: Request, clientAddress: string) {
   const token = String(formData.get("token") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const password = String(formData.get("password") ?? "");
@@ -114,6 +114,13 @@ async function handleAccept(formData: FormData, request: Request) {
       status: 303,
       headers: { Location: "/admin/invite?error=invalid" },
     });
+  }
+
+  // Key on Astro's clientAddress (trusted), not the spoofable X-Forwarded-For header.
+  const opts = { max: 10, windowMs: 15 * 60 * 1000, failClosed: true };
+  const ipLimit = await hitRateLimit("invite:ip", clientAddress, opts);
+  if (!ipLimit.ok) {
+    return new Response(null, { status: 303, headers: { Location: "/admin/invite?error=invalid" } });
   }
 
   if (!name || !password) {
@@ -137,7 +144,10 @@ async function handleAccept(formData: FormData, request: Request) {
     });
   }
 
-  const invite = await validateInvite(token);
+  // Hash before claiming: the token is single-use, so run the fallible work first, then
+  // consume as the atomic single-winner gate against a double-submit.
+  const hashedPassword = await hashPassword(password);
+  const invite = await consumeInvite(token);
   if (!invite) {
     return new Response(null, {
       status: 303,
@@ -149,13 +159,10 @@ async function handleAccept(formData: FormData, request: Request) {
   const schema = await import("virtual:kide/schema");
   const tables = schema.cmsTables as Record<string, { main: any }>;
 
-  const hashedPassword = await hashPassword(password);
   await db
     .update(tables.users.main)
     .set({ name, password: hashedPassword, _updatedAt: new Date().toISOString() })
     .where(eq(tables.users.main._id, invite.userId));
-
-  await consumeInvite(token);
 
   const session = await createSession(invite.userId);
 

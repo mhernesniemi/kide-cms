@@ -108,6 +108,8 @@ export { createCms } from "./api";
 export type { FindOptions } from "./api";
 
 export { enqueueTask, drainTasks, tickSchedules, pruneTasks } from "./tasks";
+export { peekRateLimit, hitRateLimit, recordRateLimit, clearRateLimit, pruneRateLimits } from "./rate-limit";
+export type { RateLimitResult, RateLimitOptions } from "./rate-limit";
 export type { EnqueueTaskOptions, DrainResult } from "./tasks";
 
 export type CustomFieldProps = {
@@ -120,6 +122,7 @@ export type CustomFieldProps = {
 export {
   hashPassword,
   verifyPassword,
+  hashToken,
   createSession,
   validateSession,
   destroySession,

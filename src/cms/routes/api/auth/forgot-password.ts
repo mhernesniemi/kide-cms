@@ -2,13 +2,20 @@ import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "virtual:kide/db";
-import { auditRequestMeta, createPasswordReset, getEmail, recordAudit, tokenReference } from "virtual:kide/runtime";
+import {
+  auditRequestMeta,
+  hitRateLimit,
+  createPasswordReset,
+  getEmail,
+  recordAudit,
+  tokenReference,
+} from "virtual:kide/runtime";
 import { resolveAdminAuth } from "@/cms/core";
 import config from "virtual:kide/config";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   const auth = resolveAdminAuth(config);
   if (!auth.password.forgotPassword) return Response.json({ error: "Not found" }, { status: 404 });
 
@@ -21,6 +28,14 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
   if (!email) return redirect();
+
+  // Throttle by IP, then email. On limit, return the same "sent" response (never reveal)
+  // and skip the email send — fail-open so a DB hiccup can't block recovery. Check the IP
+  // bucket FIRST and return before touching the email bucket, so a blocked IP can't keep
+  // inserting new limiter rows by varying the email.
+  const opts = { max: 5, windowMs: 15 * 60 * 1000, failClosed: false };
+  if (!(await hitRateLimit("forgot:ip", clientAddress, opts)).ok) return redirect();
+  if (!(await hitRateLimit("forgot:email", email.toLowerCase(), opts)).ok) return redirect();
 
   const db = await getDb();
   const schema = await import("virtual:kide/schema");

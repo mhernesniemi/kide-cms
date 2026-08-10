@@ -11,54 +11,40 @@ import {
   verifyPassword,
 } from "virtual:kide/runtime";
 import config from "virtual:kide/config";
-import { resolveAdminAuth } from "@/cms/core";
+import { clearRateLimit, peekRateLimit, recordRateLimit, resolveAdminAuth } from "@/cms/core";
 
 export const prerender = false;
 
-// Simple in-memory rate limiter
-const attempts = new Map<string, { count: number; resetAt: number }>();
 const MAX_ATTEMPTS = config.admin?.rateLimit?.maxAttempts ?? 5;
 const WINDOW_MS = config.admin?.rateLimit?.windowMs ?? 15 * 60 * 1000;
 
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = attempts.get(ip);
-  if (!entry || now > entry.resetAt) {
-    attempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
-    return false;
-  }
-  entry.count++;
-  return entry.count > MAX_ATTEMPTS;
-}
-
 export const POST: APIRoute = async ({ request, clientAddress }) => {
   const contentType = request.headers.get("content-type") ?? "";
+  const isJson = contentType.includes("application/json");
   const auth = resolveAdminAuth(config);
 
-  if (!auth.password.enabled) {
-    if (contentType.includes("application/json")) {
-      return Response.json({ error: "Password login is disabled." }, { status: 404 });
+  const rateLimited = (retryAfterMs: number) => {
+    if (isJson) {
+      return Response.json(
+        { error: "Too many login attempts. Try again later." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.ceil(retryAfterMs / 1000)) },
+        },
+      );
     }
-    return new Response(null, {
-      status: 303,
-      headers: { Location: "/admin/login?error=disabled" },
-    });
-  }
+    return new Response(null, { status: 303, headers: { Location: "/admin/login?error=rate-limited" } });
+  };
 
-  if (isRateLimited(clientAddress)) {
-    if (contentType.includes("application/json")) {
-      return Response.json({ error: "Too many login attempts. Try again later." }, { status: 429 });
-    }
-    return new Response(null, {
-      status: 303,
-      headers: { Location: "/admin/login?error=rate-limited" },
-    });
+  if (!auth.password.enabled) {
+    if (isJson) return Response.json({ error: "Password login is disabled." }, { status: 404 });
+    return new Response(null, { status: 303, headers: { Location: "/admin/login?error=disabled" } });
   }
 
   let email: string;
   let password: string;
 
-  if (contentType.includes("application/json")) {
+  if (isJson) {
     const body = await request.json();
     email = String(body.email ?? "");
     password = String(body.password ?? "");
@@ -69,14 +55,25 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   }
 
   if (!email || !password) {
-    if (contentType.includes("application/json")) {
-      return Response.json({ error: "Email and password are required." }, { status: 400 });
-    }
-    return new Response(null, {
-      status: 303,
-      headers: { Location: "/admin/login?error=missing" },
-    });
+    if (isJson) return Response.json({ error: "Email and password are required." }, { status: 400 });
+    return new Response(null, { status: 303, headers: { Location: "/admin/login?error=missing" } });
   }
+
+  // Rate limit FAILED logins only: peek (read-only) before verifying, record on failure,
+  // and clear the account budget on success. Both the client IP (spraying) and the email
+  // (targeted) are throttled; a success never touches the IP bucket, so one valid credential
+  // can't reset the throttle and keep spraying other accounts.
+  const emailKey = email.toLowerCase();
+  const opts = { max: MAX_ATTEMPTS, windowMs: WINDOW_MS, failClosed: true };
+  const ipPeek = await peekRateLimit("login:ip", clientAddress, opts);
+  if (!ipPeek.ok) return rateLimited(ipPeek.retryAfterMs);
+  const emailPeek = await peekRateLimit("login:email", emailKey, opts);
+  if (!emailPeek.ok) return rateLimited(emailPeek.retryAfterMs);
+
+  const recordFailure = async () => {
+    await recordRateLimit("login:ip", clientAddress, opts);
+    await recordRateLimit("login:email", emailKey, opts);
+  };
 
   const db = await getDb();
   const schema = await import("virtual:kide/schema");
@@ -90,6 +87,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   const requestMeta = auditRequestMeta(request);
 
   if (rows.length === 0) {
+    await recordFailure();
     void recordAudit({
       action: "auth.login_failed",
       resourceType: "session",
@@ -116,6 +114,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   }
 
   if (!valid) {
+    await recordFailure();
     void recordAudit({
       action: "auth.login_failed",
       resourceType: "session",
@@ -131,8 +130,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     });
   }
 
-  // Successful login — clear rate limit
-  attempts.delete(clientAddress);
+  // Success — clear this account's failed-login budget (but not the IP bucket).
+  await clearRateLimit("login:email", emailKey);
 
   const session = await createSession(String(user._id));
 

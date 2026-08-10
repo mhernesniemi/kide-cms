@@ -1,5 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
-import { resolveAdminAuth } from "@/cms/core";
+import { readEnv, resolveAdminAuth } from "@/cms/core";
 import type { SessionUser } from "@/cms/core";
 import config from "virtual:kide/config";
 import { getSessionUser } from "virtual:kide/runtime";
@@ -49,18 +49,56 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   // Security headers for all admin routes
+  const isAuthPath =
+    pathname.startsWith("/api/cms/auth/") ||
+    isLoginPage ||
+    isSetupPage ||
+    isInvitePage ||
+    isForgotPasswordPage ||
+    isResetPasswordPage;
   const addSecurityHeaders = (response: Response) => {
     response.headers.set("X-Content-Type-Options", "nosniff");
     response.headers.set("X-Frame-Options", "SAMEORIGIN");
+    response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    // Keep credentials and reset/invite tokens out of shared/browser caches.
+    if (isAuthPath) response.headers.set("Cache-Control", "no-store");
     return response;
   };
 
-  // CSRF protection: verify Origin on state-changing requests
-  if (context.request.method !== "GET" && context.request.method !== "HEAD") {
+  // CSRF: positive same-origin assertion on state-changing requests. Machine endpoints
+  // authenticate independently (cron bearer, webhook HMAC) or are intentionally public
+  // (form submit) and legitimately have no browser Origin, so they're exempt here;
+  // everything else (login/setup/invite/reset included) must prove same-origin.
+  const method = context.request.method;
+  const isMachineEndpoint =
+    pathname === "/api/cms/cron/publish" ||
+    pathname === "/api/cms/cron/tasks" ||
+    pathname.startsWith("/api/cms/webhooks/") ||
+    pathname.startsWith("/api/cms/forms/submit/");
+  if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && !isMachineEndpoint) {
+    // Compare against an explicitly configured origin when set (robust behind a proxy that
+    // may rewrite Host); otherwise fall back to the request's own origin.
+    const host = readEnv("CMS_TRUSTED_ORIGIN") ?? context.url.origin;
     const origin = context.request.headers.get("origin");
-    const host = context.url.origin;
-    if (origin && origin !== host) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
+    const referer = context.request.headers.get("referer");
+    const secFetchSite = context.request.headers.get("sec-fetch-site");
+
+    let refererOk = false;
+    if (!origin && referer) {
+      try {
+        refererOk = new URL(referer).origin === host;
+      } catch {
+        refererOk = false;
+      }
+    }
+    const originOk = origin === host;
+    // Reject an explicit cross-site Fetch-Metadata signal, or the absence of any
+    // trustworthy same-origin signal (the hole the old `if (origin && ...)` left open).
+    if (secFetchSite === "cross-site" || !(originOk || refererOk)) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
     }
   }
 

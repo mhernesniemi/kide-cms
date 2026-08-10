@@ -6,6 +6,7 @@ import {
   folders,
   hashPassword,
   verifyPassword,
+  hashToken,
   createSession,
   validateSession,
   destroySession,
@@ -37,6 +38,11 @@ import {
   streamSeoDescription,
   streamTranslation,
   readEnv,
+  peekRateLimit,
+  hitRateLimit,
+  recordRateLimit,
+  clearRateLimit,
+  pruneRateLimits,
 } from "@/cms/core";
 
 import * as schema from "../.generated/schema";
@@ -70,6 +76,7 @@ export {
   folders,
   hashPassword,
   verifyPassword,
+  hashToken,
   createSession,
   validateSession,
   destroySession,
@@ -101,4 +108,9 @@ export {
   streamSeoDescription,
   streamTranslation,
   readEnv,
+  peekRateLimit,
+  hitRateLimit,
+  recordRateLimit,
+  clearRateLimit,
+  pruneRateLimits,
 };

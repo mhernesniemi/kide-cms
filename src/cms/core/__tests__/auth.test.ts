@@ -38,6 +38,18 @@ describe("hashPassword / verifyPassword", () => {
     expect(await verifyPassword("pbkdf2:100000", "x")).toBe(false);
   });
 
+  it("rejects a hostile iteration count and invalid base64 without spinning or throwing", async () => {
+    expect(await verifyPassword("pbkdf2:99999999999:c2FsdA==:ZGln", "x")).toBe(false); // over the iteration cap
+    expect(await verifyPassword("pbkdf2:100000:!!!notbase64!!!:ZGln", "x")).toBe(false); // bad base64 salt
+    expect(await verifyPassword("scrypt:100000:c2FsdA==:ZGln", "x")).toBe(false); // wrong scheme
+  });
+
+  it("bounds password length on hash and verify", async () => {
+    await expect(hashPassword("a".repeat(5000))).rejects.toThrow(/maximum length/);
+    const hash = await hashPassword("normal");
+    expect(await verifyPassword(hash, "a".repeat(5000))).toBe(false);
+  });
+
   it("is case-sensitive", async () => {
     const hash = await hashPassword("Secret");
     expect(await verifyPassword(hash, "secret")).toBe(false);
