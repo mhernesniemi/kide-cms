@@ -42,6 +42,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isSetupApi = pathname === "/api/cms/auth/setup";
   const isInvitePage = pathname === "/admin/invite";
   const isInviteApi = pathname === "/api/cms/auth/invite";
+  const isTwoFactorPage = pathname === "/admin/two-factor";
 
   // Public despite the /api/cms prefix: cmsImage() puts these URLs on public pages.
   // Only reads files under public/, which are served unauthenticated anyway.
@@ -159,6 +160,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     isWebhookApi ||
     isInvitePage ||
     isInviteApi ||
+    isTwoFactorPage ||
     isFormSubmit
   ) {
     return addSecurityHeaders(await next());

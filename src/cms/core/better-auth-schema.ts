@@ -22,6 +22,7 @@ export const user = sqliteTable("cms_users", {
   emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
   image: text("image"),
   role: text("role"),
+  twoFactorEnabled: integer("two_factor_enabled", { mode: "boolean" }).default(false),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   _createdAt: text("_created_at").notNull(),
@@ -64,5 +65,15 @@ export const verification = sqliteTable("cms_verifications", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
 
+export const twoFactor = sqliteTable("cms_two_factors", {
+  id: text("_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  secret: text("secret").notNull(),
+  backupCodes: text("backup_codes").notNull(),
+  verified: integer("verified", { mode: "boolean" }).notNull().default(true),
+  failedVerificationCount: integer("failed_verification_count").notNull().default(0),
+  lockedUntil: integer("locked_until", { mode: "timestamp_ms" }),
+});
+
 /** The schema object handed to Better Auth's drizzle adapter (keys = Better Auth model names). */
-export const betterAuthSchema = { user, session, account, verification };
+export const betterAuthSchema = { user, session, account, verification, twoFactor };

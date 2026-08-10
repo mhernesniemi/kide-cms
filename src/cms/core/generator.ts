@@ -203,6 +203,18 @@ const generateSchemaFile = (config: CMSConfig): string => {
   identifierIdx: index("verifications_identifier_idx").on(table.identifier),
 }));`);
   parts.push("");
+  parts.push(`export const cmsTwoFactors = sqliteTable("cms_two_factors", {
+  _id: text("_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  secret: text("secret").notNull(),
+  backupCodes: text("backup_codes").notNull(),
+  verified: integer("verified", { mode: "boolean" }).notNull().default(true),
+  failedVerificationCount: integer("failed_verification_count").notNull().default(0),
+  lockedUntil: integer("locked_until"),
+}, (table) => ({
+  userIdx: index("two_factors_user_idx").on(table.userId),
+}));`);
+  parts.push("");
   parts.push(`export const cmsLocks = sqliteTable("cms_locks", {
   _id: text("_id").primaryKey(),
   collection: text("collection").notNull(),

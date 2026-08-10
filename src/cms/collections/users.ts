@@ -26,5 +26,7 @@ export default defineCollection({
     image: fields.text({ admin: { hidden: true } }),
     createdAt: fields.number({ admin: { hidden: true } }),
     updatedAt: fields.number({ admin: { hidden: true } }),
+    // Set by Better Auth's two-factor plugin once a user enrolls TOTP.
+    twoFactorEnabled: fields.boolean({ defaultValue: false, admin: { hidden: true } }),
   },
 });

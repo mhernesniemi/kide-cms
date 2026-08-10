@@ -16,6 +16,9 @@ export type CmsRuntimeConfig = {
   storage: CmsStorageAdapter;
   email?: CmsEmailAdapter;
   env?: (key: string) => string | undefined;
+  // Resolved admin auth config (SSO providers + MFA switches). A getter so it's read lazily
+  // when the Better Auth engine is built, and so core stays decoupled from the user's config.
+  authConfig?: () => import("./auth-config").ResolvedAdminAuthConfig;
 };
 
 let runtime: CmsRuntimeConfig | null = null;
@@ -57,6 +60,10 @@ export const getEmail = (): CmsEmailAdapter => {
 };
 
 export const readEnv = (key: string): string | undefined => getCmsRuntime().env?.(key) ?? process.env[key];
+
+/** Resolved admin auth config, or null if the app hasn't registered one. */
+export const getAuthConfig = (): import("./auth-config").ResolvedAdminAuthConfig | null =>
+  getCmsRuntime().authConfig?.() ?? null;
 
 // --- background task tracking ----------------------------------------------
 // Search indexing and audit writes are dispatched fire-and-forget so requests

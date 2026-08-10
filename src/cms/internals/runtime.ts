@@ -17,6 +17,7 @@ import {
   createPasswordReset,
   validatePasswordReset,
   consumePasswordReset,
+  resolveAdminAuth,
   acquireLock,
   releaseLock,
   recordAudit,
@@ -42,6 +43,7 @@ import {
   pruneRateLimits,
 } from "@/cms/core";
 
+import cmsConfig from "../cms.config";
 import * as schema from "../.generated/schema";
 import { closeDb, getDb } from "../adapters/db";
 import { deleteFile, getFile, putFile } from "../adapters/storage";
@@ -60,6 +62,7 @@ export const initCmsRuntime = () => {
     email: { sendInviteEmail, sendPasswordResetEmail, isEmailConfigured },
     env: (key) =>
       (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.[key] ?? process.env[key],
+    authConfig: () => resolveAdminAuth(cmsConfig),
   });
 
   initialized = true;

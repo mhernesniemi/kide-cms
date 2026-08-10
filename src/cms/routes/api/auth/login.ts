@@ -81,7 +81,10 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   // Verify credentials and issue the session through Better Auth. It throws on bad
   // credentials (and disabled/locked accounts), which we treat uniformly as invalid.
   const engine = await getAuth();
-  let result: { headers: Headers; response: { user: { id: string; email: string; role?: string }; token?: string } };
+  let result: {
+    headers: Headers;
+    response: { user?: { id: string; email: string; role?: string }; token?: string; twoFactorRedirect?: boolean };
+  };
   try {
     result = (await engine.api.signInEmail({
       body: { email, password },
@@ -93,10 +96,23 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     return new Response(null, { status: 303, headers: { Location: "/admin/login?error=invalid" } });
   }
 
-  // Success — clear this account's failed-login budget (but not the IP bucket).
+  // Correct password — clear this account's failed-login budget (but not the IP bucket).
   await clearRateLimit("login:email", emailKey);
 
-  const user = result.response.user;
+  // Second factor required: Better Auth withheld the session and set the pending-2FA cookie.
+  // Forward that cookie and route to the TOTP challenge instead of the (nonexistent) session.
+  if (result.response.twoFactorRedirect) {
+    const headers = new Headers();
+    forwardCookies(result.headers, headers);
+    if (isJson) {
+      headers.set("Content-Type", "application/json");
+      return new Response(JSON.stringify({ twoFactorRedirect: true }), { status: 200, headers });
+    }
+    headers.set("Location", "/admin/two-factor");
+    return new Response(null, { status: 303, headers });
+  }
+
+  const user = result.response.user!;
   void recordAudit({
     action: "auth.login",
     resourceType: "session",

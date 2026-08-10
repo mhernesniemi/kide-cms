@@ -201,6 +201,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         injectRoute({ pattern: "/admin/reset-password", entrypoint: "./src/cms/routes/admin/reset-password.astro" });
         injectRoute({ pattern: "/admin/setup", entrypoint: "./src/cms/routes/admin/setup.astro" });
         injectRoute({ pattern: "/admin/invite", entrypoint: "./src/cms/routes/admin/invite.astro" });
+        injectRoute({ pattern: "/admin/two-factor", entrypoint: "./src/cms/routes/admin/two-factor.astro" });
         injectRoute({ pattern: "/admin/assets", entrypoint: "./src/cms/routes/admin/assets/index.astro" });
         injectRoute({
           pattern: "/admin/assets/[id]",
@@ -225,6 +226,10 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         injectRoute({ pattern: "/api/cms/auth/logout", entrypoint: "./src/cms/routes/api/auth/logout.ts" });
         injectRoute({ pattern: "/api/cms/auth/setup", entrypoint: "./src/cms/routes/api/auth/setup.ts" });
         injectRoute({ pattern: "/api/cms/auth/invite", entrypoint: "./src/cms/routes/api/auth/invite.ts" });
+        injectRoute({
+          pattern: "/api/cms/auth/two-factor-login",
+          entrypoint: "./src/cms/routes/api/auth/two-factor-login.ts",
+        });
         // Better Auth catch-all — serves every endpoint the wrapped routes above don't
         // (get-session, callbacks, verification, MFA, OAuth). More specific patterns win.
         injectRoute({ pattern: "/api/cms/auth/[...all]", entrypoint: "./src/cms/routes/api/auth/[...all].ts" });
