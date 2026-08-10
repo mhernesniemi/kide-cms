@@ -66,6 +66,7 @@ declare module "virtual:kide/content-renderer" {
 
 declare module "virtual:kide/db" {
   export function getDb(): Promise<any>;
+  export function isMigrationFailure(error: unknown): boolean;
 }
 
 declare module "virtual:kide/email" {

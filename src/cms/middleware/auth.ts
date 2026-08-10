@@ -1,6 +1,6 @@
 import { defineMiddleware } from "astro:middleware";
 import { getSessionUser } from "virtual:kide/runtime";
-import { getDb } from "virtual:kide/db";
+import { getDb, isMigrationFailure } from "virtual:kide/db";
 
 let hasUsers: boolean | null = null;
 
@@ -57,7 +57,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
       } else {
         hasUsers = true;
       }
-    } catch {
+    } catch (error) {
+      // A broken migration must surface, not masquerade as a fresh install — otherwise
+      // /admin/setup would let someone create an admin against a half-migrated schema.
+      if (isMigrationFailure(error)) throw error;
       // Tables may not exist yet (first run, schema not pushed)
       hasUsers = false;
     }

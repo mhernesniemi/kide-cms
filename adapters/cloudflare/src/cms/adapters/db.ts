@@ -4,6 +4,10 @@ import { disposeCfEnv, getCfEnv } from "./cf-env";
 
 let dbInstance: ReturnType<typeof drizzle> | null = null;
 
+// D1 migrations are applied out of band via `wrangler d1 migrations apply`, so there is
+// no boot-time migration here that could fail. Present to satisfy the shared middleware.
+export const isMigrationFailure = (_error: unknown): boolean => false;
+
 export const getDb = async () => {
   if (dbInstance) return dbInstance;
 
