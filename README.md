@@ -10,7 +10,7 @@ Instead of importing a CMS package, `create-kide-app` clones this repo as your p
 ## Quick Start
 
 ```bash
-pnpx create-kide-app my-project
+pnpm create kide-app my-project
 ```
 
 You'll be asked for a project name, deploy target (Node.js or Cloudflare), and whether to seed demo content. The CLI clones this repo, installs, initializes git, and (for Cloudflare) provisions D1 + R2 and deploys. You end up with a running app.
@@ -57,7 +57,7 @@ posts: {
 
 ## Features
 
-- 13 field types including blocks, repeaters, and relations
+- 14 field types including blocks, repeaters, and relations
 - Drafts, publishing, scheduling, versioning
 - Per-field i18n via translation tables
 - Asset management with folders, focal points, on-demand optimization
