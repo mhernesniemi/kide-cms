@@ -2,9 +2,7 @@
 import { safeUrl } from "@/cms/core";
 
 const { eyebrow, heading, body, ctaLabel, ctaHref } = Astro.props;
-// Astro escapes attribute values but does not reject URL schemes, so a stored
-// `javascript:` link would run on click. Block fields are editor-authored data —
-// treat any URL from them the same way rich-text links are treated.
+// Astro escapes attribute values but does not reject URL schemes.
 const href = ctaHref ? safeUrl(String(ctaHref)) : null;
 const hasContent = Boolean(eyebrow || heading || body || (ctaLabel && href));
 ---

@@ -52,9 +52,7 @@ export const GET: APIRoute = async ({ params, url }) => {
   const data = await getStorage().getFile(src);
   if (!data) return new Response("Not found", { status: 404 });
 
-  // This fallback streams the file untransformed, so its type is whatever the stored
-  // extension says. Raster images are safe to render inline; anything else (SVG above all,
-  // which runs script when rendered) is forced to download instead.
+  // Untransformed, so the type comes from the stored extension. Only rasters render inline.
   const contentType = originalContentType(src);
   const headers: Record<string, string> = {
     "Content-Type": contentType,

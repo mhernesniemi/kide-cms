@@ -43,9 +43,7 @@ const EXTENSION_BY_MIME: Record<string, string> = {
   "video/webm": ".webm",
 };
 
-// Extensions the server would hand back as active content. Uploads are served from the
-// same origin as the admin, so a file stored under one of these is script in the victim's
-// session, whatever its declared MIME type was.
+// Served from the admin's own origin, so any of these would execute as script there.
 const ACTIVE_CONTENT_EXTENSIONS = new Set([
   "html",
   "htm",
@@ -63,17 +61,12 @@ const ACTIVE_CONTENT_EXTENSIONS = new Set([
   "jsp",
 ]);
 
-/**
- * The stored extension decides the Content-Type the file is later served with, so it is
- * derived from the verified MIME type rather than the uploader's filename. Taking it from
- * the filename let a caller declare an allowed image type and still land a `.html` file.
- */
+/** The stored extension decides how the file is served, so derive it from the verified type. */
 const storedExtension = (file: File): string => {
   const known = EXTENSION_BY_MIME[file.type];
   if (known) return known;
 
-  // Unknown type — only possible via a custom `admin.uploads.allowedTypes`. Keep a
-  // conservative version of the supplied extension rather than inventing one.
+  // Unknown type — only reachable via a custom `admin.uploads.allowedTypes`.
   const raw = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".") + 1) : "";
   const cleaned = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
   if (!cleaned || cleaned.length > 8 || ACTIVE_CONTENT_EXTENSIONS.has(cleaned)) return "";

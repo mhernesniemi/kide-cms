@@ -42,13 +42,16 @@ export type CropOptions = {
   focalY?: number | null;
 };
 
-// Height is caller-supplied and, unlike width, has no preset list to snap to. Left
-// unbounded it either burns CPU on an enormous render or makes sharp throw, which used to
-// fall through to serving the untransformed original.
+// Unlike width, height has no preset list to snap to and is caller-supplied.
 const MAX_HEIGHT = 4320;
 
 function clampHeight(height: number): number {
   return Math.min(Math.max(1, Math.round(height)), MAX_HEIGHT);
+}
+
+function clampPercent(value: number, fallback: number): number {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(Math.max(0, Math.round(value)), 100);
 }
 
 function clampWidth(width: number): number {
@@ -79,8 +82,10 @@ export function cmsImage(src: string, width?: number, format: Format = "webp", c
     const parts: string[] = [];
     if (clamped) parts.push(`width=${clamped}`);
     if (height) parts.push(`height=${height}`, "fit=cover");
-    if (height && hasFocal)
-      parts.push(`gravity=${(crop!.focalX! / 100).toFixed(2)}x${(crop!.focalY! / 100).toFixed(2)}`);
+    if (height)
+      parts.push(
+        hasFocal ? `gravity=${(crop!.focalX! / 100).toFixed(2)}x${(crop!.focalY! / 100).toFixed(2)}` : "gravity=auto",
+      );
     parts.push(`format=${format}`);
     parts.push("quality=80");
     return `/cdn-cgi/image/${parts.join(",")}${src}`;
@@ -140,14 +145,17 @@ export async function transformImage(
     : "webp";
   const resolvedWidth = options.width ? clampWidth(options.width) : undefined;
   const resolvedHeight = options.height ? clampHeight(options.height) : undefined;
-  const resolvedQuality = options.quality ?? 80;
+  // Snapped to whole numbers: these are cache-key inputs on a route that needs no session,
+  // so continuous values would let one image mint unlimited cache entries.
+  const resolvedQuality = clampPercent(options.quality ?? 80, 80);
   const crop = resolvedWidth != null && resolvedHeight != null;
-  const focalX = crop && options.focalX != null ? Math.max(0, Math.min(100, options.focalX)) : null;
-  const focalY = crop && options.focalY != null ? Math.max(0, Math.min(100, options.focalY)) : null;
+  const focalX = crop && options.focalX != null ? clampPercent(options.focalX, 50) : null;
+  const focalY = crop && options.focalY != null ? clampPercent(options.focalY, 50) : null;
 
   if (!existsSync(cacheDir)) mkdirSync(cacheDir, { recursive: true });
   const safeName = src.replace(/[^a-zA-Z0-9.-]/g, "_");
-  const focalKey = crop ? `_f${focalX ?? "c"}-${focalY ?? "c"}` : "";
+  const autoCrop = crop && focalX == null && focalY == null;
+  const focalKey = crop ? (autoCrop ? "_fauto" : `_f${focalX ?? "c"}-${focalY ?? "c"}`) : "";
   const cacheKey = `${safeName}_${resolvedWidth ?? 0}x${resolvedHeight ?? 0}${focalKey}_q${resolvedQuality}.${resolvedFormat}`;
   const cachePath = path.join(cacheDir, cacheKey);
 
@@ -160,7 +168,12 @@ export async function transformImage(
 
   let pipeline = sharp(readFileSync(filePath));
 
-  if (crop) {
+  if (autoCrop) {
+    pipeline = pipeline.resize(resolvedWidth!, resolvedHeight!, {
+      fit: "cover",
+      position: sharp.strategy.attention,
+    });
+  } else if (crop) {
     // Focal-aware cover crop: pick the largest source window matching the target
     // aspect, positioned so the focal point stays framed, then resize to target.
     const meta = await pipeline.metadata();

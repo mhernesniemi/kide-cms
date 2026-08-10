@@ -4,10 +4,8 @@ import config from "virtual:kide/config";
 
 export const prerender = false;
 
-// SVG is deliberately absent: uploads are served from the same origin as the admin, and
-// an SVG executes script when served inline, so accepting one by default hands any account
-// that can upload a stored XSS. Re-enable it with `admin.uploads.allowedTypes` only if you
-// also serve /uploads with a restrictive CSP or Content-Disposition.
+// SVG is deliberately absent — it executes script when served inline from the admin's
+// origin. Re-enable via `admin.uploads.allowedTypes` only behind a CSP or Content-Disposition.
 const DEFAULT_ALLOWED_TYPES = [
   "image/jpeg",
   "image/png",

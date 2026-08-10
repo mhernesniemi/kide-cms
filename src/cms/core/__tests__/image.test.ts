@@ -37,6 +37,13 @@ describe("cmsImage", () => {
     expect(uncropped).not.toContain("fx=");
   });
 
+  it("omits focal params when no focal point is set, so the transform picks one", () => {
+    const url = cmsImage("/uploads/a.jpg", 1280, "webp", { aspect: "16/9" });
+    expect(url).toContain("h=720");
+    expect(url).not.toContain("fx=");
+    expect(url).not.toContain("fy=");
+  });
+
   it("accepts aspect in /, : and x notations", () => {
     for (const aspect of ["16/9", "16:9", "16x9"]) {
       expect(cmsImage("/uploads/a.jpg", 1280, "webp", { aspect })).toContain("h=720");

@@ -10,18 +10,9 @@ const timingSafeEqual = (a: string, b: string) => {
 };
 
 /**
- * Cron endpoints sit outside the admin session check, so `CRON_SECRET` is their
- * only gate. Read it through `readEnv` rather than `import.meta.env`: the latter
- * is inlined at build time, which would bake the secret into `dist/` and leave
- * the check permanently disabled for anyone setting it in the deploy environment.
- *
- * Nothing in this module may touch `import.meta.env` at all, not even for `DEV`.
- * Referencing it makes Vite emit the whole env object, and it fills in every key
- * whose name appears as a string literal in the module — so `"CRON_SECRET"` above
- * would be substituted with its build-time value and shipped inside `dist/`.
- *
- * Unset means "deny" unless we are explicitly in development, so a deploy that
- * forgets NODE_ENV fails closed rather than open.
+ * Nothing in this module may reference `import.meta.env`, not even `DEV`: Vite then emits
+ * the whole env object, filling in every key named as a string literal here — so
+ * `"CRON_SECRET"` would be baked into `dist/`. Read it through `readEnv` at runtime.
  */
 export const isAuthorized = (request: Request) => {
   const secret = readEnv("CRON_SECRET");

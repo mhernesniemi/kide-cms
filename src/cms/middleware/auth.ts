@@ -21,7 +21,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isInvitePage = pathname === "/admin/invite";
   const isInviteApi = pathname === "/api/cms/auth/invite";
 
-  if (!isAdminRoute && !isAdminApiRoute) {
+  // Public despite the /api/cms prefix: cmsImage() puts these URLs on public pages.
+  // Only reads files under public/, which are served unauthenticated anyway.
+  const isPublicImageApi = pathname.startsWith("/api/cms/img/");
+
+  if ((!isAdminRoute && !isAdminApiRoute) || isPublicImageApi) {
     return next();
   }
 

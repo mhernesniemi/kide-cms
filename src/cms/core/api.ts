@@ -241,13 +241,7 @@ const deserializeFromDb = (collection: CollectionConfig, row: Record<string, unk
   return result;
 };
 
-/**
- * Collections are default-allow, but an `auth` collection holds the credentials and
- * roles that every other rule is evaluated against — leaving it open lets any signed-in
- * account grant itself `admin`, overwrite another user's password, or delete accounts.
- * So auth collections default to admin-only, with non-admins limited to their own row.
- * An explicit `access` rule still wins; this only fills the gap when none is declared.
- */
+/** Auth collections are default-deny: admin-only, non-admins limited to their own row. */
 const defaultAuthAccess = (operation: CMSOperation, context: RuntimeContext, doc?: Record<string, unknown> | null) => {
   const user = context.user;
   if (!user) return false;
@@ -274,11 +268,6 @@ const canAccess = async (
   return true;
 };
 
-/**
- * `role` decides what every access rule grants, and `password` is the credential itself.
- * Neither may be written by a non-admin, and `password` only ever on your own record —
- * enforced even when a custom collection rule opens up writes more broadly.
- */
 const canWriteAuthField = (fieldName: string, context: RuntimeContext, doc?: Record<string, unknown> | null) => {
   const user = context.user;
   if (user?.role === "admin") return true;
@@ -286,12 +275,7 @@ const canWriteAuthField = (fieldName: string, context: RuntimeContext, doc?: Rec
   return !!user && !!doc && doc._id === user.id;
 };
 
-/**
- * Strip privileged auth fields the caller may not write. On create only `role` is
- * privileged — setting a password on a brand-new account escalates nothing, whereas
- * on update it would overwrite someone else's credential. A field carrying an explicit
- * `access.update` rule is left to that rule instead.
- */
+/** On create only `role` is privileged; a password on a new account escalates nothing. */
 const stripProtectedAuthFields = (
   collection: CollectionConfig,
   data: Record<string, unknown>,
@@ -308,11 +292,6 @@ const stripProtectedAuthFields = (
   }
 };
 
-/**
- * Drop incoming values for fields the caller may not write. Applied to `create` as well
- * as `update`: a rule like `access: { update: hasRole("admin") }` reads as "only admins
- * set this field", and enforcing it only on update let the same value through on create.
- */
 const stripUnwritableFields = async (
   collection: CollectionConfig,
   data: Record<string, unknown>,
@@ -328,12 +307,7 @@ const stripUnwritableFields = async (
   }
 };
 
-/**
- * Remove fields the caller may not read. Field-level `access.read` previously only hid
- * the input in the admin form while the API returned the value to anyone, so a rule that
- * looked like a confidentiality boundary wasn't one. Unreadable fields are omitted
- * entirely, matching how `password` is already handled.
- */
+/** Unreadable fields are omitted entirely, matching how `password` is handled. */
 const stripUnreadableFields = async (
   collection: CollectionConfig,
   doc: Record<string, unknown>,
@@ -465,11 +439,7 @@ export const createCms = (config: CMSConfig) => {
       return stripUnreadableFields(collection, stripped, context);
     };
 
-    /**
-     * Guard for the document-scoped reads that don't go through `findById` — version
-     * history and translations. Both expose stored field values, so they need the same
-     * read rule; without this they were readable by anyone who knew the id.
-     */
+    /** Read guard for the document-scoped reads that bypass `findById`. */
     const assertReadable = async (id: string, context: RuntimeContext) => {
       if (context._system) return;
       const db = await getDb();
@@ -869,8 +839,7 @@ export const createCms = (config: CMSConfig) => {
         await collection.hooks?.afterDelete?.(existing, hookContext);
         auditContent("content.delete", slug, id, context);
         removeSearch(collection, id);
-        // Every other event dispatches the findById result, which is already stripped.
-        // `existing` is the raw row, so on an auth collection it still holds the password hash.
+        // `existing` is the raw row; every other event dispatches the stripped findById result.
         dispatchWebhooks(config, "delete", slug, stripSensitiveFields(existing), context.user);
       },
 
@@ -1124,8 +1093,7 @@ export const createCms = (config: CMSConfig) => {
           return {
             version: row._version as number,
             createdAt: row._createdAt as string,
-            // Snapshots are taken from the raw row, so on an auth collection they carry
-            // the stored password hash. Strip it the same way reads do.
+            // Snapshots come from the raw row, so they carry the password hash.
             snapshot: snapshot && typeof snapshot === "object" ? stripSensitiveFields(snapshot) : snapshot,
           };
         });
