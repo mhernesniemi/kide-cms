@@ -2,12 +2,17 @@ import { existsSync, mkdirSync } from "node:fs";
 import { readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const publicDir = path.join(process.cwd(), "public");
+// Where /uploads/* files live on disk. Defaults to public/uploads for zero-config dev;
+// set CMS_UPLOADS_DIR to a path outside the release tree so uploads survive deploys.
+const uploadsDir = process.env.CMS_UPLOADS_DIR
+  ? path.resolve(process.env.CMS_UPLOADS_DIR)
+  : path.join(process.cwd(), "public", "uploads");
 
-// Resolve storagePath safely under publicDir, rejecting any traversal attempts
+// Map a "/uploads/<file>" storagePath onto uploadsDir, rejecting any traversal attempts.
 function safeResolve(storagePath: string): string {
-  const resolved = path.resolve(publicDir, storagePath.replace(/^\/+/, ""));
-  if (!resolved.startsWith(publicDir + path.sep) && resolved !== publicDir) {
+  const rel = storagePath.replace(/^\/+/, "").replace(/^uploads(?:\/|$)/, "");
+  const resolved = path.resolve(uploadsDir, rel);
+  if (resolved !== uploadsDir && !resolved.startsWith(uploadsDir + path.sep)) {
     throw new Error(`Invalid storage path: ${storagePath}`);
   }
   return resolved;

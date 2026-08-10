@@ -132,12 +132,16 @@ export async function transformImage(
   const sharpModule = "sharp";
   const sharp = (await import(/* @vite-ignore */ sharpModule)).default;
 
-  const publicDir = path.join(process.cwd(), "public");
+  // Must match the storage adapter: the source lives wherever uploads are written.
+  const uploadsDir = process.env.CMS_UPLOADS_DIR
+    ? path.resolve(process.env.CMS_UPLOADS_DIR)
+    : path.join(process.cwd(), "public", "uploads");
   const cacheDir = path.join(process.cwd(), ".cms-cache", "img");
 
-  // Resolve the source safely under publicDir, rejecting traversal.
-  const filePath = path.resolve(publicDir, src.replace(/^\/+/, ""));
-  if (!filePath.startsWith(publicDir + path.sep)) return null;
+  // Resolve the source safely under uploadsDir, rejecting traversal.
+  const rel = src.replace(/^\/+/, "").replace(/^uploads(?:\/|$)/, "");
+  const filePath = path.resolve(uploadsDir, rel);
+  if (filePath !== uploadsDir && !filePath.startsWith(uploadsDir + path.sep)) return null;
   if (!existsSync(filePath)) return null;
 
   const resolvedFormat: Format = ALLOWED_FORMATS.includes(options.format as Format)

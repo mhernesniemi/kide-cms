@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -127,6 +128,28 @@ describe("transformImage", () => {
   it("rejects path traversal outside public/", async () => {
     expect(await transformImage("/../package.json")).toBeNull();
     expect(await transformImage("/uploads/../../package.json")).toBeNull();
+  });
+
+  it("reads the source from CMS_UPLOADS_DIR when set", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "kide-img-"));
+    const original = process.env.CMS_UPLOADS_DIR;
+    try {
+      process.env.CMS_UPLOADS_DIR = dir;
+      const buffer = await sharp({
+        create: { width: 100, height: 100, channels: 3, background: { r: 10, g: 20, b: 30 } },
+      })
+        .png()
+        .toBuffer();
+      writeFileSync(path.join(dir, "__vitest-fixture-relo__.png"), buffer);
+
+      const result = await transformImage("/uploads/__vitest-fixture-relo__.png", { width: 320 });
+      expect(result).not.toBeNull();
+      expect(result!.contentType).toBe("image/webp");
+    } finally {
+      if (original === undefined) delete process.env.CMS_UPLOADS_DIR;
+      else process.env.CMS_UPLOADS_DIR = original;
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("resizes without cropping when only width is given, preserving aspect", async () => {
