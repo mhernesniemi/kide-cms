@@ -5,7 +5,16 @@ import DocumentsDataTable, { PAGE_SIZE } from "@/cms/admin/components/DocumentsD
 import { buttonVariants } from "@/cms/admin/components/ui/button";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
-import { formatDate, formatFieldValue, getLabelField, getListColumns, humanize } from "@/cms/core";
+import { collaboration } from "virtual:kide/runtime";
+import { REVIEW_STATE_META } from "@/cms/admin/lib/collaboration";
+import {
+  formatDate,
+  formatFieldValue,
+  getLabelField,
+  getListColumns,
+  humanize,
+  resolveCollaboration,
+} from "@/cms/core";
 import { canWrite, getVisualStatus } from "@/cms/admin/lib/access";
 import { loadRelationOptionList, loadSharedSectionUsageCounts } from "@/cms/admin/lib/edit-data";
 
@@ -70,6 +79,33 @@ for (const column of listColumns) {
   for (const option of options) relationLabels[option.value] = option.label;
 }
 
+// Collaboration columns (review state + editor) — only for collections in the
+// collaboration list that also support drafts. Not sortable (non-DB columns).
+const collabListColumns =
+  resolveCollaboration(config, collection.slug).enabled && collection.drafts ? ["__review", "__editor"] : [];
+const displayColumns = [...listColumns, ...collabListColumns];
+
+// Batch-load review state + editor for the listed documents.
+let collabStates: Record<string, { reviewState: string; editor: string | null }> = {};
+const collabUserNames: Record<string, string> = {};
+if (collabListColumns.length > 0) {
+  collabStates = await collaboration.getStatesForDocs(
+    collection.slug,
+    docs.map((entry: Record<string, unknown>) => String(entry._id)),
+  );
+  const editorIds = [
+    ...new Set(
+      Object.values(collabStates)
+        .map((s) => s.editor)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  if (editorIds.length > 0) {
+    const users = await cmsRuntime.users?.find({ status: "any", limit: 100 }, runtimeContext).catch(() => []);
+    for (const u of users ?? []) collabUserNames[String(u._id)] = String(u.name ?? u.email ?? u._id);
+  }
+}
+
 const sharedSectionUsageCounts =
   collection.slug === "shared-sections"
     ? await loadSharedSectionUsageCounts(
@@ -93,17 +129,25 @@ const tableRows = docs.map((entry: Record<string, unknown>) => ({
   ],
   searchText: String(entry[getLabelField(collection)] ?? entry.slug ?? entry._id ?? ""),
   values: Object.fromEntries(
-    listColumns.map((column) => [
+    displayColumns.map((column) => [
       column,
-      column === "_status"
-        ? getVisualStatus(entry)
-        : column === "__usage"
-          ? `${sharedSectionUsageCounts[String(entry._id)] ?? 0} places`
-          : column === "_updatedAt" || column === "_createdAt"
-            ? formatDate(entry[column])
-            : column.startsWith("_")
-              ? String(entry[column] ?? "—")
-              : formatFieldValue(collection.fields[column], entry[column], relationLabels),
+      column === "__review"
+        ? REVIEW_STATE_META[
+            (collabStates[String(entry._id)]?.reviewState ?? "in_progress") as keyof typeof REVIEW_STATE_META
+          ].label
+        : column === "__editor"
+          ? collabStates[String(entry._id)]?.editor
+            ? (collabUserNames[collabStates[String(entry._id)]!.editor!] ?? "—")
+            : "Unassigned"
+          : column === "_status"
+            ? getVisualStatus(entry)
+            : column === "__usage"
+              ? `${sharedSectionUsageCounts[String(entry._id)] ?? 0} places`
+              : column === "_updatedAt" || column === "_createdAt"
+                ? formatDate(entry[column])
+                : column.startsWith("_")
+                  ? String(entry[column] ?? "—")
+                  : formatFieldValue(collection.fields[column], entry[column], relationLabels),
     ]),
   ),
 }));
@@ -133,7 +177,18 @@ const tableRows = docs.map((entry: Record<string, unknown>) => ({
     labelField={getLabelField(collection)}
     newHref={`/admin/${collection.slug}/new`}
     title={collection.labels.plural}
-    columns={listColumns.map((column) => ({ key: column, label: column === "__usage" ? "Used in" : humanize(column) }))}
+    columns={displayColumns.map((column) => ({
+      key: column,
+      label:
+        column === "__usage"
+          ? "Used in"
+          : column === "__review"
+            ? "Review"
+            : column === "__editor"
+              ? "Editor"
+              : humanize(column),
+      sortable: !column.startsWith("__"),
+    }))}
     data={tableRows}
     searchPlaceholder={`Filter ${collection.labels.plural.toLowerCase()}...`}
     serverPagination={{

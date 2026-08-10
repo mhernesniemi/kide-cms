@@ -14,6 +14,8 @@ declare module "virtual:kide/api" {
 
 declare module "virtual:kide/schema" {
   const cmsTables: Record<string, { main: any; translations?: any }>;
+  export const cmsSessions: any;
+  export const cmsPasswordResets: any;
   export { cmsTables };
 }
 
@@ -31,6 +33,9 @@ declare module "virtual:kide/runtime" {
     createInvite,
     validateInvite,
     consumeInvite,
+    createPasswordReset,
+    validatePasswordReset,
+    consumePasswordReset,
     SESSION_COOKIE_NAME,
     acquireLock,
     releaseLock,
@@ -46,11 +51,13 @@ declare module "virtual:kide/runtime" {
     pruneAuditLog,
     auditRequestMeta,
     tokenReference,
+    collaboration,
     search,
     indexDocument,
     removeDocument,
     reindexAll,
     readEnv,
+    getEmail,
   } from "@/cms/core";
 }
 
@@ -71,6 +78,7 @@ declare module "virtual:kide/db" {
 
 declare module "virtual:kide/email" {
   export function sendInviteEmail(to: string, inviteUrl: string): Promise<boolean>;
+  export function sendPasswordResetEmail(to: string, resetUrl: string): Promise<boolean>;
   export function sendFormSubmissionEmail(
     to: string,
     formTitle: string,

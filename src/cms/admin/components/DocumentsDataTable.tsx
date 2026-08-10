@@ -52,6 +52,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 type DataTableColumn = {
   key: string;
   label: string;
+  // Non-field columns (e.g. collaboration review state) opt out of sorting so
+  // they never send a sort-by request for a column the DB doesn't have.
+  sortable?: boolean;
 };
 
 type DataTableRow = {
@@ -485,6 +488,7 @@ export default function DocumentsDataTable({
       ...columns.map<ColumnDef<DataTableRow>>((column) => ({
         accessorFn: (row) => row.values[column.key] ?? "",
         id: column.key,
+        enableSorting: column.sortable !== false,
         header: ({ column: headerColumn }) => <DataTableColumnHeader column={headerColumn} title={column.label} />,
         cell: ({ row }) => {
           const value = row.original.values[column.key] ?? "\u2014";

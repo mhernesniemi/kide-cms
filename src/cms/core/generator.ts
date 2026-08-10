@@ -123,7 +123,7 @@ const generateVersionsTable = (collection: CollectionConfig): string | null => {
 const generateSchemaFile = (config: CMSConfig): string => {
   const parts: string[] = [
     `// auto-generated — do not edit`,
-    `import { sqliteTable, text, integer, real, unique, index } from "drizzle-orm/sqlite-core";`,
+    `import { sqliteTable, text, integer, real, unique, index, primaryKey } from "drizzle-orm/sqlite-core";`,
     ``,
   ];
 
@@ -182,6 +182,14 @@ const generateSchemaFile = (config: CMSConfig): string => {
   usedAt: text("used_at"),
 });`);
   parts.push("");
+  parts.push(`export const cmsPasswordResets = sqliteTable("cms_password_resets", {
+  _id: text("_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: text("expires_at").notNull(),
+  usedAt: text("used_at"),
+});`);
+  parts.push("");
   parts.push(`export const cmsAuditLog = sqliteTable("cms_audit_log", {
   _id: text("_id").primaryKey(),
   timestamp: integer("timestamp").notNull(),
@@ -215,6 +223,30 @@ const generateSchemaFile = (config: CMSConfig): string => {
 }, (table) => ({
   dueIdx: index("outbox_due_idx").on(table.status, table.nextAttemptAt),
   dedupeIdx: index("outbox_dedupe_idx").on(table.dedupeKey),
+}));`);
+  parts.push("");
+  parts.push(`export const cmsCollaboration = sqliteTable("cms_collaboration", {
+  collection: text("collection").notNull(),
+  documentId: text("document_id").notNull(),
+  reviewState: text("review_state").notNull(),
+  editor: text("editor"),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.collection, table.documentId] }),
+}));`);
+  parts.push("");
+  parts.push(`export const cmsComments = sqliteTable("cms_comments", {
+  _id: text("_id").primaryKey(),
+  collection: text("collection").notNull(),
+  documentId: text("document_id").notNull(),
+  field: text("field"),
+  body: text("body").notNull(),
+  authorId: text("author_id"),
+  authorEmail: text("author_email"),
+  resolved: integer("resolved", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at").notNull(),
+}, (table) => ({
+  docIdx: index("comments_doc_idx").on(table.collection, table.documentId),
 }));`);
   parts.push("");
 

@@ -13,6 +13,9 @@ import {
   createInvite,
   validateInvite,
   consumeInvite,
+  createPasswordReset,
+  validatePasswordReset,
+  consumePasswordReset,
   SESSION_COOKIE_NAME,
   setSessionCookie,
   clearSessionCookie,
@@ -22,12 +25,14 @@ import {
   pruneAuditLog,
   auditRequestMeta,
   tokenReference,
+  collaboration,
   search,
   indexDocument,
   removeDocument,
   reindexAll,
   isAiEnabled,
   getAiModel,
+  getEmail,
   streamAltText,
   streamSeoDescription,
   streamTranslation,
@@ -37,7 +42,7 @@ import {
 import * as schema from "../.generated/schema";
 import { closeDb, getDb } from "../adapters/db";
 import { deleteFile, getFile, putFile } from "../adapters/storage";
-import { isEmailConfigured, sendInviteEmail } from "../adapters/email";
+import { isEmailConfigured, sendInviteEmail, sendPasswordResetEmail } from "../adapters/email";
 
 let initialized = false;
 
@@ -49,7 +54,7 @@ export const initCmsRuntime = () => {
     getDb,
     closeDb,
     storage: { putFile, getFile, deleteFile },
-    email: { sendInviteEmail, isEmailConfigured },
+    email: { sendInviteEmail, sendPasswordResetEmail, isEmailConfigured },
     env: (key) =>
       (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.[key] ?? process.env[key],
   });
@@ -72,6 +77,9 @@ export {
   createInvite,
   validateInvite,
   consumeInvite,
+  createPasswordReset,
+  validatePasswordReset,
+  consumePasswordReset,
   SESSION_COOKIE_NAME,
   setSessionCookie,
   clearSessionCookie,
@@ -81,12 +89,14 @@ export {
   pruneAuditLog,
   auditRequestMeta,
   tokenReference,
+  collaboration,
   search,
   indexDocument,
   removeDocument,
   reindexAll,
   isAiEnabled,
   getAiModel,
+  getEmail,
   streamAltText,
   streamSeoDescription,
   streamTranslation,

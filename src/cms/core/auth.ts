@@ -141,6 +141,7 @@ export const getSessionUser = async (request: Request): Promise<SessionUser | nu
 };
 
 const INVITE_EXPIRY_DAYS = 7;
+const PASSWORD_RESET_EXPIRY_HOURS = 1;
 
 export const createInvite = async (userId: string): Promise<{ token: string; expiresAt: string }> => {
   const db = await getDb();
@@ -179,6 +180,49 @@ export const consumeInvite = async (token: string): Promise<void> => {
     .update(schema.cmsInvites)
     .set({ usedAt: new Date().toISOString() })
     .where(eq(schema.cmsInvites.token, token));
+};
+
+export const createPasswordReset = async (userId: string): Promise<{ token: string; expiresAt: string }> => {
+  const db = await getDb();
+  const schema = getSchema();
+  const token = nanoid(40);
+  const expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRY_HOURS * 60 * 60 * 1000).toISOString();
+
+  await db.insert(schema.cmsPasswordResets).values({
+    _id: nanoid(),
+    userId,
+    token,
+    expiresAt,
+  });
+
+  return { token, expiresAt };
+};
+
+export const validatePasswordReset = async (token: string): Promise<{ userId: string; expiresAt: string } | null> => {
+  const db = await getDb();
+  const schema = getSchema();
+  const rows = await db
+    .select()
+    .from(schema.cmsPasswordResets)
+    .where(eq(schema.cmsPasswordResets.token, token))
+    .limit(1);
+
+  if (rows.length === 0) return null;
+
+  const reset = rows[0] as { userId: string; expiresAt: string; usedAt: string | null };
+  if (reset.usedAt) return null;
+  if (new Date(reset.expiresAt) < new Date()) return null;
+
+  return { userId: reset.userId, expiresAt: reset.expiresAt };
+};
+
+export const consumePasswordReset = async (token: string): Promise<void> => {
+  const db = await getDb();
+  const schema = getSchema();
+  await db
+    .update(schema.cmsPasswordResets)
+    .set({ usedAt: new Date().toISOString() })
+    .where(eq(schema.cmsPasswordResets.token, token));
 };
 
 export const SESSION_COOKIE_NAME = "cms_session";

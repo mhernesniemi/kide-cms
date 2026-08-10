@@ -190,6 +190,11 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
 
         // Inject admin pages
         injectRoute({ pattern: "/admin/login", entrypoint: "./src/cms/routes/admin/login.astro" });
+        injectRoute({
+          pattern: "/admin/forgot-password",
+          entrypoint: "./src/cms/routes/admin/forgot-password.astro",
+        });
+        injectRoute({ pattern: "/admin/reset-password", entrypoint: "./src/cms/routes/admin/reset-password.astro" });
         injectRoute({ pattern: "/admin/setup", entrypoint: "./src/cms/routes/admin/setup.astro" });
         injectRoute({ pattern: "/admin/invite", entrypoint: "./src/cms/routes/admin/invite.astro" });
         injectRoute({ pattern: "/admin/assets", entrypoint: "./src/cms/routes/admin/assets/index.astro" });
@@ -201,6 +206,18 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
 
         // Inject API routes
         injectRoute({ pattern: "/api/cms/auth/login", entrypoint: "./src/cms/routes/api/auth/login.ts" });
+        injectRoute({
+          pattern: "/api/cms/auth/forgot-password",
+          entrypoint: "./src/cms/routes/api/auth/forgot-password.ts",
+        });
+        injectRoute({
+          pattern: "/api/cms/auth/reset-password",
+          entrypoint: "./src/cms/routes/api/auth/reset-password.ts",
+        });
+        injectRoute({
+          pattern: "/api/cms/auth/sso/[provider]/start",
+          entrypoint: "./src/cms/routes/api/auth/sso/[provider]/start.ts",
+        });
         injectRoute({ pattern: "/api/cms/auth/logout", entrypoint: "./src/cms/routes/api/auth/logout.ts" });
         injectRoute({ pattern: "/api/cms/auth/setup", entrypoint: "./src/cms/routes/api/auth/setup.ts" });
         injectRoute({ pattern: "/api/cms/auth/invite", entrypoint: "./src/cms/routes/api/auth/invite.ts" });
@@ -211,6 +228,10 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         });
         injectRoute({ pattern: "/api/cms/assets/[id]", entrypoint: "./src/cms/routes/api/assets/[id].ts" });
         injectRoute({ pattern: "/api/cms/assets", entrypoint: "./src/cms/routes/api/assets/index.ts" });
+        injectRoute({
+          pattern: "/api/cms/collaboration",
+          entrypoint: "./src/cms/routes/api/collaboration/index.ts",
+        });
         injectRoute({ pattern: "/api/cms/ai/alt-text", entrypoint: "./src/cms/routes/api/ai/alt-text.ts" });
         injectRoute({ pattern: "/api/cms/ai/seo", entrypoint: "./src/cms/routes/api/ai/seo.ts" });
         injectRoute({ pattern: "/api/cms/ai/translate", entrypoint: "./src/cms/routes/api/ai/translate.ts" });

@@ -1,8 +1,9 @@
 ---
-import { ArrowLeft, ArrowUpRight, Dot } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Dot, Lock } from "lucide-react";
 
 import AdminCard from "@/cms/admin/components/AdminCard.astro";
 import AiGenerateButton from "@/cms/admin/components/AiGenerateButton";
+import CollaborationReviewBar from "@/cms/admin/components/CollaborationReviewBar";
 import DocumentActions from "@/cms/admin/components/DocumentActions";
 import DocumentLock from "@/cms/admin/components/DocumentLock";
 import LiveHeading from "@/cms/admin/components/LiveHeading";
@@ -12,8 +13,17 @@ import { StatusBadge } from "@/cms/admin/components/ui/badge";
 import { buttonVariants } from "@/cms/admin/components/ui/button";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
-import { isAiEnabled } from "virtual:kide/runtime";
-import { formatDate, getFieldGroups, getFieldSets, getLabelField, getSharedBlockTypes } from "@/cms/core";
+import { isAiEnabled, collaboration } from "virtual:kide/runtime";
+import { loadCollaborationData } from "@/cms/admin/lib/collaboration";
+import {
+  formatDate,
+  getFieldGroups,
+  getFieldSets,
+  getLabelField,
+  getSharedBlockTypes,
+  isApprover,
+  resolveCollaboration,
+} from "@/cms/core";
 import {
   getFormAction,
   getVisualStatus,
@@ -167,6 +177,29 @@ const blockRelationOptions: Record<string, Array<{ value: string; label: string 
 for (const [key, opts] of Object.entries(relationOptionsByField)) {
   if (key.startsWith("block:")) blockRelationOptions[key] = opts;
 }
+
+// Editorial collaboration UI — shown only for collections in the collaboration
+// list, and only on normal document edits (not submissions or the translation form).
+const collab = resolveCollaboration(config, collection.slug);
+const showCollab = collab.enabled && mode === "edit" && !isSubmissionView && !translationMode;
+const collabData =
+  showCollab && documentId
+    ? await loadCollaborationData({
+        collaboration,
+        cmsRuntime,
+        runtimeContext,
+        collection: collection.slug,
+        documentId,
+        currentUser: user,
+      })
+    : null;
+
+// Publish gate: when collaboration.requireApproval is on, non-admins can't
+// publish a draft-enabled document until its review is approved. New documents
+// (no review yet) count as unapproved.
+const requireApproval = collab.enabled && collab.requireApproval && !!collection.drafts && !isSubmissionView;
+const publishBlocked =
+  requireApproval && !isApprover(config, user?.role) && (collabData?.reviewState ?? "in_progress") !== "approved";
 ---
 
 <section class="space-y-14">
@@ -266,25 +299,36 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
                       ? "Save draft"
                       : "Save"}
                 </button>
-                {collection.drafts && (
-                  <button
-                    class={buttonVariants({ variant: "publish" })}
-                    type="submit"
-                    form="document-form"
-                    name="_intent"
-                    value="publish"
-                    disabled={
-                      mode === "edit" &&
-                      !(
-                        doc?._status === "draft" ||
-                        doc?._status === "scheduled" ||
-                        (doc && getVisualStatus(doc) === "changed")
-                      )
-                    }
-                  >
-                    Publish
-                  </button>
-                )}
+                {collection.drafts &&
+                  (publishBlocked ? (
+                    <button
+                      class={buttonVariants({ variant: "outline" })}
+                      type="button"
+                      disabled
+                      title="Publish unlocks once the review is approved"
+                    >
+                      <Lock className="size-3.5" />
+                      Needs approval
+                    </button>
+                  ) : (
+                    <button
+                      class={buttonVariants({ variant: "publish" })}
+                      type="submit"
+                      form="document-form"
+                      name="_intent"
+                      value="publish"
+                      disabled={
+                        mode === "edit" &&
+                        !(
+                          doc?._status === "draft" ||
+                          doc?._status === "scheduled" ||
+                          (doc && getVisualStatus(doc) === "changed")
+                        )
+                      }
+                    >
+                      Publish
+                    </button>
+                  ))}
               </>
             )}
             {mode === "edit" && !translationMode && documentId && (
@@ -314,6 +358,31 @@ for (const [key, opts] of Object.entries(relationOptionsByField)) {
 
   {/* Body — everything below the sticky bar, inset from the page edges */}
   <div class="space-y-6 px-4 pb-8 lg:pr-8 lg:pb-12 lg:pl-20">
+    {
+      /* Collaboration review strip. Margins live on this wrapper, which only
+        renders when collaboration is enabled, so non-collab edit views are
+        untouched. The body already sits 3.5rem (section space-y-14) below the
+        header, so -mt-6 trims the top gap to ~2rem and mb-8 balances the bottom.
+        lg:-ml-12 pulls it to the header's left edge (full width). */
+    }
+    {
+      showCollab && collabData && documentId && (
+        <div class="-mt-6 mb-8 lg:-ml-12">
+          <CollaborationReviewBar
+            client:load
+            collection={collection.slug}
+            documentId={documentId}
+            reviewState={collabData.reviewState}
+            editor={collabData.editor}
+            assignableUsers={collabData.assignableUsers}
+            comments={collabData.comments}
+            activity={collabData.activity}
+            currentUser={collabData.currentUser}
+            canApprove={isApprover(config, user?.role)}
+          />
+        </div>
+      )
+    }
     {
       formTab !== "submissions" && (
         <>

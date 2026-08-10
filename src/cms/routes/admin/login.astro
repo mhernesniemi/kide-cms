@@ -5,12 +5,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/cms
 import { Input } from "@/cms/admin/components/ui/input";
 import { Label } from "@/cms/admin/components/ui/label";
 import { buttonVariants } from "@/cms/admin/components/ui/button";
+import { resolveAdminAuth } from "@/cms/core";
+import config from "virtual:kide/config";
 
 export const prerender = false;
 
 const error = Astro.url.searchParams.get("error");
 const errorMessage =
-  error === "invalid" ? "Invalid email or password." : error === "missing" ? "Email and password are required." : null;
+  error === "invalid"
+    ? "Invalid email or password."
+    : error === "missing"
+      ? "Email and password are required."
+      : error === "disabled"
+        ? "Password login is disabled."
+        : null;
+const auth = resolveAdminAuth(config);
 ---
 
 <!doctype html>
@@ -40,16 +49,52 @@ const errorMessage =
               )
             }
             <form method="post" action="/api/cms/auth/login" class="grid gap-4">
-              <div class="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" placeholder="admin@example.com" required autoFocus />
-              </div>
-              <div class="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type="password" placeholder="Enter password" required />
-              </div>
-              <button class={buttonVariants({ size: "lg", className: "w-full" })} type="submit"> Sign in </button>
+              {
+                auth.password.enabled && (
+                  <>
+                    <div class="grid gap-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input id="email" name="email" type="email" placeholder="admin@example.com" required autoFocus />
+                    </div>
+                    <div class="grid gap-2">
+                      <div class="flex items-center justify-between gap-3">
+                        <Label htmlFor="password">Password</Label>
+                        {auth.password.forgotPassword && (
+                          <a class="text-muted-foreground hover:text-foreground text-xs" href="/admin/forgot-password">
+                            Forgot password?
+                          </a>
+                        )}
+                      </div>
+                      <Input id="password" name="password" type="password" placeholder="Enter password" required />
+                    </div>
+                    <button class={buttonVariants({ size: "lg", className: "w-full" })} type="submit">
+                      Sign in
+                    </button>
+                  </>
+                )
+              }
             </form>
+            {
+              auth.ssoProviders.length > 0 && (
+                <div class="mt-4 grid gap-3">
+                  {auth.password.enabled && (
+                    <div class="text-muted-foreground flex items-center gap-3 text-xs">
+                      <div class="bg-border h-px flex-1" />
+                      <span>or</span>
+                      <div class="bg-border h-px flex-1" />
+                    </div>
+                  )}
+                  {auth.ssoProviders.map((provider) => (
+                    <a
+                      class={buttonVariants({ variant: "outline", size: "lg", className: "w-full" })}
+                      href={`/api/cms/auth/sso/${provider.id}/start`}
+                    >
+                      Continue with {provider.label}
+                    </a>
+                  ))}
+                </div>
+              )
+            }
           </CardContent>
         </Card>
       </div>

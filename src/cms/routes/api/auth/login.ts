@@ -11,6 +11,7 @@ import {
   verifyPassword,
 } from "virtual:kide/runtime";
 import config from "virtual:kide/config";
+import { resolveAdminAuth } from "@/cms/core";
 
 export const prerender = false;
 
@@ -32,6 +33,17 @@ function isRateLimited(ip: string): boolean {
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
   const contentType = request.headers.get("content-type") ?? "";
+  const auth = resolveAdminAuth(config);
+
+  if (!auth.password.enabled) {
+    if (contentType.includes("application/json")) {
+      return Response.json({ error: "Password login is disabled." }, { status: 404 });
+    }
+    return new Response(null, {
+      status: 303,
+      headers: { Location: "/admin/login?error=disabled" },
+    });
+  }
 
   if (isRateLimited(clientAddress)) {
     if (contentType.includes("application/json")) {

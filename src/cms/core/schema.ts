@@ -7,6 +7,8 @@ type SchemaModule = {
   cmsInvites: any;
   cmsAuditLog: any;
   cmsOutbox: any;
+  cmsCollaboration: any;
+  cmsComments: any;
   [key: string]: any;
 };
 

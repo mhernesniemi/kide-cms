@@ -39,9 +39,16 @@ export {
   getCollectionLabel,
   getLabelField,
   hasRole,
+  resolveCollaboration,
+  isApprover,
 } from "./define";
+export { customAuth, getSsoProvider, resolveAdminAuth } from "./auth-config";
+export type { ResolvedAdminAuthConfig } from "./auth-config";
 export type {
   CMSConfig,
+  CollaborationConfig,
+  CollaborationCollection,
+  ResolvedCollaboration,
   CollectionConfig,
   CollectionFieldMap,
   FieldConfig,
@@ -71,6 +78,11 @@ export type {
   IntegrationsConfig,
   TaskHandler,
   TaskScheduleConfig,
+  AdminAuthConfig,
+  AdminAuthMfaConfig,
+  AdminAuthPasswordConfig,
+  AdminAuthSsoProviderConfig,
+  AdminCustomAuthProvider,
   ColorOption,
   ImagePreset,
   ImagesConfig,
@@ -115,6 +127,9 @@ export {
   createInvite,
   validateInvite,
   consumeInvite,
+  createPasswordReset,
+  validatePasswordReset,
+  consumePasswordReset,
   SESSION_COOKIE_NAME,
   setSessionCookie,
   clearSessionCookie,
@@ -169,6 +184,8 @@ export { acquireLock, releaseLock } from "./locks";
 
 export { recordAudit, pruneAuditLog, auditRequestMeta, tokenReference } from "./audit";
 export type { AuditEvent, AuditActor } from "./audit";
+export { collaboration, REVIEW_STATES, isReviewState } from "./collaboration";
+export type { ReviewState, CollaborationState, CommentRecord, ActivityRecord } from "./collaboration";
 
 export {
   search,

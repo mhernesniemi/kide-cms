@@ -9,7 +9,7 @@ export type AuditActor = { id: string; email: string; role: string } | null;
 
 export type AuditEvent = {
   action: string;
-  resourceType: "content" | "asset" | "user" | "invite" | "session";
+  resourceType: "content" | "asset" | "user" | "invite" | "session" | "password_reset";
   resourceCollection?: string | null;
   resourceId?: string | null;
   actor?: AuditActor;
