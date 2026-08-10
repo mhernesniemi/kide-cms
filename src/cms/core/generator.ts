@@ -159,11 +159,49 @@ const generateSchemaFile = (config: CMSConfig): string => {
   _createdAt: text("_created_at").notNull(),
 });`);
   parts.push("");
+  // Better Auth owns these three tables. Column names/shapes match Better Auth's core
+  // models; the runtime maps its logical field names onto them in core/better-auth-schema.ts.
+  // Timestamps are epoch-ms integers here (Drizzle can't bind a Date to a text column).
   parts.push(`export const cmsSessions = sqliteTable("cms_sessions", {
   _id: text("_id").primaryKey(),
   userId: text("user_id").notNull(),
-  expiresAt: text("expires_at").notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: integer("expires_at").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
 });`);
+  parts.push("");
+  parts.push(`export const cmsAccounts = sqliteTable("cms_accounts", {
+  _id: text("_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  accountId: text("account_id").notNull(),
+  providerId: text("provider_id").notNull(),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  idToken: text("id_token"),
+  accessTokenExpiresAt: integer("access_token_expires_at"),
+  refreshTokenExpiresAt: integer("refresh_token_expires_at"),
+  scope: text("scope"),
+  password: text("password"),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => ({
+  providerAccountIdx: index("accounts_provider_account_idx").on(table.providerId, table.accountId),
+  userIdx: index("accounts_user_idx").on(table.userId),
+}));`);
+  parts.push("");
+  parts.push(`export const cmsVerifications = sqliteTable("cms_verifications", {
+  _id: text("_id").primaryKey(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => ({
+  identifierIdx: index("verifications_identifier_idx").on(table.identifier),
+}));`);
   parts.push("");
   parts.push(`export const cmsLocks = sqliteTable("cms_locks", {
   _id: text("_id").primaryKey(),

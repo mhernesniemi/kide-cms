@@ -6,10 +6,9 @@ import {
   auditRequestMeta,
   hitRateLimit,
   consumePasswordReset,
-  createSession,
-  hashPassword,
+  getAuth,
   recordAudit,
-  setSessionCookie,
+  setUserCredential,
 } from "virtual:kide/runtime";
 import { resolveAdminAuth } from "@/cms/core";
 import config from "virtual:kide/config";
@@ -21,6 +20,11 @@ const redirectWithError = (token: string, error: string) =>
     status: 303,
     headers: { Location: `/admin/reset-password?token=${encodeURIComponent(token)}&error=${error}` },
   });
+
+const forwardCookies = (from: Headers, to: Headers) => {
+  const cookies = typeof from.getSetCookie === "function" ? from.getSetCookie() : [from.get("set-cookie") ?? ""];
+  for (const cookie of cookies) if (cookie) to.append("Set-Cookie", cookie);
+};
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
   const auth = resolveAdminAuth(config);
@@ -38,10 +42,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   if (password !== confirmPassword) return redirectWithError(token, "password");
   if (password.length < 8) return redirectWithError(token, "short");
 
-  // Hash before claiming the token: the token is single-use, so anything fallible must run
-  // before we burn it — otherwise a hashing failure would strand the account with a spent
-  // token. Consume is then the atomic single-winner gate against double-submit.
-  const hashedPassword = await hashPassword(password);
+  // Consume is the atomic single-winner gate against double-submit.
   const reset = await consumePasswordReset(token);
   if (!reset) return redirectWithError(token, "invalid");
 
@@ -52,34 +53,38 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   const userRows = await db.select().from(tables.users.main).where(eq(tables.users.main._id, reset.userId)).limit(1);
   if (userRows.length === 0) return redirectWithError(token, "invalid");
-
   const user = userRows[0] as Record<string, unknown>;
+
+  // Replace the credential, revoke every existing session (so a reset kicks out anyone
+  // holding the old password), then mint a fresh session for this browser.
+  await setUserCredential(reset.userId, password);
   await db
     .update(tables.users.main)
-    .set({ password: hashedPassword, _updatedAt: new Date().toISOString() })
+    .set({ _updatedAt: new Date().toISOString() })
     .where(eq(tables.users.main._id, reset.userId));
   await db.delete(schema.cmsSessions).where(eq(schema.cmsSessions.userId, reset.userId));
 
-  const session = await createSession(reset.userId);
+  const engine = await getAuth();
+  const outHeaders = new Headers();
+  try {
+    const result = (await engine.api.signInEmail({
+      body: { email: String(user.email ?? ""), password },
+      returnHeaders: true,
+    })) as { headers: Headers };
+    forwardCookies(result.headers, outHeaders);
+  } catch {
+    return new Response(null, { status: 303, headers: { Location: "/admin/login" } });
+  }
 
   void recordAudit({
     action: "auth.password_reset_completed",
     resourceType: "user",
     resourceCollection: "users",
     resourceId: reset.userId,
-    actor: {
-      id: reset.userId,
-      email: String(user.email ?? ""),
-      role: String(user.role ?? ""),
-    },
+    actor: { id: reset.userId, email: String(user.email ?? ""), role: String(user.role ?? "") },
     ...auditRequestMeta(request),
   });
 
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: "/admin",
-      "Set-Cookie": setSessionCookie(session.token, session.expiresAt),
-    },
-  });
+  outHeaders.set("Location", "/admin");
+  return new Response(null, { status: 303, headers: outHeaders });
 };

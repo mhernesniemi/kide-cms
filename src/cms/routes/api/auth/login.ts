@@ -1,22 +1,27 @@
 import type { APIRoute } from "astro";
-import { eq } from "drizzle-orm";
 
-import { getDb } from "virtual:kide/db";
 import {
   auditRequestMeta,
-  createSession,
+  getAuth,
+  peekRateLimit,
   recordAudit,
-  setSessionCookie,
+  recordRateLimit,
+  clearRateLimit,
   tokenReference,
-  verifyPassword,
 } from "virtual:kide/runtime";
 import config from "virtual:kide/config";
-import { clearRateLimit, peekRateLimit, recordRateLimit, resolveAdminAuth } from "@/cms/core";
+import { resolveAdminAuth } from "@/cms/core";
 
 export const prerender = false;
 
 const MAX_ATTEMPTS = config.admin?.rateLimit?.maxAttempts ?? 5;
 const WINDOW_MS = config.admin?.rateLimit?.windowMs ?? 15 * 60 * 1000;
+
+/** Copy every Set-Cookie Better Auth emits onto an outgoing response. */
+const forwardCookies = (from: Headers, to: Headers) => {
+  const cookies = typeof from.getSetCookie === "function" ? from.getSetCookie() : [from.get("set-cookie") ?? ""];
+  for (const cookie of cookies) if (cookie) to.append("Set-Cookie", cookie);
+};
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
   const contentType = request.headers.get("content-type") ?? "";
@@ -27,10 +32,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     if (isJson) {
       return Response.json(
         { error: "Too many login attempts. Try again later." },
-        {
-          status: 429,
-          headers: { "Retry-After": String(Math.ceil(retryAfterMs / 1000)) },
-        },
+        { status: 429, headers: { "Retry-After": String(Math.ceil(retryAfterMs / 1000)) } },
       );
     }
     return new Response(null, { status: 303, headers: { Location: "/admin/login?error=rate-limited" } });
@@ -43,7 +45,6 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   let email: string;
   let password: string;
-
   if (isJson) {
     const body = await request.json();
     email = String(body.email ?? "");
@@ -70,98 +71,46 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   const emailPeek = await peekRateLimit("login:email", emailKey, opts);
   if (!emailPeek.ok) return rateLimited(emailPeek.retryAfterMs);
 
+  const requestMeta = auditRequestMeta(request);
   const recordFailure = async () => {
     await recordRateLimit("login:ip", clientAddress, opts);
     await recordRateLimit("login:email", emailKey, opts);
+    void recordAudit({ action: "auth.login_failed", resourceType: "session", attemptedEmail: email, ...requestMeta });
   };
 
-  const db = await getDb();
-  const schema = await import("virtual:kide/schema");
-  const tables = schema.cmsTables as Record<string, { main: any }>;
-
-  if (!tables.users) {
-    return Response.json({ error: "Users collection not configured." }, { status: 500 });
-  }
-
-  const rows = await db.select().from(tables.users.main).where(eq(tables.users.main.email, email)).limit(1);
-  const requestMeta = auditRequestMeta(request);
-
-  if (rows.length === 0) {
-    await recordFailure();
-    void recordAudit({
-      action: "auth.login_failed",
-      resourceType: "session",
-      attemptedEmail: email,
-      ...requestMeta,
-    });
-    if (contentType.includes("application/json")) {
-      return Response.json({ error: "Invalid credentials." }, { status: 401 });
-    }
-    return new Response(null, {
-      status: 303,
-      headers: { Location: "/admin/login?error=invalid" },
-    });
-  }
-
-  const user = rows[0] as Record<string, unknown>;
-  const storedHash = String(user.password ?? "");
-
-  let valid = false;
+  // Verify credentials and issue the session through Better Auth. It throws on bad
+  // credentials (and disabled/locked accounts), which we treat uniformly as invalid.
+  const engine = await getAuth();
+  let result: { headers: Headers; response: { user: { id: string; email: string; role?: string }; token?: string } };
   try {
-    valid = await verifyPassword(storedHash, password);
+    result = (await engine.api.signInEmail({
+      body: { email, password },
+      returnHeaders: true,
+    })) as typeof result;
   } catch {
-    // valid remains false
-  }
-
-  if (!valid) {
     await recordFailure();
-    void recordAudit({
-      action: "auth.login_failed",
-      resourceType: "session",
-      attemptedEmail: email,
-      ...requestMeta,
-    });
-    if (contentType.includes("application/json")) {
-      return Response.json({ error: "Invalid credentials." }, { status: 401 });
-    }
-    return new Response(null, {
-      status: 303,
-      headers: { Location: "/admin/login?error=invalid" },
-    });
+    if (isJson) return Response.json({ error: "Invalid credentials." }, { status: 401 });
+    return new Response(null, { status: 303, headers: { Location: "/admin/login?error=invalid" } });
   }
 
   // Success — clear this account's failed-login budget (but not the IP bucket).
   await clearRateLimit("login:email", emailKey);
 
-  const session = await createSession(String(user._id));
-
+  const user = result.response.user;
   void recordAudit({
     action: "auth.login",
     resourceType: "session",
-    resourceId: await tokenReference(session.token),
-    actor: {
-      id: String(user._id),
-      email: String(user.email ?? ""),
-      role: String(user.role ?? ""),
-    },
+    resourceId: result.response.token ? await tokenReference(result.response.token) : undefined,
+    actor: { id: user.id, email: user.email, role: String(user.role ?? "") },
     ...requestMeta,
   });
 
-  if (contentType.includes("application/json")) {
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Set-Cookie": setSessionCookie(session.token, session.expiresAt),
-      },
-    });
+  const headers = new Headers();
+  forwardCookies(result.headers, headers);
+  if (isJson) {
+    headers.set("Content-Type", "application/json");
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
   }
-
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: "/admin",
-      "Set-Cookie": setSessionCookie(session.token, session.expiresAt),
-    },
-  });
+  headers.set("Location", "/admin");
+  return new Response(null, { status: 303, headers });
 };

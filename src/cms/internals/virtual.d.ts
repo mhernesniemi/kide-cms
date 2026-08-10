@@ -15,6 +15,8 @@ declare module "virtual:kide/api" {
 declare module "virtual:kide/schema" {
   const cmsTables: Record<string, { main: any; translations?: any }>;
   export const cmsSessions: any;
+  export const cmsAccounts: any;
+  export const cmsVerifications: any;
   export const cmsPasswordResets: any;
   export const cmsRateLimits: any;
   export { cmsTables };
@@ -24,14 +26,12 @@ declare module "virtual:kide/runtime" {
   export const initCmsRuntime: () => void;
   export {
     getSessionUser,
-    destroySession,
-    clearSessionCookie,
+    getAuth,
+    resetAuth,
+    setUserCredential,
     verifyPassword,
     hashToken,
     hashPassword,
-    createSession,
-    setSessionCookie,
-    validateSession,
     createInvite,
     validateInvite,
     consumeInvite,

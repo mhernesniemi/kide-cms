@@ -4,7 +4,6 @@
  * translations, versions — plus DB-backed sessions and invites.
  */
 import Database from "better-sqlite3";
-import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { pushSQLiteSchema } from "drizzle-kit/api";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -12,7 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as generatedSchema from "@/cms/.generated/schema";
 import config from "@/cms/cms.config";
 import { createCms } from "../api";
-import { createInvite, consumeInvite, createSession, hashToken, validateInvite, validateSession } from "../auth";
+import { createInvite, consumeInvite, validateInvite } from "../auth";
 import { configureCmsRuntime, resetCmsRuntime } from "../runtime";
 import { initSchema, resetSchema } from "../schema";
 
@@ -217,51 +216,6 @@ describe("versions", () => {
     const versions = await (cms as any).posts.versions(post._id);
     expect(Array.isArray(versions)).toBe(true);
     expect(versions.length).toBeGreaterThanOrEqual(1);
-  });
-});
-
-describe("sessions", () => {
-  it("creates and validates a session", async () => {
-    const { token, expiresAt } = await createSession("user-1");
-    expect(new Date(expiresAt).getTime()).toBeGreaterThan(Date.now());
-
-    const session = await validateSession(token);
-    expect(session?.userId).toBe("user-1");
-  });
-
-  it("rejects unknown tokens", async () => {
-    expect(await validateSession("nope")).toBeNull();
-  });
-
-  it("rejects and deletes expired sessions", async () => {
-    const schema = generatedSchema as never as { cmsSessions: any };
-    const past = new Date(Date.now() - 1000).toISOString();
-    // Sessions are stored under SHA-256(token), never the raw token.
-    const idHash = await hashToken("expired-token");
-    await db.insert(schema.cmsSessions).values({ _id: idHash, userId: "user-2", expiresAt: past });
-
-    expect(await validateSession("expired-token")).toBeNull();
-    // Second lookup confirms the row was deleted, not just rejected
-    const rows = await db
-      .select()
-      .from(schema.cmsSessions)
-      .where(eq((schema.cmsSessions as any)._id, idHash));
-    expect(rows).toHaveLength(0);
-  });
-
-  it("stores the session token only as a hash, never raw", async () => {
-    const schema = generatedSchema as never as { cmsSessions: any };
-    const { token } = await createSession("user-3");
-    const raw = await db
-      .select()
-      .from(schema.cmsSessions)
-      .where(eq((schema.cmsSessions as any)._id, token));
-    expect(raw).toHaveLength(0); // raw token is not the key
-    const hashed = await db
-      .select()
-      .from(schema.cmsSessions)
-      .where(eq((schema.cmsSessions as any)._id, await hashToken(token)));
-    expect(hashed).toHaveLength(1);
   });
 });
 

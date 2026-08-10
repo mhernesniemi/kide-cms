@@ -7,9 +7,8 @@ import {
   hitRateLimit,
   createInvite,
   consumeInvite,
-  hashPassword,
-  createSession,
-  setSessionCookie,
+  getAuth,
+  setUserCredential,
   getSessionUser,
   recordAudit,
   tokenReference,
@@ -17,6 +16,11 @@ import {
 import { sendInviteEmail, isEmailConfigured } from "virtual:kide/email";
 
 export const prerender = false;
+
+const forwardCookies = (from: Headers, to: Headers) => {
+  const cookies = typeof from.getSetCookie === "function" ? from.getSetCookie() : [from.get("set-cookie") ?? ""];
+  for (const cookie of cookies) if (cookie) to.append("Set-Cookie", cookie);
+};
 
 export const POST: APIRoute = async ({ request, url, clientAddress }) => {
   const formData = await request.formData();
@@ -71,13 +75,16 @@ async function handleCreate(formData: FormData, url: URL, request: Request) {
   const { nanoid } = await import("nanoid");
   const id = nanoid();
   const now = new Date().toISOString();
+  const nowMs = new Date().getTime();
 
+  // Credential-less user row; the invitee sets their password (into cms_accounts) on accept.
   await db.insert(tables.users.main).values({
     _id: id,
     name,
     email,
-    password: "",
     role,
+    createdAt: nowMs,
+    updatedAt: nowMs,
     _createdAt: now,
     _updatedAt: now,
   });
@@ -144,9 +151,8 @@ async function handleAccept(formData: FormData, request: Request, clientAddress:
     });
   }
 
-  // Hash before claiming: the token is single-use, so run the fallible work first, then
-  // consume as the atomic single-winner gate against a double-submit.
-  const hashedPassword = await hashPassword(password);
+  // Consume as the atomic single-winner gate against a double-submit, then set the
+  // credential and mint the session through Better Auth with the same password.
   const invite = await consumeInvite(token);
   if (!invite) {
     return new Response(null, {
@@ -161,10 +167,8 @@ async function handleAccept(formData: FormData, request: Request, clientAddress:
 
   await db
     .update(tables.users.main)
-    .set({ name, password: hashedPassword, _updatedAt: new Date().toISOString() })
+    .set({ name, _updatedAt: new Date().toISOString() })
     .where(eq(tables.users.main._id, invite.userId));
-
-  const session = await createSession(invite.userId);
 
   const acceptedUserRows = await db
     .select()
@@ -172,26 +176,35 @@ async function handleAccept(formData: FormData, request: Request, clientAddress:
     .where(eq(tables.users.main._id, invite.userId))
     .limit(1);
   const acceptedUser = acceptedUserRows[0] as Record<string, unknown> | undefined;
+  if (!acceptedUser) {
+    return new Response(null, { status: 303, headers: { Location: "/admin/invite?error=expired" } });
+  }
+
+  await setUserCredential(invite.userId, password);
+  const engine = await getAuth();
+  const outHeaders = new Headers();
+  try {
+    const result = (await engine.api.signInEmail({
+      body: { email: String(acceptedUser.email ?? ""), password },
+      returnHeaders: true,
+    })) as { headers: Headers };
+    forwardCookies(result.headers, outHeaders);
+  } catch {
+    return new Response(null, { status: 303, headers: { Location: "/admin/login" } });
+  }
 
   void recordAudit({
     action: "auth.invite_accepted",
     resourceType: "invite",
     resourceId: await tokenReference(token),
-    actor: acceptedUser
-      ? {
-          id: String(acceptedUser._id),
-          email: String(acceptedUser.email ?? ""),
-          role: String(acceptedUser.role ?? ""),
-        }
-      : null,
+    actor: {
+      id: String(acceptedUser._id),
+      email: String(acceptedUser.email ?? ""),
+      role: String(acceptedUser.role ?? ""),
+    },
     ...auditRequestMeta(request),
   });
 
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: "/admin",
-      "Set-Cookie": setSessionCookie(session.token, session.expiresAt),
-    },
-  });
+  outHeaders.set("Location", "/admin");
+  return new Response(null, { status: 303, headers: outHeaders });
 }

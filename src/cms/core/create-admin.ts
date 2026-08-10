@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 
-import { hashPassword } from "./auth";
+import { setUserCredential } from "./better-auth";
 import { getDb } from "./runtime";
 import { getSchema } from "./schema";
 
@@ -13,16 +13,22 @@ export const createAdminUser = async (input: { name: string; email: string; pass
     throw new Error("No users collection found.");
   }
 
+  const id = nanoid();
   const now = new Date().toISOString();
-  const hashedPassword = await hashPassword(input.password);
+  const nowMs = new Date().getTime();
 
   await db.insert(tables.users.main).values({
-    _id: nanoid(),
+    _id: id,
     name: input.name,
     email: input.email,
-    password: hashedPassword,
     role: "admin",
+    emailVerified: true,
+    createdAt: nowMs,
+    updatedAt: nowMs,
     _createdAt: now,
     _updatedAt: now,
   });
+
+  // Credentials live in the Better Auth cms_accounts table, hashed with Kide's pbkdf2 hasher.
+  await setUserCredential(id, input.password);
 };

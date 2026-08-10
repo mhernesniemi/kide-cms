@@ -3,16 +3,14 @@ import { eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { getDb } from "virtual:kide/db";
-import {
-  auditRequestMeta,
-  hitRateLimit,
-  createSession,
-  hashPassword,
-  recordAudit,
-  setSessionCookie,
-} from "virtual:kide/runtime";
+import { auditRequestMeta, getAuth, hitRateLimit, recordAudit, setUserCredential } from "virtual:kide/runtime";
 
 export const prerender = false;
+
+const forwardCookies = (from: Headers, to: Headers) => {
+  const cookies = typeof from.getSetCookie === "function" ? from.getSetCookie() : [from.get("set-cookie") ?? ""];
+  for (const cookie of cookies) if (cookie) to.append("Set-Cookie", cookie);
+};
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
   const ipLimit = await hitRateLimit("setup:ip", clientAddress, {
@@ -31,30 +29,18 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
   if (!name || !email || !password) {
-    return new Response(null, {
-      status: 303,
-      headers: { Location: "/admin/setup?error=missing" },
-    });
+    return new Response(null, { status: 303, headers: { Location: "/admin/setup?error=missing" } });
   }
-
   if (password !== confirmPassword) {
-    return new Response(null, {
-      status: 303,
-      headers: { Location: "/admin/setup?error=password" },
-    });
+    return new Response(null, { status: 303, headers: { Location: "/admin/setup?error=password" } });
   }
-
   if (password.length < 8) {
-    return new Response(null, {
-      status: 303,
-      headers: { Location: "/admin/setup?error=short" },
-    });
+    return new Response(null, { status: 303, headers: { Location: "/admin/setup?error=short" } });
   }
 
   const db = await getDb();
   const schema = await import("virtual:kide/schema");
   const tables = schema.cmsTables as Record<string, { main: any }>;
-
   if (!tables.users) {
     return Response.json({ error: "Users collection not configured." }, { status: 500 });
   }
@@ -62,22 +48,20 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   // Prevent setup if users already exist (fast path / friendly redirect).
   const existing = await db.select().from(tables.users.main).limit(1);
   if (existing.length > 0) {
-    return new Response(null, {
-      status: 303,
-      headers: { Location: "/admin/login" },
-    });
+    return new Response(null, { status: 303, headers: { Location: "/admin/login" } });
   }
 
   const id = nanoid();
-  const now = new Date().toISOString();
-  const hashedPassword = await hashPassword(password);
+  const nowIso = new Date().toISOString();
+  const nowMs = new Date().getTime();
 
   // Atomic winner election that leaves no orphan state: a single conditional insert creates
   // the first admin only if the table is still empty. Self-recovering — if anything fails
-  // there's no marker to strand setup, and a retry just runs the same guarded insert.
+  // there's no marker to strand setup, and a retry just runs the same guarded insert. The
+  // credential itself lives in cms_accounts (written after we confirm we won the race).
   await db.run(sql`
-    INSERT INTO cms_users (_id, name, email, role, password, _created_at, _updated_at)
-    SELECT ${id}, ${name}, ${email}, 'admin', ${hashedPassword}, ${now}, ${now}
+    INSERT INTO cms_users (_id, name, email, role, email_verified, created_at, updated_at, _created_at, _updated_at)
+    SELECT ${id}, ${name}, ${email}, 'admin', 1, ${nowMs}, ${nowMs}, ${nowIso}, ${nowIso}
     WHERE NOT EXISTS (SELECT 1 FROM cms_users)
   `);
 
@@ -88,7 +72,20 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     return new Response(null, { status: 303, headers: { Location: "/admin/login" } });
   }
 
-  const session = await createSession(id);
+  // Establish the credential, then mint the session through Better Auth with the same password.
+  await setUserCredential(id, password);
+  const engine = await getAuth();
+  const outHeaders = new Headers();
+  try {
+    const result = (await engine.api.signInEmail({
+      body: { email, password },
+      returnHeaders: true,
+    })) as { headers: Headers };
+    forwardCookies(result.headers, outHeaders);
+  } catch {
+    // Credential set but auto-login failed for some reason — send them to log in manually.
+    return new Response(null, { status: 303, headers: { Location: "/admin/login" } });
+  }
 
   void recordAudit({
     action: "auth.setup_completed",
@@ -99,11 +96,6 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     ...auditRequestMeta(request),
   });
 
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: "/admin",
-      "Set-Cookie": setSessionCookie(session.token, session.expiresAt),
-    },
-  });
+  outHeaders.set("Location", "/admin");
+  return new Response(null, { status: 303, headers: outHeaders });
 };

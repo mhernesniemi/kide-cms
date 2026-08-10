@@ -35,6 +35,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isResetPasswordPage = pathname === "/admin/reset-password";
   const isResetPasswordApi = pathname === "/api/cms/auth/reset-password";
   const isSsoAuthApi = pathname.startsWith("/api/cms/auth/sso/");
+  // Every /api/cms/auth/* endpoint self-authenticates (Better Auth handler, or the wrapped
+  // login/setup/invite/reset routes) and must be reachable without an existing session.
+  const isAuthApi = pathname.startsWith("/api/cms/auth/");
   const isSetupPage = pathname === "/admin/setup";
   const isSetupApi = pathname === "/api/cms/auth/setup";
   const isInvitePage = pathname === "/admin/invite";
@@ -150,6 +153,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     isResetPasswordPage ||
     isResetPasswordApi ||
     isSsoAuthApi ||
+    isAuthApi ||
     isSetupApi ||
     isCronApi ||
     isWebhookApi ||

@@ -123,9 +123,6 @@ export {
   hashPassword,
   verifyPassword,
   hashToken,
-  createSession,
-  validateSession,
-  destroySession,
   getSessionUser,
   createInvite,
   validateInvite,
@@ -133,11 +130,10 @@ export {
   createPasswordReset,
   validatePasswordReset,
   consumePasswordReset,
-  SESSION_COOKIE_NAME,
-  setSessionCookie,
-  clearSessionCookie,
 } from "./auth";
 export type { SessionUser } from "./auth";
+
+export { getAuth, resetAuth, buildAuthOptions, setUserCredential, AUTH_BASE_PATH } from "./better-auth";
 
 export { assets, folders } from "./assets";
 export type { AssetRecord, FolderRecord } from "./assets";

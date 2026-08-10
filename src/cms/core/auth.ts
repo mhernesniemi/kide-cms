@@ -86,44 +86,6 @@ export const hashToken = async (token: string): Promise<string> => {
   return `sha256:${hex}`;
 };
 
-export const createSession = async (userId: string): Promise<{ token: string; expiresAt: string }> => {
-  const db = await getDb();
-  const schema = getSchema();
-  const token = nanoid(32);
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-  await db.insert(schema.cmsSessions).values({
-    _id: await hashToken(token),
-    userId,
-    expiresAt,
-  });
-
-  return { token, expiresAt };
-};
-
-export const validateSession = async (token: string): Promise<{ userId: string; expiresAt: string } | null> => {
-  const db = await getDb();
-  const schema = getSchema();
-  const tokenHash = await hashToken(token);
-  const rows = await db.select().from(schema.cmsSessions).where(eq(schema.cmsSessions._id, tokenHash)).limit(1);
-
-  if (rows.length === 0) return null;
-
-  const session = rows[0] as { _id: string; userId: string; expiresAt: string };
-  if (new Date(session.expiresAt) < new Date()) {
-    await db.delete(schema.cmsSessions).where(eq(schema.cmsSessions._id, tokenHash));
-    return null;
-  }
-
-  return { userId: session.userId, expiresAt: session.expiresAt };
-};
-
-export const destroySession = async (token: string) => {
-  const db = await getDb();
-  const schema = getSchema();
-  await db.delete(schema.cmsSessions).where(eq(schema.cmsSessions._id, await hashToken(token)));
-};
-
 export type SessionUser = {
   id: string;
   email: string;
@@ -144,20 +106,21 @@ const parseSessionValue = (value: unknown) => {
 };
 
 export const getSessionUser = async (request: Request): Promise<SessionUser | null> => {
-  const cookieHeader = request.headers.get("cookie") ?? "";
-  const match = cookieHeader.match(/cms_session=([^;]+)/);
-  if (!match) return null;
-
-  const session = await validateSession(match[1]);
-  if (!session) return null;
+  // Resolve the session through Better Auth (its signed session cookie), then hydrate the
+  // full canonical user row from cms_users so downstream code sees every Kide user field
+  // (not just Better Auth's projected columns). Dynamic import avoids a static import cycle
+  // with core/better-auth.ts, which imports the password hasher from this module.
+  const { getAuth } = await import("./better-auth");
+  const auth = await getAuth();
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session?.user?.id) return null;
 
   const db = await getDb();
   const schema = getSchema();
   const tables = schema.cmsTables as Record<string, { main: any }>;
-
   if (!tables.users) return null;
 
-  const userRows = await db.select().from(tables.users.main).where(eq(tables.users.main._id, session.userId)).limit(1);
+  const userRows = await db.select().from(tables.users.main).where(eq(tables.users.main._id, session.user.id)).limit(1);
   if (userRows.length === 0) return null;
 
   const user = userRows[0] as Record<string, unknown>;
@@ -289,12 +252,3 @@ export const consumePasswordReset = async (token: string): Promise<{ userId: str
     .returning({ userId: schema.cmsPasswordResets.userId });
   return rows.length > 0 ? { userId: rows[0].userId as string } : null;
 };
-
-export const SESSION_COOKIE_NAME = "cms_session";
-
-export const setSessionCookie = (token: string, expiresAt: string) => {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `${SESSION_COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Strict${secure}; Expires=${new Date(expiresAt).toUTCString()}`;
-};
-
-export const clearSessionCookie = () => `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`;

@@ -184,6 +184,10 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
                 path.resolve(root, "src/cms/.generated/**/*.ts"),
                 path.resolve(root, "src/cms/client/**/*.ts"),
               ],
+              // Pre-bundle Better Auth (and the drizzle adapter) so its many lazily-imported
+              // submodules don't trigger repeated dev-server re-optimization on first hit to
+              // each auth route (which surfaces as transient 400s during the reload window).
+              include: ["better-auth", "better-auth/adapters/drizzle"],
             },
           },
         });
@@ -221,6 +225,9 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         injectRoute({ pattern: "/api/cms/auth/logout", entrypoint: "./src/cms/routes/api/auth/logout.ts" });
         injectRoute({ pattern: "/api/cms/auth/setup", entrypoint: "./src/cms/routes/api/auth/setup.ts" });
         injectRoute({ pattern: "/api/cms/auth/invite", entrypoint: "./src/cms/routes/api/auth/invite.ts" });
+        // Better Auth catch-all — serves every endpoint the wrapped routes above don't
+        // (get-session, callbacks, verification, MFA, OAuth). More specific patterns win.
+        injectRoute({ pattern: "/api/cms/auth/[...all]", entrypoint: "./src/cms/routes/api/auth/[...all].ts" });
         injectRoute({ pattern: "/api/cms/assets/upload", entrypoint: "./src/cms/routes/api/assets/upload.ts" });
         injectRoute({
           pattern: "/api/cms/assets/folders",
