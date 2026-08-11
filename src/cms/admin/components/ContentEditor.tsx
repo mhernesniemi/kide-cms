@@ -425,7 +425,8 @@ export default function ContentEditor({
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit,
+      // StarterKit bundles its own Link; disabled so the configured one below is the only registration.
+      StarterKit.configure({ link: false }),
       Image,
       Link.configure({
         openOnClick: false,

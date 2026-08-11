@@ -433,7 +433,8 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit,
+      // StarterKit bundles its own Link; disabled so the configured one below is the only registration.
+      StarterKit.configure({ link: false }),
       Image,
       Markdown,
       Link.configure({
