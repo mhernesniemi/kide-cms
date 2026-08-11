@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { closeDb, getDb } from "../db";
@@ -60,6 +61,16 @@ describe("getDb migration handling", () => {
   it("tolerates a broken migration in development", async () => {
     process.env.NODE_ENV = "development";
     writeMigration("CRETE TABLE broken (id text);");
+    await expect(getDb()).resolves.toBeTruthy();
+  });
+
+  it("tolerates a table `drizzle-kit push` already created, outside development (e.g. standalone cms:seed)", async () => {
+    delete process.env.NODE_ENV;
+    writeMigration("CREATE TABLE already_pushed (id text);");
+    const sqlite = new Database(path.join(tmp, "test.db"));
+    sqlite.exec("CREATE TABLE already_pushed (id text);");
+    sqlite.close();
+
     await expect(getDb()).resolves.toBeTruthy();
   });
 });

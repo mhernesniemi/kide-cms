@@ -11,10 +11,15 @@ let migrationError: (Error & { kideMigrationFailure: true }) | null = null;
 // In dev the schema is created by `drizzle-kit push`, so migrate() hits "already exists"
 // on tables it didn't record — expected noise. Any other failure means a broken or
 // half-applied migration, which must stop startup rather than serve a mismatched schema.
+// The SQLite "already exists" text sits on the wrapped driver error (drizzle rethrows via
+// `cause`), not on the top-level DrizzleError's own `message` — so the whole chain is checked.
 export const isBenignMigrationError = (error: unknown): boolean => {
   if (process.env.NODE_ENV === "development") return true;
-  const message = error instanceof Error ? error.message : String(error);
-  return /already exists/i.test(message);
+  for (let current = error; current; current = (current as { cause?: unknown }).cause) {
+    const message = current instanceof Error ? current.message : String(current);
+    if (/already exists/i.test(message)) return true;
+  }
+  return false;
 };
 
 /** True for the error getDb throws when a migration failed, so callers can avoid masking it. */
