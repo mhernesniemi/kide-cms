@@ -16,9 +16,5 @@ export default defineConfig({
     default: "en",
     supported: ["en"],
   },
-  collaboration: {
-    requireApproval: false,
-    collections: ["pages", { slug: "posts", requireApproval: true }],
-  },
   collections: [users, authors, posts, taxonomies, menus, frontPage, pages, sharedSections, forms, formSubmissions],
 });
