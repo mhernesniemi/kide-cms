@@ -242,7 +242,7 @@ describe("tickSchedules", () => {
 });
 
 describe("pruneTasks", () => {
-  it("removes old done tasks but keeps pending and failed ones", async () => {
+  it("removes old done and failed tasks but keeps pending ones", async () => {
     const doneId = await enqueueTask("a");
     const failedId = await enqueueTask("b");
     await enqueueTask("c");
@@ -253,7 +253,16 @@ describe("pruneTasks", () => {
 
     await pruneTasks();
     const rows = allRows();
-    expect(rows).toHaveLength(2);
-    expect(rows.map((row) => row.status).sort()).toEqual(["failed", "pending"]);
+    expect(rows).toHaveLength(1);
+    expect(rows.map((row) => row.status)).toEqual(["pending"]);
+  });
+
+  it("keeps a recently-failed task (payload may still be needed for debugging)", async () => {
+    const failedId = await enqueueTask("b");
+    await db.update(outbox).set({ status: "failed", updatedAt: Date.now() }).where(eq(outbox._id, failedId));
+
+    await pruneTasks();
+    const rows = allRows();
+    expect(rows.find((row) => row._id === failedId)?.status).toBe("failed");
   });
 });

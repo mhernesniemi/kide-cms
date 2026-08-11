@@ -1,6 +1,7 @@
 import { defineMiddleware } from "astro:middleware";
-import { readEnv, resolveAdminAuth } from "@/cms/core";
-import type { SessionUser } from "@/cms/core";
+import type { APIContext, MiddlewareNext } from "astro";
+import { readEnv, resolveAdminAuth, runWithRequestScope } from "@/cms/core";
+import type { RequestScope, SessionUser } from "@/cms/core";
 import config from "virtual:kide/config";
 import { getSessionUser } from "virtual:kide/runtime";
 import { getDb, isMigrationFailure } from "virtual:kide/db";
@@ -23,7 +24,30 @@ const normalizeCustomUser = (value: Record<string, unknown> | null): SessionUser
 };
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  // Establish a per-request scope for EVERY request (including public pages and custom public
+  // API routes) so deferred work (audit/search/webhook-enqueue) is kept alive only for THIS
+  // request — never routed to the module-level script fallback, whose promises aren't attached
+  // to any waitUntil on Cloudflare. On Cloudflare defer = cfContext.waitUntil (locals.runtime.ctx
+  // throws on Astro 7); on Node it's a no-op (the process stays alive regardless).
+  const cfContext = (context.locals as { cfContext?: { waitUntil?: (p: Promise<unknown>) => void } }).cfContext;
+  const scope: RequestScope = cfContext?.waitUntil
+    ? { defer: (task) => cfContext.waitUntil!(task) }
+    : { defer: () => {} };
+  return runWithRequestScope(scope, () => handle(context, next));
+});
+
+const handle = async (context: APIContext, next: MiddlewareNext) => {
   const { pathname } = context.url;
+
+  // `?preview` exposes draft content on public pages; require a session (unauth → strip it).
+  if (context.url.searchParams.has("preview")) {
+    const previewUser = await getSessionUser(context.request);
+    if (!previewUser) {
+      const clean = new URL(context.url);
+      clean.searchParams.delete("preview");
+      return context.redirect(`${clean.pathname}${clean.search}`);
+    }
+  }
 
   // Skip auth for public pages and static assets
   const isAdminRoute = pathname.startsWith("/admin");
@@ -64,6 +88,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (isAuthPath) response.headers.set("Cache-Control", "no-store");
     return response;
   };
+
+  // The request scope is already established by onRequest (wraps this whole function).
+  const serve = async () => addSecurityHeaders(await next());
 
   // CSRF: positive same-origin assertion on state-changing requests. Machine endpoints
   // authenticate independently (cron bearer, webhook HMAC) or are intentionally public
@@ -125,7 +152,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // No users yet — redirect to setup
   if (!hasUsers) {
-    if (isSetupPage || isSetupApi) return addSecurityHeaders(await next());
+    if (isSetupPage || isSetupApi) return serve();
     if (isAdminApiRoute) {
       return new Response(JSON.stringify({ error: "Setup required" }), { status: 403 });
     }
@@ -157,7 +184,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     isInviteApi ||
     isFormSubmit
   ) {
-    return addSecurityHeaders(await next());
+    return serve();
   }
 
   const auth = resolveAdminAuth(config);
@@ -182,5 +209,5 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Attach user to locals for downstream use
   context.locals.user = user;
 
-  return addSecurityHeaders(await next());
-});
+  return serve();
+};

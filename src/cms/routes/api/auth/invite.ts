@@ -11,10 +11,11 @@ import {
   createSession,
   setSessionCookie,
   getSessionUser,
-  recordAudit,
+  logAudit,
   tokenReference,
 } from "virtual:kide/runtime";
 import { sendInviteEmail, isEmailConfigured } from "virtual:kide/email";
+import { MIN_PASSWORD_LENGTH } from "@/cms/core";
 
 export const prerender = false;
 
@@ -137,7 +138,7 @@ async function handleAccept(formData: FormData, request: Request, clientAddress:
     });
   }
 
-  if (password.length < 8) {
+  if (password.length < MIN_PASSWORD_LENGTH) {
     return new Response(null, {
       status: 303,
       headers: { Location: `/admin/invite?token=${token}&error=short` },
@@ -173,7 +174,7 @@ async function handleAccept(formData: FormData, request: Request, clientAddress:
     .limit(1);
   const acceptedUser = acceptedUserRows[0] as Record<string, unknown> | undefined;
 
-  void recordAudit({
+  logAudit({
     action: "auth.invite_accepted",
     resourceType: "invite",
     resourceId: await tokenReference(token),

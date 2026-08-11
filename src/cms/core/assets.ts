@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { and, desc, eq, isNull, like, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-import { recordAudit, type AuditActor } from "./audit";
+import { logAudit, type AuditActor } from "./audit";
 import { getDb, getStorage } from "./runtime";
 import { getSchema } from "./schema";
 
@@ -132,7 +132,7 @@ export const assets = {
       _createdAt: createdAt,
     });
 
-    void recordAudit({
+    logAudit({
       action: "asset.upload",
       resourceType: "asset",
       resourceId: id,
@@ -211,7 +211,7 @@ export const assets = {
     await storage.deleteFile(asset.storagePath);
     await db.delete(schema.cmsAssets).where(eq(schema.cmsAssets._id, id));
 
-    void recordAudit({
+    logAudit({
       action: "asset.delete",
       resourceType: "asset",
       resourceId: id,
@@ -238,7 +238,7 @@ export const assets = {
 
     if (Object.keys(updateValues).length > 0) {
       await db.update(schema.cmsAssets).set(updateValues).where(eq(schema.cmsAssets._id, id));
-      void recordAudit({
+      logAudit({
         action: "asset.update",
         resourceType: "asset",
         resourceId: id,

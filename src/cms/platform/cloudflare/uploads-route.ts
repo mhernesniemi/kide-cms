@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getFile } from "@/cms/adapters/storage";
+import { getFileStream } from "./storage";
 
 export const prerender = false;
 
@@ -18,18 +18,19 @@ const MIME_TYPES: Record<string, string> = {
 
 export const GET: APIRoute = async ({ params }) => {
   const filePath = `/uploads/${params.path}`;
-  const data = await getFile(filePath);
+  const file = await getFileStream(filePath);
 
-  if (!data) {
+  if (!file) {
     return new Response("Not found", { status: 404 });
   }
 
   const ext = filePath.substring(filePath.lastIndexOf(".")).toLowerCase();
   const contentType = MIME_TYPES[ext] || "application/octet-stream";
 
-  return new Response(data, {
+  return new Response(file.body, {
     headers: {
       "Content-Type": contentType,
+      "Content-Length": String(file.size),
       "Cache-Control": "public, max-age=31536000, immutable",
     },
   });

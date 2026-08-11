@@ -8,9 +8,10 @@ import {
   hitRateLimit,
   createSession,
   hashPassword,
-  recordAudit,
+  logAudit,
   setSessionCookie,
 } from "virtual:kide/runtime";
+import { MIN_PASSWORD_LENGTH } from "@/cms/core";
 
 export const prerender = false;
 
@@ -44,7 +45,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     });
   }
 
-  if (password.length < 8) {
+  if (password.length < MIN_PASSWORD_LENGTH) {
     return new Response(null, {
       status: 303,
       headers: { Location: "/admin/setup?error=short" },
@@ -90,7 +91,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   const session = await createSession(id);
 
-  void recordAudit({
+  logAudit({
     action: "auth.setup_completed",
     resourceType: "user",
     resourceCollection: "users",

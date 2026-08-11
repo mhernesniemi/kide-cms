@@ -28,4 +28,21 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // Standalone Node scripts (build/verify tooling).
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        process: "readonly",
+        console: "readonly",
+        fetch: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        URLSearchParams: "readonly",
+        URL: "readonly",
+        FormData: "readonly",
+        Blob: "readonly",
+      },
+    },
+  },
 );

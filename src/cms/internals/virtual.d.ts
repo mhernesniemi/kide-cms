@@ -50,6 +50,7 @@ declare module "virtual:kide/runtime" {
     folders,
     createCms,
     recordAudit,
+    logAudit,
     pruneAuditLog,
     auditRequestMeta,
     tokenReference,

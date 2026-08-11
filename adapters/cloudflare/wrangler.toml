@@ -1,5 +1,5 @@
 name = "{{PROJECT_NAME}}"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
 [[d1_databases]]

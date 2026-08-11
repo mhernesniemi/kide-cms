@@ -1,13 +1,16 @@
-# Cloudflare adapter overlay
+# Cloudflare target config
 
-Scaffolding source consumed by [`create-kide-app`](https://github.com/mhernesniemi/create-kide-app) when the Cloudflare option is selected. Not used at runtime.
+Config-only scaffolding consumed by [`create-kide-app`](https://github.com/mhernesniemi/create-kide-app) when the Cloudflare option is selected. Not used at runtime.
 
 ## How it works
 
-File paths in this folder mirror the project root. When you choose Cloudflare at the interactive "Where will you deploy?" prompt, `create-kide-app` overlays each file onto the generated project, then removes the `adapters/` directory.
+The Cloudflare runtime implementations (D1 database, R2 storage, `cf-env`, the `/uploads/*` route) live **in the tree** at `src/cms/platform/cloudflare/`, alongside the Node profile at `src/cms/platform/node/`. Nothing is copied over source files. When you choose Cloudflare at the interactive "Where will you deploy?" prompt, `create-kide-app`:
 
-- `astro.config.mjs`, `drizzle.config.ts`, `src/cms/adapters/db.ts`, `src/cms/adapters/storage.ts`, `src/cms/adapters/cf-env.ts`, `src/pages/uploads/[...path].ts` — copied verbatim over the defaults.
-- `wrangler.toml` — `{{PROJECT_NAME}}` is replaced with the project name.
-- `package.patch.json` — describes dep/script changes applied to the project's `package.json` (adds `@astrojs/cloudflare` and `wrangler`, removes `@astrojs/node` and `sharp`, moves `better-sqlite3` to devDependencies, overrides `preview` and `deploy` scripts). Descriptive only; not read by the CLI — the scaffolder hardcodes these edits.
+- Copies `astro.config.mjs` (uses the Cloudflare adapter + `cmsIntegration({ platform: "cloudflare" })`) and `drizzle.config.ts` (D1 dialect) over the defaults.
+- Flips the two platform selectors — `src/cms/adapters/db.ts` and `src/cms/adapters/storage.ts` — to re-export the `platform/cloudflare` profile (one line each).
+- Processes `wrangler.toml` (`{{PROJECT_NAME}}` → the project name).
+- Patches `package.json` (adds `@astrojs/cloudflare` + `wrangler`, removes `@astrojs/node` + `sharp`, moves `better-sqlite3` to devDependencies, overrides `preview`/`deploy`).
 
-If you clone kide-cms directly (not via `create-kide-app`), you can safely delete this folder.
+`package.patch.json` documents those dependency changes; it is descriptive only — the CLI applies them directly.
+
+If you clone kide-cms directly (not via `create-kide-app`), you can safely delete this folder — the Node profile is the default.

@@ -13,7 +13,9 @@
  * database/storage from Node without being run inside the Worker.
  */
 
-type CfEnv = Record<string, any>;
+// The bindings Kide's own Cloudflare profile reads — kept in sync with wrangler.toml's
+// [[d1_databases]] and [[r2_buckets]]. Catches a binding-name typo at typecheck time.
+export type CfEnv = { CMS_DB?: D1Database; CMS_ASSETS?: R2Bucket } & Record<string, unknown>;
 
 type CfProxy = { env: CfEnv; dispose: () => Promise<void> };
 

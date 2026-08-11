@@ -9,8 +9,9 @@ export {
   readEnv,
   trackTask,
   flushTasks,
+  runWithRequestScope,
 } from "./runtime";
-export type { CmsRuntimeConfig, CmsStorageAdapter, CmsEmailAdapter } from "./runtime";
+export type { CmsRuntimeConfig, CmsStorageAdapter, CmsEmailAdapter, RequestScope } from "./runtime";
 
 export { initSchema, getSchema, resetSchema } from "./schema";
 
@@ -123,6 +124,7 @@ export {
   hashPassword,
   verifyPassword,
   hashToken,
+  MIN_PASSWORD_LENGTH,
   createSession,
   validateSession,
   destroySession,
@@ -185,7 +187,9 @@ export type { AdminRoute } from "./admin";
 
 export { acquireLock, releaseLock } from "./locks";
 
-export { recordAudit, pruneAuditLog, auditRequestMeta, tokenReference } from "./audit";
+export { readLimitedFormData, PayloadTooLargeError } from "./http";
+
+export { recordAudit, logAudit, pruneAuditLog, auditRequestMeta, tokenReference } from "./audit";
 export type { AuditEvent, AuditActor } from "./audit";
 export { collaboration, REVIEW_STATES, isReviewState } from "./collaboration";
 export type { ReviewState, CollaborationState, CommentRecord, ActivityRecord } from "./collaboration";

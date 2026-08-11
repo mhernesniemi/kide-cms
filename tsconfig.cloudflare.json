@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types"],
+    "noEmit": true
+  },
+  "include": ["src/cms/platform/cloudflare/**/*.ts", "src/cms/platform/cloudflare/globals.d.ts"],
+  "exclude": ["src/cms/platform/cloudflare/__tests__/**"]
+}

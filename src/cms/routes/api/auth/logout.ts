@@ -1,12 +1,6 @@
 import type { APIRoute } from "astro";
 
-import {
-  auditRequestMeta,
-  clearSessionCookie,
-  destroySession,
-  recordAudit,
-  tokenReference,
-} from "virtual:kide/runtime";
+import { auditRequestMeta, clearSessionCookie, destroySession, logAudit, tokenReference } from "virtual:kide/runtime";
 
 export const prerender = false;
 
@@ -19,7 +13,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const user = locals.user;
-  void recordAudit({
+  logAudit({
     action: "auth.logout",
     resourceType: "session",
     resourceId: match ? await tokenReference(match[1]) : null,

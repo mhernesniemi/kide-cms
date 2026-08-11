@@ -27,7 +27,7 @@ const errorMessage =
     : error === "password"
       ? "Passwords do not match."
       : error === "short"
-        ? "Password must be at least 8 characters."
+        ? "Password must be at least 12 characters."
         : null;
 ---
 
@@ -87,7 +87,7 @@ const errorMessage =
                   id="password"
                   name="password"
                   type="password"
-                  placeholder="Min 8 characters"
+                  placeholder="Min 12 characters"
                   autoComplete="new-password"
                   required
                 />

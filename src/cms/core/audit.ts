@@ -2,6 +2,7 @@ import { lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { log } from "./log";
+import { trackTask } from "./request-scope";
 import { getDb } from "./runtime";
 import { getSchema } from "./schema";
 
@@ -38,6 +39,11 @@ export const tokenReference = async (token: string): Promise<string> => {
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
   return `sha256:${hex}`;
+};
+
+/** Fire-and-forget audit write, deferred to the active request scope (or script flush). */
+export const logAudit = (event: AuditEvent): void => {
+  trackTask(recordAudit(event));
 };
 
 export const recordAudit = async (event: AuditEvent): Promise<void> => {

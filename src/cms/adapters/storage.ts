@@ -1,43 +1,4 @@
-import { existsSync, mkdirSync } from "node:fs";
-import { readFile, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
-
-// Where /uploads/* files live on disk. Defaults to public/uploads for zero-config dev;
-// set CMS_UPLOADS_DIR to a path outside the release tree so uploads survive deploys.
-const uploadsDir = process.env.CMS_UPLOADS_DIR
-  ? path.resolve(process.env.CMS_UPLOADS_DIR)
-  : path.join(process.cwd(), "public", "uploads");
-
-// Map a "/uploads/<file>" storagePath onto uploadsDir, rejecting any traversal attempts.
-function safeResolve(storagePath: string): string {
-  const rel = storagePath.replace(/^\/+/, "").replace(/^uploads(?:\/|$)/, "");
-  const resolved = path.resolve(uploadsDir, rel);
-  if (resolved !== uploadsDir && !resolved.startsWith(uploadsDir + path.sep)) {
-    throw new Error(`Invalid storage path: ${storagePath}`);
-  }
-  return resolved;
-}
-
-export async function putFile(storagePath: string, data: ArrayBuffer | Uint8Array): Promise<void> {
-  const filePath = safeResolve(storagePath);
-  const dir = path.dirname(filePath);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  const buffer = data instanceof Uint8Array ? data : new Uint8Array(data);
-  await writeFile(filePath, buffer);
-}
-
-export async function getFile(storagePath: string): Promise<ArrayBuffer | null> {
-  const filePath = safeResolve(storagePath);
-  if (!existsSync(filePath)) return null;
-  const buffer = await readFile(filePath);
-  return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
-}
-
-export async function deleteFile(storagePath: string): Promise<void> {
-  const filePath = safeResolve(storagePath);
-  try {
-    await unlink(filePath);
-  } catch {
-    // File may already be deleted.
-  }
-}
+// Platform selector: points at the active profile (src/cms/platform/node|cloudflare/storage.ts).
+// A real relative re-export so it resolves under both Vite and tsx. The scaffolder flips this
+// one line to the cloudflare profile; both profiles live in the tree.
+export * from "../platform/node/storage";

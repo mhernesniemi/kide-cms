@@ -239,7 +239,7 @@ export type WebhookContext = {
 };
 
 export type WebhookConfig = {
-  /** Display name (shown in logs) */
+  /** Shown in logs, and used to route durable deliveries back to this config — must be unique. */
   name: string;
   /** URL to POST to */
   url: string;

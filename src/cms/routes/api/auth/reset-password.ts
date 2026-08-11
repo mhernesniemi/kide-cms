@@ -8,10 +8,10 @@ import {
   consumePasswordReset,
   createSession,
   hashPassword,
-  recordAudit,
+  logAudit,
   setSessionCookie,
 } from "virtual:kide/runtime";
-import { resolveAdminAuth } from "@/cms/core";
+import { resolveAdminAuth, MIN_PASSWORD_LENGTH } from "@/cms/core";
 import config from "virtual:kide/config";
 
 export const prerender = false;
@@ -36,7 +36,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   if (!token || !password) return redirectWithError(token, "missing");
   if (password !== confirmPassword) return redirectWithError(token, "password");
-  if (password.length < 8) return redirectWithError(token, "short");
+  if (password.length < MIN_PASSWORD_LENGTH) return redirectWithError(token, "short");
 
   // Hash before claiming the token: the token is single-use, so anything fallible must run
   // before we burn it — otherwise a hashing failure would strand the account with a spent
@@ -62,7 +62,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   const session = await createSession(reset.userId);
 
-  void recordAudit({
+  logAudit({
     action: "auth.password_reset_completed",
     resourceType: "user",
     resourceCollection: "users",

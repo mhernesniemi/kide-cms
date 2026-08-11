@@ -5,7 +5,7 @@ import { getDb } from "virtual:kide/db";
 import {
   auditRequestMeta,
   createSession,
-  recordAudit,
+  logAudit,
   setSessionCookie,
   tokenReference,
   verifyPassword,
@@ -88,7 +88,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   if (rows.length === 0) {
     await recordFailure();
-    void recordAudit({
+    logAudit({
       action: "auth.login_failed",
       resourceType: "session",
       attemptedEmail: email,
@@ -115,7 +115,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   if (!valid) {
     await recordFailure();
-    void recordAudit({
+    logAudit({
       action: "auth.login_failed",
       resourceType: "session",
       attemptedEmail: email,
@@ -135,7 +135,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   const session = await createSession(String(user._id));
 
-  void recordAudit({
+  logAudit({
     action: "auth.login",
     resourceType: "session",
     resourceId: await tokenReference(session.token),

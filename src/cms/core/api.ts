@@ -1,8 +1,8 @@
-import { and, asc, desc, eq, inArray, like, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, like, lte, ne, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { recordAudit, type AuditActor } from "./audit";
-import { hashPassword } from "./auth";
+import { hashPassword, MIN_PASSWORD_LENGTH } from "./auth";
 import type { CMSConfig, CollectionConfig, FieldConfig, RichTextDocument } from "./define";
 import { getCollectionMap, getTranslatableFieldNames, isStructuralField } from "./define";
 import { getDb, trackTask } from "./runtime";
@@ -268,6 +268,16 @@ const canAccess = async (
   return true;
 };
 
+/** SQL predicate: another admin besides `excludeId` exists — for the atomic last-admin guards. */
+const anotherAdminExists = (mainTable: any, excludeId: string) =>
+  sql`EXISTS (SELECT 1 FROM ${mainTable} WHERE role = 'admin' AND _id != ${excludeId})`;
+
+/** Count admin rows in an auth collection's main table. */
+const countAdmins = async (db: any, mainTable: any): Promise<number> => {
+  const rows = await db.select({ _id: mainTable._id }).from(mainTable).where(eq(mainTable.role, "admin"));
+  return rows.length;
+};
+
 const canWriteAuthField = (fieldName: string, context: RuntimeContext, doc?: Record<string, unknown> | null) => {
   const user = context.user;
   if (user?.role === "admin") return true;
@@ -369,6 +379,9 @@ const removeSearch = (collection: CollectionConfig, docId: string) => {
   trackTask(removeDocument(collection.slug, docId));
 };
 
+// Test-only: pauses update() before its role write, to force a concurrency test's interleaving.
+export const __testHooks = { beforeRoleWrite: null as null | (() => Promise<void>) };
+
 const getTableRefs = async (collectionSlug: string) => {
   const tables = getSchema().cmsTables[collectionSlug] as {
     main: any;
@@ -393,6 +406,19 @@ export const createCms = (config: CMSConfig) => {
     );
   }
   const collectionMap = getCollectionMap(config);
+
+  // Webhook `name` routes deliveries — must be unique and non-empty.
+  const webhookNames = (config.admin?.webhooks ?? []).map((webhook) => webhook.name.trim());
+  if (webhookNames.some((name) => name === "")) {
+    throw new Error("A webhook in admin.webhooks has a blank name — names must be unique and non-empty.");
+  }
+  const seenWebhookNames = new Set<string>();
+  for (const name of webhookNames) {
+    if (seenWebhookNames.has(name)) {
+      throw new Error(`Duplicate webhook name "${name}" in admin.webhooks — names must be unique.`);
+    }
+    seenWebhookNames.add(name);
+  }
 
   const createCollectionApi = (slug: string) => {
     const collection = ensureCollection(config, slug);
@@ -665,6 +691,9 @@ export const createCms = (config: CMSConfig) => {
         const preparedInput = prepareIncomingData(collection, data, undefined);
 
         if (collection.auth && typeof preparedInput.password === "string" && preparedInput.password) {
+          if (!context._system && preparedInput.password.length < MIN_PASSWORD_LENGTH) {
+            throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+          }
           preparedInput.password = await hashPassword(preparedInput.password);
         }
 
@@ -755,6 +784,9 @@ export const createCms = (config: CMSConfig) => {
         const preparedInput = prepareIncomingData(collection, data, undefined, existing);
 
         if (collection.auth && typeof preparedInput.password === "string" && preparedInput.password) {
+          if (!context._system && preparedInput.password.length < MIN_PASSWORD_LENGTH) {
+            throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+          }
           preparedInput.password = await hashPassword(preparedInput.password);
         }
 
@@ -780,7 +812,24 @@ export const createCms = (config: CMSConfig) => {
           updateValues._updatedAt = now();
         }
 
-        await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
+        // Guarded live via WHERE, not the stale `existing.role` — a role promoted after this
+        // row was read but before this statement runs must still be protected.
+        const writesNonAdminRole =
+          collection.auth &&
+          collection.fields.role &&
+          transformedInput.role !== undefined &&
+          transformedInput.role !== "admin";
+        if (__testHooks.beforeRoleWrite) await __testHooks.beforeRoleWrite();
+        if (writesNonAdminRole) {
+          const applied = await db
+            .update(tables.main)
+            .set(updateValues)
+            .where(and(eq(tables.main._id, id), or(ne(tables.main.role, "admin"), anotherAdminExists(tables.main, id))))
+            .returning({ _id: tables.main._id });
+          if (applied.length === 0) throw new Error("Cannot demote the last remaining admin.");
+        } else {
+          await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
+        }
 
         if (collection.versions && tables.versions) {
           const versionRows = await db
@@ -819,11 +868,12 @@ export const createCms = (config: CMSConfig) => {
         return result!;
       },
 
-      async delete(id: string, context: RuntimeContext = {}) {
+      /** Returns true if a row was actually removed (false if not found, or blocked as the last admin). */
+      async delete(id: string, context: RuntimeContext = {}): Promise<boolean> {
         const db = await getDb();
         const tables = await getTableRefs(slug);
         const existingRows = await db.select().from(tables.main).where(eq(tables.main._id, id)).limit(1);
-        if (existingRows.length === 0) return;
+        if (existingRows.length === 0) return false;
 
         const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
         const allowed = await canAccess(collection, "delete", context, existing);
@@ -832,15 +882,28 @@ export const createCms = (config: CMSConfig) => {
         const hookContext = getHookContext(collection, "delete", context);
         await collection.hooks?.beforeDelete?.(existing, hookContext);
 
+        // Guarded atomically: removed only if it isn't the sole admin.
+        if (collection.auth && collection.fields.role) {
+          const removed = await db
+            .delete(tables.main)
+            .where(and(eq(tables.main._id, id), or(ne(tables.main.role, "admin"), anotherAdminExists(tables.main, id))))
+            .returning({ _id: tables.main._id });
+          if (removed.length === 0) {
+            if (existing.role === "admin") throw new Error("Cannot delete the last remaining admin.");
+            return false; // concurrently removed
+          }
+        } else {
+          await db.delete(tables.main).where(eq(tables.main._id, id));
+        }
         if (tables.translations) await db.delete(tables.translations).where(eq(tables.translations._entityId, id));
         if (tables.versions) await db.delete(tables.versions).where(eq(tables.versions._docId, id));
-        await db.delete(tables.main).where(eq(tables.main._id, id));
 
         await collection.hooks?.afterDelete?.(existing, hookContext);
         auditContent("content.delete", slug, id, context);
         removeSearch(collection, id);
         // `existing` is the raw row; every other event dispatches the stripped findById result.
         dispatchWebhooks(config, "delete", slug, stripSensitiveFields(existing), context.user);
+        return true;
       },
 
       /**
@@ -869,28 +932,68 @@ export const createCms = (config: CMSConfig) => {
         if (conditions.length > 0) {
           idQuery = idQuery.where(conditions.length === 1 ? conditions[0] : and(...conditions)) as any;
         }
-        const ids = (await idQuery).map((row: { _id: string }) => String(row._id));
+        const ids: string[] = (await idQuery).map((row: { _id: string }) => String(row._id));
         if (ids.length === 0) return 0;
 
-        // Fall back to the per-document path when delete hooks must run.
+        const isAuthWithRole = !!(collection.auth && collection.fields.role);
+
+        // Non-authoritative early error for the common case — the real guard is per-row below.
+        if (isAuthWithRole) {
+          let adminsInSet = 0;
+          for (let i = 0; i < ids.length; i += 200) {
+            const chunk = ids.slice(i, i + 200);
+            const rows = await db
+              .select({ _id: tables.main._id })
+              .from(tables.main)
+              .where(and(eq(tables.main.role, "admin"), inArray(tables.main._id, chunk)));
+            adminsInSet += rows.length;
+          }
+          if (adminsInSet > 0 && (await countAdmins(db, tables.main)) - adminsInSet < 1) {
+            throw new Error("Cannot delete the last remaining admin.");
+          }
+        }
+
+        // Per-document path when delete hooks must run — this.delete() already carries the guard.
         if (collection.hooks?.beforeDelete || collection.hooks?.afterDelete) {
-          for (const id of ids) await this.delete(id, context);
-          return ids.length;
+          let deleted = 0;
+          for (const id of ids) if (await this.delete(id, context)) deleted++;
+          return deleted;
         }
 
-        const CHUNK = 200; // stay well under SQLite's bound-variable limit
-        for (let i = 0; i < ids.length; i += CHUNK) {
-          const chunk = ids.slice(i, i + CHUNK);
-          if (tables.translations)
-            await db.delete(tables.translations).where(inArray(tables.translations._entityId, chunk));
-          if (tables.versions) await db.delete(tables.versions).where(inArray(tables.versions._docId, chunk));
-          await db.delete(tables.main).where(inArray(tables.main._id, chunk));
+        let deletedIds: string[];
+        if (isAuthWithRole) {
+          // Every row goes through the same live-checked guard — no admin/non-admin bucketing,
+          // or a row promoted after `ids` was built would bulk-delete unconditionally.
+          deletedIds = [];
+          for (const id of ids) {
+            const removed = await db
+              .delete(tables.main)
+              .where(
+                and(eq(tables.main._id, id), or(ne(tables.main.role, "admin"), anotherAdminExists(tables.main, id))),
+              )
+              .returning({ _id: tables.main._id });
+            if (removed.length > 0) deletedIds.push(id);
+          }
+          for (const id of deletedIds) {
+            if (tables.translations) await db.delete(tables.translations).where(eq(tables.translations._entityId, id));
+            if (tables.versions) await db.delete(tables.versions).where(eq(tables.versions._docId, id));
+          }
+        } else {
+          const CHUNK = 200; // stay well under SQLite's bound-variable limit
+          for (let i = 0; i < ids.length; i += CHUNK) {
+            const chunk = ids.slice(i, i + CHUNK);
+            if (tables.translations)
+              await db.delete(tables.translations).where(inArray(tables.translations._entityId, chunk));
+            if (tables.versions) await db.delete(tables.versions).where(inArray(tables.versions._docId, chunk));
+            await db.delete(tables.main).where(inArray(tables.main._id, chunk));
+          }
+          deletedIds = ids;
         }
 
-        if (!context._skipSearch) for (const id of ids) removeSearch(collection, id);
-        auditContent("content.deleteMany", slug, `${ids.length} document(s)`, context);
+        if (!context._skipSearch) for (const id of deletedIds) removeSearch(collection, id);
+        auditContent("content.deleteMany", slug, `${deletedIds.length} document(s)`, context);
         void context.cache?.invalidate({ tags: [slug] });
-        return ids.length;
+        return deletedIds.length;
       },
 
       async publish(id: string, context: RuntimeContext = {}) {

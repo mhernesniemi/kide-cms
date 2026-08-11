@@ -7,7 +7,7 @@ import {
   hitRateLimit,
   createPasswordReset,
   getEmail,
-  recordAudit,
+  logAudit,
   tokenReference,
 } from "virtual:kide/runtime";
 import { resolveAdminAuth } from "@/cms/core";
@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   const rows = await db.select().from(tables.users.main).where(eq(tables.users.main.email, email)).limit(1);
   if (rows.length === 0) {
-    void recordAudit({
+    logAudit({
       action: "auth.password_reset_requested",
       resourceType: "password_reset",
       attemptedEmail: email,
@@ -61,7 +61,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   const emailAdapter = getEmail();
   await emailAdapter.sendPasswordResetEmail?.(String(user.email), resetUrl.toString());
 
-  void recordAudit({
+  logAudit({
     action: "auth.password_reset_requested",
     resourceType: "password_reset",
     resourceId: await tokenReference(reset.token),

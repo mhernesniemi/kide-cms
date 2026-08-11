@@ -8,7 +8,7 @@ import cmsIntegration from "./src/cms/internals/integration.ts";
 // https://astro.build/config
 export default defineConfig({
   output: "server",
-  integrations: [react(), cmsIntegration()],
+  integrations: [react(), cmsIntegration({ platform: "cloudflare" })],
   adapter: cloudflare(),
   vite: {
     plugins: [tailwindcss()],

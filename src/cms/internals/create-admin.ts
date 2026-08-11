@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline";
-import { createAdminUser } from "@/cms/core";
+import { createAdminUser, MIN_PASSWORD_LENGTH } from "@/cms/core";
 
 import "./runtime";
 import { closeDb } from "../adapters/db";
@@ -22,8 +22,8 @@ async function main() {
   }
 
   const password = await ask("Password: ");
-  if (!password || password.length < 4) {
-    console.error("Password must be at least 4 characters.");
+  if (!password || password.length < MIN_PASSWORD_LENGTH) {
+    console.error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
     process.exit(1);
   }
 

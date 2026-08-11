@@ -1,10 +1,10 @@
 {
   "dependencies": {
-    "add": { "@astrojs/cloudflare": "^13.0.0" },
+    "add": { "@astrojs/cloudflare": "~14.1.7" },
     "remove": ["@astrojs/node", "sharp"]
   },
   "devDependencies": {
-    "add": { "wrangler": "^4.0.0" },
+    "add": { "wrangler": "^4.83.0" },
     "moveFromDependencies": ["better-sqlite3"]
   },
   "scripts": {

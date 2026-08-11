@@ -1,4 +1,4 @@
-import { and, desc, eq, lte } from "drizzle-orm";
+import { and, desc, eq, inArray, lte } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import type { CMSConfig } from "./define";
@@ -26,6 +26,14 @@ export type EnqueueTaskOptions = {
 };
 
 export type DrainResult = { processed: number; succeeded: number; failed: number };
+
+// Core-provided task handlers. Dynamic imports avoid a static import cycle.
+const BUILTIN_TASK_HANDLERS: Record<string, (payload: any, ctx: { config: CMSConfig }) => Promise<void>> = {
+  "webhook.deliver": async (payload, ctx) => {
+    const { deliverWebhookTask } = await import("./webhooks");
+    await deliverWebhookTask(payload, ctx);
+  },
+};
 
 const outboxTable = () => getSchema().cmsOutbox;
 
@@ -94,7 +102,7 @@ export const drainTasks = async (config: CMSConfig, limit = 25): Promise<DrainRe
 
     result.processed++;
     const attempt = task.attempts + 1;
-    const handler = handlers[String(task.type)];
+    const handler = handlers[String(task.type)] ?? BUILTIN_TASK_HANDLERS[String(task.type)];
 
     try {
       if (!handler) throw new Error(`No task handler registered for "${task.type}"`);
@@ -158,9 +166,11 @@ export const tickSchedules = async (config: CMSConfig): Promise<number> => {
   return scheduled;
 };
 
-/** Delete completed tasks older than the cutoff (default 7 days). */
+/** Delete completed AND failed tasks older than the cutoff (default 7 days). */
 export const pruneTasks = async (olderThanMs = DEFAULT_PRUNE_AFTER_MS): Promise<void> => {
   const db = await getDb();
   const outbox = outboxTable();
-  await db.delete(outbox).where(and(eq(outbox.status, "done"), lte(outbox.updatedAt, Date.now() - olderThanMs)));
+  await db
+    .delete(outbox)
+    .where(and(inArray(outbox.status, ["done", "failed"]), lte(outbox.updatedAt, Date.now() - olderThanMs)));
 };

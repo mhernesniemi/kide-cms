@@ -62,7 +62,7 @@ Fix: switch to `node({ mode: "middleware" })` and wrap the exported `handler` in
 
 ## Integrations (durable tasks)
 
-`src/cms/core/tasks.ts` implements a transactional-outbox task queue: the `cms_outbox` table is the queue, `enqueueTask()` is an INSERT, and `drainTasks()` claims due rows with an optimistic lease (CAS on `attempts`) and runs handlers registered in `cms.config.ts` under `integrations.tasks`. Handler contract: **throw to retry** (backoff `30s × 2^(n-1)`, `failed` after `maxAttempts`, default 5), **return to complete**. Delivery is at-least-once — handlers must tolerate re-runs. Recurring work goes in `integrations.schedules` (`{ task, payload?, everyMinutes }`), evaluated on each tick.
+`src/cms/core/tasks.ts` implements an outbox-style task queue: the `cms_outbox` table is the queue, `enqueueTask()` is an INSERT, and `drainTasks()` claims due rows with an optimistic lease (CAS on `attempts`) and runs handlers registered in `cms.config.ts` under `integrations.tasks`. Handler contract: **throw to retry** (backoff `30s × 2^(n-1)`, `failed` after `maxAttempts`, default 5), **return to complete**. Delivery is at-least-once — handlers must tolerate re-runs. Recurring work goes in `integrations.schedules` (`{ task, payload?, everyMinutes }`), evaluated on each tick. Once a row is enqueued, delivery is durable — but the enqueue itself is not wrapped in the same DB transaction as the content write that triggers it (e.g. `dispatchWebhooks`), so an enqueue failure (rare — a DB error at that moment) is logged and the event is lost rather than retried.
 
 Triggering: `GET/POST /api/cms/cron/tasks` (guarded by `Bearer ${CRON_SECRET}`; unset means open in dev, 401 in a production build) runs tick → drain → prune. Read the secret with `readEnv()`, never `import.meta.env` — the latter is inlined at build time, which bakes the secret into `dist/` and leaves the check permanently disabled for anyone who sets it in the deploy environment instead. Point an external cron (or a `setInterval` in a long-lived Node server) at it; on Cloudflare the synthesized Worker `scheduled()` handler already hits it. Inbound webhooks: `POST /api/cms/webhooks/[provider]` verifies an HMAC-SHA256 hex signature (`x-webhook-signature`, secret from env `WEBHOOK_SECRET_<PROVIDER>`; hyphens map to underscores) and enqueues a `webhook.<provider>` task — register a handler of that name to consume it. Userland API: `cms.tasks.enqueue/drain/tick/prune`.
 
@@ -74,11 +74,16 @@ Keep provider-specific code (API clients, sync logic, read models) in the app (`
 
 After code changes, ALWAYS run:
 
-1. `pnpm check` — Fix all errors before considering the task done.
+1. `pnpm check` — runs `astro check` (Node profile), `tsc -p tsconfig.cloudflare.json` (Cloudflare profile), and `eslint .`. Fix all errors before considering the task done.
 2. `pnpm test` — All tests must pass. Add tests when changing `src/cms/core/`.
 3. `pnpm format` — Must be the very last step.
 
-> **Known pre-existing `pnpm check` errors:** `astro check` reports ~6 errors confined to `adapters/cloudflare/` (missing Cloudflare ambient types — `R2Bucket`, `D1Database`, `cloudflare:workers`, `@astrojs/cloudflare`). That adapter is meant to be consumed inside a Cloudflare project where those types exist; they are not resolvable in the base repo. Treat them as baseline noise — verify your change adds **zero new errors** outside `adapters/cloudflare/` rather than expecting a fully clean run.
+If the change touches `src/cms/platform/`, `src/cms/middleware/`, or the request-scope/task-queue machinery, also run:
+
+4. `pnpm test:workers` — runs `*.workers.test.ts` in the real Cloudflare Worker runtime (workerd + miniflare). Catches lifecycle/binding bugs a build can't.
+5. `pnpm verify:cloudflare` — assembles the Cloudflare target and boots the real worker (`wrangler dev`), driving setup/login through it. Slower; run before considering runtime-boundary changes done.
+
+> **Known pre-existing lint errors:** `eslint .` reports 2 errors in `ContentEditor.tsx` (`react-hooks/set-state-in-effect`) unrelated to most changes — pre-existing, requires browser verification to fix safely. Treat as baseline; verify your change adds no new errors.
 
 ## Key Files
 
@@ -191,18 +196,18 @@ All fields share base options: `label`, `description`, `required`, `defaultValue
 
 Routes in `src/cms/routes/` import app-specific code via `virtual:kide/*` aliases (resolved by the integration). Never import user files by path from core routes — use these modules.
 
-| Module                        | Resolves to                          | Exports                                            |
-| ----------------------------- | ------------------------------------ | -------------------------------------------------- |
-| `virtual:kide/config`         | `src/cms/cms.config`                 | Default `CMSConfig`                                |
-| `virtual:kide/api`            | `src/cms/.generated/api`             | `{ cms }` — typed local API                        |
-| `virtual:kide/schema`         | `src/cms/.generated/schema`          | `{ cmsTables, cmsSessions, cmsPasswordResets, cmsRateLimits }` — Drizzle table map |
-| `virtual:kide/runtime`        | `src/cms/internals/runtime`          | Session, auth, assets, AI, locks, `createCms`      |
-| `virtual:kide/db`             | `src/cms/adapters/db`                | `{ getDb, isMigrationFailure }` — Drizzle instance |
-| `virtual:kide/email`          | `src/cms/adapters/email`             | `{ sendInviteEmail, sendPasswordResetEmail, sendFormSubmissionEmail, isEmailConfigured }` |
-| `virtual:kide/content-renderer` | `src/components/ContentRenderer.astro` | Default Astro component                          |
-| `virtual:kide/block-renderer` | `src/components/BlockRenderer.astro` | Default Astro component                            |
-| `virtual:kide/admin-css`      | Generated `.kide/admin.css`          | Side-effect import (styles)                        |
-| `virtual:kide/custom-fields`  | Generated `.kide/custom-fields.ts`   | `{ customFields }` — custom admin field components |
+| Module                          | Resolves to                            | Exports                                                                                   |
+| ------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `virtual:kide/config`           | `src/cms/cms.config`                   | Default `CMSConfig`                                                                       |
+| `virtual:kide/api`              | `src/cms/.generated/api`               | `{ cms }` — typed local API                                                               |
+| `virtual:kide/schema`           | `src/cms/.generated/schema`            | `{ cmsTables, cmsSessions, cmsPasswordResets, cmsRateLimits }` — Drizzle table map        |
+| `virtual:kide/runtime`          | `src/cms/internals/runtime`            | Session, auth, assets, AI, locks, `createCms`                                             |
+| `virtual:kide/db`               | `src/cms/adapters/db`                  | `{ getDb, isMigrationFailure }` — Drizzle instance                                        |
+| `virtual:kide/email`            | `src/cms/adapters/email`               | `{ sendInviteEmail, sendPasswordResetEmail, sendFormSubmissionEmail, isEmailConfigured }` |
+| `virtual:kide/content-renderer` | `src/components/ContentRenderer.astro` | Default Astro component                                                                   |
+| `virtual:kide/block-renderer`   | `src/components/BlockRenderer.astro`   | Default Astro component                                                                   |
+| `virtual:kide/admin-css`        | Generated `.kide/admin.css`            | Side-effect import (styles)                                                               |
+| `virtual:kide/custom-fields`    | Generated `.kide/custom-fields.ts`     | `{ customFields }` — custom admin field components                                        |
 
 ## Live Preview Protocol
 

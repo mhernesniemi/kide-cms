@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { assets } from "virtual:kide/runtime";
 import config from "virtual:kide/config";
+import { PayloadTooLargeError, readLimitedFormData } from "@/cms/core";
 
 export const prerender = false;
 
@@ -67,7 +68,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return Response.json({ error: "Expected multipart/form-data." }, { status: 400 });
   }
 
-  const formData = await request.formData();
+  // Enforce the size cap on the raw byte stream — Content-Length is optional (absent on
+  // chunked requests) and checking `file.size` only after formData() already buffered
+  // everything is too late. A small overhead covers non-file fields + multipart framing.
+  let formData: FormData;
+  try {
+    formData = await readLimitedFormData(request, MAX_FILE_SIZE + 64 * 1024);
+  } catch (error) {
+    if (error instanceof PayloadTooLargeError) {
+      return Response.json({ error: "Upload exceeds the size limit." }, { status: 413 });
+    }
+    throw error;
+  }
   const file = formData.get("file");
   const alt = formData.get("alt");
   const folder = formData.get("folder");
@@ -84,19 +96,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return Response.json({ error: `File exceeds the ${MAX_FILE_SIZE / 1024 / 1024} MB size limit.` }, { status: 400 });
   }
 
-  // Verify file content matches declared type
-  const buffer = await file.arrayBuffer();
-  if (!verifyMagicBytes(buffer, file.type)) {
+  // Verify via the header only (slice leaves `file` unconsumed → assets.upload reads it once).
+  const header = await file.slice(0, 256).arrayBuffer();
+  if (!verifyMagicBytes(header, file.type)) {
     return Response.json({ error: "File content does not match declared type." }, { status: 400 });
   }
-
-  // Reconstruct File from buffer since arrayBuffer() consumed the stream
-  const verifiedFile = new File([buffer], file.name, { type: file.type });
 
   const user = locals.user;
   const actor = user ? { id: user.id, email: user.email, role: user.role } : null;
   const asset = await assets.upload(
-    verifiedFile,
+    file,
     {
       alt: alt ? String(alt) : undefined,
       folder: folder ? String(folder) : undefined,

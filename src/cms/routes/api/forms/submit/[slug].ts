@@ -1,8 +1,16 @@
 import type { APIRoute } from "astro";
 import { cms } from "virtual:kide/api";
 import { sendFormSubmissionEmail, isEmailConfigured } from "virtual:kide/email";
+import { hitRateLimit, PayloadTooLargeError, readLimitedFormData } from "@/cms/core";
 
 export const prerender = false;
+
+// Abuse bounds for this public endpoint (beyond the honeypot).
+const MAX_BODY_BYTES = 100 * 1024;
+const MAX_FIELDS = 100;
+const MAX_VALUE_LENGTH = 10_000;
+const RATE_MAX = 10; // submissions per IP per window
+const RATE_WINDOW_MS = 10 * 60 * 1000;
 
 type FormFieldConfig = {
   type: "text" | "email" | "textarea" | "select" | "checkbox";
@@ -13,11 +21,37 @@ type FormFieldConfig = {
   options?: string[];
 };
 
-export const POST: APIRoute = async ({ request, params, redirect }) => {
+export const POST: APIRoute = async ({ request, params, redirect, clientAddress }) => {
   const slug = String(params.slug ?? "");
   if (!slug) return new Response("Not found", { status: 404 });
 
-  const formData = await request.formData();
+  // Durable per-IP throttle (keyed on Astro's trusted clientAddress, not a spoofable header).
+  const limit = await hitRateLimit("forms:ip", clientAddress, {
+    max: RATE_MAX,
+    windowMs: RATE_WINDOW_MS,
+    failClosed: true,
+  });
+  if (!limit.ok) {
+    return new Response("Too many submissions. Try again later.", {
+      status: 429,
+      headers: { "Retry-After": String(Math.ceil(limit.retryAfterMs / 1000)) },
+    });
+  }
+
+  // Enforce the body cap on the raw byte stream — Content-Length is optional (absent on
+  // chunked requests), so a header-only check can't stop an unbounded body.
+  let formData: FormData;
+  try {
+    formData = await readLimitedFormData(request, MAX_BODY_BYTES);
+  } catch (error) {
+    if (error instanceof PayloadTooLargeError) return new Response("Payload too large", { status: 413 });
+    throw error;
+  }
+
+  // Bound the number of submitted fields.
+  if ([...formData.keys()].length > MAX_FIELDS) {
+    return new Response("Too many fields", { status: 413 });
+  }
 
   // Honeypot — silently accept bot submissions without storing
   if (String(formData.get("_hp") ?? "").trim()) {
@@ -37,6 +71,11 @@ export const POST: APIRoute = async ({ request, params, redirect }) => {
 
     if (field.required && (field.type === "checkbox" ? value === false : value === "")) {
       errors.push(`${field.label} is required`);
+      continue;
+    }
+
+    if (typeof value === "string" && value.length > MAX_VALUE_LENGTH) {
+      errors.push(`${field.label} is too long`);
       continue;
     }
 

@@ -12,7 +12,7 @@ export const getDb = async () => {
   if (dbInstance) return dbInstance;
 
   const env = await getCfEnv();
-  const db = env.CMS_DB as D1Database | undefined;
+  const db = env.CMS_DB;
   if (!db) {
     throw new Error("D1 database binding CMS_DB not found. Check wrangler.toml.");
   }

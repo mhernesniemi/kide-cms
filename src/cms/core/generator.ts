@@ -1,5 +1,6 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 
 import type { CMSConfig, CollectionConfig, FieldConfig } from "./define";
 import { getTranslatableFieldNames } from "./define";
@@ -492,6 +493,13 @@ ${apiTypes}
 `;
 };
 
+// Temp file + rename: a concurrent reader never sees a partially-written file.
+const writeFileAtomic = async (filePath: string, content: string) => {
+  const tmpPath = `${filePath}.${randomUUID()}.tmp`;
+  await writeFile(tmpPath, content, "utf-8");
+  await rename(tmpPath, filePath);
+};
+
 export const generate = async (config: CMSConfig, options: GeneratorOptions) => {
   const outputDir = options.outputDir;
   const coreImportPath = options.coreImportPath ?? "@/cms/core";
@@ -500,13 +508,12 @@ export const generate = async (config: CMSConfig, options: GeneratorOptions) => 
 
   await mkdir(outputDir, { recursive: true });
   await Promise.all([
-    writeFile(path.join(outputDir, "schema.ts"), generateSchemaFile(config), "utf-8"),
-    writeFile(path.join(outputDir, "types.ts"), generateTypesFile(config, coreImportPath), "utf-8"),
-    writeFile(path.join(outputDir, "validators.ts"), generateValidatorsFile(config), "utf-8"),
-    writeFile(
+    writeFileAtomic(path.join(outputDir, "schema.ts"), generateSchemaFile(config)),
+    writeFileAtomic(path.join(outputDir, "types.ts"), generateTypesFile(config, coreImportPath)),
+    writeFileAtomic(path.join(outputDir, "validators.ts"), generateValidatorsFile(config)),
+    writeFileAtomic(
       path.join(outputDir, "api.ts"),
       generateApiFile(config, coreImportPath, runtimeImportPath, configImportPath),
-      "utf-8",
     ),
   ]);
 };

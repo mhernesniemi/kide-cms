@@ -1,85 +1,85 @@
 import type { CMSConfig, WebhookConfig, WebhookContext, WebhookEvent } from "./define";
+import { trackTask } from "./request-scope";
+import { enqueueTask } from "./tasks";
 
-const MAX_RETRIES = 3;
 const TIMEOUT_MS = 5000;
-const RETRY_DELAYS = [1000, 3000, 9000];
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+export type WebhookDeliveryRef = {
+  webhookName: string;
+  event: WebhookEvent;
+  collection: string;
+  doc: Record<string, unknown>;
+  user: WebhookContext["user"];
+  timestamp: string;
+};
 
-async function deliverOnce(
-  webhook: WebhookConfig,
-  body: string,
-): Promise<{ ok: boolean; status?: number; error?: string }> {
+const buildPayload = (webhook: WebhookConfig, ref: WebhookDeliveryRef) => {
+  const context: WebhookContext = {
+    user: ref.user,
+    event: ref.event,
+    collection: ref.collection,
+    timestamp: ref.timestamp,
+  };
+  return webhook.payload
+    ? webhook.payload(ref.doc, context)
+    : { event: ref.event, collection: ref.collection, doc: ref.doc, user: ref.user, timestamp: ref.timestamp };
+};
+
+/** One delivery attempt as a durable outbox task. URL/headers resolve from live config, never stored. */
+export async function deliverWebhookTask(ref: WebhookDeliveryRef, ctx: { config: CMSConfig }): Promise<void> {
+  const webhook = ctx.config.admin?.webhooks?.find((w) => w.name === ref.webhookName);
+  if (!webhook) {
+    // Config no longer defines this webhook (renamed/removed) — nothing to retry.
+    return;
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
     const response = await fetch(webhook.url, {
       method: webhook.method ?? "POST",
       headers: { "Content-Type": "application/json", ...webhook.headers },
-      body,
+      body: JSON.stringify(buildPayload(webhook, ref)),
       signal: controller.signal,
     });
-    return { ok: response.ok, status: response.status };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    if (!response.ok) throw new Error(`webhook ${webhook.name} → HTTP ${response.status}`);
   } finally {
     clearTimeout(timeout);
   }
 }
 
-async function deliverWebhook(webhook: WebhookConfig, body: string): Promise<void> {
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const result = await deliverOnce(webhook, body);
-    if (result.ok) {
-      if (attempt > 0) {
-        console.log(`  [webhook] ${webhook.name} delivered after ${attempt + 1} attempts`);
-      }
-      return;
-    }
-    const detail = result.status ? `HTTP ${result.status}` : result.error;
-    if (attempt < MAX_RETRIES) {
-      console.warn(`  [webhook] ${webhook.name} failed (${detail}) — retrying in ${RETRY_DELAYS[attempt]}ms`);
-      await sleep(RETRY_DELAYS[attempt]);
-    } else {
-      console.error(`  [webhook] ${webhook.name} failed permanently after ${MAX_RETRIES + 1} attempts: ${detail}`);
-    }
-  }
-}
-
-export async function dispatchWebhooks(
+/** Durably enqueue a delivery reference for every webhook matching this event. */
+export function dispatchWebhooks(
   config: CMSConfig,
   event: WebhookEvent,
   collectionSlug: string,
   doc: Record<string, unknown>,
   user: WebhookContext["user"],
-): Promise<void> {
+): void {
   const webhooks = config.admin?.webhooks;
   if (!webhooks || webhooks.length === 0) return;
 
-  const matching = webhooks.filter((webhook) => {
-    if (!webhook.events.includes(event)) return false;
-    if (webhook.collections && !webhook.collections.includes(collectionSlug)) return false;
-    return true;
-  });
-
+  const matching = webhooks.filter(
+    (webhook: WebhookConfig) =>
+      webhook.events.includes(event) && (!webhook.collections || webhook.collections.includes(collectionSlug)),
+  );
   if (matching.length === 0) return;
 
-  const context: WebhookContext = {
-    user: user ?? null,
-    event,
-    collection: collectionSlug,
-    timestamp: new Date().toISOString(),
-  };
-
-  // Fire all matching webhooks in parallel — don't block the operation
+  const timestamp = new Date().toISOString();
   for (const webhook of matching) {
-    const payload = webhook.payload
-      ? webhook.payload(doc, context)
-      : { event, collection: collectionSlug, doc, user, timestamp: context.timestamp };
-    const body = JSON.stringify(payload);
-    // Fire and forget — failures are logged but don't bubble up
-    deliverWebhook(webhook, body).catch((err) => {
-      console.error(`  [webhook] ${webhook.name} dispatcher error:`, err);
-    });
+    const ref: WebhookDeliveryRef = {
+      webhookName: webhook.name,
+      event,
+      collection: collectionSlug,
+      doc,
+      user: user ?? null,
+      timestamp,
+    };
+    // If the enqueue itself fails, the event is lost — log loudly rather than swallow it.
+    trackTask(
+      enqueueTask("webhook.deliver", ref).catch((error) => {
+        console.error(`[webhook] failed to enqueue "${webhook.name}" for ${event}/${collectionSlug}:`, error);
+      }),
+    );
   }
 }

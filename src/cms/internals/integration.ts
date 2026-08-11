@@ -14,6 +14,8 @@ export interface CmsIntegrationOptions {
   adaptersPath?: string;
   /** Path to the generator script (default: "src/cms/generator.ts") */
   generatorPath?: string;
+  /** Runtime target — selects the platform profile (database/storage). Default "node". */
+  platform?: "node" | "cloudflare";
 }
 
 function runGenerator(cwd: string, generatorPath: string) {
@@ -76,6 +78,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
   const generatedPath = options?.generatedPath ?? "src/cms/.generated";
   const adaptersPath = options?.adaptersPath ?? "src/cms/adapters";
   const generatorPath = options?.generatorPath ?? "src/cms/internals/generator.ts";
+  const platform = options?.platform ?? "node";
 
   return {
     name: "kide-cms",
@@ -203,6 +206,11 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           entrypoint: "./src/cms/routes/admin/assets/[id].astro",
         });
         injectRoute({ pattern: "/admin/[...path]", entrypoint: "./src/cms/routes/admin/[...path].astro" });
+
+        // Cloudflare serves /uploads/* from R2 through a route (Node uses static files).
+        if (platform === "cloudflare") {
+          injectRoute({ pattern: "/uploads/[...path]", entrypoint: "./src/cms/platform/cloudflare/uploads-route.ts" });
+        }
 
         // Inject API routes
         injectRoute({ pattern: "/api/cms/auth/login", entrypoint: "./src/cms/routes/api/auth/login.ts" });
