@@ -24,9 +24,9 @@ let cms: any;
 const system = { _system: true } as const;
 
 let adminId: string;
-let viewerId: string;
+let nonAdminId: string;
 /** The context the HTTP layer builds for a signed-in non-admin. */
-let viewerCtx: { user: { id: string; role: string; email: string } };
+let nonAdminCtx: { user: { id: string; role: string; email: string } };
 
 beforeAll(async () => {
   sqlite = new Database(":memory:");
@@ -48,13 +48,13 @@ beforeAll(async () => {
     { name: "Admin", email: "admin@example.com", role: "admin", password: "admin-pw" },
     system,
   );
-  const viewer = await cms.users.create(
-    { name: "Viewer", email: "viewer@example.com", role: "viewer", password: "viewer-pw" },
+  const nonAdmin = await cms.users.create(
+    { name: "Editor", email: "editor@example.com", role: "editor", password: "editor-pw" },
     system,
   );
   adminId = String(admin._id);
-  viewerId = String(viewer._id);
-  viewerCtx = { user: { id: viewerId, role: "viewer", email: "viewer@example.com" } };
+  nonAdminId = String(nonAdmin._id);
+  nonAdminCtx = { user: { id: nonAdminId, role: "editor", email: "editor@example.com" } };
 });
 
 afterAll(() => {
@@ -75,59 +75,60 @@ const readPasswordHash = async (id: string) => {
 
 describe("auth collections deny by default", () => {
   it("ignores a non-admin's attempt to give itself a role", async () => {
-    await cms.users.update(viewerId, { name: "Viewer Renamed", role: "admin" }, viewerCtx);
+    await cms.users.update(nonAdminId, { name: "Editor Renamed", role: "admin" }, nonAdminCtx);
 
-    const viewer = await readUser(viewerId);
-    expect(viewer.role).toBe("viewer");
+    const nonAdmin = await readUser(nonAdminId);
+    expect(nonAdmin.role).toBe("editor");
     // The rest of the update still applies — only the privileged field is dropped.
-    expect(viewer.name).toBe("Viewer Renamed");
+    expect(nonAdmin.name).toBe("Editor Renamed");
   });
 
   it("refuses a non-admin writing to someone else's record", async () => {
-    await expect(cms.users.update(adminId, { password: "attacker-set" }, viewerCtx)).rejects.toThrow(/Access denied/);
+    await expect(cms.users.update(adminId, { password: "attacker-set" }, nonAdminCtx)).rejects.toThrow(/Access denied/);
 
     expect(await verifyPassword(await readPasswordHash(adminId), "admin-pw")).toBe(true);
   });
 
   it("refuses a non-admin creating or deleting users", async () => {
     await expect(
-      cms.users.create({ name: "Mallory", email: "mallory@example.com", role: "admin" }, viewerCtx),
+      cms.users.create({ name: "Mallory", email: "mallory@example.com", role: "admin" }, nonAdminCtx),
     ).rejects.toThrow(/Access denied/);
-    await expect(cms.users.delete(adminId, viewerCtx)).rejects.toThrow(/Access denied/);
+    await expect(cms.users.delete(adminId, nonAdminCtx)).rejects.toThrow(/Access denied/);
 
     expect(await readUser(adminId)).toBeTruthy();
   });
 
   it("hides other users from a non-admin's reads", async () => {
-    const docs = await cms.users.find({}, viewerCtx);
-    expect(docs.map((d: any) => d._id)).toEqual([viewerId]);
-    expect(await cms.users.count({}, viewerCtx)).toBe(1);
+    const docs = await cms.users.find({}, nonAdminCtx);
+    expect(docs.map((d: any) => d._id)).toEqual([nonAdminId]);
+    expect(await cms.users.count({}, nonAdminCtx)).toBe(1);
 
-    await expect(cms.users.findById(adminId, {}, viewerCtx)).rejects.toThrow(/Access denied/);
+    await expect(cms.users.findById(adminId, {}, nonAdminCtx)).rejects.toThrow(/Access denied/);
   });
 
   it("still lets a user change their own password", async () => {
-    await cms.users.update(viewerId, { password: "self-chosen-strong-pw" }, viewerCtx);
+    await cms.users.update(nonAdminId, { password: "self-chosen-strong-pw" }, nonAdminCtx);
 
-    expect(await verifyPassword(await readPasswordHash(viewerId), "self-chosen-strong-pw")).toBe(true);
+    expect(await verifyPassword(await readPasswordHash(nonAdminId), "self-chosen-strong-pw")).toBe(true);
   });
 
   it("rejects a too-short password from a non-system caller", async () => {
-    await expect(cms.users.update(viewerId, { password: "short" }, viewerCtx)).rejects.toThrow(/at least/);
+    await expect(cms.users.update(nonAdminId, { password: "short" }, nonAdminCtx)).rejects.toThrow(/at least/);
   });
 
   it("lets an admin manage roles and other accounts", async () => {
     const adminCtx = { user: { id: adminId, role: "admin", email: "admin@example.com" } };
-    await cms.users.update(viewerId, { role: "editor" }, adminCtx);
+    await cms.users.update(nonAdminId, { role: "admin" }, adminCtx);
 
-    expect((await readUser(viewerId)).role).toBe("editor");
+    expect((await readUser(nonAdminId)).role).toBe("admin");
     expect((await cms.users.find({}, adminCtx)).length).toBe(2);
 
-    await cms.users.update(viewerId, { role: "viewer" }, adminCtx);
+    // Demote back — another admin (adminId) still exists, so this stays within the invariant.
+    await cms.users.update(nonAdminId, { role: "editor" }, adminCtx);
   });
 
   it("leaves non-auth collections default-allow", async () => {
-    const post = await cms.posts.create({ title: "Anyone can write this" }, viewerCtx);
+    const post = await cms.posts.create({ title: "Anyone can write this" }, nonAdminCtx);
     expect(post._id).toBeTruthy();
   });
 });
@@ -137,11 +138,11 @@ describe("field-level access rules", () => {
   it("omits an unreadable field from find and findById", async () => {
     const page = await cms.pages.create({ title: "Board Page", summary: "CONFIDENTIAL" }, system);
 
-    const asViewer = await cms.pages.findById(String(page._id), { status: "any" }, viewerCtx);
+    const asViewer = await cms.pages.findById(String(page._id), { status: "any" }, nonAdminCtx);
     expect(asViewer.summary).toBeUndefined();
     expect(asViewer.title).toBe("Board Page");
 
-    const listed = (await cms.pages.find({ status: "any" }, viewerCtx)).find((d: any) => d._id === page._id);
+    const listed = (await cms.pages.find({ status: "any" }, nonAdminCtx)).find((d: any) => d._id === page._id);
     expect(listed.summary).toBeUndefined();
 
     const asAdmin = await cms.pages.findById(String(page._id), { status: "any" }, adminCtx());
@@ -149,10 +150,10 @@ describe("field-level access rules", () => {
   });
 
   it("applies a field's update rule on create, not just on update", async () => {
-    const created = await cms.pages.create({ title: "No SEO For You", seoDescription: "injected" }, viewerCtx);
+    const created = await cms.pages.create({ title: "No SEO For You", seoDescription: "injected" }, nonAdminCtx);
     expect(created.seoDescription).toBeFalsy();
 
-    await cms.pages.update(String(created._id), { seoDescription: "still no" }, viewerCtx);
+    await cms.pages.update(String(created._id), { seoDescription: "still no" }, nonAdminCtx);
     const after = await cms.pages.findById(String(created._id), { status: "any" }, system);
     expect(after.seoDescription).toBeFalsy();
   });
@@ -160,12 +161,12 @@ describe("field-level access rules", () => {
 
 describe("version history and translations respect read access", () => {
   it("denies both to a caller who cannot read the document", async () => {
-    await expect(cms.users.versions(adminId, viewerCtx)).rejects.toThrow(/Access denied/);
-    await expect(cms.users.getTranslations(adminId, viewerCtx)).rejects.toThrow(/Access denied/);
+    await expect(cms.users.versions(adminId, nonAdminCtx)).rejects.toThrow(/Access denied/);
+    await expect(cms.users.getTranslations(adminId, nonAdminCtx)).rejects.toThrow(/Access denied/);
   });
 
   it("never exposes a password hash in a version snapshot", async () => {
-    const snapshots = await cms.users.versions(viewerId, system);
+    const snapshots = await cms.users.versions(nonAdminId, system);
     for (const entry of snapshots) {
       expect(entry.snapshot?.password).toBeUndefined();
     }
@@ -230,21 +231,18 @@ describe("last-admin invariant", () => {
     )[0] as { _id: string };
     expect(soleAdmin).toBeTruthy();
 
-    // Keep the shared `viewerId` fixture out of the `role: "viewer"` filter below so it only
-    // matches the fresh user this test creates.
-    await cms.users.update(viewerId, { role: "editor" }, system);
     const promotee = await cms.users.create(
-      { name: "Promotee", email: "promotee@example.com", role: "viewer", password: "promotee-password" },
+      { name: "Promotee", email: "promotee@example.com", role: "editor", password: "promotee-password" },
       system,
     );
 
-    // deleteMany's own id-selection SELECT will see `promotee` as a viewer (matching the
-    // filter); the race is whether its actual per-row delete statement re-checks role live —
-    // if promotion completes first, the guard must block it, since deleting both the promoted
-    // admin and the original sole admin would zero out every admin.
+    // deleteMany's own id-selection SELECT will see `promotee` as a match (filtered by its
+    // unique email); the race is whether its actual per-row delete statement re-checks role
+    // live — if promotion completes first, the guard must block it, since deleting both the
+    // promoted admin and the original sole admin would zero out every admin.
     await Promise.allSettled([
       cms.users.update(String(promotee._id), { role: "admin" }, system),
-      cms.users.deleteMany({ role: "viewer" }, system),
+      cms.users.deleteMany({ email: promotee.email }, system),
       cms.users.delete(String(soleAdmin._id), system),
     ]);
 
@@ -266,7 +264,7 @@ describe("last-admin invariant", () => {
     )[0] as { _id: string };
 
     const v = await cms.users.create(
-      { name: "V", email: "stale-read@example.com", role: "viewer", password: "stale-read-password" },
+      { name: "V", email: "stale-read@example.com", role: "editor", password: "stale-read-password" },
       system,
     );
 
@@ -278,7 +276,7 @@ describe("last-admin invariant", () => {
       await gate;
     };
 
-    const staleWrite = cms.users.update(String(v._id), { role: "viewer" }, system);
+    const staleWrite = cms.users.update(String(v._id), { role: "editor" }, system);
     while (!paused) await new Promise((r) => setTimeout(r, 0));
     __testHooks.beforeRoleWrite = null;
 

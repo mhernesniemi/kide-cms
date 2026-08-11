@@ -110,7 +110,7 @@ describe("hasRole", () => {
   it("matches any of the given roles", async () => {
     const rule = hasRole("admin", "editor");
     expect(await rule({ user: { id: "1", role: "admin" }, operation: "read", collection: "x" })).toBe(true);
-    expect(await rule({ user: { id: "1", role: "viewer" }, operation: "read", collection: "x" })).toBe(false);
+    expect(await rule({ user: { id: "1", role: "guest" }, operation: "read", collection: "x" })).toBe(false);
     expect(await rule({ user: null, operation: "read", collection: "x" })).toBe(false);
   });
 });

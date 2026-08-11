@@ -83,8 +83,6 @@ If the change touches `src/cms/platform/`, `src/cms/middleware/`, or the request
 4. `pnpm test:workers` — runs `*.workers.test.ts` in the real Cloudflare Worker runtime (workerd + miniflare). Catches lifecycle/binding bugs a build can't.
 5. `pnpm verify:cloudflare` — assembles the Cloudflare target and boots the real worker (`wrangler dev`), driving setup/login through it. Slower; run before considering runtime-boundary changes done.
 
-> **Known pre-existing lint errors:** `eslint .` reports 2 errors in `ContentEditor.tsx` (`react-hooks/set-state-in-effect`) unrelated to most changes — pre-existing, requires browser verification to fix safely. Treat as baseline; verify your change adds no new errors.
-
 ## Key Files
 
 | File                               | Purpose                                               |

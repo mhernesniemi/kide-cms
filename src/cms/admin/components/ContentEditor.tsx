@@ -491,6 +491,8 @@ export default function ContentEditor({
   useEffect(() => {
     const btn = findSaveButton();
     if (!btn) return;
+    // btn is a real DOM node from a sibling component tree; its state can't be read at render time.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSaveLabel((btn.textContent || "Save").trim());
     setSaveDisabled(btn.disabled);
     const observer = new MutationObserver(() => setSaveDisabled(btn.disabled));
@@ -509,6 +511,9 @@ export default function ContentEditor({
     try {
       if (sessionStorage.getItem(restoreKey()) === "1") {
         sessionStorage.removeItem(restoreKey());
+        // Deliberately post-mount: computing this during render would make the client's first
+        // render diverge from SSR's (sessionStorage doesn't exist server-side) — a hydration mismatch.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIsFullscreen(true);
       }
     } catch {}

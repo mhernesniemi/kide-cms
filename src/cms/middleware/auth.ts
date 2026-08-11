@@ -19,7 +19,7 @@ const normalizeCustomUser = (value: Record<string, unknown> | null): SessionUser
     id: value.id,
     email: value.email,
     name: typeof value.name === "string" ? value.name : value.email,
-    role: typeof value.role === "string" ? value.role : "viewer",
+    role: typeof value.role === "string" ? value.role : "editor",
   };
 };
 
