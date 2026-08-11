@@ -9,8 +9,7 @@
  * either DROP the affected table first (data loss — fine for a dev DB you're
  * about to repopulate) and re-run, or hand-write a migration to preserve data.
  *
- *   pnpm cms:push                          # sync ./data/cms.db (or CMS_DATABASE_URL)
- *   pnpm cms:generate && pnpm cms:push     # after editing collections
+ *   pnpm cms:push       # generate + sync ./data/cms.db (or CMS_DATABASE_URL)
  *
  * For Cloudflare D1 projects, keep using `drizzle-kit push` / wrangler — this
  * script targets local better-sqlite3 only.
@@ -35,6 +34,10 @@ const isSearchIndexStatement = (stmt: string) => /\bcms_search_index/i.test(stmt
 // list of collection slugs or table names; expands to the collection's
 // _translations/_versions tables too.
 //   RECREATE=pages,posts pnpm cms:push      (or --recreate=pages,posts)
+// Destructive statements abort unless explicitly approved:
+//   pnpm cms:push --allow-data-loss     (or ALLOW_DATA_LOSS=1)
+const allowDataLoss = process.argv.includes("--allow-data-loss") || process.env.ALLOW_DATA_LOSS === "1";
+
 const parseRecreate = (): string[] => {
   const arg = process.argv.find((a) => a.startsWith("--recreate="))?.slice("--recreate=".length);
   const raw = process.env.RECREATE ?? arg ?? "";
@@ -60,6 +63,14 @@ async function main() {
 
   const recreate = parseRecreate();
   if (recreate.length) {
+    // Recreate drops tables before the diff runs, so it needs the same approval as any
+    // destructive diff — checked here, before anything is touched.
+    if (!allowDataLoss) {
+      console.error(`[cms:push] Refusing --recreate (drops ${recreate.join(", ")} — data loss).`);
+      console.error("[cms:push] Re-run with --allow-data-loss to apply anyway.");
+      sqlite.close();
+      process.exit(1);
+    }
     for (const t of recreate) sqlite.exec(`DROP TABLE IF EXISTS ${t}`);
     console.log(`[cms:push] dropped for recreate: ${recreate.join(", ")}`);
   }
@@ -106,12 +117,38 @@ async function main() {
   const { statementsToExecute, hasDataLoss } = diff;
   const statements = statementsToExecute.filter((stmt) => !isSearchIndexStatement(stmt));
 
+  // drizzle-kit's hasDataLoss misses plain DROP COLUMN — classify statement shapes too.
+  // (`__new_` is drizzle's table-recreate pattern: create copy, insert-select, drop old.)
+  const isDestructive = (stmt: string) => /\bDROP\s+TABLE\b|\bDROP\s+COLUMN\b|\bDELETE\s+FROM\b|__new_/i.test(stmt);
+  const losesData = hasDataLoss || statements.some(isDestructive);
+
   if (statements.length === 0) {
     console.log("[cms:push] Schema already in sync.");
+  } else if (losesData && !allowDataLoss) {
+    console.error("[cms:push] Refusing to apply — this diff loses data:");
+    for (const statement of statements) console.error(`  ${statement.split("\n")[0]}`);
+    console.error("[cms:push] Re-run with --allow-data-loss to apply anyway.");
+    sqlite.close();
+    process.exit(1);
   } else {
-    for (const statement of statements) sqlite.exec(statement);
-    console.log(`[cms:push] Applied ${statements.length} statement(s)${hasDataLoss ? " (includes data loss)" : ""}.`);
-    if (hasDataLoss)
+    // One transaction: a mid-diff failure must not leave a half-applied schema.
+    sqlite.exec("BEGIN");
+    try {
+      for (const statement of statements) sqlite.exec(statement);
+      // FKs are OFF in this script, so verify integrity before committing.
+      const violations = sqlite.pragma("foreign_key_check") as Array<{ table: string; parent: string }>;
+      if (violations.length) {
+        const pairs = [...new Set(violations.map((v) => `${v.table}→${v.parent}`))].join(", ");
+        throw new Error(`[cms:push] foreign_key_check failed (${pairs}) — rolled back.`);
+      }
+      sqlite.exec("COMMIT");
+    } catch (error) {
+      sqlite.exec("ROLLBACK");
+      sqlite.close();
+      throw error;
+    }
+    console.log(`[cms:push] Applied ${statements.length} statement(s)${losesData ? " (includes data loss)" : ""}.`);
+    if (losesData)
       console.log("[cms:push] Tip: run `pnpm cms:reindex` to rebuild the search index if columns changed.");
   }
 

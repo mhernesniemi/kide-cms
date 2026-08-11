@@ -4,7 +4,7 @@ import { readEnv, resolveAdminAuth, runWithRequestScope } from "@/cms/core";
 import type { RequestScope, SessionUser } from "@/cms/core";
 import config from "virtual:kide/config";
 import { getSessionUser } from "virtual:kide/runtime";
-import { getDb, isMigrationFailure } from "virtual:kide/db";
+import { getDb } from "virtual:kide/db";
 
 let hasUsers: boolean | null = null;
 
@@ -142,10 +142,10 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
         hasUsers = true;
       }
     } catch (error) {
-      // A broken migration must surface, not masquerade as a fresh install — otherwise
-      // /admin/setup would let someone create an admin against a half-migrated schema.
-      if (isMigrationFailure(error)) throw error;
-      // Tables may not exist yet (first run, schema not pushed)
+      // Only a missing users table means first run (schema not pushed yet) — anything else
+      // (corruption, I/O) must surface, not funnel visitors to /admin/setup.
+      const message = error instanceof Error ? error.message : String(error);
+      if (!/no such table: cms_users/i.test(message)) throw error;
       hasUsers = false;
     }
   }

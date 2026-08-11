@@ -11,7 +11,7 @@ src/
     collections/          # Collection definitions
     adapters/             # db, email, storage adapters
     internals/            # Thin runner scripts + integration.ts + virtual.d.ts (not user-edited)
-    migrations/           # Drizzle migrations
+    migrations/           # Drizzle migrations (Cloudflare D1 only — Node syncs via cms:push, no migrate-on-boot)
     .generated/           # Auto-generated schema/types/validators/api (do not edit)
     core/                 # CMS runtime library (define, api, auth, schema, content, ...)
     admin/                # Admin UI (components, layouts, lib)
