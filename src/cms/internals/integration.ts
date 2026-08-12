@@ -25,8 +25,11 @@ function runGenerator(cwd: string, generatorPath: string) {
   });
 }
 
-function pushSchema(cwd: string) {
-  execSync("npx drizzle-kit push --force", {
+// D1 dev syncs via drizzle-kit against miniflare's sqlite (located by the CF drizzle
+// config); the Node target goes through the guarded cms:push script — same gates as CI/deploy.
+function pushSchema(cwd: string, d1 = false) {
+  const command = d1 ? "npx drizzle-kit push --force" : "node --import tsx src/cms/internals/push.ts";
+  execSync(command, {
     stdio: "inherit",
     cwd,
   });
@@ -306,7 +309,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
             }
 
             try {
-              pushSchema(root);
+              pushSchema(root, true);
               if (isFirstRun) {
                 console.log("  \x1b[36m[cms]\x1b[0m Database ready. Open /admin to create your admin account.");
               }
@@ -329,7 +332,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
               }
             } catch (error) {
               console.error("  \x1b[31m[cms]\x1b[0m Database setup failed:", (error as Error).message);
-              console.error("  \x1b[31m[cms]\x1b[0m Try running: npx drizzle-kit push --force");
+              console.error("  \x1b[31m[cms]\x1b[0m Try running: pnpm cms:push");
             }
           }
 
@@ -360,7 +363,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
               console.log("  [cms] Config changed, regenerating...");
               try {
                 runGenerator(root, generatorPath);
-                pushSchema(root);
+                pushSchema(root, useD1);
                 console.log("  [cms] Schema updated.");
               } catch (error) {
                 console.error("  [cms] Regeneration failed:", (error as Error).message);
