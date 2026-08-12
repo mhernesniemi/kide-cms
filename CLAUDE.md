@@ -200,7 +200,7 @@ Routes in `src/cms/routes/` import app-specific code via `virtual:kide/*` aliase
 | `virtual:kide/api`              | `src/cms/.generated/api`               | `{ cms }` — typed local API                                                               |
 | `virtual:kide/schema`           | `src/cms/.generated/schema`            | `{ cmsTables, cmsSessions, cmsPasswordResets, cmsRateLimits }` — Drizzle table map        |
 | `virtual:kide/runtime`          | `src/cms/internals/runtime`            | Session, auth, assets, AI, locks, `createCms`                                             |
-| `virtual:kide/db`               | `src/cms/adapters/db`                  | `{ getDb, isMigrationFailure }` — Drizzle instance                                        |
+| `virtual:kide/db`               | `src/cms/adapters/db`                  | `{ getDb }` — Drizzle instance                                                            |
 | `virtual:kide/email`            | `src/cms/adapters/email`               | `{ sendInviteEmail, sendPasswordResetEmail, sendFormSubmissionEmail, isEmailConfigured }` |
 | `virtual:kide/content-renderer` | `src/components/ContentRenderer.astro` | Default Astro component                                                                   |
 | `virtual:kide/block-renderer`   | `src/components/BlockRenderer.astro`   | Default Astro component                                                                   |

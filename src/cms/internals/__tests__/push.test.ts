@@ -90,7 +90,9 @@ describe("cms:push safety gates", () => {
   it(
     "refuses --recreate without approval, before dropping anything",
     () => {
-      exec("INSERT INTO cms_pages (_id, title, _status, _created_at, _updated_at) VALUES ('t1','Keep','draft','2026-01-01','2026-01-01');");
+      exec(
+        "INSERT INTO cms_pages (_id, title, _status, _created_at, _updated_at) VALUES ('t1','Keep','draft','2026-01-01','2026-01-01');",
+      );
       const result = push([], { RECREATE: "pages" });
       expect(result.code).toBe(1);
       expect(result.out).toMatch(/Refusing --recreate/);
@@ -106,7 +108,9 @@ describe("cms:push safety gates", () => {
     () => {
       // Dangling versions row (FKs are off) + a column dropped out-of-band: the next push
       // wants to re-ADD the column, opens its transaction, then must roll back on the check.
-      exec("INSERT INTO cms_pages_versions (_id, _doc_id, _version, _snapshot, _created_at) VALUES ('v1','missing-doc',1,'{}','2026-01-01');");
+      exec(
+        "INSERT INTO cms_pages_versions (_id, _doc_id, _version, _snapshot, _created_at) VALUES ('v1','missing-doc',1,'{}','2026-01-01');",
+      );
       exec("ALTER TABLE cms_pages DROP COLUMN summary;");
       const result = push();
       expect(result.code).toBe(1);
