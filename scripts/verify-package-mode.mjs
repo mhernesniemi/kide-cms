@@ -45,7 +45,8 @@ try {
   // stays pinned (mirrors how create-kide-app scaffolds from a cloned tag).
 
   console.log("[pkg-verify] installing + building");
-  run("pnpm install --prefer-offline", project);
+  // --no-frozen-lockfile: the dep swap above diverges from the lockfile; CI defaults to frozen
+  run("pnpm install --prefer-offline --no-frozen-lockfile", project);
   run("pnpm cms:generate", project);
   run("pnpm cms:push", project);
   run("pnpm exec vitest run --passWithNoTests", project); // project-owned tests must pass in package mode

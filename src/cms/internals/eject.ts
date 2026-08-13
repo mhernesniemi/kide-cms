@@ -122,7 +122,8 @@ const eject = () => {
 
   console.log("[kide:eject] Running pnpm install...");
   try {
-    execFileSync("pnpm", ["install"], { cwd, stdio: "inherit" });
+    // --no-frozen-lockfile: eject just rewrote the dep spec, so the lockfile is always stale here
+    execFileSync("pnpm", ["install", "--no-frozen-lockfile"], { cwd, stdio: "inherit" });
   } catch {
     console.error(
       "[kide:eject] Files are ejected and package.json is updated, but pnpm install failed.\n" +

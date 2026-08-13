@@ -53,7 +53,8 @@ try {
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
 
   console.log("[cf-verify] installing + building");
-  run("pnpm install --prefer-offline");
+  // --no-frozen-lockfile: the dep swap above diverges from the lockfile; CI defaults to frozen
+  run("pnpm install --prefer-offline --no-frozen-lockfile");
   run("pnpm cms:generate");
   run("pnpm exec astro build");
   console.log("[cf-verify] ✓ build clean");
