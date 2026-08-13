@@ -20,45 +20,6 @@ export default defineCollection({
         position: "sidebar",
       },
     }),
-    // Consecutive fields sharing an admin.group render as one titled panel.
-    introHeading: fields.text({
-      translatable: true,
-      label: "Heading",
-      admin: { group: "Intro" },
-    }),
-    introText: fields.text({
-      translatable: true,
-      label: "Text",
-      admin: { group: "Intro", rows: 2 },
-    }),
-
-    featuredHeading: fields.text({
-      translatable: true,
-      label: "Heading",
-      admin: { group: { label: "Featured posts", collapsible: true } },
-    }),
-    featuredPosts: fields.relation({
-      collection: "posts",
-      hasMany: true,
-      maxItems: 4,
-      label: "Posts",
-      admin: {
-        group: { label: "Featured posts", collapsible: true },
-        help: "Hand-picked posts, up to four — drag the selected rows to reorder.",
-      },
-    }),
-
-    promoText: fields.text({
-      translatable: true,
-      label: "Text",
-      admin: { group: { label: "Promo banner", collapsible: "collapsed" }, rows: 2 },
-    }),
-    promoLink: fields.link({
-      translatable: true,
-      label: "Link",
-      admin: { group: { label: "Promo banner", collapsible: "collapsed" } },
-    }),
-
     blocks: fields.blocks({
       translatable: true,
       types: {
