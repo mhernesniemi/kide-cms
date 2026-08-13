@@ -1,31 +1,19 @@
 ---
 import PublicLayout from "@/layouts/PublicLayout.astro";
-import { cms } from "@/cms/.generated/api";
-
-const pages = await cms.pages.find({ status: "published", sort: { field: "_createdAt", direction: "desc" } });
 ---
 
 <PublicLayout>
-  <main class="mx-auto max-w-2xl px-4 py-8">
-    <h1 class="mb-2 text-2xl font-semibold">Kide CMS</h1>
-    <p class="mb-6 text-gray-500">
-      Manage content in the <a href="/admin" class="text-teal-700">admin</a>, define your schema in
-      <code>src/cms/collections/</code>.
+  <main class="mx-auto max-w-2xl px-4 py-16 text-gray-700">
+    <h1 class="mb-6 text-2xl font-bold">Kide CMS</h1>
+    <p class="mb-4">
+      Open the <a href="/admin" class="text-blue-700 underline">admin</a> to create your first page.
     </p>
-    {
-      pages.length > 0 ? (
-        <ul class="space-y-2">
-          {pages.map((doc) => (
-            <li>
-              <a href={`/${doc.slug}`} class="text-teal-700 hover:underline">
-                {doc.title}
-              </a>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p class="text-gray-500">No content yet — create a Page in the admin.</p>
-      )
-    }
+    <p class="mb-4">
+      To shape your content model, add collections in <code class="bg-gray-200 px-1">src/cms/collections/</code> and register
+      them in <code class="bg-gray-200 px-1">cms.config.ts</code>.
+    </p>
+    <p>
+      Learn more in the <a href="https://docs.kide.dev" class="text-blue-700 underline">docs</a>.
+    </p>
   </main>
 </PublicLayout>

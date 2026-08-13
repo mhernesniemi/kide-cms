@@ -15,15 +15,6 @@ const { title = "Kide CMS", description = "A code-first CMS built inside Astro."
     <title>{title}</title>
   </head>
   <body class="min-h-screen bg-white pb-24 text-gray-900 antialiased">
-    <header class="mx-auto flex max-w-4xl items-center gap-8 px-4 py-4">
-      <a href="/" class="text-lg font-semibold no-underline">My site</a>
-      <a
-        href="/admin"
-        class="ml-auto rounded-md border border-teal-700 px-3 py-1.5 text-sm font-medium text-teal-700 no-underline transition-colors hover:bg-teal-50"
-      >
-        Open admin
-      </a>
-    </header>
     <slot />
   </body>
 </html>
