@@ -4,7 +4,7 @@
     "remove": ["@astrojs/node", "sharp"]
   },
   "devDependencies": {
-    "add": { "wrangler": "^4.83.0" },
+    "add": { "wrangler": "^4.121.0" },
     "moveFromDependencies": ["better-sqlite3"]
   },
   "scripts": {

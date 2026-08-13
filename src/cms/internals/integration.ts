@@ -1,7 +1,28 @@
 import type { AstroIntegration } from "astro";
-import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, watch, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, watch, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+// All runtime files resolve relative to this module, never the project root, so
+// the integration works identically embedded (workspace package in the project
+// tree) and installed from the registry. realpath because pnpm links packages
+// via symlinks and Vite/Tailwind watch real paths.
+const packageDir = realpathSync(path.dirname(fileURLToPath(import.meta.url)));
+const packageRoot = path.dirname(packageDir);
+const packagePath = (...segments: string[]) => path.join(packageRoot, ...segments);
+const requireFromPackage = createRequire(import.meta.url);
+
+// Locate a file inside a dependency without going through its exports map
+// (needed for CSS-only packages whose exports have no importable condition).
+const resolvePackageFile = (pkg: string, file: string) => {
+  for (const base of requireFromPackage.resolve.paths(pkg) ?? []) {
+    const candidate = path.join(base, pkg, file);
+    if (existsSync(candidate)) return candidate;
+  }
+  throw new Error(`[kide] Could not locate ${file} in package "${pkg}".`);
+};
 
 export interface CmsIntegrationOptions {
   /** Path to the CMS config file (default: "src/cms/cms.config") */
@@ -12,14 +33,19 @@ export interface CmsIntegrationOptions {
   generatedPath?: string;
   /** Path to the adapters directory (default: "src/cms/adapters") */
   adaptersPath?: string;
-  /** Path to the generator script (default: "src/cms/generator.ts") */
+  /** Absolute path to the generator script (default: the package's own generator) */
   generatorPath?: string;
   /** Runtime target — selects the platform profile (database/storage). Default "node". */
   platform?: "node" | "cloudflare";
 }
 
-function runGenerator(cwd: string, generatorPath: string) {
-  execSync(`node --import tsx ${generatorPath}`, {
+// The runner scripts live in this package but read the project from cwd. tsx is
+// a dependency of this package, so resolve its entry absolutely — the project
+// itself may not depend on it.
+const tsxEntry = requireFromPackage.resolve("tsx");
+
+function runScript(cwd: string, scriptPath: string) {
+  execFileSync(process.execPath, ["--import", tsxEntry, scriptPath], {
     stdio: "inherit",
     cwd,
   });
@@ -28,11 +54,11 @@ function runGenerator(cwd: string, generatorPath: string) {
 // D1 dev syncs via drizzle-kit against miniflare's sqlite (located by the CF drizzle
 // config); the Node target goes through the guarded cms:push script — same gates as CI/deploy.
 function pushSchema(cwd: string, d1 = false) {
-  const command = d1 ? "npx drizzle-kit push --force" : "node --import tsx src/cms/internals/push.ts";
-  execSync(command, {
-    stdio: "inherit",
-    cwd,
-  });
+  if (d1) {
+    execFileSync("npx", ["drizzle-kit", "push", "--force"], { stdio: "inherit", cwd });
+  } else {
+    runScript(cwd, packagePath("internals", "push.ts"));
+  }
 }
 
 function isCloudflareD1(cwd: string): boolean {
@@ -69,7 +95,7 @@ function getD1DatabaseName(cwd: string): string | null {
 function initLocalD1(cwd: string) {
   const dbName = getD1DatabaseName(cwd);
   if (!dbName) throw new Error("No database_name found in wrangler.toml");
-  execSync(`npx wrangler d1 execute "${dbName}" --local --command="SELECT 1"`, {
+  execFileSync("npx", ["wrangler", "d1", "execute", dbName, "--local", "--command=SELECT 1"], {
     stdio: "pipe",
     cwd,
   });
@@ -77,10 +103,10 @@ function initLocalD1(cwd: string) {
 
 export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIntegration {
   const configPath = options?.configPath ?? "src/cms/cms.config";
-  const runtimePath = options?.runtimePath ?? "src/cms/internals/runtime";
+  const runtimePath = options?.runtimePath ?? "src/cms/runtime";
   const generatedPath = options?.generatedPath ?? "src/cms/.generated";
   const adaptersPath = options?.adaptersPath ?? "src/cms/adapters";
-  const generatorPath = options?.generatorPath ?? "src/cms/internals/generator.ts";
+  const generatorPath = options?.generatorPath ?? packagePath("internals", "generator.ts");
   const platform = options?.platform ?? "node";
 
   return {
@@ -90,9 +116,11 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         const root = process.cwd();
 
         // Generate a wrapper CSS that adds @source directives and imports user's admin CSS
-        const adminDir = path.resolve(root, "src/cms/admin");
-        const routesDir = path.resolve(root, "src/cms/routes");
-        const twAnimateCssPath = path.resolve(root, "node_modules/tw-animate-css/dist/tw-animate.css");
+        const adminDir = packagePath("admin");
+        const routesDir = packagePath("routes");
+        // tw-animate-css is a CSS-only package (exports only a "style" condition),
+        // so Node resolution can't reach into it — walk the module paths instead.
+        const twAnimateCssPath = resolvePackageFile("tw-animate-css", "dist/tw-animate.css");
         const userAdminCss = path.resolve(root, "src/styles/admin.css");
         const generatedDir = path.join(root, "node_modules", ".kide");
         mkdirSync(generatedDir, { recursive: true });
@@ -124,8 +152,9 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           ].join("\n"),
         );
 
-        // Generate custom field components barrel
-        const customFieldsDir = path.resolve(root, "src/cms/admin/fields");
+        // Generate custom field components barrel (user-authored fields live
+        // project-side in src/cms/fields/, outside the managed runtime dirs)
+        const customFieldsDir = path.resolve(root, "src/cms/fields");
         const customFieldsBarrel = path.join(generatedDir, "custom-fields.ts");
         const generateFieldsBarrel = () => {
           if (existsSync(customFieldsDir)) {
@@ -160,6 +189,13 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
                 "virtual:kide/admin-css": wrapperCss,
                 "virtual:kide/custom-fields": customFieldsBarrel,
               },
+              // Two React copies (project + package) break hooks/context identity.
+              dedupe: ["react", "react-dom"],
+            },
+            // The package ships TypeScript/Astro source — Vite must compile it
+            // rather than treat it as an external Node dependency in SSR.
+            ssr: {
+              noExternal: ["@kidecms/core"],
             },
             // Pre-bundle admin component deps.
             //
@@ -185,111 +221,162 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
             // corrupt, run `pnpm dev:clean` to nuke and rebuild.
             optimizeDeps: {
               entries: [
-                path.resolve(root, "src/cms/admin/**/*.{ts,tsx,astro}"),
-                path.resolve(root, "src/cms/routes/admin/**/*.astro"),
-                path.resolve(root, "src/cms/.generated/**/*.ts"),
-                path.resolve(root, "src/cms/client/**/*.ts"),
+                path.join(adminDir, "**/*.{ts,tsx,astro}"),
+                path.join(routesDir, "admin/**/*.astro"),
+                path.resolve(root, generatedPath, "**/*.ts"),
+                packagePath("client", "**/*.ts"),
               ],
             },
           },
         });
 
         // Inject admin pages
-        injectRoute({ pattern: "/admin/login", entrypoint: "./src/cms/routes/admin/login.astro" });
+        injectRoute({ pattern: "/admin/login", entrypoint: new URL("../routes/admin/login.astro", import.meta.url) });
         injectRoute({
           pattern: "/admin/forgot-password",
-          entrypoint: "./src/cms/routes/admin/forgot-password.astro",
+          entrypoint: new URL("../routes/admin/forgot-password.astro", import.meta.url),
         });
-        injectRoute({ pattern: "/admin/reset-password", entrypoint: "./src/cms/routes/admin/reset-password.astro" });
-        injectRoute({ pattern: "/admin/setup", entrypoint: "./src/cms/routes/admin/setup.astro" });
-        injectRoute({ pattern: "/admin/invite", entrypoint: "./src/cms/routes/admin/invite.astro" });
-        injectRoute({ pattern: "/admin/assets", entrypoint: "./src/cms/routes/admin/assets/index.astro" });
+        injectRoute({
+          pattern: "/admin/reset-password",
+          entrypoint: new URL("../routes/admin/reset-password.astro", import.meta.url),
+        });
+        injectRoute({ pattern: "/admin/setup", entrypoint: new URL("../routes/admin/setup.astro", import.meta.url) });
+        injectRoute({ pattern: "/admin/invite", entrypoint: new URL("../routes/admin/invite.astro", import.meta.url) });
+        injectRoute({
+          pattern: "/admin/assets",
+          entrypoint: new URL("../routes/admin/assets/index.astro", import.meta.url),
+        });
         injectRoute({
           pattern: "/admin/assets/[id]",
-          entrypoint: "./src/cms/routes/admin/assets/[id].astro",
+          entrypoint: new URL("../routes/admin/assets/[id].astro", import.meta.url),
         });
-        injectRoute({ pattern: "/admin/[...path]", entrypoint: "./src/cms/routes/admin/[...path].astro" });
+        injectRoute({
+          pattern: "/admin/[...path]",
+          entrypoint: new URL("../routes/admin/[...path].astro", import.meta.url),
+        });
 
         // Cloudflare serves /uploads/* from R2 through a route (Node uses static files).
         if (platform === "cloudflare") {
-          injectRoute({ pattern: "/uploads/[...path]", entrypoint: "./src/cms/platform/cloudflare/uploads-route.ts" });
+          injectRoute({
+            pattern: "/uploads/[...path]",
+            entrypoint: new URL("../platform/cloudflare/uploads-route.ts", import.meta.url),
+          });
         }
 
         // Inject API routes
-        injectRoute({ pattern: "/api/cms/auth/login", entrypoint: "./src/cms/routes/api/auth/login.ts" });
+        injectRoute({
+          pattern: "/api/cms/auth/login",
+          entrypoint: new URL("../routes/api/auth/login.ts", import.meta.url),
+        });
         injectRoute({
           pattern: "/api/cms/auth/forgot-password",
-          entrypoint: "./src/cms/routes/api/auth/forgot-password.ts",
+          entrypoint: new URL("../routes/api/auth/forgot-password.ts", import.meta.url),
         });
         injectRoute({
           pattern: "/api/cms/auth/reset-password",
-          entrypoint: "./src/cms/routes/api/auth/reset-password.ts",
+          entrypoint: new URL("../routes/api/auth/reset-password.ts", import.meta.url),
         });
         injectRoute({
           pattern: "/api/cms/auth/sso/[provider]/start",
-          entrypoint: "./src/cms/routes/api/auth/sso/[provider]/start.ts",
+          entrypoint: new URL("../routes/api/auth/sso/[provider]/start.ts", import.meta.url),
         });
-        injectRoute({ pattern: "/api/cms/auth/logout", entrypoint: "./src/cms/routes/api/auth/logout.ts" });
-        injectRoute({ pattern: "/api/cms/auth/setup", entrypoint: "./src/cms/routes/api/auth/setup.ts" });
-        injectRoute({ pattern: "/api/cms/auth/invite", entrypoint: "./src/cms/routes/api/auth/invite.ts" });
-        injectRoute({ pattern: "/api/cms/assets/upload", entrypoint: "./src/cms/routes/api/assets/upload.ts" });
+        injectRoute({
+          pattern: "/api/cms/auth/logout",
+          entrypoint: new URL("../routes/api/auth/logout.ts", import.meta.url),
+        });
+        injectRoute({
+          pattern: "/api/cms/auth/setup",
+          entrypoint: new URL("../routes/api/auth/setup.ts", import.meta.url),
+        });
+        injectRoute({
+          pattern: "/api/cms/auth/invite",
+          entrypoint: new URL("../routes/api/auth/invite.ts", import.meta.url),
+        });
+        injectRoute({
+          pattern: "/api/cms/assets/upload",
+          entrypoint: new URL("../routes/api/assets/upload.ts", import.meta.url),
+        });
         injectRoute({
           pattern: "/api/cms/assets/folders",
-          entrypoint: "./src/cms/routes/api/assets/folders.ts",
+          entrypoint: new URL("../routes/api/assets/folders.ts", import.meta.url),
         });
-        injectRoute({ pattern: "/api/cms/assets/[id]", entrypoint: "./src/cms/routes/api/assets/[id].ts" });
-        injectRoute({ pattern: "/api/cms/assets", entrypoint: "./src/cms/routes/api/assets/index.ts" });
+        injectRoute({
+          pattern: "/api/cms/assets/[id]",
+          entrypoint: new URL("../routes/api/assets/[id].ts", import.meta.url),
+        });
+        injectRoute({
+          pattern: "/api/cms/assets",
+          entrypoint: new URL("../routes/api/assets/index.ts", import.meta.url),
+        });
         injectRoute({
           pattern: "/api/cms/collaboration",
-          entrypoint: "./src/cms/routes/api/collaboration/index.ts",
+          entrypoint: new URL("../routes/api/collaboration/index.ts", import.meta.url),
         });
-        injectRoute({ pattern: "/api/cms/ai/alt-text", entrypoint: "./src/cms/routes/api/ai/alt-text.ts" });
-        injectRoute({ pattern: "/api/cms/ai/seo", entrypoint: "./src/cms/routes/api/ai/seo.ts" });
-        injectRoute({ pattern: "/api/cms/ai/translate", entrypoint: "./src/cms/routes/api/ai/translate.ts" });
-        injectRoute({ pattern: "/api/cms/cron/publish", entrypoint: "./src/cms/routes/api/cron/publish.ts" });
-        injectRoute({ pattern: "/api/cms/cron/tasks", entrypoint: "./src/cms/routes/api/cron/tasks.ts" });
+        injectRoute({
+          pattern: "/api/cms/ai/alt-text",
+          entrypoint: new URL("../routes/api/ai/alt-text.ts", import.meta.url),
+        });
+        injectRoute({ pattern: "/api/cms/ai/seo", entrypoint: new URL("../routes/api/ai/seo.ts", import.meta.url) });
+        injectRoute({
+          pattern: "/api/cms/ai/translate",
+          entrypoint: new URL("../routes/api/ai/translate.ts", import.meta.url),
+        });
+        injectRoute({
+          pattern: "/api/cms/cron/publish",
+          entrypoint: new URL("../routes/api/cron/publish.ts", import.meta.url),
+        });
+        injectRoute({
+          pattern: "/api/cms/cron/tasks",
+          entrypoint: new URL("../routes/api/cron/tasks.ts", import.meta.url),
+        });
         injectRoute({
           pattern: "/api/cms/webhooks/[provider]",
-          entrypoint: "./src/cms/routes/api/webhooks/[provider].ts",
+          entrypoint: new URL("../routes/api/webhooks/[provider].ts", import.meta.url),
         });
         injectRoute({
           pattern: "/api/cms/forms/submit/[slug]",
-          entrypoint: "./src/cms/routes/api/forms/submit/[slug].ts",
+          entrypoint: new URL("../routes/api/forms/submit/[slug].ts", import.meta.url),
         });
         injectRoute({
           pattern: "/api/cms/locks/[...path]",
-          entrypoint: "./src/cms/routes/api/locks/[...path].ts",
+          entrypoint: new URL("../routes/api/locks/[...path].ts", import.meta.url),
         });
         // Preview render route uses Astro Container API which depends on Vite internals.
         // Only inject in dev mode — production builds (especially Cloudflare Workers) can't bundle it.
         if (command === "dev") {
           injectRoute({
             pattern: "/api/cms/preview/render",
-            entrypoint: "./src/cms/routes/api/preview/render.ts",
+            entrypoint: new URL("../routes/api/preview/render.ts", import.meta.url),
           });
         }
         injectRoute({
           pattern: "/api/cms/references/[collection]/[id]",
-          entrypoint: "./src/cms/routes/api/references/[collection]/[id].ts",
+          entrypoint: new URL("../routes/api/references/[collection]/[id].ts", import.meta.url),
         });
-        injectRoute({ pattern: "/api/cms/img/[...path]", entrypoint: "./src/cms/routes/api/img/[...path].ts" });
-        injectRoute({ pattern: "/api/cms/admin/search", entrypoint: "./src/cms/routes/api/admin/search.ts" });
+        injectRoute({
+          pattern: "/api/cms/img/[...path]",
+          entrypoint: new URL("../routes/api/img/[...path].ts", import.meta.url),
+        });
+        injectRoute({
+          pattern: "/api/cms/admin/search",
+          entrypoint: new URL("../routes/api/admin/search.ts", import.meta.url),
+        });
         injectRoute({
           pattern: "/api/cms/[collection]/[...path]",
-          entrypoint: "./src/cms/routes/api/[collection]/[...path].ts",
+          entrypoint: new URL("../routes/api/[collection]/[...path].ts", import.meta.url),
         });
 
         // Inject auth middleware
-        addMiddleware({ entrypoint: "./src/cms/middleware/auth.ts", order: "pre" });
+        addMiddleware({ entrypoint: new URL("../middleware/auth.ts", import.meta.url), order: "pre" });
 
         // Inject live-preview client script (no-op unless ?preview is in the URL)
-        const previewClient = path.resolve(root, "src/cms/client/preview.ts");
+        const previewClient = packagePath("client", "preview.ts");
         injectScript("page", `import ${JSON.stringify(previewClient)};`);
 
         // Generate schema, types, validators, and API
         console.log("  [cms] Generating schema, types, validators, and API...");
         try {
-          runGenerator(root, generatorPath);
+          runScript(root, generatorPath);
         } catch (error) {
           console.error("  [cms] Generator failed:", (error as Error).message);
         }
@@ -362,7 +449,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
               lastConfigContent = content;
               console.log("  [cms] Config changed, regenerating...");
               try {
-                runGenerator(root, generatorPath);
+                runScript(root, generatorPath);
                 pushSchema(root, useD1);
                 console.log("  [cms] Schema updated.");
               } catch (error) {

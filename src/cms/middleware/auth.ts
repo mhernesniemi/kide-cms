@@ -1,7 +1,7 @@
 import { defineMiddleware } from "astro:middleware";
 import type { APIContext, MiddlewareNext } from "astro";
-import { readEnv, resolveAdminAuth, runWithRequestScope } from "@/cms/core";
-import type { RequestScope, SessionUser } from "@/cms/core";
+import { readEnv, resolveAdminAuth, runWithRequestScope } from "../core";
+import type { RequestScope, SessionUser } from "../core";
 import config from "virtual:kide/config";
 import { getSessionUser } from "virtual:kide/runtime";
 import { getDb } from "virtual:kide/db";

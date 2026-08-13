@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { assets } from "virtual:kide/runtime";
 import config from "virtual:kide/config";
-import { PayloadTooLargeError, readLimitedFormData } from "@/cms/core";
+import { PayloadTooLargeError, readLimitedFormData } from "../../../core";
 
 export const prerender = false;
 

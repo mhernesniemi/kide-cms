@@ -1,4 +1,4 @@
-import { getYoutubeId, youtubeThumbnail } from "@/cms/core/youtube";
+import { getYoutubeId, youtubeThumbnail } from "../../core/youtube";
 import { cn } from "../lib/utils";
 import { Input } from "./ui/input";
 

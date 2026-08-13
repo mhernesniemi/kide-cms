@@ -22,7 +22,7 @@ let runtime: CmsRuntimeConfig | null = null;
 
 const runtimeError = () =>
   new Error(
-    "@/cms/core runtime not initialized. Call configureCmsRuntime(...) and initSchema(...) from your app before using runtime APIs.",
+    "../core runtime not initialized. Call configureCmsRuntime(...) and initSchema(...) from your app before using runtime APIs.",
   );
 
 export const configureCmsRuntime = (config: CmsRuntimeConfig) => {

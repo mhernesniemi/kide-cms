@@ -8,7 +8,7 @@ import { buttonVariants } from "./ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
 import { REVIEW_STATE_META, type CollabActivity, type CollabComment, type CollabUser } from "../lib/collaboration";
-import type { ReviewState } from "@/cms/core";
+import type { ReviewState } from "../../core";
 
 type Props = {
   collection: string;

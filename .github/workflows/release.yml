@@ -1,0 +1,44 @@
+name: Release
+
+# Publishes @kidecms/core to npm when a v* tag is pushed. The tag version must
+# match src/cms/package.json (and the root template version). Requires the
+# NPM_TOKEN repository secret (npm automation token with publish rights to the
+# @kidecms scope).
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+
+      - name: Tag matches package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./src/cms/package.json').version")
+          if [ "$TAG" != "$PKG" ]; then
+            echo "Tag v$TAG does not match src/cms/package.json version $PKG" >&2
+            exit 1
+          fi
+
+      - run: pnpm verify:pack
+      - run: pnpm test
+
+      - name: Publish @kidecms/core
+        run: pnpm --filter @kidecms/core publish --no-git-checks --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -2,12 +2,12 @@
  * Bootstrap the CMS for a standalone Node script — migrations, seeds, one-off
  * maintenance — run via `node --import tsx scripts/<file>.ts`.
  *
- * Importing this module wires the runtime (DB / storage / email adapters) as a
- * side effect through `./runtime`, so you don't have to remember the import-order
- * dance. `createCmsContext()` then hands back the typed API plus the handles a
+ * `createCmsContext()` wires the runtime (DB / storage / email adapters) by
+ * loading the project's `src/cms/runtime.ts`, so you don't have to remember the
+ * import-order dance. It then hands back the typed API plus the handles a
  * script usually needs.
  *
- *   import { createCmsContext } from "@/cms/internals/context";
+ *   import { createCmsContext } from "@kidecms/core/context";
  *
  *   const { cms, assets, flush, dispose } = await createCmsContext();
  *   await cms.posts.create({ title: "…" }, { _system: true, _skipSearch: true });
@@ -17,7 +17,6 @@
  * For bulk imports, pass `{ _system: true, _skipSearch: true }` to writes and
  * call `reindex()` once at the end instead of indexing per document.
  */
-import "./runtime"; // side effect: configureCmsRuntime()
 import {
   assets,
   closeDb,
@@ -30,10 +29,12 @@ import {
   importDocuments,
   reindexAll,
   type ImportItem,
-} from "@/cms/core";
-import config from "@/cms/cms.config";
+} from "../core";
+import { loadProjectConfig, loadProjectRuntime } from "./project";
 
 export const createCmsContext = async () => {
+  await loadProjectRuntime(); // side effect: configureCmsRuntime()
+  const config = await loadProjectConfig();
   const cms = createCms(config);
   const db = await getDb();
   return {
@@ -60,7 +61,7 @@ export const createCmsContext = async () => {
     /** Flush pending tasks, then close the database connection. */
     dispose: async () => {
       await flushTasks();
-      closeDb();
+      await closeDb();
     },
   };
 };

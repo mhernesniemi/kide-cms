@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
-import { SHARED_SECTIONS_COLLECTION, extractSharedSectionRefsFromDocument, getLabelField } from "@/cms/core";
+import { SHARED_SECTIONS_COLLECTION, extractSharedSectionRefsFromDocument, getLabelField } from "../../../../core";
 
 export const prerender = false;
 

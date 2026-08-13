@@ -15,7 +15,7 @@ import type {
 
 export const cms = createCms(config) as {
   articles: {
-    find(options?: import("@/cms/core").FindOptions, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument[]>;
+    find(options?: import("../core").FindOptions, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument[]>;
     findOne(filter: Record<string, unknown> & { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument | null>;
     findById(id: string, options?: { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument | null>;
     create(data: ArticlesInput, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
@@ -23,7 +23,7 @@ export const cms = createCms(config) as {
     upsert(data: ArticlesInput & { _id?: string }, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
     update(id: string, data: Partial<ArticlesInput>, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
     delete(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<void>;
-    count(filter?: Omit<import("@/cms/core").FindOptions, "limit" | "offset" | "sort">, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<number>;
+    count(filter?: Omit<import("../core").FindOptions, "limit" | "offset" | "sort">, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<number>;
     versions(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<import("./types").StoredVersion[]>;
     restore(id: string, versionNumber: number, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
     publish(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
@@ -33,7 +33,7 @@ export const cms = createCms(config) as {
     upsertTranslation(id: string, locale: string, data: ArticlesTranslationInput, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
   };
   writers: {
-    find(options?: import("@/cms/core").FindOptions, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument[]>;
+    find(options?: import("../core").FindOptions, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument[]>;
     findOne(filter: Record<string, unknown> & { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument | null>;
     findById(id: string, options?: { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument | null>;
     create(data: WritersInput, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
@@ -41,7 +41,7 @@ export const cms = createCms(config) as {
     upsert(data: WritersInput & { _id?: string }, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
     update(id: string, data: Partial<WritersInput>, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
     delete(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<void>;
-    count(filter?: Omit<import("@/cms/core").FindOptions, "limit" | "offset" | "sort">, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<number>;
+    count(filter?: Omit<import("../core").FindOptions, "limit" | "offset" | "sort">, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<number>;
     versions(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<import("./types").StoredVersion[]>;
     restore(id: string, versionNumber: number, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
     publish(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
@@ -239,7 +239,7 @@ export const cmsTables = {
 
 exports[`generate > types.ts > matches the golden snapshot 1`] = `
 "// auto-generated — do not edit
-import type { RichTextDocument, ContentDocument } from "@/cms/core";
+import type { RichTextDocument, ContentDocument } from "../core";
 
 export type CMSCollectionSlug = "articles" | "writers";
 

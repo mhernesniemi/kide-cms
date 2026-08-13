@@ -20,7 +20,9 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { pushSQLiteSchema } from "drizzle-kit/api";
 
-import * as schema from "../.generated/schema";
+import { loadGeneratedSchema } from "./project";
+
+const schema = await loadGeneratedSchema();
 
 const dbPath = process.env.CMS_DATABASE_URL ?? path.join(process.cwd(), "data", "cms.db");
 

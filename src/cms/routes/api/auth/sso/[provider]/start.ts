@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 
-import { getSsoProvider, resolveAdminAuth } from "@/cms/core";
+import { getSsoProvider, resolveAdminAuth } from "../../../../../core";
 import config from "virtual:kide/config";
 
 export const prerender = false;

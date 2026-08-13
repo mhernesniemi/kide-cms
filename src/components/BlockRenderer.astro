@@ -1,6 +1,6 @@
 ---
 import { cms } from "@/cms/.generated/api";
-import { SHARED_BLOCK_TYPE, isSharedBlockReference } from "@/cms/core";
+import { SHARED_BLOCK_TYPE, isSharedBlockReference } from "@kidecms/core";
 
 const { blocks = [], status = "published" } = Astro.props as {
   blocks?: Array<Record<string, unknown>>;

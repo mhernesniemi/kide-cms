@@ -1,5 +1,5 @@
 ---
-import { getYoutubeId, youtubeEmbedUrl } from "@/cms/core/youtube";
+import { getYoutubeId, youtubeEmbedUrl } from "@kidecms/core/youtube";
 
 const { url } = Astro.props as { url?: string };
 const id = getYoutubeId(url ?? "");

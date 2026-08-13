@@ -1,4 +1,4 @@
-import type { SeedDocument } from "@/cms/core";
+import type { SeedDocument } from "../core";
 
 const rt = (...children: any[]) => ({ type: "root", children });
 const p = (text: string) => ({ type: "paragraph", children: [{ type: "text", value: text }] });

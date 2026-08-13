@@ -44,12 +44,12 @@ import {
   recordRateLimit,
   clearRateLimit,
   pruneRateLimits,
-} from "@/cms/core";
+} from "@kidecms/core";
 
-import * as schema from "../.generated/schema";
-import { closeDb, getDb } from "../adapters/db";
-import { deleteFile, getFile, putFile } from "../adapters/storage";
-import { isEmailConfigured, sendInviteEmail, sendPasswordResetEmail } from "../adapters/email";
+import * as schema from "./.generated/schema";
+import { closeDb, getDb } from "./adapters/db";
+import { deleteFile, getFile, putFile } from "./adapters/storage";
+import { isEmailConfigured, sendInviteEmail, sendPasswordResetEmail } from "./adapters/email";
 
 let initialized = false;
 

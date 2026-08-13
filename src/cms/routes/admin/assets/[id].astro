@@ -1,19 +1,19 @@
 ---
 import { ArrowLeft } from "lucide-react";
 
-import AdminCard from "@/cms/admin/components/AdminCard.astro";
-import DocumentActions from "@/cms/admin/components/DocumentActions";
-import AiGenerateButton from "@/cms/admin/components/AiGenerateButton";
-import FocalPointSelector from "@/cms/admin/components/FocalPointSelector";
-import UnsavedGuard from "@/cms/admin/components/UnsavedGuard";
-import TreeSelect, { flattenByParent } from "@/cms/admin/components/TreeSelect";
-import { buttonVariants } from "@/cms/admin/components/ui/button";
-import { Label } from "@/cms/admin/components/ui/label";
-import { Textarea } from "@/cms/admin/components/ui/textarea";
+import AdminCard from "../../../admin/components/AdminCard.astro";
+import DocumentActions from "../../../admin/components/DocumentActions";
+import AiGenerateButton from "../../../admin/components/AiGenerateButton";
+import FocalPointSelector from "../../../admin/components/FocalPointSelector";
+import UnsavedGuard from "../../../admin/components/UnsavedGuard";
+import TreeSelect, { flattenByParent } from "../../../admin/components/TreeSelect";
+import { buttonVariants } from "../../../admin/components/ui/button";
+import { Label } from "../../../admin/components/ui/label";
+import { Textarea } from "../../../admin/components/ui/textarea";
 import config from "virtual:kide/config";
 import { assets, folders, isAiEnabled } from "virtual:kide/runtime";
-import { formatDate, initDateFormat, DEFAULT_PRESETS } from "@/cms/core";
-import AdminLayout from "@/cms/admin/layouts/AdminLayout.astro";
+import { formatDate, initDateFormat, DEFAULT_PRESETS } from "../../../core";
+import AdminLayout from "../../../admin/layouts/AdminLayout.astro";
 
 export const prerender = false;
 

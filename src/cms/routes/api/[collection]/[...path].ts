@@ -3,8 +3,8 @@ import type { APIRoute } from "astro";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { collaboration } from "virtual:kide/runtime";
-import { isApprover, resolveCollaboration } from "@/cms/core";
-import { loadSharedSectionUsageCounts } from "@/cms/admin/lib/edit-data";
+import { isApprover, resolveCollaboration } from "../../../core";
+import { loadSharedSectionUsageCounts } from "../../../admin/lib/edit-data";
 
 export const prerender = false;
 

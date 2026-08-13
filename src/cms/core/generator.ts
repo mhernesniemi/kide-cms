@@ -502,7 +502,7 @@ const writeFileAtomic = async (filePath: string, content: string) => {
 
 export const generate = async (config: CMSConfig, options: GeneratorOptions) => {
   const outputDir = options.outputDir;
-  const coreImportPath = options.coreImportPath ?? "@/cms/core";
+  const coreImportPath = options.coreImportPath ?? "../core";
   const runtimeImportPath = options.runtimeImportPath ?? "../runtime";
   const configImportPath = options.configImportPath ?? "../cms.config";
 

@@ -31,7 +31,7 @@ pnpm cms:reindex                       # build search (or context.reindex())
 A migration script bootstraps with `createCmsContext()` and uses `load()` (validate + create):
 
 ```ts
-import { createCmsContext } from "@/cms/internals/context";
+import { createCmsContext } from "@kidecms/core/context";
 const { cms, assets, load, reindex, dispose } = await createCmsContext();
 
 // dry run first — fix everything it flags before importing for real

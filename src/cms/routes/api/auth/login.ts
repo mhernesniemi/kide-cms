@@ -11,7 +11,7 @@ import {
   verifyPassword,
 } from "virtual:kide/runtime";
 import config from "virtual:kide/config";
-import { clearRateLimit, peekRateLimit, recordRateLimit, resolveAdminAuth } from "@/cms/core";
+import { clearRateLimit, peekRateLimit, recordRateLimit, resolveAdminAuth } from "../../../core";
 
 export const prerender = false;
 

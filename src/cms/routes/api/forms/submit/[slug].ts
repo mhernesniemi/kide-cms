@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { cms } from "virtual:kide/api";
 import { sendFormSubmissionEmail, isEmailConfigured } from "virtual:kide/email";
-import { hitRateLimit, PayloadTooLargeError, readLimitedFormData } from "@/cms/core";
+import { hitRateLimit, PayloadTooLargeError, readLimitedFormData } from "../../../../core";
 
 export const prerender = false;
 

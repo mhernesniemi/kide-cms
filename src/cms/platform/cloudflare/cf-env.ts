@@ -51,7 +51,7 @@ export async function disposeCfEnv(): Promise<void> {
   envPromise = undefined;
   if (!p) return;
   try {
-    const { flushTasks } = await import("@/cms/core");
+    const { flushTasks } = await import("../../core");
     await flushTasks();
   } catch {
     // core not loaded / nothing to flush

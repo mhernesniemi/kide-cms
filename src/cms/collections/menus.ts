@@ -1,4 +1,4 @@
-import { defineCollection, fields } from "@/cms/core";
+import { defineCollection, fields } from "@kidecms/core";
 
 // Menu items render as root → section → link (see SiteHeader.tsx's rendering,
 // which only ever reads item.children and section.children — a 4th level is

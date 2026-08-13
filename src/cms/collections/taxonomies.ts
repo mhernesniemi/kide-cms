@@ -1,4 +1,4 @@
-import { defineCollection, fields } from "@/cms/core";
+import { defineCollection, fields } from "@kidecms/core";
 
 export default defineCollection({
   slug: "taxonomies",

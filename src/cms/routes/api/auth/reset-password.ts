@@ -11,7 +11,7 @@ import {
   logAudit,
   setSessionCookie,
 } from "virtual:kide/runtime";
-import { resolveAdminAuth, MIN_PASSWORD_LENGTH } from "@/cms/core";
+import { resolveAdminAuth, MIN_PASSWORD_LENGTH } from "../../../core";
 import config from "virtual:kide/config";
 
 export const prerender = false;

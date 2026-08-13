@@ -25,7 +25,7 @@ export const resetSchema = () => {
 
 export const getSchema = (): SchemaModule => {
   if (!schema) {
-    throw new Error("@/cms/core schema not initialized. Call initSchema(...) from your app before using runtime APIs.");
+    throw new Error("../core schema not initialized. Call initSchema(...) from your app before using runtime APIs.");
   }
 
   return schema;

@@ -10,7 +10,7 @@ import {
   logAudit,
   tokenReference,
 } from "virtual:kide/runtime";
-import { resolveAdminAuth } from "@/cms/core";
+import { resolveAdminAuth } from "../../../core";
 import config from "virtual:kide/config";
 
 export const prerender = false;

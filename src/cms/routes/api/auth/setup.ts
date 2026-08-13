@@ -11,7 +11,7 @@ import {
   logAudit,
   setSessionCookie,
 } from "virtual:kide/runtime";
-import { MIN_PASSWORD_LENGTH } from "@/cms/core";
+import { MIN_PASSWORD_LENGTH } from "../../../core";
 
 export const prerender = false;
 

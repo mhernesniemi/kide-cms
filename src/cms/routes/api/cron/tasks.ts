@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 
 import { cms } from "virtual:kide/api";
-import { pruneRateLimits } from "@/cms/core";
+import { pruneRateLimits } from "../../../core";
 
 import { isAuthorized, unauthorized } from "./_authorize";
 

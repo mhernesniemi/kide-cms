@@ -2,7 +2,12 @@
 
 A code-first CMS that lives **inside** your Astro project, not beside it.
 
-Instead of importing a CMS package, `create-kide-app` clones this repo as your project. All ~3k lines of the CMS runtime, admin UI, and routes sit in `src/cms/` where you can read, debug, and modify them. No external package boundary, no version pinning against someone else's breaking change, no abstraction you can't open up.
+Kide ships one runtime, two ways to have it — pick per project when you scaffold:
+
+- **Embedded** — the CMS runtime, admin UI, and routes sit in `src/cms/` as a local workspace package. Read, debug, and modify everything. No abstraction you can't open up. Upgrades arrive as reviewable release packets.
+- **Package** — a thin project with the same runtime installed as the `@kidecms/core` npm dependency. Update with a semver bump. If you ever need to go deeper, `pnpm exec kide eject` converts the project to embedded mode in place — same import specifiers, no code changes.
+
+Both modes are the same source at the same release tag; only where the package resolves from differs.
 
 - [Live demo](https://demo.kide.dev/admin)
 - [Docs](https://docs.kide.dev/)
@@ -13,7 +18,7 @@ Instead of importing a CMS package, `create-kide-app` clones this repo as your p
 pnpm create kide-app my-project
 ```
 
-You'll be asked for a project name, deploy target (Node.js or Cloudflare), and whether to seed demo content. The CLI clones this repo, installs, initializes git, and (for Cloudflare) provisions D1 + R2 and deploys. You end up with a running app.
+You'll be asked for a project name, distribution mode (embedded or package), deploy target (Node.js or Cloudflare), and whether to seed demo content. The CLI scaffolds from the latest release, installs, initializes git, and (for Cloudflare) provisions D1 + R2 and deploys. You end up with a running app.
 
 ## How It Works
 
@@ -39,7 +44,7 @@ One config generates everything: Drizzle tables, TypeScript types, a Zod validat
 Query through the typed local API anywhere in server code:
 
 ```ts
-import { cms } from "./cms/.generated/api";
+import { cms } from "@/cms/.generated/api";
 
 const posts = await cms.posts.find({ status: "published" });
 const post = await cms.posts.create({ title: "Hello" });

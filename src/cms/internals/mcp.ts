@@ -2,10 +2,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-import { cms } from "@/cms/.generated/api";
-import config from "@/cms/cms.config";
-import { assets, closeDb, describeModel, folders } from "@/cms/core";
-import type { CollectionConfig } from "@/cms/core";
+import { assets, closeDb, describeModel, folders } from "../core";
+import type { CollectionConfig } from "../core";
+import { loadGeneratedApi, loadProjectConfig } from "./project";
+
+const { cms } = await loadGeneratedApi();
+const config = await loadProjectConfig();
 
 const server = new McpServer({
   name: "kide-cms",

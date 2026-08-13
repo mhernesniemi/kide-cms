@@ -23,8 +23,14 @@ try {
   const overlay = path.join(dir, "adapters/cloudflare");
   cpSync(path.join(overlay, "astro.config.mjs"), path.join(dir, "astro.config.mjs"));
   cpSync(path.join(overlay, "drizzle.config.ts"), path.join(dir, "drizzle.config.ts"));
-  writeFileSync(path.join(dir, "src/cms/adapters/db.ts"), 'export * from "../platform/cloudflare/database";\n');
-  writeFileSync(path.join(dir, "src/cms/adapters/storage.ts"), 'export * from "../platform/cloudflare/storage";\n');
+  writeFileSync(
+    path.join(dir, "src/cms/adapters/db.ts"),
+    'export * from "@kidecms/core/platform/cloudflare/database";\n',
+  );
+  writeFileSync(
+    path.join(dir, "src/cms/adapters/storage.ts"),
+    'export * from "@kidecms/core/platform/cloudflare/storage";\n',
+  );
   // database_id must be non-empty for local wrangler dev, even without a real D1.
   const wrangler = readFileSync(path.join(overlay, "wrangler.toml"), "utf8")
     .replaceAll("{{PROJECT_NAME}}", "cf-verify")
@@ -41,7 +47,7 @@ try {
     pkg.devDependencies["better-sqlite3"] = pkg.dependencies["better-sqlite3"];
     delete pkg.dependencies["better-sqlite3"];
   }
-  pkg.devDependencies["wrangler"] = "^4.83.0";
+  pkg.devDependencies["wrangler"] = "^4.121.0";
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
 
   console.log("[cf-verify] installing + building");

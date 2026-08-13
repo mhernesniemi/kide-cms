@@ -3,7 +3,7 @@ import PublicLayout from "@/layouts/PublicLayout.astro";
 import ContentRenderer from "@/components/ContentRenderer.astro";
 import CmsPicture from "@/components/CmsPicture.astro";
 import { cms } from "@/cms/.generated/api";
-import { cacheTags } from "@/cms/core";
+import { cacheTags } from "@kidecms/core";
 
 const isPreview = Astro.url.searchParams.has("preview");
 const doc = await cms.posts.findOne({ slug: Astro.params.slug!, status: isPreview ? "any" : "published" });

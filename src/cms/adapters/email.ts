@@ -1,4 +1,4 @@
-import { readEnv } from "@/cms/core";
+import { readEnv } from "@kidecms/core";
 
 export const sendInviteEmail = async (to: string, inviteUrl: string): Promise<boolean> => {
   const apiKey = readEnv("RESEND_API_KEY");

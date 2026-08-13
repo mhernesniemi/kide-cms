@@ -3,7 +3,7 @@ declare module "virtual:kide/custom-fields" {
 }
 
 declare module "virtual:kide/config" {
-  const config: import("@/cms/core").CMSConfig;
+  const config: import("../core").CMSConfig;
   export default config;
 }
 
@@ -66,7 +66,7 @@ declare module "virtual:kide/runtime" {
     clearRateLimit,
     pruneRateLimits,
     getEmail,
-  } from "@/cms/core";
+  } from "../core";
 }
 
 declare module "virtual:kide/block-renderer" {

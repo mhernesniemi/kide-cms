@@ -1,4 +1,4 @@
-import { defineConfig } from "@/cms/core";
+import { defineConfig } from "@kidecms/core";
 import users from "./collections/users";
 import authors from "./collections/authors";
 import posts from "./collections/posts";

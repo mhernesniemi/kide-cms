@@ -1,9 +1,9 @@
 ---
-import DocumentsDataTable from "@/cms/admin/components/DocumentsDataTable";
+import DocumentsDataTable from "../components/DocumentsDataTable";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
-import { formatDate } from "@/cms/core";
-import { canRead } from "@/cms/admin/lib/access";
+import { formatDate } from "../../core";
+import { canRead } from "../lib/access";
 
 const user = Astro.locals.user;
 const runtimeContext = user ? { user: { id: user.id, role: user.role, email: user.email } } : {};

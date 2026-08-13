@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getStorage, transformImage } from "@/cms/core";
+import { getStorage, transformImage } from "../../../core";
 
 export const prerender = false;
 

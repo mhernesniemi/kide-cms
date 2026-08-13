@@ -1,8 +1,8 @@
 import { createInterface } from "node:readline";
-import { createAdminUser, MIN_PASSWORD_LENGTH } from "@/cms/core";
+import { closeDb, createAdminUser, MIN_PASSWORD_LENGTH } from "../core";
+import { loadProjectRuntime } from "./project";
 
-import "./runtime";
-import { closeDb } from "../adapters/db";
+await loadProjectRuntime();
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
 const ask = (question: string): Promise<string> =>

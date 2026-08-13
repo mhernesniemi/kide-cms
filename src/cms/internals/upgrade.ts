@@ -28,6 +28,7 @@ type VersionStamp = {
   ref?: string;
   commit?: string | null;
   target?: string;
+  mode?: "embedded" | "package";
   corePath?: string;
   upgrades?: UpgradeRecord[];
   [key: string]: unknown;
@@ -270,11 +271,11 @@ const isManagedRuntimePath = (file: string, corePath: string) => {
     `${corePath}/core`,
     `${corePath}/internals`,
     `${corePath}/middleware`,
+    `${corePath}/platform`,
     `${corePath}/routes`,
   ];
 
-  const managedFiles = new Set(["src/styles/admin.css"]);
-  return managedFiles.has(file) || managedPrefixes.some((prefix) => file === prefix || file.startsWith(`${prefix}/`));
+  return managedPrefixes.some((prefix) => file === prefix || file.startsWith(`${prefix}/`));
 };
 
 const isCarefulPath = (file: string, corePath: string) => {
@@ -285,8 +286,15 @@ const isCarefulPath = (file: string, corePath: string) => {
     "tsconfig.json",
     "drizzle.config.ts",
     "src/env.d.ts",
+    "src/styles/admin.css",
+    `${corePath}/runtime.ts`,
   ]);
-  const carefulPrefixes = [`${corePath}/adapters`, `${corePath}/collections`, `${corePath}/migrations`];
+  const carefulPrefixes = [
+    `${corePath}/adapters`,
+    `${corePath}/collections`,
+    `${corePath}/fields`,
+    `${corePath}/migrations`,
+  ];
   return (
     carefulFiles.has(file) ||
     file === `${corePath}/cms.config.ts` ||
@@ -426,6 +434,7 @@ const renderPlan = (input: {
   fromRef: string;
   targetRef: string;
   corePath: string;
+  mode: "embedded" | "package";
   applyMode: string;
   managed: string[];
   careful: string[];
@@ -438,19 +447,29 @@ const renderPlan = (input: {
     `From: ${input.fromRef}`,
     `To: ${input.targetRef}`,
     `Managed CMS path: ${input.corePath}`,
+    `Distribution mode: ${input.mode}`,
     `Apply mode: ${input.applyMode}`,
     "",
     "## What was prepared",
     "",
-    "- `managed-runtime.patch` contains paths Kide can usually merge automatically.",
+    input.mode === "package"
+      ? "- `managed-runtime.patch` is informational only in package mode — those files ship inside @kidecms/core and are upgraded by the dependency bump."
+      : "- `managed-runtime.patch` contains paths Kide can usually merge automatically.",
     "- `careful-review.patch` contains project-sensitive files such as package/config/collections/adapters.",
     "- `full-release.patch` contains the complete upstream diff for reference.",
-    "- `backup/` contains restorable snapshots of local files touched by the managed patch.",
+    "- `backup/` contains restorable snapshots of local files touched by the upgrade.",
     "",
     "## Next steps",
     "",
-    "1. If the managed patch applied cleanly, review the diff and continue with the careful-review patch only where it is relevant.",
-    "2. If there are conflicts, resolve them by preserving local project intent and upstream runtime fixes.",
+    ...(input.mode === "package"
+      ? [
+          "1. Run `pnpm install` to pull the bumped @kidecms/core release.",
+          "2. Review `careful-review.patch` — template changes to project-owned files (cms.config API changes, scripts, configs) that the dependency bump cannot apply for you.",
+        ]
+      : [
+          "1. If the managed patch applied cleanly, review the diff and continue with the careful-review patch only where it is relevant.",
+          "2. If there are conflicts, resolve them by preserving local project intent and upstream runtime fixes.",
+        ]),
     "3. Review `package.json` and `pnpm-lock.yaml` changes from `careful-review.patch`; run `pnpm install` if dependencies changed.",
     "4. Run `pnpm cms:generate`, `pnpm check`, and `pnpm test`.",
     "5. Commit the upgrade together with the updated `.kide-version`.",
@@ -558,6 +577,10 @@ async function main() {
   const stamp = readStamp(cwd);
   const repo = args.repo ?? stamp?.template ?? DEFAULT_REPO;
   const corePath = args.corePath ?? stamp?.corePath ?? DEFAULT_CORE_PATH;
+  // Package mode: managed runtime comes from the @kidecms/core dependency, so
+  // upgrades bump that version; only project-owned template files need review.
+  const mode: "embedded" | "package" =
+    stamp?.mode ?? (existsSync(path.join(cwd, corePath, "core")) ? "embedded" : "package");
   const fromRef = args.fromRef ?? stamp?.ref ?? stamp?.commit ?? null;
 
   if (!fromRef) {
@@ -607,37 +630,59 @@ async function main() {
       `${JSON.stringify(changedFilesJson(repoDir, fromCommit, toCommit), null, 2)}\n`,
     );
     writeReleaseNotes(repoDir, fromCommit, toCommit, packetDir);
-    backupFiles(cwd, packetDir, [...managed, ".kide-version"]);
+    backupFiles(cwd, packetDir, mode === "package" ? ["package.json", ".kide-version"] : [...managed, ".kide-version"]);
 
     let applied = false;
     let applyError: string | null = null;
 
-    if (shouldApply && managedPatch.trim()) {
+    const stampUpgrade = () => {
+      const now = new Date().toISOString();
+      const upgradeRecord: UpgradeRecord = {
+        from: fromRef,
+        to: targetRef,
+        fromCommit,
+        toCommit,
+        at: now,
+        packet: packetRelative,
+        applied: true,
+      };
+      const nextStamp: VersionStamp = {
+        ...(stamp ?? {}),
+        template: stripGitSuffix(repo),
+        ref: targetRef,
+        commit: toCommit,
+        kideVersion: versionFromRef(targetRef) ?? stamp?.kideVersion ?? null,
+        mode,
+        corePath,
+        upgradedAt: now,
+        upgrades: [...(stamp?.upgrades ?? []), upgradeRecord],
+      };
+      writeFileSync(path.join(cwd, ".kide-version"), `${JSON.stringify(nextStamp, null, 2)}\n`);
+    };
+
+    if (shouldApply && mode === "package") {
+      // Managed runtime changes arrive via the published package — bump the
+      // dependency instead of patching files that only exist in node_modules.
+      const targetVersion = versionFromRef(targetRef);
+      const pkgJsonPath = path.join(cwd, "package.json");
+      const pkgJson = JSON.parse(readFileSync(pkgJsonPath, "utf-8"));
+      if (!targetVersion) {
+        applyError = `Target ref "${targetRef}" is not a release tag — cannot derive an @kidecms/core version.`;
+      } else if (!pkgJson.dependencies?.["@kidecms/core"]) {
+        applyError = "package.json has no @kidecms/core dependency — is this really a package-mode project?";
+      } else {
+        pkgJson.dependencies["@kidecms/core"] = `^${targetVersion}`;
+        writeFileSync(pkgJsonPath, `${JSON.stringify(pkgJson, null, 2)}\n`);
+        applied = true;
+        stampUpgrade();
+      }
+      recordBackupAttemptState(cwd, packetDir);
+    } else if (shouldApply && managedPatch.trim()) {
       const patchPath = path.join(packetDir, "managed-runtime.patch");
       const result = tryRun("git", ["apply", "--3way", relativeToCwd(cwd, patchPath)], { cwd });
       if (result.ok) {
         applied = true;
-        const now = new Date().toISOString();
-        const upgradeRecord: UpgradeRecord = {
-          from: fromRef,
-          to: targetRef,
-          fromCommit,
-          toCommit,
-          at: now,
-          packet: packetRelative,
-          applied: true,
-        };
-        const nextStamp: VersionStamp = {
-          ...(stamp ?? {}),
-          template: stripGitSuffix(repo),
-          ref: targetRef,
-          commit: toCommit,
-          kideVersion: versionFromRef(targetRef) ?? stamp?.kideVersion ?? null,
-          corePath,
-          upgradedAt: now,
-          upgrades: [...(stamp?.upgrades ?? []), upgradeRecord],
-        };
-        writeFileSync(path.join(cwd, ".kide-version"), `${JSON.stringify(nextStamp, null, 2)}\n`);
+        stampUpgrade();
       } else {
         applyError = result.stderr.trim() || result.stdout.trim() || "git apply --3way failed";
       }
@@ -652,6 +697,7 @@ async function main() {
       targetRef,
       fromCommit,
       toCommit,
+      mode,
       corePath,
       dirtyBefore,
       applied,
@@ -672,7 +718,12 @@ async function main() {
         fromRef,
         targetRef,
         corePath,
-        applyMode: shouldApply ? "managed patch attempted" : "packet only",
+        mode,
+        applyMode: shouldApply
+          ? mode === "package"
+            ? "dependency bump attempted"
+            : "managed patch attempted"
+          : "packet only",
         managed,
         careful,
         other,
@@ -692,7 +743,11 @@ async function main() {
     );
 
     console.log(`[cms:upgrade] Packet ready: ${packetRelative}`);
-    if (applied) {
+    if (applied && mode === "package") {
+      console.log(
+        `[cms:upgrade] Bumped @kidecms/core to ^${versionFromRef(targetRef)} and updated .kide-version — run \`pnpm install\`, then review careful-review.patch.`,
+      );
+    } else if (applied) {
       console.log(`[cms:upgrade] Applied managed runtime changes and updated .kide-version to ${targetRef}.`);
     } else if (applyError) {
       console.log("[cms:upgrade] Managed patch needs help. See conflicts.json and agent-instructions.md.");

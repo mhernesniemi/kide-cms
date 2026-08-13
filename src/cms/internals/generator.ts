@@ -1,10 +1,11 @@
-import path from "node:path";
-import { generate } from "@/cms/core";
+import { generate } from "../core";
+import { loadProjectConfig, projectPath } from "./project";
 
-import config from "../cms.config";
+const config = await loadProjectConfig();
 
 await generate(config, {
-  outputDir: path.join(process.cwd(), "src/cms/.generated"),
-  runtimeImportPath: "../internals/runtime",
+  outputDir: projectPath("src/cms/.generated"),
+  coreImportPath: "@kidecms/core",
+  runtimeImportPath: "../runtime",
   configImportPath: "../cms.config",
 });

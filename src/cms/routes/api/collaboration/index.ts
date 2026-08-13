@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import config from "virtual:kide/config";
 import { collaboration } from "virtual:kide/runtime";
-import { isApprover, resolveCollaboration } from "@/cms/core";
+import { isApprover, resolveCollaboration } from "../../../core";
 
 export const prerender = false;
 

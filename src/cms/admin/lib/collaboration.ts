@@ -1,4 +1,4 @@
-import type { ReviewState } from "@/cms/core";
+import type { ReviewState } from "../../core";
 
 // Display helpers for the collaboration UI (edit strip + list columns).
 

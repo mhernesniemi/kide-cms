@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 
 import { cms } from "virtual:kide/api";
 import config from "virtual:kide/config";
-import { getLabelField } from "@/cms/core";
+import { getLabelField } from "../../../core";
 
 export const prerender = false;
 

@@ -7,6 +7,43 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.13.0] - Unreleased
+
+### Added
+
+- **Dual distribution.** The CMS runtime is now the `@kidecms/core` package, embedded
+  in the repo at `src/cms/` and linked via a pnpm workspace. Projects can scaffold in
+  **embedded** mode (runtime source in the tree, as before) or **package** mode (thin
+  project + npm dependency). Both modes are the same source at the same tag.
+- `kide` CLI bin (`kide generate|push|seed|admin|reindex|describe|upgrade|restore|eject|mcp`)
+  replaces the project-relative `node --import tsx src/cms/internals/*.ts` script wiring.
+- `kide eject` converts a package-mode project to embedded in place (offline,
+  version-exact); `kide eject --undo` reverses it while the runtime is pristine
+  (hash-verified via `.kide/eject-manifest.json`).
+- `cms:upgrade` is mode-aware: embedded mode applies the managed-runtime patch as
+  before; package mode bumps the `@kidecms/core` version and reserves the packet for
+  project-owned template files.
+- CI: publish-manifest check (`verify:pack`), package-mode end-to-end smoke test with
+  eject round-trip (`verify:package`), and a release workflow that publishes
+  `@kidecms/core` from `v*` tags.
+
+### Changed
+
+- **Breaking (layout):** the runtime composition root moved from
+  `src/cms/internals/runtime.ts` to project-owned `src/cms/runtime.ts`; custom admin
+  field components moved from `src/cms/admin/fields/` to project-owned `src/cms/fields/`;
+  adapters select platforms via `@kidecms/core/platform/...` specifiers instead of
+  relative paths.
+- **Breaking (imports):** userland imports the CMS library as `@kidecms/core`
+  (previously `@/cms/core`); standalone-script bootstrap is `@kidecms/core/context`.
+  Managed runtime code uses relative imports internally.
+- The Astro integration resolves all runtime files relative to the package
+  (`import.meta.url`) instead of the project root, and sets `ssr.noExternal` +
+  React `dedupe` for package-mode installs.
+- `src/cms/platform/` is now classified as managed in the upgrade path rules;
+  `src/styles/admin.css`, `src/cms/runtime.ts`, and `src/cms/fields/` are
+  project-owned ("careful").
+
 ## [0.10.0] - 2026-06-10
 
 ### Added

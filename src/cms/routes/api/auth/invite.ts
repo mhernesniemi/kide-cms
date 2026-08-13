@@ -15,7 +15,7 @@ import {
   tokenReference,
 } from "virtual:kide/runtime";
 import { sendInviteEmail, isEmailConfigured } from "virtual:kide/email";
-import { MIN_PASSWORD_LENGTH } from "@/cms/core";
+import { MIN_PASSWORD_LENGTH } from "../../../core";
 
 export const prerender = false;
 

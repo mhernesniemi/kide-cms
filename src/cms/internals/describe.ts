@@ -10,8 +10,10 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { describeModel, renderModelMarkdown } from "@/cms/core";
-import config from "@/cms/cms.config";
+import { describeModel, renderModelMarkdown } from "../core";
+import { loadProjectConfig } from "./project";
+
+const config = await loadProjectConfig();
 
 const outDir = path.join(process.cwd(), ".kide");
 mkdirSync(outDir, { recursive: true });

@@ -1,8 +1,8 @@
-import { reindexAll } from "@/cms/core";
+import { closeDb, reindexAll } from "../core";
+import { loadProjectConfig, loadProjectRuntime } from "./project";
 
-import "./runtime";
-import { closeDb } from "../adapters/db";
-import config from "../cms.config";
+await loadProjectRuntime();
+const config = await loadProjectConfig();
 
 const locales = config.locales?.supported ?? [];
 const { indexed } = await reindexAll(config.collections, locales);

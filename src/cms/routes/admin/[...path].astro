@@ -1,14 +1,14 @@
 ---
-import AdminLayout from "@/cms/admin/layouts/AdminLayout.astro";
-import AccessDeniedView from "@/cms/admin/views/AccessDeniedView.astro";
-import EditView from "@/cms/admin/views/EditView.astro";
-import ListView from "@/cms/admin/views/ListView.astro";
-import RecentView from "@/cms/admin/views/RecentView.astro";
-import SinglesView from "@/cms/admin/views/SinglesView.astro";
+import AdminLayout from "../../admin/layouts/AdminLayout.astro";
+import AccessDeniedView from "../../admin/views/AccessDeniedView.astro";
+import EditView from "../../admin/views/EditView.astro";
+import ListView from "../../admin/views/ListView.astro";
+import RecentView from "../../admin/views/RecentView.astro";
+import SinglesView from "../../admin/views/SinglesView.astro";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
-import { initDateFormat, resolveAdminRoute } from "@/cms/core";
-import { canRead } from "@/cms/admin/lib/access";
+import { initDateFormat, resolveAdminRoute } from "../../core";
+import { canRead } from "../../admin/lib/access";
 
 export const prerender = false;
 

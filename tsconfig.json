@@ -6,6 +6,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": [".astro/types.d.ts", "**/*", "src/cms/virtual.d.ts"],
+  "include": [".astro/types.d.ts", "**/*"],
   "exclude": ["dist", "docs", "packages", "examples", "src/cms/platform/cloudflare", "adapters/cloudflare"]
 }

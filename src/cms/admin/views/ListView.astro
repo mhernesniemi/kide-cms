@@ -1,12 +1,12 @@
 ---
 import { Plus } from "lucide-react";
 
-import DocumentsDataTable, { PAGE_SIZE } from "@/cms/admin/components/DocumentsDataTable";
-import { buttonVariants } from "@/cms/admin/components/ui/button";
+import DocumentsDataTable, { PAGE_SIZE } from "../components/DocumentsDataTable";
+import { buttonVariants } from "../components/ui/button";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { collaboration } from "virtual:kide/runtime";
-import { REVIEW_STATE_META } from "@/cms/admin/lib/collaboration";
+import { REVIEW_STATE_META } from "../lib/collaboration";
 import {
   formatDate,
   formatFieldValue,
@@ -14,9 +14,9 @@ import {
   getListColumns,
   humanize,
   resolveCollaboration,
-} from "@/cms/core";
-import { canWrite, getVisualStatus } from "@/cms/admin/lib/access";
-import { loadRelationOptionList, loadSharedSectionUsageCounts } from "@/cms/admin/lib/edit-data";
+} from "../../core";
+import { canWrite, getVisualStatus } from "../lib/access";
+import { loadRelationOptionList, loadSharedSectionUsageCounts } from "../lib/edit-data";
 
 type CollectionLike = {
   slug: string;

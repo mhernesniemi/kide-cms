@@ -1,4 +1,4 @@
-import { contentToPlainText, defineCollection, fields } from "@/cms/core";
+import { contentToPlainText, defineCollection, fields } from "@kidecms/core";
 
 export default defineCollection({
   slug: "posts",

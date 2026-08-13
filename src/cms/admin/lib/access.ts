@@ -1,4 +1,4 @@
-import type { CMSConfig } from "@/cms/core";
+import type { CMSConfig } from "../../core";
 
 type User = { id: string; role?: string; email?: string } | null | undefined;
 

@@ -1,23 +1,29 @@
 # Kide CMS
 
-Code-first, single-schema CMS built inside Astro 7. Runtime, admin UI, routes, and middleware all live inside `src/cms/`. No external package boundary — own your code.
+Code-first, single-schema CMS built inside Astro 7. The CMS runtime is the `@kidecms/core` workspace package embedded at `src/cms/` (linked via `pnpm-workspace.yaml` + `"@kidecms/core": "workspace:*"`). The same package can be installed from npm instead ("package mode") — this repo is both the embedded template and the package source. In this repo you edit the runtime directly — own your code.
 
 ## Repo Structure
 
 ```
 src/
-  cms/
+  cms/                    # = the @kidecms/core package (own package.json) + project-owned files
+    package.json          # @kidecms/core — exports map, `kide` bin, package deps
+    # project-owned (stay in the user's project in both modes):
     cms.config.ts         # CMS configuration (collections, admin, locales)
     collections/          # Collection definitions
     adapters/             # db, email, storage adapters
-    internals/            # Thin runner scripts + integration.ts + virtual.d.ts (not user-edited)
+    fields/               # Custom admin field components (user-authored .tsx, optional)
+    runtime.ts            # Composition root — wires adapters into the core runtime
     migrations/           # Drizzle migrations (Cloudflare D1 only — Node syncs via cms:push, no migrate-on-boot)
     .generated/           # Auto-generated schema/types/validators/api (do not edit)
+    # managed package dirs (published to npm; in package mode these live in node_modules):
     core/                 # CMS runtime library (define, api, auth, schema, content, ...)
     admin/                # Admin UI (components, layouts, lib)
     routes/               # Admin pages + API routes (injected by integration)
     middleware/           # Auth middleware (injected by integration)
     client/               # preview.ts — browser-side live-preview client
+    platform/             # node / cloudflare database + storage implementations
+    internals/            # Runner scripts, integration.ts, cli.mjs (`kide` bin), virtual.d.ts
   components/             # App-level components (incl. BlockRenderer)
   layouts/, pages/, styles/, env.d.ts
 ```
@@ -48,7 +54,11 @@ pnpm cms:admin        # create an admin user from CLI
 pnpm cms:describe     # write .kide/model.json + MODEL.md (the migration model manifest)
 pnpm cms:upgrade      # in scaffolded client projects: prepare/apply a release-tag core upgrade packet
 pnpm cms:restore      # restore files from the latest upgrade backup
+pnpm verify:pack      # assert the @kidecms/core publish manifest ships only managed files
+pnpm verify:package   # assemble a package-mode project from HEAD, build+boot it, test eject round-trip
 ```
+
+All `cms:*` scripts run through the `kide` bin (`src/cms/internals/cli.mjs`), which works identically in embedded and package mode. `kide eject` / `kide eject --undo` convert a package-mode project to embedded and back.
 
 > **Migrating content in?** Read `AGENTS.md` (repo root) and run the `/migrate` skill. The short version: `pnpm cms:describe` → read `MODEL.md` → write an importer that matches the value shapes → `createCmsContext().load(items, { dryRun: true })` to validate → import → verify.
 
@@ -107,9 +117,9 @@ If the change touches `src/cms/platform/`, `src/cms/middleware/`, or the request
 - Admin styles use shadcn CSS variables. Public site uses plain Tailwind colors — no shared styles.
 - `labelField` on collections controls display name (fallback: title → name → first text field).
 - Always query content through the typed local API (`cms.posts.findOne()`, `cms.pages.find()`, etc.) — never bypass it with raw DB queries or untyped wrappers.
-- Routes in `src/cms/routes/` import app-specific code via `virtual:kide/*` modules (resolved by the integration's Vite aliases). Userland (`src/pages/`, `src/layouts/`, `src/components/`) imports directly via `@/cms/*` — virtual is the one-way core → user contract, don't use it in userland.
-- Use the `cn()` utility from `@/cms/admin/lib/utils` for conditional class names — never use template literal interpolation for className.
-- Import the CMS library via the `@/cms/core` alias (tsconfig `@/*` → `./src/*`), not relative paths.
+- Routes in `src/cms/routes/` import app-specific code via `virtual:kide/*` modules (resolved by the integration's Vite aliases). Userland (`src/pages/`, `src/layouts/`, `src/components/`) imports the CMS via the package name — virtual is the one-way core → user contract, don't use it in userland.
+- Import boundaries: userland and project-owned CMS files (cms.config, collections, adapters, runtime.ts) import the CMS library as `@kidecms/core` (never `@/cms/core` and never deep relative paths into managed dirs). Managed package code (`core/`, `admin/`, `routes/`, `middleware/`, `client/`, `platform/`, `internals/`) uses **relative imports internally** and must never import project files except via `virtual:kide/*` (Vite-land) or `internals/project.ts` cwd-loaders (script-land). The `@/*` alias is for userland's own files (e.g. `@/cms/.generated/api`, `@/components/...`).
+- Use the `cn()` utility for conditional class names — never use template literal interpolation for className. Inside admin code import it relatively (`../lib/utils`); in project-side custom fields use `@kidecms/core/admin/lib/utils`.
 - Prefer the Astro 7 **background dev server** (`pnpm exec astro dev --background`) over a foreground `pnpm dev`: it detaches once ready, dedupes via a lockfile, and is stoppable with `pnpm exec astro dev stop`. Either way, stop the server when you're done (`pnpm exec astro dev stop`, or kill the foreground process).
 
 ## Migrations & Bulk Import
@@ -133,7 +143,7 @@ During normal feature work you rarely run this by hand: `pnpm dev` already pushe
 
 ```ts
 // scripts/import.ts  →  node --import tsx scripts/import.ts
-import { createCmsContext } from "@/cms/internals/context";
+import { createCmsContext } from "@kidecms/core/context";
 
 const { cms, assets, reindex, flush, dispose } = await createCmsContext();
 // … import work …
@@ -199,7 +209,7 @@ Routes in `src/cms/routes/` import app-specific code via `virtual:kide/*` aliase
 | `virtual:kide/config`           | `src/cms/cms.config`                   | Default `CMSConfig`                                                                       |
 | `virtual:kide/api`              | `src/cms/.generated/api`               | `{ cms }` — typed local API                                                               |
 | `virtual:kide/schema`           | `src/cms/.generated/schema`            | `{ cmsTables, cmsSessions, cmsPasswordResets, cmsRateLimits }` — Drizzle table map        |
-| `virtual:kide/runtime`          | `src/cms/internals/runtime`            | Session, auth, assets, AI, locks, `createCms`                                             |
+| `virtual:kide/runtime`          | `src/cms/runtime`                      | Session, auth, assets, AI, locks, `createCms`                                             |
 | `virtual:kide/db`               | `src/cms/adapters/db`                  | `{ getDb }` — Drizzle instance                                                            |
 | `virtual:kide/email`            | `src/cms/adapters/email`               | `{ sendInviteEmail, sendPasswordResetEmail, sendFormSubmissionEmail, isEmailConfigured }` |
 | `virtual:kide/content-renderer` | `src/components/ContentRenderer.astro` | Default Astro component                                                                   |

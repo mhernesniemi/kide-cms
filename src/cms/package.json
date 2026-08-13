@@ -1,0 +1,91 @@
+{
+  "name": "@kidecms/core",
+  "version": "0.13.0",
+  "description": "Kide CMS runtime — core library, admin UI, routes, and middleware for Astro. Shipped as TypeScript source.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mhernesniemi/kide-cms.git"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "bin": {
+    "kide": "./internals/cli.mjs"
+  },
+  "exports": {
+    ".": "./core/index.ts",
+    "./astro": "./internals/integration.ts",
+    "./context": "./internals/context.ts",
+    "./youtube": "./core/youtube.ts",
+    "./client/preview": "./client/preview.ts",
+    "./platform/*": "./platform/*.ts",
+    "./package.json": "./package.json",
+    "./*": "./*"
+  },
+  "files": [
+    "admin",
+    "client",
+    "core",
+    "internals",
+    "middleware",
+    "platform",
+    "routes",
+    "!**/__tests__",
+    "!**/__snapshots__",
+    "!**/*.test.ts",
+    "!**/*.workers.test.ts"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.41",
+    "@base-ui/react": "^1.3.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-popover": "^1.1.15",
+    "@tanstack/react-table": "^8.21.3",
+    "@tiptap/core": "^3.22.3",
+    "@tiptap/extension-image": "^3.22.3",
+    "@tiptap/extension-link": "^3.22.3",
+    "@tiptap/extension-placeholder": "^3.27.1",
+    "@tiptap/markdown": "^3.22.3",
+    "@tiptap/pm": "^3.22.3",
+    "@tiptap/react": "^3.22.3",
+    "@tiptap/starter-kit": "^3.22.3",
+    "@tiptap/suggestion": "3.22.4",
+    "ai": "^6.0.116",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "drizzle-kit": "^0.31.9",
+    "lucide-react": "^0.577.0",
+    "nanoid": "^6.0.1",
+    "tailwind-merge": "^3.5.0",
+    "tsx": "^4.21.0",
+    "tw-animate-css": "^1.4.0"
+  },
+  "peerDependencies": {
+    "astro": "^7.0.0",
+    "better-sqlite3": "^12.0.0",
+    "drizzle-orm": "^0.45.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sharp": "^0.35.0",
+    "tailwindcss": "^4.0.0",
+    "zod": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "better-sqlite3": {
+      "optional": true
+    },
+    "sharp": {
+      "optional": true
+    }
+  }
+}

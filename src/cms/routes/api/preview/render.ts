@@ -5,7 +5,7 @@ import { getContainerRenderer } from "@astrojs/react/container-renderer";
 
 import BlockRenderer from "virtual:kide/block-renderer";
 import ContentRenderer from "virtual:kide/content-renderer";
-import { renderRichText, parseBlocks } from "@/cms/core";
+import { renderRichText, parseBlocks } from "../../../core";
 
 export const prerender = false;
 

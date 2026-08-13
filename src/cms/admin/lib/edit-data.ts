@@ -4,7 +4,7 @@ import {
   getLabelField,
   getSharedBlockTypes,
   type SharedSectionOption,
-} from "@/cms/core";
+} from "../../core";
 import { canRead } from "./access";
 
 type User = { id: string; role?: string; email?: string } | null | undefined;

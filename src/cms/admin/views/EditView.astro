@@ -1,20 +1,20 @@
 ---
 import { ArrowLeft, ArrowUpRight, Dot, Lock } from "lucide-react";
 
-import AdminCard from "@/cms/admin/components/AdminCard.astro";
-import AiGenerateButton from "@/cms/admin/components/AiGenerateButton";
-import CollaborationReviewBar from "@/cms/admin/components/CollaborationReviewBar";
-import DocumentActions from "@/cms/admin/components/DocumentActions";
-import DocumentLock from "@/cms/admin/components/DocumentLock";
-import LiveHeading from "@/cms/admin/components/LiveHeading";
-import UnsavedGuard from "@/cms/admin/components/UnsavedGuard";
-import FieldControl from "@/cms/admin/components/FieldControl.astro";
-import { StatusBadge } from "@/cms/admin/components/ui/badge";
-import { buttonVariants } from "@/cms/admin/components/ui/button";
+import AdminCard from "../components/AdminCard.astro";
+import AiGenerateButton from "../components/AiGenerateButton";
+import CollaborationReviewBar from "../components/CollaborationReviewBar";
+import DocumentActions from "../components/DocumentActions";
+import DocumentLock from "../components/DocumentLock";
+import LiveHeading from "../components/LiveHeading";
+import UnsavedGuard from "../components/UnsavedGuard";
+import FieldControl from "../components/FieldControl.astro";
+import { StatusBadge } from "../components/ui/badge";
+import { buttonVariants } from "../components/ui/button";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { isAiEnabled, collaboration } from "virtual:kide/runtime";
-import { loadCollaborationData } from "@/cms/admin/lib/collaboration";
+import { loadCollaborationData } from "../lib/collaboration";
 import {
   formatDate,
   getFieldGroups,
@@ -23,13 +23,13 @@ import {
   getSharedBlockTypes,
   isApprover,
   resolveCollaboration,
-} from "@/cms/core";
+} from "../../core";
 import {
   getFormAction,
   getVisualStatus,
   isFieldHidden as isFieldHiddenFn,
   isFieldReadOnly as isFieldReadOnlyFn,
-} from "@/cms/admin/lib/access";
+} from "../lib/access";
 import {
   loadDocument,
   loadMenuLinkOptions,
@@ -38,7 +38,7 @@ import {
   loadReverseRefs,
   loadSharedBlockRelationOptions,
   loadSharedSectionOptions,
-} from "@/cms/admin/lib/edit-data";
+} from "../lib/edit-data";
 import EditScripts from "./edit/EditScripts.astro";
 import ReverseReferencesList from "./edit/ReverseReferencesList.astro";
 
