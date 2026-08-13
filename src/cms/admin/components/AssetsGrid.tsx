@@ -324,6 +324,18 @@ export default function AssetsGrid({
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
+  // On lg+ the folder sidebar is sticky and always visible, so dnd-kit's
+  // edge auto-scroll only causes the page to lurch while dragging toward it.
+  // Below lg the folders sit above the grid and auto-scroll is needed.
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
+    const update = () => setSidebarVisible(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
   // Flatten the folder tree into depth-tagged rows for the sidebar.
   const folderTree = useMemo(() => {
     const byParent = new Map<string, FolderItem[]>();
@@ -525,6 +537,7 @@ export default function AssetsGrid({
     <DndContext
       sensors={sensors}
       collisionDetection={pointerWithin}
+      autoScroll={!sidebarVisible}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
