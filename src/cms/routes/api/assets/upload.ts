@@ -20,6 +20,7 @@ const DEFAULT_ALLOWED_TYPES = [
 
 const ALLOWED_TYPES = new Set(config.admin?.uploads?.allowedTypes ?? DEFAULT_ALLOWED_TYPES);
 const MAX_FILE_SIZE = config.admin?.uploads?.maxFileSize ?? 50 * 1024 * 1024; // 50 MB
+const MAX_FILES_PER_UPLOAD = 20;
 
 // Magic number signatures for binary file type verification
 const MAGIC_SIGNATURES: Array<{ type: string; bytes: number[]; offset?: number }> = [
@@ -73,56 +74,74 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // everything is too late. A small overhead covers non-file fields + multipart framing.
   let formData: FormData;
   try {
-    formData = await readLimitedFormData(request, MAX_FILE_SIZE + 64 * 1024);
+    formData = await readLimitedFormData(request, MAX_FILES_PER_UPLOAD * MAX_FILE_SIZE + 64 * 1024);
   } catch (error) {
     if (error instanceof PayloadTooLargeError) {
       return Response.json({ error: "Upload exceeds the size limit." }, { status: 413 });
     }
     throw error;
   }
-  const file = formData.get("file");
+  const files = formData.getAll("file").filter((entry): entry is File => entry instanceof File);
   const alt = formData.get("alt");
   const folder = formData.get("folder");
 
-  if (!file || !(file instanceof File)) {
+  if (files.length === 0) {
     return Response.json({ error: "No file provided." }, { status: 400 });
   }
 
-  if (!ALLOWED_TYPES.has(file.type)) {
-    return Response.json({ error: `File type "${file.type}" is not allowed.` }, { status: 400 });
+  if (files.length > MAX_FILES_PER_UPLOAD) {
+    return Response.json({ error: `Too many files (max ${MAX_FILES_PER_UPLOAD} per upload).` }, { status: 400 });
   }
 
-  if (file.size > MAX_FILE_SIZE) {
-    return Response.json({ error: `File exceeds the ${MAX_FILE_SIZE / 1024 / 1024} MB size limit.` }, { status: 400 });
-  }
+  // Validate every file before storing any, so a bad file mid-batch never
+  // leaves a partial upload behind.
+  for (const file of files) {
+    if (!ALLOWED_TYPES.has(file.type)) {
+      return Response.json({ error: `File type "${file.type}" is not allowed.` }, { status: 400 });
+    }
 
-  // Verify via the header only (slice leaves `file` unconsumed → assets.upload reads it once).
-  const header = await file.slice(0, 256).arrayBuffer();
-  if (!verifyMagicBytes(header, file.type)) {
-    return Response.json({ error: "File content does not match declared type." }, { status: 400 });
+    if (file.size > MAX_FILE_SIZE) {
+      return Response.json(
+        { error: `"${file.name}" exceeds the ${MAX_FILE_SIZE / 1024 / 1024} MB size limit.` },
+        { status: 400 },
+      );
+    }
+
+    // Verify via the header only (slice leaves `file` unconsumed → assets.upload reads it once).
+    const header = await file.slice(0, 256).arrayBuffer();
+    if (!verifyMagicBytes(header, file.type)) {
+      return Response.json({ error: `"${file.name}" content does not match declared type.` }, { status: 400 });
+    }
   }
 
   const user = locals.user;
   const actor = user ? { id: user.id, email: user.email, role: user.role } : null;
-  const asset = await assets.upload(
-    file,
-    {
-      alt: alt ? String(alt) : undefined,
-      folder: folder ? String(folder) : undefined,
-    },
-    { actor },
-  );
+  const uploaded = [];
+  for (const file of files) {
+    uploaded.push(
+      await assets.upload(
+        file,
+        {
+          // alt describes one file — never apply the same text to a whole batch
+          alt: alt && files.length === 1 ? String(alt) : undefined,
+          folder: folder ? String(folder) : undefined,
+        },
+        { actor },
+      ),
+    );
+  }
 
   const redirectTo = formData.get("redirectTo");
 
   if (redirectTo) {
-    // Delay so Vite's dev server picks up the new file before the redirect
+    // Delay so Vite's dev server picks up the new files before the redirect
     await new Promise((r) => setTimeout(r, 1000));
-    return new Response(null, {
-      status: 303,
-      headers: { Location: `/admin/assets/${asset._id}?_toast=success&_msg=Asset+uploaded` },
-    });
+    const location =
+      uploaded.length === 1
+        ? `/admin/assets/${uploaded[0]._id}?_toast=success&_msg=Asset+uploaded`
+        : `/admin/assets?_toast=success&_msg=${uploaded.length}+assets+uploaded`;
+    return new Response(null, { status: 303, headers: { Location: location } });
   }
 
-  return Response.json(asset, { status: 201 });
+  return Response.json(uploaded.length === 1 ? uploaded[0] : uploaded, { status: 201 });
 };
