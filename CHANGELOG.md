@@ -18,8 +18,8 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 - `kide` CLI bin (`kide generate|push|seed|admin|reindex|describe|upgrade|restore|eject|mcp`)
   replaces the project-relative `node --import tsx src/cms/internals/*.ts` script wiring.
 - `kide eject` converts a package-mode project to embedded in place (offline,
-  version-exact); `kide eject --undo` reverses it while the runtime is pristine
-  (hash-verified via `.kide/eject-manifest.json`).
+  version-exact). One-way by design — evaluate on a branch, or use `pnpm patch`
+  for small package-mode tweaks.
 - `cms:upgrade` is mode-aware: embedded mode applies the managed-runtime patch as
   before; package mode bumps the `@kidecms/core` version and reserves the packet for
   project-owned template files.

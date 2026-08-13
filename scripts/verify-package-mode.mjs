@@ -55,14 +55,14 @@ try {
   await bootAndProbe(project);
   console.log("[pkg-verify] ✓ package mode builds AND serves requests without crashing");
 
-  console.log("[pkg-verify] testing eject → undo round-trip");
-  verifyEjectRoundTrip(project);
-  console.log("\n[pkg-verify] ✓ package mode + eject round-trip verified");
+  console.log("[pkg-verify] testing eject");
+  verifyEject(project);
+  console.log("\n[pkg-verify] ✓ package mode + eject verified");
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }
 
-function verifyEjectRoundTrip(project) {
+function verifyEject(project) {
   const read = (p) => readFileSync(path.join(project, p), "utf8");
   const dep = () => JSON.parse(read("package.json")).dependencies["@kidecms/core"];
   const exists = (p) => existsSync(path.join(project, p));
@@ -70,30 +70,26 @@ function verifyEjectRoundTrip(project) {
     if (!cond) throw new Error(`[pkg-verify] eject: ${msg}`);
   };
 
+  // A pre-existing workspace file that doesn't list src/cms must make eject
+  // refuse before touching anything.
+  const workspacePath = path.join(project, "pnpm-workspace.yaml");
+  writeFileSync(workspacePath, "packages:\n  - some/other\n");
+  let refused = false;
+  try {
+    execSync("pnpm exec kide eject", { cwd: project, stdio: "pipe" });
+  } catch {
+    refused = true;
+  }
+  check(refused, "eject did not refuse a foreign pnpm-workspace.yaml");
+  check(!exists("src/cms/core"), "eject mutated the project despite refusing");
+  rmSync(workspacePath, { force: true });
+
   run("pnpm exec kide eject", project);
   check(exists("src/cms/core/index.ts"), "src/cms/core missing after eject");
   check(exists("src/cms/package.json"), "src/cms/package.json missing after eject");
   check(exists("pnpm-workspace.yaml"), "pnpm-workspace.yaml missing after eject");
   check(dep() === "workspace:*", `dependency is ${dep()}, expected workspace:*`);
   run("pnpm cms:generate", project); // embedded mode must still generate via the workspace bin
-
-  // A modified managed file must make --undo refuse (exit non-zero) without --force.
-  const probeFile = path.join(project, "src/cms/core/index.ts");
-  const original = readFileSync(probeFile, "utf8");
-  writeFileSync(probeFile, `${original}\n// local edit\n`);
-  let refused = false;
-  try {
-    execSync("pnpm exec kide eject --undo", { cwd: project, stdio: "pipe" });
-  } catch {
-    refused = true;
-  }
-  check(refused, "--undo did not refuse a modified runtime");
-  writeFileSync(probeFile, original);
-
-  run("pnpm exec kide eject --undo", project);
-  check(!exists("src/cms/core"), "src/cms/core still present after undo");
-  check(!exists("pnpm-workspace.yaml"), "pnpm-workspace.yaml still present after undo");
-  check(/^\^\d+\.\d+\.\d+/.test(dep()), `dependency is ${dep()}, expected a ^version`);
 }
 
 async function bootAndProbe(project) {

@@ -5,7 +5,7 @@ A code-first CMS that lives **inside** your Astro project, not beside it.
 Kide ships one runtime, two ways to have it — pick per project when you scaffold:
 
 - **Embedded** — the CMS runtime, admin UI, and routes sit in `src/cms/` as a local workspace package. Read, debug, and modify everything. No abstraction you can't open up. Upgrades arrive as reviewable release packets.
-- **Package** — a thin project with the same runtime installed as the `@kidecms/core` npm dependency. Update with a semver bump. If you ever need to go deeper, `pnpm exec kide eject` converts the project to embedded mode in place — same import specifiers, no code changes.
+- **Package** — a thin project with the same runtime installed as the `@kidecms/core` npm dependency. Update with a semver bump. If you ever need to go deeper, `pnpm exec kide eject` converts the project to embedded mode in place (one-way) — same import specifiers, no code changes.
 
 Both modes are the same source at the same release tag; only where the package resolves from differs.
 

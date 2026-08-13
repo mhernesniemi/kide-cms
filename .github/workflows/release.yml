@@ -35,8 +35,14 @@ jobs:
             exit 1
           fi
 
-      - run: pnpm verify:pack
+      # Full gate — a tag push does not trigger the branch CI workflow, so the
+      # release must run everything itself before publishing.
+      - run: pnpm check
       - run: pnpm test
+      - run: pnpm test:workers
+      - run: pnpm verify:pack
+      - run: pnpm verify:package
+      - run: pnpm verify:cloudflare
 
       - name: Publish @kidecms/core
         run: pnpm --filter @kidecms/core publish --no-git-checks --provenance

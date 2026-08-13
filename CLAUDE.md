@@ -58,7 +58,7 @@ pnpm verify:pack      # assert the @kidecms/core publish manifest ships only man
 pnpm verify:package   # assemble a package-mode project from HEAD, build+boot it, test eject round-trip
 ```
 
-All `cms:*` scripts run through the `kide` bin (`src/cms/internals/cli.mjs`), which works identically in embedded and package mode. `kide eject` / `kide eject --undo` convert a package-mode project to embedded and back.
+All `cms:*` scripts run through the `kide` bin (`src/cms/internals/cli.mjs`), which works identically in embedded and package mode. `kide eject` converts a package-mode project to embedded (one-way).
 
 > **Migrating content in?** Read `AGENTS.md` (repo root) and run the `/migrate` skill. The short version: `pnpm cms:describe` → read `MODEL.md` → write an importer that matches the value shapes → `createCmsContext().load(items, { dryRun: true })` to validate → import → verify.
 
