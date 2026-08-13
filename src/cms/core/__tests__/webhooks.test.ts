@@ -8,7 +8,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { pushSQLiteSchema } from "drizzle-kit/api";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import * as generatedSchema from "@/cms/.generated/schema";
+import * as generatedSchema from "./fixtures/project/src/cms/.generated/schema";
 import { createCms } from "../api";
 import type { CMSConfig } from "../define";
 import { runWithRequestScope } from "../request-scope";

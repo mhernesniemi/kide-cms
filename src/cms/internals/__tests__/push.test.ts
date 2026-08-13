@@ -14,10 +14,15 @@ const SPAWN_TIMEOUT = 60_000;
 let tmp: string;
 let dbPath: string;
 
+// Run against the committed test-fixture project so the gates are exercised on
+// a rich schema (cms_pages + versions) regardless of the template's userland.
+const repoRoot = process.cwd();
+const fixtureProject = path.join(repoRoot, "src/cms/core/__tests__/fixtures/project");
+
 function push(args: string[] = [], env: Record<string, string> = {}) {
   try {
-    const out = execFileSync("node", ["--import", "tsx", "src/cms/internals/push.ts", ...args], {
-      cwd: process.cwd(),
+    const out = execFileSync("node", ["--import", "tsx", path.join(repoRoot, "src/cms/internals/push.ts"), ...args], {
+      cwd: fixtureProject,
       env: { ...process.env, CMS_DATABASE_URL: dbPath, ...env },
       encoding: "utf8",
       stdio: "pipe",

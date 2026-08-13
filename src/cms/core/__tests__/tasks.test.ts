@@ -9,7 +9,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { pushSQLiteSchema } from "drizzle-kit/api";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import * as generatedSchema from "@/cms/.generated/schema";
+import * as generatedSchema from "./fixtures/project/src/cms/.generated/schema";
 import type { CMSConfig } from "../define";
 import { drainTasks, enqueueTask, pruneTasks, tickSchedules } from "../tasks";
 import { configureCmsRuntime, resetCmsRuntime } from "../runtime";

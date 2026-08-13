@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { pushSQLiteSchema } from "drizzle-kit/api";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import * as generatedSchema from "@/cms/.generated/schema";
+import * as generatedSchema from "./fixtures/project/src/cms/.generated/schema";
 import { createPasswordReset, consumePasswordReset, hashToken } from "../auth";
 import { clearRateLimit, hitRateLimit, peekRateLimit, recordRateLimit } from "../rate-limit";
 import { configureCmsRuntime, resetCmsRuntime } from "../runtime";

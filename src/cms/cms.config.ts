@@ -1,14 +1,6 @@
 import { defineConfig } from "@kidecms/core";
 import users from "./collections/users";
-import authors from "./collections/authors";
-import posts from "./collections/posts";
-import taxonomies from "./collections/taxonomies";
-import menus from "./collections/menus";
-import frontPage from "./collections/front-page";
-import pages from "./collections/pages";
-import sharedSections from "./collections/shared-sections";
-import forms from "./collections/forms";
-import formSubmissions from "./collections/form-submissions";
+import examples from "./collections/example";
 
 export default defineConfig({
   database: { dialect: "sqlite" },
@@ -16,5 +8,5 @@ export default defineConfig({
     default: "en",
     supported: ["en"],
   },
-  collections: [users, authors, posts, taxonomies, menus, frontPage, pages, sharedSections, forms, formSubmissions],
+  collections: [users, examples],
 });

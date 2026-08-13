@@ -29,6 +29,14 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 
 ### Changed
 
+- **Bare-bones template.** The repo's userland is now the scaffold: one
+  `examples` collection (`title` + `body`), a minimal public page, no demo
+  content, no seeds. The demo collections/pages/blocks, seed data, and the
+  scaffolder's "seed demo content?" prompt are gone. Core tests run against a
+  committed rich fixture schema (`src/cms/core/__tests__/fixtures/`, regenerate
+  with `pnpm test:fixtures`) instead of the userland config, so they pass no
+  matter what collections a project defines.
+
 - **Breaking (layout):** the runtime composition root moved from
   `src/cms/internals/runtime.ts` to project-owned `src/cms/runtime.ts`; custom admin
   field components moved from `src/cms/admin/fields/` to project-owned `src/cms/fields/`;

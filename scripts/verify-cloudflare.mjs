@@ -56,6 +56,9 @@ try {
   // --no-frozen-lockfile: the dep swap above diverges from the lockfile; CI defaults to frozen
   run("pnpm install --prefer-offline --no-frozen-lockfile");
   run("pnpm cms:generate");
+  // The template ships no migration history — generate the baseline the way
+  // create-kide-app's Cloudflare flow does.
+  run("pnpm exec drizzle-kit generate");
   run("pnpm exec astro build");
   console.log("[cf-verify] ✓ build clean");
 

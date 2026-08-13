@@ -49,7 +49,6 @@ pnpm check            # astro check (types) + eslint (lint)
 pnpm test             # vitest (unit + generator golden + in-memory DB integration)
 pnpm format           # prettier --write .
 pnpm cms:generate     # regenerate src/cms/.generated/ from cms.config.ts
-pnpm cms:seed         # seed database with demo content
 pnpm cms:admin        # create an admin user from CLI
 pnpm cms:describe     # write .kide/model.json + MODEL.md (the migration model manifest)
 pnpm cms:upgrade      # in scaffolded client projects: prepare/apply a release-tag core upgrade packet

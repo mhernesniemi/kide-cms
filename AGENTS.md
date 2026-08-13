@@ -48,7 +48,7 @@ await dispose();
 
 ## Invariants & gotchas (these are what bite first-try)
 
-- **Schema sync is `cms:push`** (non-interactive). A column **rename/drop** can't be auto-resolved headlessly → run `RECREATE=pages,posts pnpm cms:push` (drops + recreates those tables; data loss, fine for a DB you're repopulating). The dev server also auto-pushes on boot — stop it before running scripts (SQLite single-writer).
+- **Schema sync is `cms:push`** (non-interactive). A column **rename/drop** can't be auto-resolved headlessly → run `RECREATE=<slugs> pnpm cms:push` (drops + recreates those tables; data loss, fine for a DB you're repopulating). The dev server also auto-pushes on boot — stop it before running scripts (SQLite single-writer).
 - **Bulk writes:** pass `{ _system: true, _skipSearch: true }` (the default in `load()`), then `reindex()` once. Don't index per document.
 - **Wipe before re-import:** `cms.<collection>.deleteMany({}, { _system: true })`. Combine with caller-supplied `_id`s so re-runs replace, not duplicate.
 - **Slugs default `unique: true`** — set `fields.slug({ unique: false })` for hierarchical or per-locale reused slugs.

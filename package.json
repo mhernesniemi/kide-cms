@@ -18,7 +18,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "cms:generate": "kide generate",
-    "cms:seed": "kide seed",
+    "test:fixtures": "node --import tsx scripts/generate-test-fixtures.ts",
     "cms:admin": "kide admin",
     "cms:reindex": "kide reindex",
     "cms:push": "pnpm cms:generate && kide push",

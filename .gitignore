@@ -3,6 +3,7 @@ dist/
 # generated types
 .astro/
 .generated/
+!src/cms/core/__tests__/fixtures/project/src/cms/.generated/
 # generated wrapper CSS
 .kide/
 

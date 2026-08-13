@@ -10,8 +10,8 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { pushSQLiteSchema } from "drizzle-kit/api";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import * as generatedSchema from "@/cms/.generated/schema";
-import config from "@/cms/cms.config";
+import * as generatedSchema from "./fixtures/project/src/cms/.generated/schema";
+import config from "./fixtures/config";
 import { __testHooks, createCms } from "../api";
 import { verifyPassword } from "../auth";
 import { configureCmsRuntime, resetCmsRuntime } from "../runtime";
