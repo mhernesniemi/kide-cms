@@ -97,7 +97,7 @@ export default function TreeSelect({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
-            variant="outline"
+            variant="input"
             role="combobox"
             aria-expanded={open}
             size="lg"

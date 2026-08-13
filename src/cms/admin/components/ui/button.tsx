@@ -11,11 +11,12 @@ const buttonVariants = cva(
         default:
           "bg-indigo-100 hover:bg-indigo-200/70 text-indigo-900 border-indigo-300 dark:bg-indigo-500/30 dark:hover:bg-indigo-500/40 dark:border-indigo-600 dark:text-indigo-100",
         outline:
-          "border-input hover:border-foreground/20 bg-muted-strong/40 hover:bg-muted-strong/70 hover:text-foreground aria-expanded:bg-muted-strong/70 aria-expanded:text-foreground dark:border-input dark:hover:border-foreground/20 dark:bg-input/30 dark:hover:bg-input/50",
+          "border-input hover:border-foreground/20 bg-muted-strong/40 hover:bg-muted-strong/60 hover:text-foreground aria-expanded:bg-muted-strong/60 aria-expanded:text-foreground dark:border-input dark:hover:border-foreground/20 dark:bg-input/30 dark:hover:bg-input/50",
+        input: "border-input hover:border-foreground/25 bg-muted/30 dark:bg-input/30 dark:hover:border-foreground/25",
         secondary:
           "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         publish:
-          "bg-emerald-200/80 hover:bg-emerald-200/60 text-emerald-800 border-emerald-400 dark:bg-emerald-500/30 dark:hover:bg-emerald-500/40 dark:border-emerald-700 dark:text-emerald-200",
+          "bg-emerald-200/80 hover:bg-emerald-200 text-emerald-800 hover:text-emerald-900 border-emerald-400 dark:bg-emerald-500/30 dark:hover:bg-emerald-500/40 dark:border-emerald-700 dark:text-emerald-200 dark:hover:text-emerald-100",
         ghost:
           "border-transparent hover:bg-foreground/8 hover:text-foreground aria-expanded:bg-foreground/8 aria-expanded:text-foreground dark:hover:bg-foreground/15 dark:aria-expanded:bg-foreground/15",
         destructive:

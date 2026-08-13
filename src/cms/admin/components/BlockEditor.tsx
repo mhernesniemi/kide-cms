@@ -141,11 +141,11 @@ function SortableBlock({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn("bg-muted-strong/50 overflow-hidden rounded-lg border", isDragging && "z-10 opacity-90 shadow-lg")}
+      className={cn("bg-card overflow-hidden rounded-lg border", isDragging && "z-10 opacity-90 shadow-lg")}
     >
       {/* Header — entire row is clickable to expand/collapse */}
       <div
-        className="group/row hover:bg-muted-strong/80 flex items-center gap-2 px-3 py-2 transition-colors select-none"
+        className="group/row bg-muted-strong/50 hover:bg-muted-strong/70 flex items-center gap-2 px-3 py-2 transition-colors select-none"
         onClick={onToggle}
       >
         {/* Drag handle */}
@@ -170,7 +170,7 @@ function SortableBlock({
         <span
           className={cn(
             "rounded px-2 py-0.5 text-xs font-medium",
-            shared ? "bg-primary/10 text-primary border-primary/20 border" : "bg-secondary text-secondary-foreground",
+            shared ? "bg-primary/10 text-primary border-primary/20 border" : "bg-card text-secondary-foreground border",
           )}
         >
           {shared ? "Shared" : humanize(block.type)}

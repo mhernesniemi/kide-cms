@@ -205,7 +205,7 @@ function RelationControl({
           {selected.map((id) => (
             <span
               key={id}
-              className="bg-secondary text-secondary-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-sm"
+              className="bg-card text-secondary-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-sm"
             >
               {getLabel(id)}
               <button
@@ -490,10 +490,10 @@ function SortableRepeaterItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn("bg-muted-strong/50 overflow-hidden rounded-lg border", isDragging && "z-10 opacity-90 shadow-lg")}
+      className={cn("bg-card overflow-hidden rounded-lg border", isDragging && "z-10 opacity-90 shadow-lg")}
     >
       <div
-        className="group/row hover:bg-muted-strong/80 flex items-center gap-2 px-3 py-2 transition-colors select-none"
+        className="group/row bg-muted-strong/50 hover:bg-muted-strong/70 flex items-center gap-2 px-3 py-2 transition-colors select-none"
         onClick={onToggle}
       >
         <button
