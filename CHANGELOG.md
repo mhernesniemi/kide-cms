@@ -30,7 +30,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 ### Changed
 
 - **Bare-bones template.** The repo's userland is now the scaffold: one
-  `examples` collection (`title` + `body`), a minimal public page, no demo
+  `pages` collection (`title`, `slug`, `body`), a minimal public page, no demo
   content, no seeds. The demo collections/pages/blocks, seed data, and the
   scaffolder's "seed demo content?" prompt are gone. Core tests run against a
   committed rich fixture schema (`src/cms/core/__tests__/fixtures/`, regenerate

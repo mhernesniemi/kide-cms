@@ -2,7 +2,7 @@
 import PublicLayout from "@/layouts/PublicLayout.astro";
 import { cms } from "@/cms/.generated/api";
 
-const examples = await cms.examples.find({ status: "published", sort: { field: "_createdAt", direction: "desc" } });
+const pages = await cms.pages.find({ status: "published", sort: { field: "_createdAt", direction: "desc" } });
 ---
 
 <PublicLayout>
@@ -13,18 +13,18 @@ const examples = await cms.examples.find({ status: "published", sort: { field: "
       <code>src/cms/collections/</code>.
     </p>
     {
-      examples.length > 0 ? (
+      pages.length > 0 ? (
         <ul class="space-y-2">
-          {examples.map((doc) => (
+          {pages.map((doc) => (
             <li>
-              <a href={`/examples/${doc._id}`} class="text-teal-700 hover:underline">
+              <a href={`/${doc.slug}`} class="text-teal-700 hover:underline">
                 {doc.title}
               </a>
             </li>
           ))}
         </ul>
       ) : (
-        <p class="text-gray-500">No content yet — create an Example in the admin.</p>
+        <p class="text-gray-500">No content yet — create a Page in the admin.</p>
       )
     }
   </main>

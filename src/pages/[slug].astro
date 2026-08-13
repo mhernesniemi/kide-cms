@@ -3,7 +3,7 @@ import PublicLayout from "@/layouts/PublicLayout.astro";
 import { cms } from "@/cms/.generated/api";
 
 const isPreview = Astro.url.searchParams.has("preview");
-const doc = await cms.examples.findById(Astro.params.id!, { status: isPreview ? "any" : "published" });
+const doc = await cms.pages.findOne({ slug: Astro.params.slug!, status: isPreview ? "any" : "published" });
 if (!doc) return Astro.redirect("/");
 ---
 

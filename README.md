@@ -18,7 +18,7 @@ Both modes are the same source at the same release tag — the choice is who own
 pnpm create kide-app my-project
 ```
 
-You'll be asked for a project name, distribution mode (embedded or package), and deploy target (Node.js or Cloudflare). Every project starts bare-bones — one `examples` collection, no demo content — so there's nothing to delete before you build your own schema. The CLI scaffolds from the latest release, installs, initializes git, and (for Cloudflare) provisions D1 + R2 and deploys.
+You'll be asked for a project name, distribution mode (embedded or package), and deploy target (Node.js or Cloudflare). Every project starts bare-bones — one `pages` collection, no demo content — so there's nothing to delete before you build your own schema. The CLI scaffolds from the latest release, installs, initializes git, and (for Cloudflare) provisions D1 + R2 and deploys.
 
 ## How It Works
 

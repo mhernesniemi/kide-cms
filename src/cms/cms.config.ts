@@ -1,6 +1,6 @@
 import { defineConfig } from "@kidecms/core";
 import users from "./collections/users";
-import examples from "./collections/example";
+import pages from "./collections/pages";
 
 export default defineConfig({
   database: { dialect: "sqlite" },
@@ -8,5 +8,5 @@ export default defineConfig({
     default: "en",
     supported: ["en"],
   },
-  collections: [users, examples],
+  collections: [users, pages],
 });
