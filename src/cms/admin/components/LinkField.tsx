@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
@@ -111,12 +112,11 @@ export default function LinkField({ name, value: initial, onChange, linkOptions 
         <Label className="text-xs">Label</Label>
         <Input value={value.label ?? ""} placeholder="Link text" onChange={(e) => set({ label: e.target.value })} />
       </div>
-      <label className="text-muted-foreground inline-flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          className="border-input size-4 rounded"
+      <label className="text-muted-foreground group inline-flex cursor-pointer items-center gap-2 text-sm">
+        <Checkbox
+          className="group-hover:border-primary/60"
           checked={!!value.newTab}
-          onChange={(e) => set({ newTab: e.target.checked })}
+          onCheckedChange={(checked) => set({ newTab: Boolean(checked) })}
         />
         Open in new tab
         {value.url && <span className="ml-auto text-xs">({value.type})</span>}

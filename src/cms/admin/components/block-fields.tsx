@@ -15,6 +15,7 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
@@ -334,16 +335,15 @@ export function SubFieldControl({
 
     case "boolean":
       return (
-        <span className="inline-flex items-center gap-3 text-sm">
-          <input
+        <label className="group inline-flex cursor-pointer items-center gap-3 text-sm">
+          <Checkbox
             id={fieldId}
-            type="checkbox"
-            className="border-input text-primary focus:ring-primary size-4 rounded"
+            className="group-hover:border-primary/60"
             checked={Boolean(value)}
-            onChange={(e) => onChange(e.target.checked)}
+            onCheckedChange={(checked) => onChange(Boolean(checked))}
           />
-          <span className="text-muted-foreground">{value ? "true" : "false"}</span>
-        </span>
+          <span className="text-muted-foreground select-none">{value ? "true" : "false"}</span>
+        </label>
       );
 
     case "select":
@@ -519,7 +519,7 @@ function SortableRepeaterItem({
         </span>
 
         {!isExpanded && preview && (
-          <span className="text-muted-foreground group-hover/row:text-foreground/70 min-w-0 truncate text-sm transition-colors">
+          <span className="text-foreground/70 group-hover/row:text-foreground/85 min-w-0 truncate text-sm transition-colors">
             {preview}
           </span>
         )}

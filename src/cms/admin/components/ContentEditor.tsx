@@ -202,10 +202,10 @@ function BlockNodeView(props: NodeViewProps) {
           >
             {isShared ? "Shared" : humanize(blockType)}
           </span>
-          {isShared && sharedType && <span className="text-muted-foreground text-xs">{humanize(sharedType)}</span>}
+          {isShared && sharedType && <span className="text-foreground/70 text-xs">{humanize(sharedType)}</span>}
         </button>
 
-        {!expanded && preview && <span className="text-muted-foreground min-w-0 truncate text-sm">{preview}</span>}
+        {!expanded && preview && <span className="text-foreground/70 min-w-0 truncate text-sm">{preview}</span>}
 
         <div className="ml-auto flex shrink-0 items-center">
           <Button
@@ -603,7 +603,12 @@ export default function ContentEditor({
       {/* Editor area */}
       {editor ? (
         <div className={cn("min-w-0", isFullscreen && "flex-1 overflow-y-auto")}>
-          <div className={cn(isFullscreen && "mx-auto w-full max-w-3xl px-2 py-6")}>
+          <div
+            className={cn(
+              isFullscreen && "mx-auto w-full max-w-3xl px-2 py-6",
+              fullscreen && !isFullscreen && "[&_.ProseMirror]:pr-8",
+            )}
+          >
             {/* Selection toolbar — appears when text is highlighted */}
             <BubbleMenu
               editor={editor}

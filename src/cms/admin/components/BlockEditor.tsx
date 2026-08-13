@@ -176,12 +176,10 @@ function SortableBlock({
           {shared ? "Shared" : humanize(block.type)}
         </span>
 
-        {shared && sharedBlockType && (
-          <span className="text-muted-foreground text-xs">{humanize(sharedBlockType)}</span>
-        )}
+        {shared && sharedBlockType && <span className="text-foreground/70 text-xs">{humanize(sharedBlockType)}</span>}
 
         {!isExpanded && preview && (
-          <span className="text-muted-foreground group-hover/row:text-foreground/70 min-w-0 truncate text-sm transition-colors">
+          <span className="text-foreground/70 group-hover/row:text-foreground/85 min-w-0 truncate text-sm transition-colors">
             {preview}
           </span>
         )}
