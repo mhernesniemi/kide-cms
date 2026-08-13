@@ -28,7 +28,7 @@ if (!isPreview) Astro.cache.set({ tags: ["front-page", "posts", "home", ...getSh
 
 <PublicLayout title="Kide CMS">
   <div class="mx-auto flex max-w-4xl gap-8 px-4 py-8">
-    <main class="min-w-0 flex-1">
+    <main class="min-w-0 flex-1" data-cms="blocks">
       {
         blocks.length > 0 ? (
           <BlockRenderer blocks={blocks} status={isPreview ? "any" : "published"} />
