@@ -31,6 +31,8 @@ try {
     path.join(dir, "src/cms/adapters/storage.ts"),
     'export * from "@kidecms/core/platform/cloudflare/storage";\n',
   );
+  // Mirror create-kide-app: the Node-storage adapter test is invalid on this target.
+  rmSync(path.join(dir, "src/cms/adapters/__tests__"), { recursive: true, force: true });
   // database_id must be non-empty for local wrangler dev, even without a real D1.
   const wrangler = readFileSync(path.join(overlay, "wrangler.toml"), "utf8")
     .replaceAll("{{PROJECT_NAME}}", "cf-verify")

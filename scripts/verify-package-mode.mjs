@@ -48,6 +48,7 @@ try {
   run("pnpm install --prefer-offline", project);
   run("pnpm cms:generate", project);
   run("pnpm cms:push", project);
+  run("pnpm exec vitest run --passWithNoTests", project); // project-owned tests must pass in package mode
   run("pnpm exec astro build", project);
   console.log("[pkg-verify] ✓ build clean");
 
@@ -69,6 +70,20 @@ function verifyEject(project) {
   const check = (cond, msg) => {
     if (!cond) throw new Error(`[pkg-verify] eject: ${msg}`);
   };
+
+  // Removed/unknown flags must never fall through into the irreversible eject.
+  for (const flag of ["--undo", "--force", "--nonsense"]) {
+    let flagRefused = false;
+    try {
+      execSync(`pnpm exec kide eject ${flag}`, { cwd: project, stdio: "pipe" });
+    } catch {
+      flagRefused = true;
+    }
+    check(flagRefused, `eject did not reject ${flag}`);
+    check(!exists("src/cms/core"), `eject ran despite ${flag}`);
+  }
+  execSync("pnpm exec kide eject --help", { cwd: project, stdio: "pipe" }); // must exit 0 without ejecting
+  check(!exists("src/cms/core"), "eject ran on --help");
 
   // A pre-existing workspace file that doesn't list src/cms must make eject
   // refuse before touching anything.

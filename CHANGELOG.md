@@ -23,8 +23,8 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 - `cms:upgrade` is mode-aware: embedded mode applies the managed-runtime patch as
   before; package mode bumps the `@kidecms/core` version and reserves the packet for
   project-owned template files.
-- CI: publish-manifest check (`verify:pack`), package-mode end-to-end smoke test with
-  eject round-trip (`verify:package`), and a release workflow that publishes
+- CI: publish-manifest check (`verify:pack`), package-mode end-to-end smoke test
+  including eject (`verify:package`), and a release workflow that publishes
   `@kidecms/core` from `v*` tags.
 
 ### Changed

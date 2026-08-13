@@ -16,8 +16,35 @@ import { fileURLToPath } from "node:url";
 
 const MANAGED_DIRS = ["admin", "client", "core", "internals", "middleware", "platform", "routes"];
 
+const USAGE = `Usage: kide eject [--allow-dirty]
+
+Copies the installed @kidecms/core source into src/cms/ and links it as a pnpm
+workspace package. One-way — evaluate on a branch, or use \`pnpm patch\` for
+small package-mode tweaks.
+
+Options:
+  --allow-dirty   Eject even with uncommitted changes in the worktree
+  --help          Show this help`;
+
+// Strict argv handling: this command is irreversible, so an unrecognized flag
+// (including the removed --undo/--force) must never fall through into eject.
+let allowDirty = false;
+for (const arg of process.argv.slice(2)) {
+  if (arg === "--allow-dirty") {
+    allowDirty = true;
+  } else if (arg === "--help" || arg === "-h") {
+    console.log(USAGE);
+    process.exit(0);
+  } else if (arg === "--undo" || arg === "--force") {
+    console.error(`[kide:eject] ${arg} was removed — eject is one-way. Re-scaffold in package mode to go back.`);
+    process.exit(1);
+  } else {
+    console.error(`[kide:eject] Unknown option: ${arg}\n\n${USAGE}`);
+    process.exit(1);
+  }
+}
+
 const cwd = process.cwd();
-const allowDirty = process.argv.includes("--allow-dirty");
 
 // This file lives inside the installed package, so its own location IS the
 // source to eject (realpath resolves pnpm's symlink into the store).

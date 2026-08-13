@@ -55,7 +55,7 @@ pnpm cms:describe     # write .kide/model.json + MODEL.md (the migration model m
 pnpm cms:upgrade      # in scaffolded client projects: prepare/apply a release-tag core upgrade packet
 pnpm cms:restore      # restore files from the latest upgrade backup
 pnpm verify:pack      # assert the @kidecms/core publish manifest ships only managed files
-pnpm verify:package   # assemble a package-mode project from HEAD, build+boot it, test eject round-trip
+pnpm verify:package   # assemble a package-mode project from HEAD, build+boot it, test eject
 ```
 
 All `cms:*` scripts run through the `kide` bin (`src/cms/internals/cli.mjs`), which works identically in embedded and package mode. `kide eject` converts a package-mode project to embedded (one-way).
@@ -107,6 +107,18 @@ If the change touches `src/cms/platform/`, `src/cms/middleware/`, or the request
 | `src/cms/routes/`                  | Admin pages + API routes injected by integration      |
 | `src/cms/middleware/`              | Auth middleware injected by integration               |
 | `src/cms/client/`                  | Browser-side live-preview client                      |
+
+## Dual-Distribution Guardrails
+
+The two modes share one source, so source drift is impossible by construction. What CAN rot is the **boundary** between Kide-owned runtime dirs and project-owned files — package mode depends on it. When changing anything here:
+
+- **Never introduce package-only or embedded-only CMS behavior.** If code needs to know which mode it's running in, the design is wrong — fix the boundary instead.
+- **Treat project-owned files as public API.** Changes to `cms.config.ts`'s shape, `runtime.ts` wiring, adapter signatures, `fields/` conventions, or root configs land in every package-mode user's `careful-review.patch` — that's a breaking change even when everything compiles. Prefer designs that keep the change inside the package. Quality metric: outside major versions, package users should upgrade with **only a dependency bump** (empty careful-review.patch) almost always.
+- **Keep the boundary small and stable.** New user extension points need a strong reason. Adding/moving a managed dir means updating every copy of the boundary: the classification in `internals/upgrade.ts`, the `files` whitelist in `src/cms/package.json`, `MANAGED_DIRS` in `internals/eject.ts`, `scripts/verify-package-mode.mjs`, `scripts/verify-pack.mjs`, and `create-kide-app/index.js` (separate repo). Grep for `MANAGED` to find them all.
+- **One coordinated release.** The git tag, root `package.json` version, and `src/cms/package.json` version move together; the npm artifact and the template tag are the same source at the same commit (the release workflow enforces the version match).
+- **Test the full matrix before release**: embedded (`check`, `test`, `test:workers`) × package (`verify:pack`, `verify:package`) × Cloudflare (`verify:cloudflare`). The release workflow runs all of it — never bypass with a manual publish.
+- **Eject stays boring, explicit, and one-way.** No clever flags, no partial ejects, no undo.
+- **Embedded users keep receiving upgrade packets.** Ownership is not abandonment — keep `upgrade.ts`'s path classification current as the tree evolves.
 
 ## Rules
 
