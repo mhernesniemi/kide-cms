@@ -41,12 +41,13 @@ export default function InternalLinkPicker({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="h-7 w-full justify-between font-normal"
+            size="lg"
+            className="w-full justify-between text-sm font-normal"
           >
             <span className={cn("truncate", !selectedLabel && "text-muted-foreground")}>
               {selectedLabel || "Search documents..."}
             </span>
-            <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
+            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">

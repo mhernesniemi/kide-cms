@@ -141,11 +141,11 @@ function SortableBlock({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn("overflow-hidden rounded-lg border", isDragging && "z-10 opacity-90 shadow-lg")}
+      className={cn("bg-muted-strong/50 overflow-hidden rounded-lg border", isDragging && "z-10 opacity-90 shadow-lg")}
     >
       {/* Header — entire row is clickable to expand/collapse */}
       <div
-        className="group/row hover:bg-muted/80 flex items-center gap-2 px-3 py-2 transition-colors select-none"
+        className="group/row hover:bg-muted-strong/80 flex items-center gap-2 px-3 py-2 transition-colors select-none"
         onClick={onToggle}
       >
         {/* Drag handle */}

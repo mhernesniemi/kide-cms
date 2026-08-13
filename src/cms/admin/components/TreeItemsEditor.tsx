@@ -518,7 +518,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
           <Collapsible open={isExpanded}>
             <div ref={setNodeRef} style={style} className={cn(isDragging && "z-10 opacity-30")}>
               <div
-                className="hover:bg-accent/40 flex items-center gap-1 border-b py-1.5 pr-2 text-sm transition-colors"
+                className="hover:bg-muted-strong/80 flex items-center gap-1 border-b py-1.5 pr-2 text-sm transition-colors"
                 style={{ paddingLeft: `${depth * 1.5 + 0.25}rem` }}
               >
                 <button
@@ -757,7 +757,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="rounded-lg border">
+        <div className="bg-muted-strong/50 rounded-lg border">
           {items.length > 0 ? (
             <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
               {items.map((item) => renderItem(item, 0))}

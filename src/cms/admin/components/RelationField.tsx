@@ -57,13 +57,14 @@ function SortableRow({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "bg-background flex items-center gap-2 rounded-lg border px-3 py-2",
+        "bg-muted-strong/50 has-[[data-drag-handle]:hover]:bg-muted-strong/80 flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors",
         isDragging && "z-10 opacity-90 shadow-lg",
       )}
     >
       <button
         type="button"
         ref={setActivatorNodeRef}
+        data-drag-handle
         className="text-muted-foreground/50 hover:text-muted-foreground -ml-1 cursor-grab touch-none rounded p-1 transition-colors active:cursor-grabbing"
         {...attributes}
         {...listeners}
@@ -72,14 +73,16 @@ function SortableRow({
       </button>
       <span className="text-muted-foreground text-xs font-medium">#{index + 1}</span>
       <span className="min-w-0 flex-1 truncate text-sm">{label}</span>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon"
         title="Remove"
+        className="text-muted-foreground hover:text-destructive size-7"
         onClick={onRemove}
-        className="text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
       >
-        <Trash2 className="size-4" />
-      </button>
+        <Trash2 className="size-3.5" />
+      </Button>
     </div>
   );
 }
@@ -213,7 +216,7 @@ export default function RelationField({
             role="combobox"
             aria-expanded={open}
             size="lg"
-            className="border-input bg-muted/30 hover:bg-muted dark:bg-input/30 dark:hover:bg-input/50 w-full justify-between text-sm font-normal"
+            className="w-full justify-between text-sm font-normal"
           >
             <span className={cn("truncate", !displayLabel && "text-muted-foreground")}>
               {displayLabel || `Search ${collectionLabel.toLowerCase()}...`}
