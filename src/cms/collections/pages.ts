@@ -6,8 +6,8 @@ export default defineCollection({
   timestamps: true,
   drafts: true,
   fields: {
-    title: fields.text({ required: true, translatable: true }),
-    slug: fields.slug({ from: "title", translatable: true, admin: { position: "sidebar" } }),
-    body: fields.text({ translatable: true, admin: { rows: 8 } }),
+    title: fields.text({ required: true }),
+    slug: fields.slug({ from: "title", admin: { position: "sidebar" } }),
+    body: fields.content(),
   },
 });

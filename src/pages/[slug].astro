@@ -1,5 +1,6 @@
 ---
 import PublicLayout from "@/layouts/PublicLayout.astro";
+import ContentRenderer from "@/components/ContentRenderer.astro";
 import { cms } from "@/cms/.generated/api";
 
 const isPreview = Astro.url.searchParams.has("preview");
@@ -13,8 +14,8 @@ if (!doc) return Astro.redirect("/");
     <h1 data-cms="title" class="mt-4 mb-2 text-2xl font-semibold">
       {doc.title}
     </h1>
-    <p data-cms="body" class="whitespace-pre-line text-gray-700">
-      {doc.body}
-    </p>
+    <div data-cms="body">
+      <ContentRenderer content={doc.body} />
+    </div>
   </article>
 </PublicLayout>

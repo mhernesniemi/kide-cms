@@ -120,8 +120,8 @@ export type ContentDocument = {
 };
 
 export type ContentFieldConfig = BaseFieldConfig<"content", ContentDocument> & {
-  /** Component block types that can be embedded inline, same shape as `blocks`. */
-  blocks: Record<string, Record<string, FieldConfig>>;
+  /** Component block types that can be embedded inline, same shape as `blocks`. Omit for pure rich text. */
+  blocks?: Record<string, Record<string, FieldConfig>>;
   /**
    * Show a button that expands the editor into a distraction-free fullscreen
    * overlay (hides the sidemenu and every other field). Defaults to true; set
@@ -542,7 +542,7 @@ export const fields = {
   date: (options?: Omit<DateFieldConfig, "type">) => createField<DateFieldConfig>("date", options),
   select: (options: Omit<SelectFieldConfig, "type">) => createField<SelectFieldConfig>("select", options),
   richText: (options?: Omit<RichTextFieldConfig, "type">) => createField<RichTextFieldConfig>("richText", options),
-  content: (options: Omit<ContentFieldConfig, "type">) => createField<ContentFieldConfig>("content", options),
+  content: (options?: Omit<ContentFieldConfig, "type">) => createField<ContentFieldConfig>("content", options),
   image: (options?: Omit<ImageFieldConfig, "type">) => createField<ImageFieldConfig>("image", options),
   /**
    * A palette colour picker. Stored as a hex text string ('' = inherit). Editors choose

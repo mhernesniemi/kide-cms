@@ -7,7 +7,7 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
-## [0.13.0] - Unreleased
+## [0.13.0] - 2026-08-14
 
 ### Added
 
@@ -29,6 +29,8 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 
 ### Changed
 
+- `blocks` is now optional on `fields.content()` — omit it for pure rich text
+  (the template's `pages.body` does exactly this).
 - **Bare-bones template.** The repo's userland is now the scaffold: one
   `pages` collection (`title`, `slug`, `body`), a minimal public page, no demo
   content, no seeds. The demo collections/pages/blocks, seed data, and the
