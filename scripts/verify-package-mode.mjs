@@ -40,6 +40,12 @@ try {
   const pkgPath = path.join(project, "package.json");
   const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
   pkg.dependencies["@kidecms/core"] = `file:${tarball}`;
+  // Mirror create-kide-app's package-mode pruning.
+  delete pkg.scripts["test:fixtures"];
+  delete pkg.devDependencies["@cloudflare/vitest-pool-workers"];
+  delete pkg.devDependencies["@cloudflare/workers-types"];
+  delete pkg.devDependencies["jsdom"];
+  rmSync(path.join(project, "scripts/generate-test-fixtures.ts"), { force: true });
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
   // Keep pnpm-lock.yaml: only the @kidecms/core dep re-resolves; everything else
   // stays pinned (mirrors how create-kide-app scaffolds from a cloned tag).
