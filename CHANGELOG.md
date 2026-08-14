@@ -7,6 +7,36 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.14.2] - 2026-08-15
+
+### Fixed
+
+- Draft (`?preview`) responses could be cached by Astro's route caching and served to
+  anonymous visitors, or a stale cached redirect could make the editor's own preview
+  tab appear broken for up to 24h. The auth middleware now disables caching on every
+  `?preview` request after the page renders, regardless of what the page itself does.
+- `/blog/**` in `astro.config.mjs` used glob syntax, which Astro 7 route rules don't
+  support — blog caching silently never activated. Fixed to `/blog/[...slug]`.
+- The generic `findOne({ where: {...} } )` mistake (the flat-filter shape `find` uses,
+  not `findOne`) existed in two runtime call sites — the forms submit endpoint and the
+  admin's shared-block form lookup — both silently returning the first row instead of
+  the requested one once more than one row exists. Fixed both call sites.
+- Login page now shows a message for the rate-limited error case (previously silent)
+  and a generic fallback for any other error code.
+
+### Changed
+
+- Blank template landing page (`src/pages/index.astro`) restyled: removed the stray
+  Astro logo (leftover from the base template, not a Kide mark), and reworked as a
+  centered light layout in the spirit of Payload's welcome screen.
+- **Marketing starter**: reworked front page as a proper `front-page` singleton
+  (was a `pages` doc with a magic `home` slug); moved sidebar placement for
+  `form-submissions` under Library (was showing under Content); gave `features`/`faq`
+  repeater fields explicit `itemFields` instead of relying on a legacy auto-detect
+  fallback; visual restyle (grayscale, no eyebrow field, section dividers); added
+  `afterUnpublish` cache invalidation to all content collections; `submitRedirect`
+  now sanitized with `safeUrl`; submission `data` field is now truly read-only.
+
 ## [0.14.1] - 2026-08-14
 
 ### Fixed
