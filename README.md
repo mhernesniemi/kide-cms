@@ -8,7 +8,7 @@ A code-first CMS for Astro. Define collections in TypeScript and get a generated
 ## Quick Start
 
 ```bash
-pnpm create kide-app
+pnpx create kide-app
 ```
 
 Pick how the runtime lives in your project:
