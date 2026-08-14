@@ -1,0 +1,59 @@
+---
+import "@/styles/public.css";
+import { cms } from "@/cms/.generated/api";
+import { safeUrl } from "@kidecms/core";
+
+const { title = "Acme", description = "A marketing site powered by Kide CMS." } = Astro.props;
+type MenuItem = { id: string; label?: string; href?: string; target?: string; children: MenuItem[] };
+
+const menu = await cms.menus.findOne({ slug: "main" });
+const rawItems: MenuItem[] = Array.isArray(menu?.items) ? menu.items : [];
+// Menu hrefs are CMS-authored content — sanitize and drop anything unsafe.
+const menuItems = rawItems
+  .map((item) => ({ ...item, href: safeUrl(String(item.href ?? "")) }))
+  .filter((item) => item.href !== null);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen bg-white pb-24 text-gray-900 antialiased">
+    <header class="mx-auto flex max-w-4xl items-center gap-8 px-4 py-4">
+      <a href="/" class="text-lg font-semibold no-underline">Acme</a>
+      {
+        menuItems.length > 0 && (
+          <nav>
+            <ul class="flex list-none gap-6 p-0">
+              {menuItems.map((item) => (
+                <li>
+                  <a
+                    href={item.href}
+                    target={item.target || undefined}
+                    rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
+                    class="text-sm text-gray-500 no-underline transition-colors hover:text-gray-900"
+                  >
+                    {String(item.label ?? "")}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )
+      }
+      <a
+        href="/admin"
+        class="ml-auto rounded-md border border-teal-700 px-3 py-1.5 text-sm font-medium text-teal-700 no-underline transition-colors hover:bg-teal-50"
+      >
+        Open admin
+      </a>
+    </header>
+    <slot />
+  </body>
+</html>

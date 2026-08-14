@@ -1,0 +1,26 @@
+---
+import { safeUrl } from "@kidecms/core";
+
+const { eyebrow, heading, body, ctaLabel, ctaHref } = Astro.props;
+// Astro escapes attribute values but does not reject URL schemes.
+const href = ctaHref ? safeUrl(String(ctaHref)) : null;
+const hasContent = Boolean(eyebrow || heading || body || (ctaLabel && href));
+---
+
+{
+  hasContent && (
+    <section class="py-8 text-center">
+      {eyebrow && <p class="mb-2 text-xs font-semibold tracking-wide text-teal-700 uppercase">{eyebrow}</p>}
+      {heading && <h1 class="mb-3 text-4xl font-semibold">{heading}</h1>}
+      {body && <p class="mx-auto mb-4 max-w-xl text-lg text-gray-500">{body}</p>}
+      {ctaLabel && href && (
+        <a
+          href={href}
+          class="mt-4 inline-block rounded-md bg-teal-700 px-5 py-2.5 text-sm font-medium text-white no-underline hover:bg-teal-800"
+        >
+          {ctaLabel}
+        </a>
+      )}
+    </section>
+  )
+}

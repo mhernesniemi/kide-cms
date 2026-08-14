@@ -1,0 +1,20 @@
+---
+import RichTextContent from "@/components/RichTextContent.astro";
+
+const { heading, content } = Astro.props;
+const hasBody = content && (typeof content !== "object" || (content as { children?: unknown[] }).children?.length);
+const hasContent = Boolean(heading) || Boolean(hasBody);
+---
+
+{
+  hasContent && (
+    <section>
+      {heading && <h2 class="mb-3 text-2xl font-semibold">{heading}</h2>}
+      {hasBody && (
+        <div class="prose max-w-none">
+          <RichTextContent content={content} />
+        </div>
+      )}
+    </section>
+  )
+}

@@ -1,0 +1,30 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import BlockRenderer from "@/components/BlockRenderer.astro";
+import { cms } from "@/cms/.generated/api";
+import { parseBlocks } from "@kidecms/core";
+
+const isPreview = Astro.url.searchParams.has("preview");
+const doc = await cms.pages.findOne({ slug: "home", status: isPreview ? "any" : "published" });
+const blocks = parseBlocks(doc?.blocks);
+
+if (!isPreview && doc) Astro.cache.set({ tags: ["pages", `page:${doc._id}`] });
+---
+
+<PublicLayout title={doc?.title ?? "Acme"} description={doc?.seoDescription}>
+  <main class="mx-auto max-w-4xl px-4 py-8" data-cms="blocks">
+    {
+      blocks.length > 0 ? (
+        <BlockRenderer blocks={blocks} status={isPreview ? "any" : "published"} />
+      ) : (
+        <p class="text-gray-500">
+          No content yet. Open the{" "}
+          <a href="/admin" class="text-teal-700 underline">
+            admin
+          </a>{" "}
+          and publish a page with the slug <code>home</code>.
+        </p>
+      )
+    }
+  </main>
+</PublicLayout>

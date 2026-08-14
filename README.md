@@ -63,7 +63,7 @@ posts: {
 
 ## Features
 
-- 14 field types including blocks, repeaters, and relations
+- 16 field types including blocks, repeaters, and relations
 - Drafts, publishing, scheduling, versioning
 - Per-field i18n via translation tables
 - Asset management with folders, focal points, on-demand optimization

@@ -217,7 +217,6 @@ export type CollectionConfig = {
   fields: CollectionFieldMap;
   views?: CollectionViewConfig;
   admin?: CollectionAdminConfig;
-  seed?: SeedDocument[];
 };
 
 export type AdminNavItem = {

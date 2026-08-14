@@ -1,0 +1,22 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import BlockRenderer from "@/components/BlockRenderer.astro";
+import { cms } from "@/cms/.generated/api";
+import { cacheTags, parseBlocks } from "@kidecms/core";
+
+const isPreview = Astro.url.searchParams.has("preview");
+const doc = await cms.pages.findOne({ slug: Astro.params.slug!, status: isPreview ? "any" : "published" });
+if (!doc) return Astro.redirect("/");
+
+const blocks = parseBlocks(doc.blocks);
+if (!isPreview) Astro.cache.set({ tags: cacheTags("pages", doc._id) });
+---
+
+<PublicLayout title={doc.title} description={doc.seoDescription}>
+  <article class="mx-auto max-w-4xl px-4 py-8">
+    <h1 data-cms="title" class="mb-8 text-3xl font-semibold">{doc.title}</h1>
+    <div data-cms="blocks">
+      <BlockRenderer blocks={blocks} status={isPreview ? "any" : "published"} />
+    </div>
+  </article>
+</PublicLayout>

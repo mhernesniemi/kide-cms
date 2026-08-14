@@ -20,6 +20,7 @@
     "cms:generate": "kide generate",
     "test:fixtures": "node --import tsx scripts/generate-test-fixtures.ts",
     "cms:admin": "kide admin",
+    "cms:seed": "kide seed",
     "cms:reindex": "kide reindex",
     "cms:push": "pnpm cms:generate && kide push",
     "cms:describe": "kide describe",
@@ -32,6 +33,7 @@
     "verify:cloudflare": "node scripts/verify-cloudflare.mjs",
     "verify:pack": "node scripts/verify-pack.mjs",
     "verify:package": "node scripts/verify-package-mode.mjs",
+    "verify:starters": "node scripts/verify-starters.mjs",
     "test:workers": "vitest run --config vitest.workers.config.ts"
   },
   "dependencies": {

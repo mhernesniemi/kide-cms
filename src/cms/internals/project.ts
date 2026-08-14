@@ -5,10 +5,11 @@
  * installed as a package dependency — a static import of a project file would
  * only exist in the embedded case.
  */
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { CMSConfig } from "../core";
+import type { CMSConfig, SeedDocument } from "../core";
 
 const projectRoot = process.cwd();
 
@@ -22,5 +23,9 @@ export const loadProjectRuntime = () => importProject("src/cms/runtime.ts");
 export const loadProjectConfig = async (): Promise<CMSConfig> => (await importProject("src/cms/cms.config.ts")).default;
 
 export const loadGeneratedApi = () => importProject("src/cms/.generated/api.ts");
+
+/** Seed content is optional — projects without src/cms/seed.ts seed nothing. */
+export const loadProjectSeedData = async (): Promise<Record<string, SeedDocument[]>> =>
+  existsSync(projectPath("src/cms/seed.ts")) ? (await importProject("src/cms/seed.ts")).default : {};
 
 export const loadGeneratedSchema = () => importProject("src/cms/.generated/schema.ts");

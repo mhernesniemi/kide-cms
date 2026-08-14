@@ -1,0 +1,35 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import { cms } from "@/cms/.generated/api";
+
+const posts = await cms.posts.find({
+  status: "published",
+  sort: { field: "_publishedAt", direction: "desc" },
+  limit: 50,
+});
+
+Astro.cache.set({ tags: ["posts"] });
+---
+
+<PublicLayout title="Blog" description="News, guides, and customer stories.">
+  <main class="mx-auto max-w-2xl px-4 py-8">
+    <h1 class="mb-8 text-3xl font-semibold">Blog</h1>
+    {posts.length === 0 && <p class="text-gray-500">No published posts yet.</p>}
+    <ul class="grid list-none gap-8 p-0">
+      {
+        posts.map((post) => (
+          <li>
+            <article>
+              <h2 class="mb-1 text-xl font-semibold">
+                <a href={`/blog/${post.slug}`} class="no-underline hover:text-teal-700">
+                  {post.title}
+                </a>
+              </h2>
+              {post.excerpt && <p class="m-0 text-gray-500">{post.excerpt}</p>}
+            </article>
+          </li>
+        ))
+      }
+    </ul>
+  </main>
+</PublicLayout>

@@ -1,0 +1,6 @@
+{
+  "name": "marketing",
+  "label": "Marketing site",
+  "hint": "pages with blocks, blog, menu, contact form",
+  "order": 10
+}

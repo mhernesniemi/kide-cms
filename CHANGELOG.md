@@ -7,6 +7,25 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+### Added
+
+- **Starter templates.** `starters/<name>/` overlay directories ship with the template;
+  `create-kide-app` lists them from the cloned tag (Blank stays the default). First
+  starter: **Marketing site** (pages with blocks, blog + taxonomy, menu, contact form,
+  seed content). Verified per release by `pnpm verify:starters`.
+- Seed content is project-owned: `kide seed` reads `src/cms/seed.ts`
+  (`src/cms/internals/seed.data.ts` is deprecated but still honored, and routed to
+  careful review by upgrades). New root script `cms:seed`.
+
+### Release note
+
+- The starter prompt requires a template tag that contains `starters/` — publish this
+  release **before** releasing `create-kide-app` with starter support. Older
+  `create-kide-app` versions scaffold new tags fine but leave a harmless `starters/`
+  directory behind.
+
 ## [0.13.0] - 2026-08-14
 
 ### Added

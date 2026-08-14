@@ -239,12 +239,16 @@ const resolveCommit = (repoDir: string, ref: string) => {
   return result.stdout;
 };
 
+// Template-only dirs that never exist in scaffolded projects — excluded from packets.
+const TEMPLATE_ONLY_PREFIXES = ["starters/"];
+
 const listChangedFiles = (repoDir: string, fromCommit: string, toCommit: string) => {
   const output = run("git", ["diff", "--name-only", fromCommit, toCommit], { cwd: repoDir });
   return output
     .split("\n")
     .map((line) => line.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((file) => !TEMPLATE_ONLY_PREFIXES.some((prefix) => file.startsWith(prefix)));
 };
 
 const diffForPaths = (repoDir: string, fromCommit: string, toCommit: string, files: string[]) => {
@@ -265,6 +269,9 @@ const changedFilesJson = (repoDir: string, fromCommit: string, toCommit: string)
 };
 
 const isManagedRuntimePath = (file: string, corePath: string) => {
+  // Legacy seed-data file may carry user customizations — careful review, not auto-apply.
+  if (file === `${corePath}/internals/seed.data.ts`) return false;
+
   const managedPrefixes = [
     `${corePath}/admin`,
     `${corePath}/client`,
@@ -288,6 +295,8 @@ const isCarefulPath = (file: string, corePath: string) => {
     "src/env.d.ts",
     "src/styles/admin.css",
     `${corePath}/runtime.ts`,
+    `${corePath}/seed.ts`,
+    `${corePath}/internals/seed.data.ts`,
   ]);
   const carefulPrefixes = [
     `${corePath}/adapters`,

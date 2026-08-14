@@ -7,5 +7,5 @@
     }
   },
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist", "docs", "packages", "examples", "src/cms/platform/cloudflare", "adapters/cloudflare"]
+  "exclude": ["dist", "docs", "packages", "starters", "src/cms/platform/cloudflare", "adapters/cloudflare"]
 }

@@ -1,0 +1,12 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import CmsForm from "@/components/CmsForm.astro";
+---
+
+<PublicLayout title="Contact" description="Get in touch with us.">
+  <main class="mx-auto max-w-2xl px-4 py-8">
+    <h1 class="mb-2 text-3xl font-semibold">Contact</h1>
+    <p class="mb-8 text-gray-500">Tell us about your project and we will get back to you within one business day.</p>
+    <CmsForm slug="contact" context={{ page: "/contact" }} />
+  </main>
+</PublicLayout>

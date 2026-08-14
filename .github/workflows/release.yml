@@ -43,6 +43,7 @@ jobs:
       - run: pnpm verify:pack
       - run: pnpm verify:package
       - run: pnpm verify:cloudflare
+      - run: pnpm verify:starters
 
       - name: Publish @kidecms/core
         run: pnpm --filter @kidecms/core publish --no-git-checks --provenance

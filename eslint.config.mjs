@@ -5,7 +5,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist/", ".astro/", "docs/", "packages/", "workers/", "examples/**/.astro/", "examples/**/.generated/"],
+    ignores: ["dist/", ".astro/", "docs/", "packages/", "workers/", "starters/"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
