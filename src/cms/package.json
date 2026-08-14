@@ -1,13 +1,23 @@
 {
   "name": "@kidecms/core",
-  "version": "0.14.2",
+  "version": "0.14.3",
   "description": "Kide CMS runtime — core library, admin UI, routes, and middleware for Astro. Shipped as TypeScript source.",
+  "keywords": [
+    "cms",
+    "astro",
+    "headless-cms",
+    "content-management",
+    "typescript",
+    "admin-panel"
+  ],
   "type": "module",
   "license": "MIT",
+  "homepage": "https://docs.kide.dev/",
   "repository": {
     "type": "git",
     "url": "https://github.com/mhernesniemi/kide-cms.git"
   },
+  "bugs": "https://github.com/mhernesniemi/kide-cms/issues",
   "engines": {
     "node": ">=22.12.0"
   },

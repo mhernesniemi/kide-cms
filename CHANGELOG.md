@@ -7,6 +7,15 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.14.3] - 2026-08-15
+
+### Fixed
+
+- `@kidecms/core` on npm had no README, no keywords, and its homepage link pointed at
+  the monorepo's README anchor. Added a package-scoped `README.md` and `LICENSE`
+  (`verify-pack.mjs` already allowed both at the package root; they were never
+  created), keywords for npm search, and `homepage`/`bugs` fields.
+
 ## [0.14.2] - 2026-08-15
 
 ### Fixed
