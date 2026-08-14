@@ -19,7 +19,7 @@ export default defineConfig({
     provider: memoryCache(),
   },
   routeRules: {
-    "/blog/**": { maxAge: 86400, swr: 3600 },
+    "/blog/[...slug]": { maxAge: 86400, swr: 3600 },
     "/": { maxAge: 86400, swr: 3600 },
   },
 });

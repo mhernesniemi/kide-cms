@@ -18,7 +18,11 @@ const errorMessage =
       ? "Email and password are required."
       : error === "disabled"
         ? "Password login is disabled."
-        : null;
+        : error === "rate-limited"
+          ? "Too many attempts. Try again in a few minutes."
+          : error
+            ? "Sign-in failed. Try again."
+            : null;
 const auth = resolveAdminAuth(config);
 ---
 

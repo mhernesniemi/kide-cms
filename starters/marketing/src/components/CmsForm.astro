@@ -13,7 +13,7 @@ type FormFieldConfig = {
 };
 
 const { slug, context } = Astro.props as { slug: string; context?: Record<string, string | number | boolean> };
-const form = await cms.forms.findOne({ where: { slug } });
+const form = await cms.forms.findOne({ slug });
 
 const fieldConfigs = form && Array.isArray(form.fields) ? (form.fields as FormFieldConfig[]) : [];
 

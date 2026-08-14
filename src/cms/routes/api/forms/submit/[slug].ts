@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { cms } from "virtual:kide/api";
 import { sendFormSubmissionEmail, isEmailConfigured } from "virtual:kide/email";
-import { hitRateLimit, PayloadTooLargeError, readLimitedFormData } from "../../../../core";
+import { hitRateLimit, PayloadTooLargeError, readLimitedFormData, safeUrl } from "../../../../core";
 
 export const prerender = false;
 
@@ -58,7 +58,7 @@ export const POST: APIRoute = async ({ request, params, redirect, clientAddress 
     return redirect(buildRedirectUrl(request, null, true), 303);
   }
 
-  const form = await cms.forms.findOne({ where: { slug } }, { _system: true });
+  const form = await cms.forms.findOne({ slug }, { _system: true });
   if (!form) return new Response("Form not found", { status: 404 });
 
   const fieldConfigs = Array.isArray(form.fields) ? (form.fields as FormFieldConfig[]) : [];
@@ -125,8 +125,9 @@ export const POST: APIRoute = async ({ request, params, redirect, clientAddress 
     await sendFormSubmissionEmail(String(form.notificationEmail), String(form.title), data);
   }
 
-  if (form.submitRedirect) {
-    return redirect(String(form.submitRedirect), 303);
+  const submitRedirect = form.submitRedirect ? safeUrl(String(form.submitRedirect)) : null;
+  if (submitRedirect) {
+    return redirect(submitRedirect, 303);
   }
 
   return redirect(buildRedirectUrl(request, null, true), 303);

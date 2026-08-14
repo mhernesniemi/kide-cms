@@ -23,5 +23,8 @@ export default defineCollection({
     afterUpdate(_doc, context) {
       context.cache?.invalidate({ tags: ["front-page"] });
     },
+    afterUnpublish(_doc, context) {
+      context.cache?.invalidate({ tags: ["front-page"] });
+    },
   },
 });

@@ -7,9 +7,13 @@ import { cacheTags } from "@kidecms/core";
 
 const isPreview = Astro.url.searchParams.has("preview");
 const doc = await cms.posts.findOne({ slug: Astro.params.slug!, status: isPreview ? "any" : "published" });
-if (!doc) return Astro.redirect("/blog");
+if (!doc) {
+  Astro.cache.set(false); // an untagged cached redirect would pin a not-yet-published URL
+  return Astro.redirect("/blog");
+}
 
-if (!isPreview) Astro.cache.set({ tags: cacheTags("posts", doc._id) });
+if (isPreview) Astro.cache.set(false);
+else Astro.cache.set({ tags: cacheTags("posts", doc._id) });
 ---
 
 <PublicLayout title={doc.title} description={doc.seoDescription}>
@@ -31,13 +35,7 @@ if (!isPreview) Astro.cache.set({ tags: cacheTags("posts", doc._id) });
         />
       )
     }
-    {
-      doc.excerpt && (
-        <p data-cms="excerpt" class="mb-8 text-lg leading-relaxed text-gray-600">
-          {doc.excerpt}
-        </p>
-      )
-    }
+    <p data-cms="excerpt" class="mb-8 text-lg leading-relaxed text-gray-600 empty:hidden">{doc.excerpt}</p>
     <div data-cms="body" class="prose prose-gray max-w-none">
       <ContentRenderer content={doc.body} status={isPreview ? "any" : "published"} />
     </div>

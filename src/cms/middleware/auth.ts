@@ -33,7 +33,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const scope: RequestScope = cfContext?.waitUntil
     ? { defer: (task) => cfContext.waitUntil!(task) }
     : { defer: () => {} };
-  return runWithRequestScope(scope, () => handle(context, next));
+  return runWithRequestScope(scope, async () => {
+    const response = await handle(context, next);
+    // Draft responses must never enter the shared cache. Runs after the page
+    // rendered because a page-level cache.set() would re-enable caching.
+    if (context.url.searchParams.has("preview")) context.cache?.set(false);
+    return response;
+  });
 });
 
 const handle = async (context: APIContext, next: MiddlewareNext) => {

@@ -6,10 +6,14 @@ import { cacheTags, parseBlocks } from "@kidecms/core";
 
 const isPreview = Astro.url.searchParams.has("preview");
 const doc = await cms.pages.findOne({ slug: Astro.params.slug!, status: isPreview ? "any" : "published" });
-if (!doc) return Astro.redirect("/");
+if (!doc) {
+  Astro.cache.set(false);
+  return Astro.redirect("/");
+}
 
 const blocks = parseBlocks(doc.blocks);
-if (!isPreview) Astro.cache.set({ tags: cacheTags("pages", doc._id) });
+if (isPreview) Astro.cache.set(false);
+else Astro.cache.set({ tags: cacheTags("pages", doc._id) });
 ---
 
 <PublicLayout title={doc.title} description={doc.seoDescription}>

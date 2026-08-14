@@ -31,5 +31,8 @@ export default defineCollection({
     afterDelete(doc, context) {
       context.cache?.invalidate({ tags: ["pages", `page:${doc._id}`] });
     },
+    afterUnpublish(doc, context) {
+      context.cache?.invalidate({ tags: ["pages", `page:${doc._id}`] });
+    },
   },
 });

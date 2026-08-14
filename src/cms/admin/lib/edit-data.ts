@@ -436,7 +436,7 @@ export async function loadParentFormTitle(
   runtimeContext: RuntimeContext,
 ): Promise<string | null> {
   try {
-    const parentForm = (await cmsRuntime.forms.findOne({ where: { _id: formId } }, runtimeContext)) as Record<
+    const parentForm = (await cmsRuntime.forms.findOne({ _id: formId }, runtimeContext)) as Record<
       string,
       unknown
     > | null;

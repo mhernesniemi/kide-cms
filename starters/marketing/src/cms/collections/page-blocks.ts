@@ -15,7 +15,11 @@ export const pageBlockTypes = {
   features: {
     heading: fields.text(),
     items: fields.json({
-      admin: { component: "repeater", help: "Add title and description pairs" },
+      admin: { component: "repeater" },
+      itemFields: {
+        title: fields.text(),
+        description: fields.text({ admin: { rows: 2 } }),
+      },
     }),
   },
   cta: {
@@ -27,7 +31,11 @@ export const pageBlockTypes = {
   faq: {
     heading: fields.text(),
     items: fields.json({
-      admin: { component: "repeater", help: "Add question and answer pairs" },
+      admin: { component: "repeater" },
+      itemFields: {
+        title: fields.text({ label: "Question" }),
+        description: fields.text({ label: "Answer", admin: { rows: 2 } }),
+      },
     }),
   },
 };

@@ -17,7 +17,7 @@ export default defineCollection({
       defaultValue: "new",
       admin: { position: "sidebar" },
     }),
-    data: fields.json({ admin: { help: "Submitted form data (read-only)." } }),
+    data: fields.json({ access: { update: () => false }, admin: { help: "Submitted form data (read-only)." } }),
   },
   hooks: {
     beforeCreate(data) {
