@@ -7,7 +7,7 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
-## [Unreleased]
+## [0.13.0] - 2026-08-14
 
 ### Added
 
@@ -18,17 +18,6 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 - Seed content is project-owned: `kide seed` reads `src/cms/seed.ts` and no longer
   reads `src/cms/internals/seed.data.ts` — move any contents to `src/cms/seed.ts`
   (upgrades route the legacy file to careful review). New root script `cms:seed`.
-
-### Release note
-
-- The starter prompt requires a template tag that contains `starters/` — publish this
-  release **before** releasing `create-kide-app` with starter support. Older
-  `create-kide-app` versions scaffold new tags fine but leave a harmless `starters/`
-  directory behind.
-
-## [0.13.0] - 2026-08-14
-
-### Added
 
 - **Dual distribution.** The CMS runtime is now the `@kidecms/core` package, embedded
   in the repo at `src/cms/` and linked via a pnpm workspace. Projects can scaffold in
