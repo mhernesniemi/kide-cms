@@ -8,7 +8,7 @@ const isPreview = Astro.url.searchParams.has("preview");
 const doc = await cms.pages.findOne({ slug: "home", status: isPreview ? "any" : "published" });
 const blocks = parseBlocks(doc?.blocks);
 
-if (!isPreview && doc) Astro.cache.set({ tags: ["pages", `page:${doc._id}`] });
+if (!isPreview) Astro.cache.set({ tags: doc ? ["pages", `page:${doc._id}`] : ["pages"] });
 ---
 
 <PublicLayout title={doc?.title ?? "Acme"} description={doc?.seoDescription}>

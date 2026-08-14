@@ -4,7 +4,7 @@
 // row-count verification, and builds. Also rejects overlay files outside the
 // allowlist in starters/README.md. Run: pnpm verify:starters
 import { execSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -47,7 +47,7 @@ db.close();
 
 const starters = existsSync(startersDir)
   ? readdirSync(startersDir, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && existsSync(path.join(startersDir, entry.name, "starter.json")))
+      .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
   : [];
 
@@ -58,6 +58,27 @@ if (starters.length === 0) {
 
 for (const starter of starters) {
   const starterRoot = path.join(startersDir, starter);
+
+  // The CLI silently skips starters with a broken manifest — fail the gate instead.
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(path.join(starterRoot, "starter.json"), "utf8"));
+  } catch (error) {
+    console.error(`[starters-verify] "${starter}" has invalid starter.json: ${error.message}`);
+    process.exit(1);
+  }
+  if (
+    manifest.name !== starter ||
+    typeof manifest.label !== "string" ||
+    typeof manifest.hint !== "string" ||
+    typeof manifest.order !== "number"
+  ) {
+    console.error(
+      `[starters-verify] "${starter}" starter.json needs name (matching the directory), label, hint, order`,
+    );
+    process.exit(1);
+  }
+
   const forbidden = listFiles(starterRoot).filter((file) => !ALLOWED.some((pattern) => pattern.test(file)));
   if (forbidden.length > 0) {
     console.error(

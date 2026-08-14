@@ -15,9 +15,9 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
   `create-kide-app` lists them from the cloned tag (Blank stays the default). First
   starter: **Marketing site** (pages with blocks, blog + taxonomy, menu, contact form,
   seed content). Verified per release by `pnpm verify:starters`.
-- Seed content is project-owned: `kide seed` reads `src/cms/seed.ts`
-  (`src/cms/internals/seed.data.ts` is deprecated but still honored, and routed to
-  careful review by upgrades). New root script `cms:seed`.
+- Seed content is project-owned: `kide seed` reads `src/cms/seed.ts` and no longer
+  reads `src/cms/internals/seed.data.ts` — move any contents to `src/cms/seed.ts`
+  (upgrades route the legacy file to careful review). New root script `cms:seed`.
 
 ### Release note
 

@@ -44,5 +44,14 @@ export default defineCollection({
       if (data.items !== undefined) assertMenuDepth(data.items);
       return data;
     },
+    afterCreate(_doc, context) {
+      context.cache?.invalidate({ tags: ["menus"] });
+    },
+    afterUpdate(_doc, context) {
+      context.cache?.invalidate({ tags: ["menus"] });
+    },
+    afterDelete(_doc, context) {
+      context.cache?.invalidate({ tags: ["menus"] });
+    },
   },
 });

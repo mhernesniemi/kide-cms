@@ -7,6 +7,7 @@ const { title = "Acme", description = "A marketing site powered by Kide CMS." } 
 type MenuItem = { id: string; label?: string; href?: string; target?: string; children: MenuItem[] };
 
 const menu = await cms.menus.findOne({ slug: "main" });
+Astro.cache.set({ tags: ["menus"] });
 const rawItems: MenuItem[] = Array.isArray(menu?.items) ? menu.items : [];
 // Menu hrefs are CMS-authored content — sanitize and drop anything unsafe.
 const menuItems = rawItems
