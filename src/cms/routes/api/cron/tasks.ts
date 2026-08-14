@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 
 import { cms } from "virtual:kide/api";
-import { pruneRateLimits } from "../../../core";
+import { pruneAuditLog, pruneRateLimits } from "../../../core";
 
 import { isAuthorized, unauthorized } from "./_authorize";
 
@@ -18,6 +18,7 @@ const handler: APIRoute = async ({ request }) => {
   const result = await cmsRuntime.tasks.drain();
   await cmsRuntime.tasks.prune();
   await pruneRateLimits();
+  await pruneAuditLog();
 
   return Response.json({
     ok: true,

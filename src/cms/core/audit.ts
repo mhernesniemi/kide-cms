@@ -75,7 +75,9 @@ export const recordAudit = async (event: AuditEvent): Promise<void> => {
   }
 };
 
-export const pruneAuditLog = async (olderThanMs: number): Promise<number> => {
+const AUDIT_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+
+export const pruneAuditLog = async (olderThanMs: number = AUDIT_RETENTION_MS): Promise<number> => {
   const db = await getDb();
   const schema = getSchema();
   const cutoff = Date.now() - olderThanMs;

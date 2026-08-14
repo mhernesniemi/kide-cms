@@ -144,7 +144,6 @@ export type ArrayFieldConfig = BaseFieldConfig<"array", unknown[]> & {
 };
 
 export type JsonFieldConfig = BaseFieldConfig<"json", unknown> & {
-  schema?: string;
   /**
    * Typed repeater rows. When set together with `admin.component: "repeater"`,
    * the block editor renders each array item as these named sub-fields (text,
