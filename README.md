@@ -1,13 +1,6 @@
 # Kide CMS
 
-A code-first CMS that lives **inside** your Astro project, not beside it.
-
-Kide ships one runtime, two ways to have it — pick per project when you scaffold:
-
-- **Package** (recommended for most projects) — a thin project with the runtime installed as the `@kidecms/core` npm dependency. Runtime maintenance stays with Kide; most updates are a version bump. If you ever need to go deeper, `pnpm exec kide eject` converts the project to embedded mode in place (one-way) — same import specifiers, no code changes.
-- **Embedded** — the CMS runtime, admin UI, and routes sit in `src/cms/` as a local workspace package. Read, debug, and modify everything. No abstraction you can't open up. Upgrades arrive as reviewable release packets.
-
-Both modes are the same source at the same release tag — the choice is who owns the runtime source and how updates arrive.
+A code-first CMS for Astro. Define collections in TypeScript, get an admin UI and typed content API for free.
 
 - [Live demo](https://demo.kide.dev/admin)
 - [Docs](https://docs.kide.dev/)
@@ -18,7 +11,15 @@ Both modes are the same source at the same release tag — the choice is who own
 pnpm create kide-app my-project
 ```
 
-You'll be asked for a project name, distribution mode (embedded or package), and deploy target (Node.js or Cloudflare). Every project starts bare-bones — one `pages` collection, no demo content — so there's nothing to delete before you build your own schema. The CLI scaffolds from the latest release, installs, initializes git, and (for Cloudflare) provisions D1 + R2 and deploys.
+Pick how the runtime lives in your project:
+
+- **Package** — the runtime is an `@kidecms/core` npm dependency in `node_modules`. Updates are a version bump.
+- **Embedded** — the CMS runtime, admin UI, and routes sit in `src/cms/` as part of your project. Everything is there to read, debug, and change. Upgrades come as patches you review and apply yourself.
+
+Pick a deploy target:
+
+- **Node.js** — runs anywhere Node runs, SQLite for storage.
+- **Cloudflare** — deploys as a Worker; provisions D1 + R2 for you.
 
 ## How It Works
 
