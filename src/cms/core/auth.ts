@@ -4,8 +4,11 @@ import { nanoid } from "nanoid";
 import { getDb } from "./runtime";
 import { getSchema } from "./schema";
 
-// 600k per OWASP. Iteration count is stored per-hash, so existing 100k hashes still verify.
-const ITERATIONS = 600_000;
+// 600k per OWASP, but Cloudflare Workers rejects counts above 100k in production
+// (not in wrangler dev, so only deploys hit it). Iteration count is stored
+// per-hash, so hashes created at either count keep verifying on both runtimes.
+const isWorkers = typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
+const ITERATIONS = isWorkers ? 100_000 : 600_000;
 const HASH_LENGTH = 32;
 const SALT_LENGTH = 16;
 
@@ -66,13 +69,21 @@ export const verifyPassword = async (hash: string, plain: string): Promise<boole
   const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(plain), "PBKDF2", false, [
     "deriveBits",
   ]);
-  const derived = new Uint8Array(
-    await crypto.subtle.deriveBits(
-      { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
-      keyMaterial,
-      expected.length * 8,
-    ),
-  );
+  let derived: Uint8Array;
+  try {
+    derived = new Uint8Array(
+      await crypto.subtle.deriveBits(
+        { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+        keyMaterial,
+        expected.length * 8,
+      ),
+    );
+  } catch (error) {
+    // Workers rejects iteration counts above 100k — a hash created on Node can
+    // land here after a database move. Fail the login instead of crashing.
+    console.error("[auth] verifyPassword failed to derive", error);
+    return false;
+  }
 
   if (derived.length !== expected.length) return false;
   let diff = 0;
