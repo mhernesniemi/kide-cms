@@ -1,6 +1,6 @@
 # Kide CMS
 
-A code-first CMS for Astro. Define collections in TypeScript, get an admin UI and typed content API for free.
+A code-first CMS for Astro. Define collections in TypeScript and get a generated admin UI and typed content API.
 
 - [Live demo](https://demo.kide.dev/admin)
 - [Docs](https://docs.kide.dev/)
