@@ -14,7 +14,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write # GitHub Release creation
       id-token: write # npm provenance
     steps:
       - uses: actions/checkout@v4
@@ -49,3 +49,18 @@ jobs:
         run: pnpm --filter @kidecms/core publish --no-git-checks --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Notes come from the tag's CHANGELOG section; the title stays the bare
+      # tag — edit on github.com to append a descriptive suffix if wanted.
+      - name: Create GitHub Release
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v ver="$VERSION" '$0 ~ "^## \\[" ver "\\]" {flag=1;next} /^## \[/ {flag=0} flag' CHANGELOG.md > /tmp/release-notes.md
+          if [ ! -s /tmp/release-notes.md ]; then
+            echo "No CHANGELOG section for $VERSION — creating release with generated notes" >&2
+            gh release create "$GITHUB_REF_NAME" --generate-notes --latest
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file /tmp/release-notes.md --latest
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
