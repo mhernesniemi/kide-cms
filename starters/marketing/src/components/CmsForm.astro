@@ -64,7 +64,7 @@ const action = `/api/cms/forms/submit/${slug}`;
                 rows={field.rows ?? 4}
                 placeholder={field.placeholder ?? ""}
                 required={field.required}
-                class="rounded border border-gray-300 px-3 py-2"
+                class="rounded-md border border-gray-300 px-3.5 py-2.5 transition-colors outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-950/10"
               />
             </label>
           );
@@ -81,7 +81,7 @@ const action = `/api/cms/forms/submit/${slug}`;
                 id={inputId}
                 name={field.name}
                 required={field.required}
-                class="rounded border border-gray-300 px-3 py-2"
+                class="rounded-md border border-gray-300 px-3.5 py-2.5 transition-colors outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-950/10"
               >
                 <option value="">Select…</option>
                 {(field.options ?? []).map((opt) => (
@@ -118,7 +118,7 @@ const action = `/api/cms/forms/submit/${slug}`;
               placeholder={field.placeholder ?? ""}
               required={field.required}
               maxlength={field.maxLength}
-              class="rounded border border-gray-300 px-3 py-2"
+              class="rounded-md border border-gray-300 px-3.5 py-2.5 transition-colors outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-950/10"
             />
           </label>
         );
@@ -126,7 +126,7 @@ const action = `/api/cms/forms/submit/${slug}`;
 
       <button
         type="submit"
-        class="self-start rounded bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
+        class="self-start rounded-full bg-gray-950 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-700"
       >
         Submit
       </button>

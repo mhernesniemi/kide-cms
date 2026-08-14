@@ -13,9 +13,10 @@ if (!isPreview) Astro.cache.set({ tags: cacheTags("posts", doc._id) });
 ---
 
 <PublicLayout title={doc.title} description={doc.seoDescription}>
-  <article class="mx-auto max-w-2xl px-4 py-8">
-    <a href="/blog" class="text-sm text-teal-700">&larr; All posts</a>
-    <h1 data-cms="title" class="mt-4 mb-2 text-2xl font-semibold">{doc.title}</h1>
+  <article class="mx-auto max-w-2xl px-6 py-14 sm:py-20">
+    <a href="/blog" class="text-sm text-gray-500 no-underline transition-colors hover:text-gray-950">&larr; All posts</a
+    >
+    <h1 data-cms="title" class="mt-6 mb-3 text-3xl font-semibold tracking-tight sm:text-4xl">{doc.title}</h1>
     {
       doc.image && (
         <CmsPicture
@@ -32,12 +33,12 @@ if (!isPreview) Astro.cache.set({ tags: cacheTags("posts", doc._id) });
     }
     {
       doc.excerpt && (
-        <p data-cms="excerpt" class="mb-6 text-gray-500">
+        <p data-cms="excerpt" class="mb-8 text-lg leading-relaxed text-gray-600">
           {doc.excerpt}
         </p>
       )
     }
-    <div data-cms="body">
+    <div data-cms="body" class="prose prose-gray max-w-none">
       <ContentRenderer content={doc.body} status={isPreview ? "any" : "published"} />
     </div>
   </article>

@@ -25,36 +25,49 @@ const menuItems = rawItems
     <link rel="icon" href="/favicon.ico" />
     <title>{title}</title>
   </head>
-  <body class="min-h-screen bg-white pb-24 text-gray-900 antialiased">
-    <header class="mx-auto flex max-w-4xl items-center gap-8 px-4 py-4">
-      <a href="/" class="text-lg font-semibold no-underline">Acme</a>
-      {
-        menuItems.length > 0 && (
-          <nav>
-            <ul class="flex list-none gap-6 p-0">
-              {menuItems.map((item) => (
-                <li>
-                  <a
-                    href={item.href}
-                    target={item.target || undefined}
-                    rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
-                    class="text-sm text-gray-500 no-underline transition-colors hover:text-gray-900"
-                  >
-                    {String(item.label ?? "")}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        )
-      }
-      <a
-        href="/admin"
-        class="ml-auto rounded-md border border-teal-700 px-3 py-1.5 text-sm font-medium text-teal-700 no-underline transition-colors hover:bg-teal-50"
-      >
-        Open admin
-      </a>
+  <body class="flex min-h-screen flex-col overflow-x-clip bg-white text-gray-950 antialiased">
+    <header class="border-b border-gray-200">
+      <div class="mx-auto flex max-w-5xl items-center gap-10 px-6 py-5">
+        <a href="/" class="text-base font-semibold tracking-tight no-underline">Acme</a>
+        {
+          menuItems.length > 0 && (
+            <nav>
+              <ul class="flex list-none gap-7 p-0">
+                {menuItems.map((item) => (
+                  <li>
+                    <a
+                      href={item.href}
+                      target={item.target || undefined}
+                      rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
+                      class="text-sm text-gray-500 no-underline transition-colors hover:text-gray-950"
+                    >
+                      {String(item.label ?? "")}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )
+        }
+        <a
+          href="/admin"
+          class="ml-auto rounded-full border border-gray-200 px-3.5 py-1.5 text-sm text-gray-600 no-underline transition-colors hover:border-gray-300 hover:text-gray-950"
+        >
+          Open admin
+        </a>
+      </div>
     </header>
-    <slot />
+    <div class="flex-1">
+      <slot />
+    </div>
+    <footer class="border-t border-gray-200">
+      <div class="mx-auto flex max-w-5xl items-baseline justify-between px-6 py-10">
+        <p class="m-0 text-sm text-gray-500">&copy; {new Date().getFullYear()} Acme</p>
+        <p class="m-0 text-sm text-gray-400">
+          Built with{" "}
+          <a href="https://kide.dev" class="text-gray-500 no-underline hover:text-gray-950">Kide CMS</a>
+        </p>
+      </div>
+    </footer>
   </body>
 </html>

@@ -8,13 +8,15 @@ const hasContent = Boolean(heading) || Boolean(hasBody);
 
 {
   hasContent && (
-    <section>
-      {heading && <h2 class="mb-3 text-2xl font-semibold">{heading}</h2>}
-      {hasBody && (
-        <div class="prose max-w-none">
-          <RichTextContent content={content} />
-        </div>
-      )}
+    <section class="py-4 sm:py-5">
+      <div class="max-w-2xl">
+        {heading && <h2 class="mb-5 text-2xl font-semibold tracking-tight sm:text-3xl">{heading}</h2>}
+        {hasBody && (
+          <div class="prose prose-gray">
+            <RichTextContent content={content} />
+          </div>
+        )}
+      </div>
     </section>
   )
 }

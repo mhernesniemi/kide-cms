@@ -1,5 +1,6 @@
 import { defineConfig } from "@kidecms/core";
 import users from "./collections/users";
+import frontPage from "./collections/front-page";
 import pages from "./collections/pages";
 import posts from "./collections/posts";
 import taxonomies from "./collections/taxonomies";
@@ -13,5 +14,5 @@ export default defineConfig({
     default: "en",
     supported: ["en"],
   },
-  collections: [users, pages, posts, taxonomies, menus, forms, formSubmissions],
+  collections: [users, frontPage, pages, posts, taxonomies, menus, forms, formSubmissions],
 });

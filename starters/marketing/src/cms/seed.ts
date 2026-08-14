@@ -10,15 +10,12 @@ const li = (text: string) => ({
 const ul = (...items: string[]) => ({ type: "list", ordered: false, children: items.map(li) });
 
 const seeds: Record<string, SeedDocument[]> = {
-  pages: [
+  "front-page": [
     {
-      title: "Home",
-      slug: "home",
       seoDescription: "Acme helps small teams launch faster with less overhead.",
       blocks: [
         {
           type: "hero",
-          eyebrow: "Acme Platform",
           heading: "Launch faster, grow smarter",
           body: "Everything your team needs to plan, build, and ship — in one place, without the busywork.",
           ctaLabel: "Get in touch",
@@ -70,6 +67,8 @@ const seeds: Record<string, SeedDocument[]> = {
       ],
       _status: "published",
     },
+  ],
+  pages: [
     {
       title: "About",
       slug: "about",

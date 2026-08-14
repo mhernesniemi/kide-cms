@@ -5,24 +5,24 @@ import { cms } from "@/cms/.generated/api";
 import { parseBlocks } from "@kidecms/core";
 
 const isPreview = Astro.url.searchParams.has("preview");
-const doc = await cms.pages.findOne({ slug: "home", status: isPreview ? "any" : "published" });
+const doc = await cms["front-page"].findOne({ status: isPreview ? "any" : "published" });
 const blocks = parseBlocks(doc?.blocks);
 
-if (!isPreview) Astro.cache.set({ tags: doc ? ["pages", `page:${doc._id}`] : ["pages"] });
+if (!isPreview) Astro.cache.set({ tags: ["front-page"] });
 ---
 
-<PublicLayout title={doc?.title ?? "Acme"} description={doc?.seoDescription}>
-  <main class="mx-auto max-w-4xl px-4 py-8" data-cms="blocks">
+<PublicLayout title="Acme" description={doc?.seoDescription}>
+  <main class="mx-auto max-w-5xl px-6" data-cms="blocks">
     {
       blocks.length > 0 ? (
         <BlockRenderer blocks={blocks} status={isPreview ? "any" : "published"} />
       ) : (
-        <p class="text-gray-500">
+        <p class="py-20 text-gray-500">
           No content yet. Open the{" "}
-          <a href="/admin" class="text-teal-700 underline">
+          <a href="/admin" class="text-gray-950 underline">
             admin
           </a>{" "}
-          and publish a page with the slug <code>home</code>.
+          and publish the Front page.
         </p>
       )
     }

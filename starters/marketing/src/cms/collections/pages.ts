@@ -1,4 +1,5 @@
 import { defineCollection, fields } from "@kidecms/core";
+import { pageBlockTypes } from "./page-blocks";
 
 export default defineCollection({
   slug: "pages",
@@ -18,40 +19,7 @@ export default defineCollection({
       maxLength: 160,
       admin: { rows: 3, help: "Meta description for search engines. Max 160 characters.", position: "sidebar" },
     }),
-    blocks: fields.blocks({
-      shared: false,
-      types: {
-        hero: {
-          eyebrow: fields.text(),
-          heading: fields.text({ required: true }),
-          body: fields.text({ admin: { rows: 3 } }),
-          ctaLabel: fields.text(),
-          ctaHref: fields.text({ admin: { placeholder: "/contact" } }),
-        },
-        text: {
-          heading: fields.text(),
-          content: fields.richText(),
-        },
-        features: {
-          heading: fields.text(),
-          items: fields.json({
-            admin: { component: "repeater", help: "Add title and description pairs" },
-          }),
-        },
-        cta: {
-          heading: fields.text(),
-          body: fields.text({ admin: { rows: 2 } }),
-          buttonLabel: fields.text(),
-          buttonHref: fields.text({ admin: { placeholder: "/contact" } }),
-        },
-        faq: {
-          heading: fields.text(),
-          items: fields.json({
-            admin: { component: "repeater", help: "Add question and answer pairs" },
-          }),
-        },
-      },
-    }),
+    blocks: fields.blocks({ shared: false, types: pageBlockTypes }),
   },
   hooks: {
     afterPublish(doc, context) {

@@ -4,9 +4,11 @@ import CmsForm from "@/components/CmsForm.astro";
 ---
 
 <PublicLayout title="Contact" description="Get in touch with us.">
-  <main class="mx-auto max-w-2xl px-4 py-8">
-    <h1 class="mb-2 text-3xl font-semibold">Contact</h1>
-    <p class="mb-8 text-gray-500">Tell us about your project and we will get back to you within one business day.</p>
+  <main class="mx-auto max-w-2xl px-6 py-14 sm:py-20">
+    <h1 class="mb-3 text-3xl font-semibold tracking-tight sm:text-4xl">Contact</h1>
+    <p class="mb-10 text-lg leading-relaxed text-gray-600">
+      Tell us about your project and we will get back to you within one business day.
+    </p>
     <CmsForm slug="contact" context={{ page: "/contact" }} />
   </main>
 </PublicLayout>

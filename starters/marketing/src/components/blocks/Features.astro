@@ -9,17 +9,20 @@ const hasContent = Boolean(heading) || items.length > 0;
 {
   hasContent && (
     <section>
-      {heading && <h2 class="mb-6 text-center text-2xl font-semibold">{heading}</h2>}
-      {items.length > 0 && (
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => (
-            <div class="rounded-lg border border-gray-200 px-5 py-4">
-              {item.title && <p class="mb-1 font-semibold">{item.title}</p>}
-              {item.description && <p class="m-0 text-sm text-gray-500">{item.description}</p>}
-            </div>
-          ))}
-        </div>
-      )}
+      <div class="mx-[calc(50%-50vw)] border-t border-gray-200" />
+      <div class="py-12 sm:py-16">
+        {heading && <h2 class="mb-10 text-2xl font-semibold tracking-tight sm:text-3xl">{heading}</h2>}
+        {items.length > 0 && (
+          <div class="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            {items.map((item) => (
+              <div class="border-l border-gray-200 pl-5">
+                {item.title && <p class="mb-2 font-medium">{item.title}</p>}
+                {item.description && <p class="m-0 text-sm leading-relaxed text-gray-600">{item.description}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   )
 }
