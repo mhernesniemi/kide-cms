@@ -9,7 +9,7 @@ const ITERATIONS = 600_000;
 const HASH_LENGTH = 32;
 const SALT_LENGTH = 16;
 
-export const MIN_PASSWORD_LENGTH = 12;
+export const MIN_PASSWORD_LENGTH = 8;
 
 const encode = (buffer: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(buffer)));
 

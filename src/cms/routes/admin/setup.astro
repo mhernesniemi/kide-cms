@@ -6,6 +6,7 @@ import { Input } from "../../admin/components/ui/input";
 import { Label } from "../../admin/components/ui/label";
 import { buttonVariants } from "../../admin/components/ui/button";
 import { getDb } from "virtual:kide/db";
+import { MIN_PASSWORD_LENGTH } from "../../core";
 
 export const prerender = false;
 
@@ -27,7 +28,7 @@ const errorMessage =
     : error === "password"
       ? "Passwords do not match."
       : error === "short"
-        ? "Password must be at least 12 characters."
+        ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
         : null;
 ---
 
@@ -87,7 +88,7 @@ const errorMessage =
                   id="password"
                   name="password"
                   type="password"
-                  placeholder="Min 12 characters"
+                  placeholder={`Min ${MIN_PASSWORD_LENGTH} characters`}
                   autoComplete="new-password"
                   required
                 />
