@@ -77,7 +77,6 @@ posts: {
 - Outbound and inbound webhooks
 - Durable background task queue with retries and recurring schedules
 - Built-in forms with a visual builder
-- Multisite support
 - Audit log
 - Reusable shared content sections
 - MCP server for AI-agent content editing

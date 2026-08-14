@@ -16,7 +16,7 @@ initDateFormat(config, Astro.cookies.get("tz")?.value);
 
 const route = resolveAdminRoute(Astro.params.path);
 const user = Astro.locals.user;
-const runtimeContext = user ? { user: { id: user.id, role: user.role, email: user.email } } : {};
+const runtimeContext = user ? { user } : {};
 const isEmbed = Astro.url.searchParams.get("_embed") === "1";
 const accessibleCollections = config.collections.filter((c) => canRead(config, user, c.slug));
 

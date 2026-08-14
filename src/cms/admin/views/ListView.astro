@@ -28,7 +28,7 @@ type CollectionLike = {
 
 const { collection } = Astro.props as { collection: CollectionLike };
 const user = Astro.locals.user;
-const runtimeContext = user ? { user: { id: user.id, role: user.role, email: user.email } } : {};
+const runtimeContext = user ? { user } : {};
 const cmsRuntime = cms as Record<string, any>;
 const defaultLocale = config.locales?.default ?? "en";
 const locales = config.locales?.supported ?? [];

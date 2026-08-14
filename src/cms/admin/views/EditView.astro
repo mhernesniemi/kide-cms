@@ -67,7 +67,7 @@ const {
 };
 
 const user = Astro.locals.user;
-const runtimeContext = user ? { user: { id: user.id, role: user.role, email: user.email } } : {};
+const runtimeContext = user ? { user } : {};
 const cmsRuntime = cms as Record<string, any> & { meta: typeof cms.meta };
 const locales = config.locales?.supported ?? [];
 const defaultLocale = config.locales?.default ?? "en";

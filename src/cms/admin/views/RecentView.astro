@@ -6,7 +6,7 @@ import { formatDate, getLabelField } from "../../core";
 import { canRead, getVisualStatus } from "../lib/access";
 
 const user = Astro.locals.user;
-const runtimeContext = user ? { user: { id: user.id, role: user.role, email: user.email } } : {};
+const runtimeContext = user ? { user } : {};
 const cmsRuntime = cms as Record<string, any>;
 const defaultLocale = config.locales?.default ?? "en";
 
