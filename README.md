@@ -63,23 +63,14 @@ posts: {
 
 ## Features
 
-- 16 field types including blocks, repeaters, and relations
+- 16 field types, including blocks and relations
 - Drafts, publishing, scheduling, versioning
-- Per-field i18n via translation tables
-- Asset management with folders, focal points, on-demand optimization
-- Tiptap rich text, block editor, real-time cross-tab live preview
-- Hierarchical taxonomies and menus
+- Per-field i18n
+- Asset management with focal points and on-demand optimization
+- Tiptap rich text, block editor, live preview
 - Role-based access control
-- Tag-based cache invalidation (Astro 7 route caching)
-- Optional AI assistant (alt text, SEO, translations)
-- Full-text search (FTS5, snippet highlighting)
-- Editorial review workflow with comments and approval gates
-- Outbound and inbound webhooks
-- Durable background task queue with retries and recurring schedules
-- Built-in forms with a visual builder
-- Audit log
-- Reusable shared content sections
-- MCP server for AI-agent content editing
+
+See the full feature list at [docs.kide.dev](https://docs.kide.dev/).
 
 ## Stack
 
