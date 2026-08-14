@@ -13,13 +13,13 @@ pnpm create kide-app my-project
 
 Pick how the runtime lives in your project:
 
-- **Package** — the runtime is an `@kidecms/core` npm dependency in `node_modules`. Updates are a version bump.
-- **Embedded** — the CMS runtime, admin UI, and routes sit in `src/cms/` as part of your project. Everything is there to read, debug, and change. Upgrades come as patches you review and apply yourself.
+- **Package** - the runtime is an `@kidecms/core` npm dependency in `node_modules`. Updates are a version bump.
+- **Embedded** - the CMS runtime, admin UI, and routes sit in `src/cms/` as part of your project. Everything is there to read, debug, and change. Upgrades come as patches you review and apply yourself.
 
 Pick a deploy target:
 
-- **Node.js** — runs anywhere Node runs, SQLite for storage.
-- **Cloudflare** — deploys as a Worker; provisions D1 + R2 for you.
+- **Node.js** - runs anywhere Node runs, SQLite for storage.
+- **Cloudflare** - deploys as a Worker; provisions D1 + R2 for you.
 
 ## How It Works
 
