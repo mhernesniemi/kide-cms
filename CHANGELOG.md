@@ -7,6 +7,15 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.14.1] - 2026-08-14
+
+### Fixed
+
+- Cloudflare deploys crashed on setup/login: production Workers rejects PBKDF2
+  above 100k iterations (local `wrangler dev` doesn't enforce the cap). Hashing
+  now uses 100k on Workers and 600k elsewhere; the per-hash iteration count
+  keeps existing hashes verifying on both runtimes.
+
 ## [0.14.0] - 2026-08-14
 
 ### Added
