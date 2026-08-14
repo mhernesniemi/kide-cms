@@ -72,19 +72,15 @@ posts: {
 - Role-based access control
 - Tag-based cache invalidation (Astro 7 route caching)
 - Optional AI assistant (alt text, SEO, translations)
-
-## Local MCP
-
-Kide ships a local stdio MCP server (`pnpm cms:mcp`) so agents like Claude Code and Codex can inspect collections and edit content through the same schema-aware API your server code uses — drafts by default, publishing always explicit.
-
-See the [MCP docs](https://docs.kide.dev/mcp/) for client setup (Claude Code, Codex, generic config), the access-rule actor, and safety defaults.
-
-## Deploy Targets
-
-- **Node.js**: SQLite via `better-sqlite3`, local filesystem storage.
-- **Cloudflare Workers**: D1 for the database, R2 for assets.
-
-Both are wired up by `create-kide-app`. The Cloudflare overlay lives in [`adapters/cloudflare/`](./adapters/cloudflare) and is consumed by the CLI at scaffold time. If you clone this repo directly (not via `create-kide-app`), that folder is scaffolding source and can be deleted.
+- Full-text search (FTS5, snippet highlighting)
+- Editorial review workflow with comments and approval gates
+- Outbound and inbound webhooks
+- Durable background task queue with retries and recurring schedules
+- Built-in forms with a visual builder
+- Multisite support
+- Audit log
+- Reusable shared content sections
+- MCP server for AI-agent content editing
 
 ## Stack
 
