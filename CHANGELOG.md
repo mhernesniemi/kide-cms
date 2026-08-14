@@ -7,7 +7,7 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
-## [0.13.0] - 2026-08-14
+## [0.14.0] - 2026-08-14
 
 ### Added
 
@@ -18,6 +18,14 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 - Seed content is project-owned: `kide seed` reads `src/cms/seed.ts` and no longer
   reads `src/cms/internals/seed.data.ts` — move any contents to `src/cms/seed.ts`
   (upgrades route the legacy file to careful review). New root script `cms:seed`.
+
+### Changed
+
+- Minimum password length lowered from 12 to 8 characters.
+
+## [0.13.0] - 2026-08-14
+
+### Added
 
 - **Dual distribution.** The CMS runtime is now the `@kidecms/core` package, embedded
   in the repo at `src/cms/` and linked via a pnpm workspace. Projects can scaffold in
