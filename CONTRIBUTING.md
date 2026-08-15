@@ -3,7 +3,7 @@
 Kide's core is constrained by design. That shapes how contributions work:
 
 - **Bug fixes, hardening existing features, and docs** - open a PR. Refining what's already here is especially welcome.
-- **New features** - open an issue first, before writing code. Some ideas fit better as a starter, a docs recipe, or your own project code than in core.
+- **New features** - open an issue first. Some ideas can fit better as a starter, a docs recipe, or your own project code than in core.
 
 ## Setup
 
