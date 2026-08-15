@@ -12,8 +12,6 @@ pnpm install
 pnpm dev
 ```
 
-See [CLAUDE.md](CLAUDE.md) for the full repo map, conventions, and dual-distribution details.
-
 ## Before opening a PR
 
 ```bash
