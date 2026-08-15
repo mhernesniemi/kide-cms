@@ -17,7 +17,7 @@ pnpm dev
 ```bash
 pnpm check   # astro check + Cloudflare TS profile + eslint
 pnpm test    # unit tests + generated-code snapshot checks + in-memory DB integration tests
-pnpm format  # prettier - run last
+pnpm format  # prettier (should run last)
 ```
 
 If your change touches `src/cms/platform/`, `src/cms/middleware/`, or the request-scope/task-queue machinery, also run `pnpm test:workers`.
