@@ -16,7 +16,7 @@ pnpm dev
 
 ```bash
 pnpm check   # astro check + Cloudflare TS profile + eslint
-pnpm test    # unit + generator golden + in-memory DB integration
+pnpm test    # unit tests + generated-code snapshot checks + in-memory DB integration tests
 pnpm format  # prettier - run last
 ```
 
