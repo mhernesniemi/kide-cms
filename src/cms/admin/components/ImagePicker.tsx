@@ -108,7 +108,7 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
               setAssetId(null);
               onChangeProp?.("");
             }}
-            className="border-foreground/25 hover:border-foreground bg-background/80 absolute top-2 right-2 flex size-5 items-center justify-center rounded border opacity-0 backdrop-blur-sm transition-[opacity,border-color] group-hover:opacity-100"
+            className="border-foreground/25 hover:border-foreground bg-background/80 absolute top-2 right-2 flex size-5 items-center justify-center rounded border opacity-0 backdrop-blur-sm transition-[opacity,border-color] group-hover:opacity-100 focus-visible:opacity-100"
           >
             <X className="size-3" />
           </button>

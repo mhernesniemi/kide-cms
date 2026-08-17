@@ -135,7 +135,9 @@ function DraggableAssetCard({
       <label
         className={cn(
           "border-foreground/40 hover:border-foreground/80 bg-background/80 absolute top-2.5 right-2.5 z-10 flex size-5 cursor-default items-center justify-center rounded border backdrop-blur-sm transition-[opacity,border-color]",
-          selected ? "border-foreground! opacity-100" : "opacity-0 group-hover:opacity-100",
+          selected
+            ? "border-foreground! opacity-100"
+            : "opacity-0 group-hover:opacity-100 has-[:focus-visible]:opacity-100",
         )}
         onClick={(e) => e.stopPropagation()}
       >
@@ -163,7 +165,7 @@ function DraggableAssetCard({
       {/* Drag handle */}
       <div
         ref={setActivatorNodeRef}
-        className="bg-background/80 border-foreground/40 hover:border-foreground/80 text-muted-foreground absolute top-2.5 left-2.5 z-10 flex size-5 cursor-grab items-center justify-center rounded border opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+        className="bg-background/80 border-foreground/40 hover:border-foreground/80 text-muted-foreground absolute top-2.5 left-2.5 z-10 flex size-5 cursor-grab items-center justify-center rounded border opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing"
         {...attributes}
         {...listeners}
       >
