@@ -4,6 +4,10 @@
     "types": ["@cloudflare/workers-types"],
     "noEmit": true
   },
-  "include": ["src/cms/platform/cloudflare/**/*.ts", "src/cms/platform/cloudflare/globals.d.ts"],
+  "include": [
+    "src/cms/platform/cloudflare/**/*.ts",
+    "src/cms/platform/cloudflare/globals.d.ts",
+    "src/cms/routes/uploads/**/*.ts"
+  ],
   "exclude": ["src/cms/platform/cloudflare/__tests__/**"]
 }

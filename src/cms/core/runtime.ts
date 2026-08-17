@@ -2,6 +2,8 @@ export type CmsStorageAdapter = {
   putFile: (storagePath: string, data: ArrayBuffer | Uint8Array) => Promise<void>;
   getFile: (storagePath: string) => Promise<ArrayBuffer | null>;
   deleteFile: (storagePath: string) => Promise<void>;
+  /** Optional streaming read — the /uploads route buffers via getFile when absent. */
+  getFileStream?: (storagePath: string) => Promise<{ body: ReadableStream; size: number } | null>;
 };
 
 export type CmsEmailAdapter = {

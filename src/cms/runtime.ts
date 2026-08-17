@@ -48,7 +48,7 @@ import {
 
 import * as schema from "./.generated/schema";
 import { closeDb, getDb } from "./adapters/db";
-import { deleteFile, getFile, putFile } from "./adapters/storage";
+import { deleteFile, getFile, getFileStream, putFile } from "./adapters/storage";
 import { isEmailConfigured, sendInviteEmail, sendPasswordResetEmail } from "./adapters/email";
 
 let initialized = false;
@@ -60,7 +60,7 @@ export const initCmsRuntime = () => {
   configureCmsRuntime({
     getDb,
     closeDb,
-    storage: { putFile, getFile, deleteFile },
+    storage: { putFile, getFile, deleteFile, getFileStream },
     email: { sendInviteEmail, sendPasswordResetEmail, isEmailConfigured },
     env: (key) =>
       (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.[key] ?? process.env[key],

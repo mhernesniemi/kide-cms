@@ -148,11 +148,18 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
         hasUsers = true;
       }
     } catch (error) {
-      // Only a missing users table means first run (schema not pushed yet) — anything else
-      // (corruption, I/O) must surface, not funnel visitors to /admin/setup.
+      // Anything but a missing users table (corruption, I/O) must surface.
       const message = error instanceof Error ? error.message : String(error);
       if (!/no such table: cms_users/i.test(message)) throw error;
-      hasUsers = false;
+      // Schema not pushed. Setup can't succeed against a table-less database
+      // (its INSERT would fail too), so say what's actually wrong instead of
+      // redirecting there. Typical cause: `pnpm build && pnpm preview` without
+      // a prior `pnpm cms:push` (dev pushes on boot, production never does).
+      // hasUsers stays unset so the check re-runs once the schema exists.
+      return new Response(
+        "Database schema is not initialized. Run `pnpm cms:push` against this environment's database (Cloudflare D1: apply your migrations), then reload.",
+        { status: 503, headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" } },
+      );
     }
   }
 

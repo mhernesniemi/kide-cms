@@ -107,7 +107,8 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
   const generatedPath = options?.generatedPath ?? "src/cms/.generated";
   const adaptersPath = options?.adaptersPath ?? "src/cms/adapters";
   const generatorPath = options?.generatorPath ?? packagePath("internals", "generator.ts");
-  const platform = options?.platform ?? "node";
+  // options.platform stays accepted for compat (CF configs pass it) but nothing
+  // branches on it anymore — the /uploads route now serves both platforms.
 
   return {
     name: "kide-cms",
@@ -255,13 +256,13 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           entrypoint: new URL("../routes/admin/[...path].astro", import.meta.url),
         });
 
-        // Cloudflare serves /uploads/* from R2 through a route (Node uses static files).
-        if (platform === "cloudflare") {
-          injectRoute({
-            pattern: "/uploads/[...path]",
-            entrypoint: new URL("../platform/cloudflare/uploads-route.ts", import.meta.url),
-          });
-        }
+        // /uploads/* streams from the storage adapter (Node: uploads dir, CF: R2).
+        // Both platforms need it: Node's static layer only serves files that
+        // existed at build time, so runtime uploads 404 in production without it.
+        injectRoute({
+          pattern: "/uploads/[...path]",
+          entrypoint: new URL("../routes/uploads/[...path].ts", import.meta.url),
+        });
 
         // Inject API routes
         injectRoute({
