@@ -106,6 +106,9 @@ export const resolveAdminRoute = (path: string | undefined): AdminRoute => {
 /** Display text for a document's public URL in list tables — the bare root path reads as "Homepage" instead of "/". */
 export const formatPagePath = (path: string | null | undefined) => (path === "/" ? "Homepage" : (path ?? "—"));
 
+/** Link target for the URL column: live documents open the real page; never-published drafts only exist behind ?preview. */
+export const getPageHref = (pagePath: string, isLive: boolean) => (isLive ? pagePath : `${pagePath}?preview=true`);
+
 export const humanize = (value: string) =>
   value
     .replace(/^_+/, "")

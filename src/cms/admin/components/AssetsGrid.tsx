@@ -806,7 +806,7 @@ export default function AssetsGrid({
 
             {/* Selection toolbar */}
             {selectedIds.size > 0 && (
-              <div className="bg-muted/40 flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+              <div className="bg-background sticky top-4 z-20 flex items-center justify-between gap-3 rounded-lg border px-3 py-2 shadow-sm">
                 <span className="text-sm font-medium">{selectedIds.size} selected</span>
                 <div className="flex items-center gap-2">
                   <Button

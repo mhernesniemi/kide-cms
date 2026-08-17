@@ -2,7 +2,7 @@
 import DocumentsDataTable from "../components/DocumentsDataTable";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
-import { formatDate, formatPagePath, getTranslatableFieldNames } from "../../core";
+import { formatDate, formatPagePath, getPageHref, getTranslatableFieldNames } from "../../core";
 import { canRead } from "../lib/access";
 
 const user = Astro.locals.user;
@@ -46,7 +46,9 @@ const singletonsData = await Promise.all(
       updatedAt: singleDoc ? formatDate(singleDoc._updatedAt) : "—",
       editHref: `/admin/${sc.slug}`,
       page: pagePath,
-      pageHref: pagePath ? `${pagePath}?preview=true` : null,
+      pageHref: pagePath
+        ? getPageHref(pagePath, !!singleDoc && (!sc.drafts || singleDoc._status === "published"))
+        : null,
     };
   }),
 );

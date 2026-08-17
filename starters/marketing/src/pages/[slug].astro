@@ -16,7 +16,7 @@ if (isPreview) Astro.cache.set(false);
 else Astro.cache.set({ tags: cacheTags("pages", doc._id) });
 ---
 
-<PublicLayout title={doc.title} description={doc.seoDescription}>
+<PublicLayout title={doc.title} description={doc.seoDescription} cmsDoc={`pages:${doc._id}`}>
   <article class="mx-auto max-w-5xl px-6">
     <h1 data-cms="title" class="pt-14 pb-4 text-3xl font-semibold tracking-tight sm:text-4xl">{doc.title}</h1>
     <div data-cms="blocks">

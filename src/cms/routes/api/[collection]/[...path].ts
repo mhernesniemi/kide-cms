@@ -3,7 +3,7 @@ import type { APIRoute } from "astro";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { collaboration } from "virtual:kide/runtime";
-import { formatPagePath, isApprover, resolveCollaboration } from "../../../core";
+import { formatPagePath, getPageHref, isApprover, resolveCollaboration } from "../../../core";
 import { loadSharedSectionUsageCounts } from "../../../admin/lib/edit-data";
 
 export const prerender = false;
@@ -295,7 +295,9 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
           ? collection.preview
           : cmsRuntime.meta.getRouteForDocument(collectionSlug, entry)
         : null;
-      if (pagePath) entry._pageHref = `${pagePath}?preview=true`;
+      if (pagePath) {
+        entry._pageHref = getPageHref(pagePath, !collection.drafts || entry._status === "published");
+      }
       entry.__page = formatPagePath(pagePath);
     }
   }

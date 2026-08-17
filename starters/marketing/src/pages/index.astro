@@ -12,7 +12,7 @@ if (isPreview) Astro.cache.set(false);
 else Astro.cache.set({ tags: ["front-page"] });
 ---
 
-<PublicLayout title="Acme" description={doc?.seoDescription}>
+<PublicLayout title="Acme" description={doc?.seoDescription} cmsDoc={doc ? `front-page:${doc._id}` : undefined}>
   <main class="mx-auto max-w-5xl px-6" data-cms="blocks">
     {
       blocks.length > 0 ? (

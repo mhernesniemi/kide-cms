@@ -313,6 +313,10 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           entrypoint: new URL("../routes/api/collaboration/index.ts", import.meta.url),
         });
         injectRoute({
+          pattern: "/api/cms/edit-bar",
+          entrypoint: new URL("../routes/api/edit-bar.ts", import.meta.url),
+        });
+        injectRoute({
           pattern: "/api/cms/ai/alt-text",
           entrypoint: new URL("../routes/api/ai/alt-text.ts", import.meta.url),
         });

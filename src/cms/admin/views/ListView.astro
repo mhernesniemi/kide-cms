@@ -11,6 +11,7 @@ import {
   formatDate,
   formatFieldValue,
   formatPagePath,
+  getPageHref,
   getLabelField,
   getListColumns,
   getTranslatableFieldNames,
@@ -175,7 +176,7 @@ const tableRows = docs.map((entry: Record<string, unknown>) => {
         : []),
     ],
     searchText: String(entry[getLabelField(collection)] ?? entry.slug ?? entry._id ?? ""),
-    pageHref: pagePath ? `${pagePath}?preview=true` : undefined,
+    pageHref: pagePath ? getPageHref(pagePath, !collection.drafts || entry._status === "published") : undefined,
     values: Object.fromEntries(displayColumns.map((column) => [column, formatColumnValue(column, entry, pagePath)])),
   };
 });

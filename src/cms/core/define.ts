@@ -382,6 +382,8 @@ export type AdminConfig = {
    */
   dateTimePattern?: string;
   nav?: AdminNavItem[];
+  /** "Edit this page" chip on public pages for logged-in editors (default: true). */
+  editBar?: boolean;
   uploads?: AdminUploadConfig;
   rateLimit?: AdminRateLimitConfig;
   auth?: AdminAuthConfig;

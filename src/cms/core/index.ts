@@ -180,6 +180,7 @@ export {
   humanize,
   formatFieldValue,
   formatPagePath,
+  getPageHref,
   getListColumns,
   getFieldGroups,
   getFieldSets,

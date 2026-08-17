@@ -200,6 +200,22 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
       ? normalizeCustomUser(await customProvider.getSession(context.request))
       : await getSessionUser(context.request);
 
+  // Non-httpOnly hint for the public-site edit bar: lets the injected client skip
+  // the session check entirely for anonymous visitors. Carries no auth value — the
+  // edit-bar endpoint verifies the real session. Only ever set/cleared on /admin
+  // responses, which are never cached, so it can't poison the shared cache.
+  const hasEditorHint = (context.request.headers.get("cookie") ?? "").split(/;\s*/).includes("kide-editor=1");
+  const editBarEnabled = config.admin?.editBar !== false;
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  const withEditorHint = (response: Response, loggedIn: boolean) => {
+    if (loggedIn && editBarEnabled && !hasEditorHint) {
+      response.headers.append("Set-Cookie", `kide-editor=1; Path=/; SameSite=Strict${secure}; Max-Age=2592000`);
+    } else if (hasEditorHint && (!loggedIn || !editBarEnabled)) {
+      response.headers.append("Set-Cookie", `kide-editor=; Path=/; SameSite=Strict${secure}; Max-Age=0`);
+    }
+    return response;
+  };
+
   if (!user) {
     // API routes → 401
     if (isAdminApiRoute) {
@@ -209,11 +225,11 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
       });
     }
     // Admin pages → redirect to login
-    return context.redirect("/admin/login");
+    return withEditorHint(context.redirect("/admin/login"), false);
   }
 
   // Attach user to locals for downstream use
   context.locals.user = user;
 
-  return serve();
+  return withEditorHint(await serve(), true);
 };

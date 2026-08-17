@@ -3,7 +3,9 @@ import "@/styles/public.css";
 import { cms } from "@/cms/.generated/api";
 import { safeUrl } from "@kidecms/core";
 
-const { title = "Acme", description = "A marketing site powered by Kide CMS." } = Astro.props;
+// cmsDoc ("<collection>:<id>") marks which document this page renders — the
+// injected client uses it to show logged-in editors an "Edit this page" chip.
+const { title = "Acme", description = "A marketing site powered by Kide CMS.", cmsDoc } = Astro.props;
 type MenuItem = { id: string; label?: string; href?: string; target?: string; children: MenuItem[] };
 
 const menu = await cms.menus.findOne({ slug: "main" });
@@ -27,7 +29,7 @@ const menuItems = rawItems
     <link rel="icon" href="/favicon.ico" />
     <title>{title}</title>
   </head>
-  <body class="flex min-h-screen flex-col overflow-x-clip bg-white text-gray-950 antialiased">
+  <body class="flex min-h-screen flex-col overflow-x-clip bg-white text-gray-950 antialiased" data-cms-doc={cmsDoc}>
     <header class="border-b border-gray-200">
       <div class="mx-auto flex max-w-5xl items-center gap-10 px-6 py-5">
         <a href="/" class="text-base font-semibold tracking-tight no-underline">Acme</a>

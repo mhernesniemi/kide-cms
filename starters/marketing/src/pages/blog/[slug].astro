@@ -16,7 +16,7 @@ if (isPreview) Astro.cache.set(false);
 else Astro.cache.set({ tags: cacheTags("posts", doc._id) });
 ---
 
-<PublicLayout title={doc.title} description={doc.seoDescription}>
+<PublicLayout title={doc.title} description={doc.seoDescription} cmsDoc={`posts:${doc._id}`}>
   <article class="mx-auto max-w-2xl px-6 py-14 sm:py-20">
     <a href="/blog" class="text-sm text-gray-500 no-underline transition-colors hover:text-gray-950">&larr; All posts</a
     >
