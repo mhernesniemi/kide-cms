@@ -101,6 +101,8 @@
 }
 
 @theme inline {
+  --breakpoint-2xl: 100rem; /* 1600px */
+
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", monospace;
 
