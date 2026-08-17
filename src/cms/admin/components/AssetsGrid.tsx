@@ -325,6 +325,7 @@ export default function AssetsGrid({
   const [uploadCount, setUploadCount] = useState(0);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -410,6 +411,7 @@ export default function AssetsGrid({
     (files: FileList) => {
       if (files.length === 0) return;
       setUploadError(null);
+      setUploadNotice(null);
       setUploading(true);
       setUploadCount(files.length);
       setUploadProgress(0);
@@ -424,10 +426,26 @@ export default function AssetsGrid({
         if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
       };
       xhr.onload = () => {
-        setUploading(false);
         if (xhr.status >= 200 && xhr.status < 300) {
+          let uploaded: unknown = null;
+          try {
+            uploaded = JSON.parse(xhr.responseText);
+          } catch {
+            /* fall through to list refresh */
+          }
+          // Single upload → its detail view (matches the old form-flow redirect).
+          if (uploaded && !Array.isArray(uploaded)) {
+            window.location.assign(
+              `/admin/assets/${(uploaded as { _id: string })._id}?_toast=success&_msg=Asset+uploaded`,
+            );
+            return; // keep the busy state until navigation
+          }
+          setUploading(false);
+          setUploadNotice(`${Array.isArray(uploaded) ? uploaded.length : files.length} assets uploaded`);
+          setTimeout(() => setUploadNotice(null), 4000);
           fetchPage(1, query);
         } else {
+          setUploading(false);
           try {
             setUploadError(JSON.parse(xhr.responseText).error ?? "Upload failed.");
           } catch {
@@ -671,7 +689,9 @@ export default function AssetsGrid({
                 {uploading ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    Uploading {uploadCount > 1 ? `${uploadCount} files` : "file"}… {uploadProgress}%
+                    {uploadProgress < 100
+                      ? `Uploading ${uploadCount > 1 ? `${uploadCount} files` : "file"}… ${uploadProgress}%`
+                      : "Processing…"}
                   </>
                 ) : (
                   <>
@@ -694,7 +714,13 @@ export default function AssetsGrid({
               </label>
             </div>
             {uploading && (
-              <div className="bg-muted h-1 w-full overflow-hidden rounded-full">
+              <div
+                role="progressbar"
+                aria-valuenow={uploadProgress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="bg-muted h-1 w-full overflow-hidden rounded-full"
+              >
                 <div
                   className="bg-primary h-full rounded-full transition-[width]"
                   style={{ width: `${uploadProgress}%` }}
@@ -702,6 +728,7 @@ export default function AssetsGrid({
               </div>
             )}
             {uploadError && <p className="text-destructive text-sm">{uploadError}</p>}
+            {uploadNotice && <p className="text-muted-foreground text-sm">{uploadNotice}</p>}
 
             {/* Selection toolbar */}
             {selectedIds.size > 0 && (
