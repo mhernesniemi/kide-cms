@@ -7,6 +7,21 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.16.1] - 2026-08-17
+
+### Fixed
+
+- Files uploaded after `astro build` 404d in production on the Node target: static
+  serving only knows files present at build time. `/uploads/*` is now served
+  through the storage adapter on every platform (previously a Cloudflare-only
+  route). The storage contract gains an optional `getFileStream` — wired in the
+  template's `runtime.ts` (package-mode upgrades see this one-line addition in
+  careful-review); custom adapters without it are served buffered via `getFile`.
+- Booting a production build against a database with no schema (e.g.
+  `pnpm build && pnpm preview` before any `pnpm cms:push`) redirected to
+  `/admin/setup`, which then crashed against the missing tables. The middleware
+  now returns a clear 503 telling you to run `pnpm cms:push`.
+
 ## [0.16.0] - 2026-08-17
 
 ### Added
