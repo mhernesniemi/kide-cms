@@ -332,11 +332,11 @@ const navGroups = [...new Set(navItems.map((item) => item.group))]
         </main>
       ) : (
         <div
-          class="min-h-screen lg:grid"
+          class="min-h-screen xl:grid"
           style="grid-template-columns: 17rem 1fr; transition: grid-template-columns 150ms ease;"
         >
           {/* ── Desktop sidebar ──────────────────────────────────────────── */}
-          <aside class="bg-sidebar/40 sticky top-0 mt-1 hidden h-screen overflow-hidden border-r backdrop-blur transition-transform duration-150 ease-in-out lg:flex lg:flex-col">
+          <aside class="bg-sidebar/40 sticky top-0 mt-1 hidden h-screen overflow-hidden border-r backdrop-blur transition-transform duration-150 ease-in-out xl:flex xl:flex-col">
             <div class="px-3 pt-4 pb-1">
               <button
                 type="button"
@@ -422,7 +422,7 @@ const navGroups = [...new Set(navItems.map((item) => item.group))]
 
           <div class="min-w-0">
             {/* ── Mobile header ────────────────────────────────────────── */}
-            <header class="bg-background/95 supports-backdrop-filter:bg-background/75 flex items-center gap-3 border-b px-4 py-3 backdrop-blur lg:hidden">
+            <header class="bg-background/95 supports-backdrop-filter:bg-background/75 flex items-center gap-3 border-b px-4 py-3 backdrop-blur xl:hidden">
               <MobileSidebar client:load>
                 <div class="px-3 pt-4 pb-1">
                   <button

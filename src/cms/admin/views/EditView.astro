@@ -215,8 +215,8 @@ const publishBlocked =
       variant === "editorial" && "bg-background sticky top-0 z-30 backdrop-blur-md",
     ]}
   >
-    <div class="flex items-center justify-between gap-3">
-      <div class="min-w-0">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2.5">
           <h1 class="truncate text-lg font-semibold tracking-tight md:text-xl">
             {mode === "new" && <LiveHeading client:load initial={`New ${collection.labels.singular}`} />}
@@ -248,7 +248,7 @@ const publishBlocked =
 
       {
         formTab !== "submissions" && (
-          <div class="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
+          <div class="flex flex-wrap items-center gap-2 sm:flex-shrink-0 sm:justify-end">
             {hasPreview && previewUrl && !translationMode && (
               <>
                 <a href={previewUrl} target="_blank" class={buttonVariants({ variant: "outline" })}>
@@ -358,7 +358,7 @@ const publishBlocked =
   </div>
 
   {/* Body — everything below the sticky bar, inset from the page edges */}
-  <div class="space-y-6 px-4 pb-8 lg:pr-8 lg:pb-12 lg:pl-20">
+  <div class="space-y-6 px-4 pb-8 lg:pr-8 lg:pb-12 lg:pl-8 2xl:pl-20">
     {
       /* Collaboration review strip. Margins live on this wrapper, which only
         renders when collaboration is enabled, so non-collab edit views are
@@ -425,7 +425,9 @@ const publishBlocked =
                 action={getFormAction(collection.slug, mode === "edit" ? documentId : undefined)}
                 class:list={[
                   "grid items-start gap-y-10",
-                  hasSidebarColumn ? "2xl:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] 2xl:gap-x-20" : "max-w-3xl",
+                  hasSidebarColumn
+                    ? "gap-x-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] 2xl:gap-x-20"
+                    : "max-w-3xl",
                 ]}
               >
                 <input type="hidden" name="_action" value={mode === "new" ? "create" : "update"} />
@@ -533,7 +535,7 @@ const publishBlocked =
                 </div>
 
                 {hasSidebarColumn && (
-                  <div class="text-sm 2xl:border-l 2xl:pl-8 [&_button]:text-sm [&_input]:text-sm [&_select]:text-sm [&_textarea]:text-sm">
+                  <div class="text-sm lg:border-l lg:pl-8 [&_button]:text-sm [&_input]:text-sm [&_select]:text-sm [&_textarea]:text-sm">
                     <div class="space-y-6">
                       {effectiveSidebarFieldSets.map((set) => {
                         const fields = (
