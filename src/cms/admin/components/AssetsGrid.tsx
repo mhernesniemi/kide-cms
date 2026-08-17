@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import type { CSSProperties } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -51,6 +52,8 @@ type AssetItem = {
   mimeType: string;
   url: string;
   alt: string | null;
+  focalX: number | null;
+  focalY: number | null;
   _createdAt: string;
 };
 
@@ -78,6 +81,13 @@ type Props = {
   total: number;
   pageSize: number;
 };
+
+// object-cover crops around the CSS center by default — steer it to the asset's
+// focal point instead, when one is set.
+function focalPointStyle(asset: Pick<AssetItem, "focalX" | "focalY">): CSSProperties | undefined {
+  if (asset.focalX == null || asset.focalY == null) return undefined;
+  return { objectPosition: `${asset.focalX}% ${asset.focalY}%` };
+}
 
 // Build a "/admin/assets" URL for a sidebar scope ("all" | "unfiled" | folderId).
 // "all" is the bare route; "unfiled" and folder ids ride on the `folder` param.
@@ -115,7 +125,12 @@ function DraggableAssetCard({
           <div className="relative">
             {asset.mimeType.startsWith("image/") ? (
               <div className="bg-muted/30 aspect-square w-full overflow-hidden">
-                <img src={thumbnail(asset.url)} alt={asset.alt ?? asset.filename} className="size-full object-cover" />
+                <img
+                  src={thumbnail(asset.url)}
+                  alt={asset.alt ?? asset.filename}
+                  className="size-full object-cover"
+                  style={focalPointStyle(asset)}
+                />
               </div>
             ) : (
               <div className="bg-muted/30 flex aspect-square items-center justify-center">
@@ -258,7 +273,12 @@ function AssetDragOverlay({ asset }: { asset: AssetItem }) {
         <div className="relative">
           {asset.mimeType.startsWith("image/") ? (
             <div className="bg-muted/30 aspect-square w-full overflow-hidden">
-              <img src={thumbnail(asset.url)} alt={asset.alt ?? asset.filename} className="size-full object-cover" />
+              <img
+                src={thumbnail(asset.url)}
+                alt={asset.alt ?? asset.filename}
+                className="size-full object-cover"
+                style={focalPointStyle(asset)}
+              />
             </div>
           ) : (
             <div className="bg-muted/30 flex aspect-square items-center justify-center">
@@ -328,6 +348,8 @@ export default function AssetsGrid({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const dragDepthRef = useRef(0);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -462,6 +484,36 @@ export default function AssetsGrid({
       xhr.send(formData);
     },
     [currentFolderId, fetchPage, query],
+  );
+
+  // OS-level file drag onto the page. Guarded on the "Files" drag type so this never
+  // fires for dnd-kit's own pointer-based asset-card dragging (no DataTransfer involved
+  // there) or for dragging text/selections. A depth counter avoids overlay flicker as
+  // the pointer crosses child element boundaries while dragging over the page.
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    dragDepthRef.current += 1;
+    setIsDraggingFile(true);
+  }, []);
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+  }, []);
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setIsDraggingFile(false);
+  }, []);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      if (!e.dataTransfer.types.includes("Files")) return;
+      e.preventDefault();
+      dragDepthRef.current = 0;
+      setIsDraggingFile(false);
+      if (e.dataTransfer.files.length > 0) handleFilesSelected(e.dataTransfer.files);
+    },
+    [handleFilesSelected],
   );
 
   // Debounce the filter box: re-query from page 1 on every keystroke. Skip the
@@ -616,7 +668,19 @@ export default function AssetsGrid({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <section className="px-4 py-6 lg:py-8 lg:pr-8 lg:pl-12">
+      <section
+        className="relative px-4 py-6 lg:py-8 lg:pr-8 lg:pl-12"
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {isDraggingFile && (
+          <div className="border-primary bg-background/90 pointer-events-none absolute inset-0 z-50 m-2 flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed backdrop-blur-sm">
+            <Upload className="text-primary size-10" />
+            <p className="text-foreground text-sm font-medium">Drop to upload</p>
+          </div>
+        )}
         <h1 className="mb-6 text-2xl font-semibold tracking-tight">Assets</h1>
 
         <div className="grid gap-8 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-0">

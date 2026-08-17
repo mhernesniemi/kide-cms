@@ -131,11 +131,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
+  // Dev only: let Vite's dev server catch up on the new files before the client
+  // reloads, or the just-uploaded asset renders broken until a manual refresh.
+  if (import.meta.env.DEV) {
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+
   const redirectTo = formData.get("redirectTo");
 
   if (redirectTo) {
-    // Delay so Vite's dev server picks up the new files before the redirect
-    await new Promise((r) => setTimeout(r, 1000));
     const location =
       uploaded.length === 1
         ? `/admin/assets/${uploaded[0]._id}?_toast=success&_msg=Asset+uploaded`
