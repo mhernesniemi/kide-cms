@@ -565,7 +565,7 @@ export default function ContentEditor({
       className={cn(
         isFullscreen
           ? "bg-background fixed inset-0 z-50 flex flex-col"
-          : "border-input hover:border-foreground/20 bg-muted/30 dark:bg-input/10 relative overflow-hidden rounded-lg border transition-colors",
+          : "border-input hover:border-foreground/20 bg-field relative overflow-hidden rounded-lg border transition-colors",
       )}
     >
       <input ref={hiddenRef} type="hidden" name={name} value={cmsJson} />

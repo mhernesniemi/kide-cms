@@ -761,7 +761,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
           className={
             items.length > 0
               ? "bg-muted-strong/50 rounded-lg border"
-              : "bg-muted/20 flex h-20 items-center justify-center rounded-lg border border-dashed"
+              : "bg-field-subtle flex h-20 items-center justify-center rounded-lg border border-dashed"
           }
         >
           {items.length > 0 ? (

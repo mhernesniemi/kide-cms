@@ -83,7 +83,7 @@ export default function FocalPointSelector({ src, alt, focalX: initialX, focalY:
           </div>
         )}
       </div>
-      <div className="bg-muted/30 relative cursor-crosshair overflow-hidden rounded-md" onClick={handleClick}>
+      <div className="bg-field relative cursor-crosshair overflow-hidden rounded-md" onClick={handleClick}>
         <img ref={imageRef} src={src} alt={alt} className="w-full object-contain" draggable={false} />
         {hasFocal && (
           <div
@@ -102,7 +102,7 @@ export default function FocalPointSelector({ src, alt, focalX: initialX, focalY:
             {presets.map((preset) => (
               <div key={preset.name} className="space-y-1">
                 <div
-                  className="bg-muted/30 w-24 overflow-hidden rounded-sm"
+                  className="bg-field w-24 overflow-hidden rounded-sm"
                   style={{ aspectRatio: preset.aspect.replace(/[:x]/, "/") }}
                 >
                   <img

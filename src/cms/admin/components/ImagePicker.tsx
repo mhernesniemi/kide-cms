@@ -94,7 +94,7 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
               <img src={imgSrc} alt="" className="size-full object-cover" />
             </a>
           ) : (
-            <div className="bg-muted/30 flex size-40 items-center justify-center rounded-lg border">
+            <div className="bg-field flex size-40 items-center justify-center rounded-lg border">
               <span className="text-muted-foreground truncate px-4 text-sm">{value}</span>
             </div>
           )}

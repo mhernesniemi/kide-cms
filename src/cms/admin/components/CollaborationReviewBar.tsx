@@ -134,7 +134,7 @@ export default function CollaborationReviewBar(props: Props) {
 
   return (
     <>
-      <div className="bg-muted/30 flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border px-4 py-2.5">
+      <div className="bg-field flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border px-4 py-2.5">
         {/* Left — review status + the action for this stage */}
         <div className="flex flex-wrap items-center gap-2.5">
           {reviewState === "changes_requested" ? (

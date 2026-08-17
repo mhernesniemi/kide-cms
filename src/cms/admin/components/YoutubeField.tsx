@@ -37,7 +37,7 @@ export default function YoutubeField({ value = "", placeholder, onChange }: Prop
         ) : (
           <div
             className={cn(
-              "bg-muted/30 text-muted-foreground flex aspect-video w-64 max-w-full items-center justify-center rounded-lg border px-4 text-center text-sm",
+              "bg-field text-muted-foreground flex aspect-video w-64 max-w-full items-center justify-center rounded-lg border px-4 text-center text-sm",
             )}
           >
             Not a recognized YouTube URL

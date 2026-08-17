@@ -57,7 +57,7 @@ function SortableRow({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "bg-muted-strong/50 has-[[data-drag-handle]:hover]:bg-muted-strong/70 flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors",
+        "bg-field flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors",
         isDragging && "z-10 opacity-90 shadow-lg",
       )}
     >

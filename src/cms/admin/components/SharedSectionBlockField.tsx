@@ -54,7 +54,7 @@ export default function SharedSectionBlockField({ name, value, types, blockRelat
 
   if (typeNames.length === 0) {
     return (
-      <div className="bg-muted/20 text-muted-foreground rounded-lg border border-dashed px-4 py-3 text-sm">
+      <div className="bg-field-subtle text-muted-foreground rounded-lg border border-dashed px-4 py-3 text-sm">
         Add at least one block type to a collection before creating shared sections.
       </div>
     );

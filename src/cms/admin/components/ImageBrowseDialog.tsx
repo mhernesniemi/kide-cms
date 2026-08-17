@@ -162,7 +162,7 @@ export default function ImageBrowseDialog({ open, onOpenChange, onSelect }: Prop
                 </div>
               ) : (
                 browse.folders.length === 0 && (
-                  <div className="bg-muted/20 text-muted-foreground flex h-48 items-center justify-center rounded-lg border border-dashed text-sm">
+                  <div className="bg-field-subtle text-muted-foreground flex h-48 items-center justify-center rounded-lg border border-dashed text-sm">
                     {browse.folderId ? "This folder is empty." : "No images uploaded yet."}
                   </div>
                 )

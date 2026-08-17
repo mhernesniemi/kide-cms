@@ -850,7 +850,7 @@ export default function AssetsGrid({
                 <CardContent className="text-muted-foreground py-12 text-center text-sm">Searching…</CardContent>
               </Card>
             ) : (
-              <div className="bg-muted/20 flex h-40 flex-col items-center justify-center gap-3 rounded-lg border border-dashed">
+              <div className="bg-field-subtle flex h-40 flex-col items-center justify-center gap-3 rounded-lg border border-dashed">
                 <ImagePlus className="text-muted-foreground/30 size-12" />
                 <p className="text-muted-foreground text-sm">{emptyStateMessage}</p>
               </div>

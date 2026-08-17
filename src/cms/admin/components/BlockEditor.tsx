@@ -477,7 +477,7 @@ export default function BlockEditor({
       <input type="hidden" ref={hiddenRef} name={name} value={serialized} />
 
       {blocks.length === 0 && (
-        <div className="bg-muted/20 flex h-20 items-center justify-center rounded-lg border border-dashed">
+        <div className="bg-field-subtle flex h-20 items-center justify-center rounded-lg border border-dashed">
           <p className="text-muted-foreground text-sm">No blocks added yet</p>
         </div>
       )}
