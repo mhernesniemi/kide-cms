@@ -150,7 +150,11 @@ export const getListColumns = (collection: CollectionConfig, viewConfig?: { colu
     return collection.drafts ? viewConfig.columns : viewConfig.columns.filter((column) => column !== "_status");
   }
   const firstField = "title" in collection.fields ? "title" : Object.keys(collection.fields)[0];
-  return collection.drafts ? [firstField, "_status", "_updatedAt"] : [firstField, "_updatedAt"];
+  const columns = [firstField];
+  if (collection.drafts) columns.push("_status");
+  if (collection.timestamps !== false) columns.push("_createdAt");
+  columns.push("_updatedAt");
+  return columns;
 };
 
 /**

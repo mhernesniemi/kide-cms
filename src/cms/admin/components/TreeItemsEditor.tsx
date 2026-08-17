@@ -434,7 +434,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
             value={editing.label}
             onChange={(e) => updateEditing({ label: e.target.value })}
             placeholder="Label"
-            className="h-7 min-w-0 flex-3 text-sm"
+            className="bg-background h-7 min-w-0 flex-3 text-sm"
             autoFocus
             onKeyDown={editKeyHandler}
           />
@@ -449,7 +449,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
               updateEditing({ linkType: newType, ...(newType === "internal" ? { href: "" } : {}) });
             }}
           >
-            <SelectTrigger className="h-7! min-w-0 flex-2 text-sm">
+            <SelectTrigger className="bg-background h-7! min-w-0 flex-2 text-sm">
               <SelectValue placeholder="Link type" />
             </SelectTrigger>
             <SelectContent>
@@ -464,7 +464,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
               value={editing.href}
               onChange={(e) => updateEditing({ href: e.target.value })}
               placeholder="https://..."
-              className="h-7 min-w-0 flex-3 text-sm"
+              className="bg-background h-7 min-w-0 flex-3 text-sm"
               onKeyDown={editKeyHandler}
             />
           ) : (
@@ -488,7 +488,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
             updateEditing({ name, ...(editing.autoSlug ? { slug: slugify(name) } : {}) });
           }}
           placeholder="Name"
-          className="h-7 flex-1 text-sm"
+          className="bg-background h-7 flex-1 text-sm"
           autoFocus
           onKeyDown={editKeyHandler}
         />
@@ -496,7 +496,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
           value={editing.slug}
           onChange={(e) => updateEditing({ slug: e.target.value, autoSlug: false })}
           placeholder="slug"
-          className="h-7 w-36 text-sm"
+          className="bg-background h-7 w-36 text-sm"
           onKeyDown={editKeyHandler}
         />
       </>
