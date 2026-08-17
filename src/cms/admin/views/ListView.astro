@@ -12,6 +12,7 @@ import {
   formatFieldValue,
   getLabelField,
   getListColumns,
+  getTranslatableFieldNames,
   humanize,
   resolveCollaboration,
 } from "../../core";
@@ -22,6 +23,7 @@ type CollectionLike = {
   slug: string;
   labels: { singular: string; plural: string };
   drafts?: boolean;
+  auth?: boolean;
   fields: Record<string, any>;
   views?: Record<string, any>;
 };
@@ -32,6 +34,9 @@ const runtimeContext = user ? { user } : {};
 const cmsRuntime = cms as Record<string, any>;
 const defaultLocale = config.locales?.default ?? "en";
 const locales = config.locales?.supported ?? [];
+// The Locales column only means something when there's more than one locale
+// and this collection actually has translatable fields to show per-locale.
+const showLocalesColumn = locales.length > 1 && getTranslatableFieldNames(collection).length > 0;
 
 const viewConfig = collection.views ?? {};
 const defaultSort = viewConfig.list?.defaultSort ?? { field: "_updatedAt", direction: "desc" };
@@ -173,6 +178,8 @@ const tableRows = docs.map((entry: Record<string, unknown>) => ({
     client:load
     collectionSlug={collection.slug}
     draftsEnabled={collection.drafts}
+    duplicateEnabled={!collection.auth}
+    showLocalesColumn={showLocalesColumn}
     defaultLocale={locales.length > 1 ? defaultLocale : undefined}
     labelField={getLabelField(collection)}
     newHref={`/admin/${collection.slug}/new`}

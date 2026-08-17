@@ -81,6 +81,8 @@ type DocumentsDataTableProps = {
   collectionSlug: string;
   draftsEnabled?: boolean;
   duplicateEnabled?: boolean;
+  /** Show the Locales column. Defaults to true for callers (e.g. Recent) that mix collections. */
+  showLocalesColumn?: boolean;
   defaultLocale?: string;
   labelField?: string;
   newHref?: string;
@@ -138,6 +140,7 @@ export default function DocumentsDataTable({
   collectionSlug,
   draftsEnabled = false,
   duplicateEnabled = true,
+  showLocalesColumn = true,
   defaultLocale,
   labelField = "title",
   newHref,
@@ -517,25 +520,35 @@ export default function DocumentsDataTable({
           );
         },
       })),
-      {
-        accessorFn: (row) => row.locales.join(", "),
-        id: "locales",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Locales" />,
-        cell: ({ row }) => (
-          <div className="flex flex-wrap gap-1.5">
-            {row.original.locales.map((locale) => (
-              <a key={locale} href={`${row.original.editHref}?locale=${locale}`} onClick={(e) => e.stopPropagation()}>
-                <Badge
-                  variant="outline"
-                  className="text-muted-foreground hover:border-foreground/50 hover:text-foreground uppercase transition-colors"
-                >
-                  {locale}
-                </Badge>
-              </a>
-            ))}
-          </div>
-        ),
-      },
+      ...(showLocalesColumn
+        ? [
+            {
+              accessorFn: (row: DataTableRow) => row.locales.join(", "),
+              id: "locales",
+              header: ({ column }: { column: Column<DataTableRow, unknown> }) => (
+                <DataTableColumnHeader column={column} title="Locales" />
+              ),
+              cell: ({ row }: { row: { original: DataTableRow } }) => (
+                <div className="flex flex-wrap gap-1.5">
+                  {row.original.locales.map((locale) => (
+                    <a
+                      key={locale}
+                      href={`${row.original.editHref}?locale=${locale}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Badge
+                        variant="outline"
+                        className="text-muted-foreground hover:border-foreground/50 hover:text-foreground uppercase transition-colors"
+                      >
+                        {locale}
+                      </Badge>
+                    </a>
+                  ))}
+                </div>
+              ),
+            } as ColumnDef<DataTableRow>,
+          ]
+        : []),
       {
         id: "actions",
         enableSorting: false,
@@ -605,7 +618,7 @@ export default function DocumentsDataTable({
         ),
       },
     ],
-    [columns, draftsEnabled, duplicateEnabled, isPending, primaryColumnKey, isServerMode, runAction],
+    [columns, draftsEnabled, duplicateEnabled, showLocalesColumn, isPending, primaryColumnKey, isServerMode, runAction],
   );
 
   const table = useReactTable({

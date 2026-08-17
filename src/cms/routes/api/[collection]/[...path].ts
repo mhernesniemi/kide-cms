@@ -330,11 +330,16 @@ export const POST: APIRoute = async ({ params, request, locals, cache }) => {
   }
 
   if (pathAction === "duplicate" && documentId) {
+    const collection = getCollection(collectionSlug);
+    if (collection.auth) {
+      // Duplicating a user would copy its password hash onto a new account —
+      // never useful, and not something field-stripping alone can make safe.
+      return Response.json({ error: "Auth collections can't be duplicated." }, { status: 400 });
+    }
     const original = await collectionApi.findById(documentId, { status: "any" }, ctx);
     if (!original) {
       return Response.json({ error: "Not found." }, { status: 404 });
     }
-    const collection = getCollection(collectionSlug);
 
     // Strip system fields and unique values that would conflict
     const stripFields = (source: Record<string, any>) => {
