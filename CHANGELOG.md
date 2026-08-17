@@ -7,6 +7,28 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.16.2] - 2026-08-17
+
+### Removed
+
+- `database.dialect`/`database.url` config and the field-level `indexed` option:
+  both were accepted but never consumed anywhere — `"postgres"` in particular
+  implied support that never existed. The database engine is entirely determined
+  by the project's `adapters/db.ts`, not a declared dialect. Existing configs
+  with `database: { dialect: "sqlite" }` or `indexed: true` on a field just drop
+  the line — neither ever had any effect.
+
+### Changed
+
+- Dark-mode input/textarea/select/checkbox fills had much higher contrast against
+  the page background than their light-mode equivalents (roughly 10x, from a
+  token that's also shared with the border color). Toned down to ~3.5x — still
+  visible, no longer the odd one out between themes.
+- Dark-mode outline/input-styled buttons share that same fill token, but a
+  button needs to read as clickable, not recede like a field — bumped their
+  fill back up (independent from the form-control value) so they don't blend
+  into the page in dark mode.
+
 ## [0.16.1] - 2026-08-17
 
 ### Fixed
