@@ -10,19 +10,14 @@ import config from "virtual:kide/config";
 
 export const prerender = false;
 
+const ERROR_MESSAGES: Record<string, string> = {
+  invalid: "Invalid email or password.",
+  missing: "Email and password are required.",
+  disabled: "Password login is disabled.",
+  "rate-limited": "Too many attempts. Try again in a few minutes.",
+};
 const error = Astro.url.searchParams.get("error");
-const errorMessage =
-  error === "invalid"
-    ? "Invalid email or password."
-    : error === "missing"
-      ? "Email and password are required."
-      : error === "disabled"
-        ? "Password login is disabled."
-        : error === "rate-limited"
-          ? "Too many attempts. Try again in a few minutes."
-          : error
-            ? "Sign-in failed. Try again."
-            : null;
+const errorMessage = error ? (ERROR_MESSAGES[error] ?? "Sign-in failed. Try again.") : null;
 const auth = resolveAdminAuth(config);
 ---
 

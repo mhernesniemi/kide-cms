@@ -10,6 +10,7 @@ import { REVIEW_STATE_META } from "../lib/collaboration";
 import {
   formatDate,
   formatFieldValue,
+  formatPagePath,
   getLabelField,
   getListColumns,
   getTranslatableFieldNames,
@@ -24,6 +25,8 @@ type CollectionLike = {
   labels: { singular: string; plural: string };
   drafts?: boolean;
   auth?: boolean;
+  preview?: boolean | string;
+  pathPrefix?: string;
   fields: Record<string, any>;
   views?: Record<string, any>;
 };
@@ -122,40 +125,60 @@ const sharedSectionUsageCounts =
         runtimeContext,
       )
     : {};
-const tableRows = docs.map((entry: Record<string, unknown>) => ({
-  id: String(entry._id),
-  editHref: `/admin/${collection.slug}/${entry._id}`,
-  status: getVisualStatus(entry),
-  locales: [
-    defaultLocale,
-    ...(Array.isArray(entry._availableLocales)
-      ? entry._availableLocales.map((l) => String(l)).filter((l) => l !== defaultLocale)
-      : []),
-  ],
-  searchText: String(entry[getLabelField(collection)] ?? entry.slug ?? entry._id ?? ""),
-  values: Object.fromEntries(
-    displayColumns.map((column) => [
-      column,
-      column === "__review"
-        ? REVIEW_STATE_META[
-            (collabStates[String(entry._id)]?.reviewState ?? "in_progress") as keyof typeof REVIEW_STATE_META
-          ].label
-        : column === "__editor"
-          ? collabStates[String(entry._id)]?.editor
-            ? (collabUserNames[collabStates[String(entry._id)]!.editor!] ?? "—")
-            : "Unassigned"
-          : column === "_status"
-            ? getVisualStatus(entry)
-            : column === "__usage"
-              ? `${sharedSectionUsageCounts[String(entry._id)] ?? 0} places`
-              : column === "_updatedAt" || column === "_createdAt"
-                ? formatDate(entry[column])
-                : column.startsWith("_")
-                  ? String(entry[column] ?? "—")
-                  : formatFieldValue(collection.fields[column], entry[column], relationLabels),
-    ]),
-  ),
-}));
+const hasPageColumn = displayColumns.includes("__page");
+
+// Mirrors EditView's own hasPreview/previewUrl logic, so the listed URL matches
+// what the document's own "Preview" button links to.
+const getPagePath = (entry: Record<string, unknown>): string | null => {
+  const hasPreview = hasPageColumn && !!(collection.preview || (collection.pathPrefix && entry?.slug));
+  if (!hasPreview) return null;
+  return typeof collection.preview === "string"
+    ? collection.preview
+    : cms.meta.getRouteForDocument(collection.slug, entry);
+};
+
+const COLUMN_LABELS: Record<string, string> = {
+  __usage: "Used in",
+  __review: "Review",
+  __editor: "Editor",
+  __page: "URL",
+};
+const getColumnLabel = (column: string) => COLUMN_LABELS[column] ?? humanize(column);
+
+const formatColumnValue = (column: string, entry: Record<string, unknown>, pagePath: string | null): string => {
+  if (column === "__review") {
+    const reviewState = collabStates[String(entry._id)]?.reviewState ?? "in_progress";
+    return REVIEW_STATE_META[reviewState as keyof typeof REVIEW_STATE_META].label;
+  }
+  if (column === "__editor") {
+    const editorId = collabStates[String(entry._id)]?.editor;
+    return editorId ? (collabUserNames[editorId] ?? "—") : "Unassigned";
+  }
+  if (column === "_status") return getVisualStatus(entry);
+  if (column === "__usage") return `${sharedSectionUsageCounts[String(entry._id)] ?? 0} places`;
+  if (column === "__page") return formatPagePath(pagePath);
+  if (column === "_updatedAt" || column === "_createdAt") return formatDate(entry[column]);
+  if (column.startsWith("_")) return String(entry[column] ?? "—");
+  return formatFieldValue(collection.fields[column], entry[column], relationLabels);
+};
+
+const tableRows = docs.map((entry: Record<string, unknown>) => {
+  const pagePath = getPagePath(entry);
+  return {
+    id: String(entry._id),
+    editHref: `/admin/${collection.slug}/${entry._id}`,
+    status: getVisualStatus(entry),
+    locales: [
+      defaultLocale,
+      ...(Array.isArray(entry._availableLocales)
+        ? entry._availableLocales.map((l) => String(l)).filter((l) => l !== defaultLocale)
+        : []),
+    ],
+    searchText: String(entry[getLabelField(collection)] ?? entry.slug ?? entry._id ?? ""),
+    pageHref: pagePath ? `${pagePath}?preview=true` : undefined,
+    values: Object.fromEntries(displayColumns.map((column) => [column, formatColumnValue(column, entry, pagePath)])),
+  };
+});
 ---
 
 <section class="space-y-6 px-4 py-6 lg:py-8 lg:pr-8 lg:pl-12">
@@ -186,14 +209,7 @@ const tableRows = docs.map((entry: Record<string, unknown>) => ({
     title={collection.labels.plural}
     columns={displayColumns.map((column) => ({
       key: column,
-      label:
-        column === "__usage"
-          ? "Used in"
-          : column === "__review"
-            ? "Review"
-            : column === "__editor"
-              ? "Editor"
-              : humanize(column),
+      label: getColumnLabel(column),
       sortable: !column.startsWith("__"),
     }))}
     data={tableRows}

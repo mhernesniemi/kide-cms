@@ -17,6 +17,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  ArrowUpRight,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -65,6 +66,8 @@ type DataTableRow = {
   locales: string[];
   searchText: string;
   values: Record<string, string>;
+  /** Live URL for the "__page" column (e.g. Singles), rendered as an external link. */
+  pageHref?: string;
 };
 
 type ServerPaginationConfig = {
@@ -113,6 +116,16 @@ const getVisualStatus = (d: Record<string, unknown>): string => {
   if (status === "scheduled") return "scheduled";
   if (status === "published" && d._published) return "changed";
   return status;
+};
+
+// Rebuilds row values after a client-side re-fetch (sort/search/page change). The
+// "__page"/"__usage" values are pre-computed server-side (see the collection GET route)
+// since they aren't stored fields — this just reads them back.
+const formatRowValue = (columnKey: string, entry: Record<string, unknown>): string => {
+  if (columnKey === "_status") return getVisualStatus(entry);
+  if (columnKey === "__usage") return `${Number(entry.__usage ?? 0)} places`;
+  if (columnKey === "_updatedAt" || columnKey === "_createdAt") return formatDateClient(entry[columnKey]);
+  return String(entry[columnKey] ?? "—");
 };
 
 function DataTableColumnHeader({ column, title }: { column: Column<DataTableRow, unknown>; title: string }) {
@@ -238,18 +251,8 @@ export default function DocumentsDataTable({
                 : []),
             ],
             searchText: String(entry[labelField] ?? entry.slug ?? entry._id ?? ""),
-            values: Object.fromEntries(
-              columns.map((column) => [
-                column.key,
-                column.key === "_status"
-                  ? getVisualStatus(entry)
-                  : column.key === "__usage"
-                    ? `${Number(entry.__usage ?? 0)} places`
-                    : column.key === "_updatedAt" || column.key === "_createdAt"
-                      ? formatDateClient(entry[column.key])
-                      : String(entry[column.key] ?? "\u2014"),
-              ]),
-            ),
+            pageHref: entry._pageHref as string | undefined,
+            values: Object.fromEntries(columns.map((column) => [column.key, formatRowValue(column.key, entry)])),
           })),
         );
         setServerTotalDocs(result.totalDocs);
@@ -501,6 +504,23 @@ export default function DocumentsDataTable({
                 status={row.original.status ?? value}
                 className="text-muted-foreground text-sm font-normal"
               />
+            );
+          }
+          if (column.key === "__page") {
+            return row.original.pageHref ? (
+              <a
+                href={row.original.pageHref}
+                target="_blank"
+                rel="noreferrer"
+                title={value}
+                onClick={(e) => e.stopPropagation()}
+                className="text-muted-foreground hover:text-foreground inline-flex max-w-64 min-w-0 items-center gap-1 underline-offset-2 hover:underline"
+              >
+                <span className="truncate">{value}</span>
+                <ArrowUpRight className="size-3.5 shrink-0" />
+              </a>
+            ) : (
+              <div className="text-muted-foreground max-w-64 truncate">{value}</div>
             );
           }
           const isPrimary = column.key === primaryColumnKey;

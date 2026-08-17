@@ -599,6 +599,14 @@ export default function AssetsGrid({
     location.reload();
   }
 
+  const emptyStateMessage = query.trim()
+    ? `No assets match “${query.trim()}”.`
+    : scope === "unfiled"
+      ? "No unfiled assets."
+      : scope === "all"
+        ? "No assets uploaded yet."
+        : "This folder is empty.";
+
   return (
     <DndContext
       sensors={sensors}
@@ -780,15 +788,7 @@ export default function AssetsGrid({
             ) : (
               <div className="bg-muted/20 flex h-40 flex-col items-center justify-center gap-3 rounded-lg border border-dashed">
                 <ImagePlus className="text-muted-foreground/30 size-12" />
-                <p className="text-muted-foreground text-sm">
-                  {query.trim()
-                    ? `No assets match “${query.trim()}”.`
-                    : scope === "unfiled"
-                      ? "No unfiled assets."
-                      : scope === "all"
-                        ? "No assets uploaded yet."
-                        : "This folder is empty."}
-                </p>
+                <p className="text-muted-foreground text-sm">{emptyStateMessage}</p>
               </div>
             )}
 

@@ -21,15 +21,13 @@ if (tables.users) {
   }
 }
 
+const ERROR_MESSAGES: Record<string, string> = {
+  missing: "All fields are required.",
+  password: "Passwords do not match.",
+  short: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+};
 const error = Astro.url.searchParams.get("error");
-const errorMessage =
-  error === "missing"
-    ? "All fields are required."
-    : error === "password"
-      ? "Passwords do not match."
-      : error === "short"
-        ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
-        : null;
+const errorMessage = error ? (ERROR_MESSAGES[error] ?? null) : null;
 ---
 
 <!doctype html>

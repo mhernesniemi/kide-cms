@@ -3,7 +3,7 @@ import type { APIRoute } from "astro";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { collaboration } from "virtual:kide/runtime";
-import { isApprover, resolveCollaboration } from "../../../core";
+import { formatPagePath, isApprover, resolveCollaboration } from "../../../core";
 import { loadSharedSectionUsageCounts } from "../../../admin/lib/edit-data";
 
 export const prerender = false;
@@ -124,13 +124,13 @@ const handleHtmlMutation = async (
           ctx,
         );
       }
+      const CREATE_MESSAGES: Record<string, string> = {
+        publish: `${name} created and published`,
+        schedule: `${name} scheduled`,
+      };
       const msg = blocked
         ? `${name} saved as draft — needs review approval before publishing`
-        : intent === "publish"
-          ? `${name} created and published`
-          : intent === "schedule"
-            ? `${name} scheduled`
-            : `${name} created`;
+        : (CREATE_MESSAGES[intent] ?? `${name} created`);
       return redirect(`/admin/${collectionSlug}/${created._id}`, { status: blocked ? "error" : "success", msg });
     }
 
@@ -158,19 +158,15 @@ const handleHtmlMutation = async (
         const actor = locals.user ? { id: locals.user.id, email: locals.user.email, role: locals.user.role } : null;
         await collaboration.submitForReview(collectionSlug, documentId, actor);
       }
+      const UPDATE_MESSAGES: Record<string, string> = {
+        publish: `${name} published`,
+        unpublish: `${name} unpublished`,
+        schedule: `${name} scheduled`,
+        "submit-review": "Saved and submitted for review",
+      };
       const msg = blocked
         ? `Saved — needs review approval before publishing`
-        : intent === "publish"
-          ? `${name} published`
-          : intent === "unpublish"
-            ? `${name} unpublished`
-            : intent === "schedule"
-              ? `${name} scheduled`
-              : intent === "submit-review"
-                ? `Saved and submitted for review`
-                : collection.drafts
-                  ? `${name} saved as draft`
-                  : `${name} saved`;
+        : (UPDATE_MESSAGES[intent] ?? (collection.drafts ? `${name} saved as draft` : `${name} saved`));
       return redirect(redirectTo, { status: blocked ? "error" : "success", msg });
     }
 
@@ -284,6 +280,23 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
     );
     for (const entry of docs as Array<Record<string, unknown>>) {
       entry.__usage = usageCounts[String(entry._id)] ?? 0;
+    }
+  }
+
+  // The list table's "URL" column is computed, not stored — resolve it here too so
+  // client-side re-fetches (sort/search/page changes) keep showing it. Mirrors
+  // ListView.astro's own getPagePath, since both run server-side against the same collection config.
+  const collection = getCollection(collectionSlug);
+  if (collection.preview || collection.pathPrefix) {
+    for (const entry of docs as Array<Record<string, unknown>>) {
+      const hasPreview = !!(collection.preview || (collection.pathPrefix && entry.slug));
+      const pagePath = hasPreview
+        ? typeof collection.preview === "string"
+          ? collection.preview
+          : cmsRuntime.meta.getRouteForDocument(collectionSlug, entry)
+        : null;
+      if (pagePath) entry._pageHref = `${pagePath}?preview=true`;
+      entry.__page = formatPagePath(pagePath);
     }
   }
 

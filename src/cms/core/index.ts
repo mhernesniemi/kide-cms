@@ -179,6 +179,7 @@ export {
   resolveAdminRoute,
   humanize,
   formatFieldValue,
+  formatPagePath,
   getListColumns,
   getFieldGroups,
   getFieldSets,

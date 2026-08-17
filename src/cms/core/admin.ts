@@ -103,6 +103,9 @@ export const resolveAdminRoute = (path: string | undefined): AdminRoute => {
   };
 };
 
+/** Display text for a document's public URL in list tables — the bare root path reads as "Homepage" instead of "/". */
+export const formatPagePath = (path: string | null | undefined) => (path === "/" ? "Homepage" : (path ?? "—"));
+
 export const humanize = (value: string) =>
   value
     .replace(/^_+/, "")
@@ -151,6 +154,7 @@ export const getListColumns = (collection: CollectionConfig, viewConfig?: { colu
   }
   const firstField = "title" in collection.fields ? "title" : Object.keys(collection.fields)[0];
   const columns = [firstField];
+  if (collection.preview || collection.pathPrefix) columns.push("__page");
   if (collection.drafts) columns.push("_status");
   if (collection.timestamps !== false) columns.push("_createdAt");
   columns.push("_updatedAt");

@@ -32,16 +32,14 @@ if (token) {
   }
 }
 
-const errorMessage =
-  error === "missing"
-    ? "Name and password are required."
-    : error === "password"
-      ? "Passwords do not match."
-      : error === "short"
-        ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
-        : error === "expired" || error === "invalid"
-          ? "This invite link has expired or already been used."
-          : null;
+const ERROR_MESSAGES: Record<string, string> = {
+  missing: "Name and password are required.",
+  password: "Passwords do not match.",
+  short: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+  expired: "This invite link has expired or already been used.",
+  invalid: "This invite link has expired or already been used.",
+};
+const errorMessage = error ? (ERROR_MESSAGES[error] ?? null) : null;
 ---
 
 <!doctype html>

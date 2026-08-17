@@ -77,15 +77,8 @@ const {
 const label = field.label ?? humanize(name);
 const placeholder = field.admin?.placeholder ?? "";
 const serializedValue = serializeFieldValue(field, value);
-const rows =
-  field.admin?.rows ??
-  (field.type === "richText" || field.type === "content"
-    ? field.type === "content"
-      ? 14
-      : 10
-    : field.type === "json" || field.type === "blocks"
-      ? 12
-      : 5);
+const DEFAULT_ROWS: Record<string, number> = { content: 14, richText: 10, json: 12, blocks: 12 };
+const rows = field.admin?.rows ?? DEFAULT_ROWS[field.type] ?? 5;
 const inputMode = field.type === "number" ? "decimal" : undefined;
 const controlClass = cn("w-full shadow-none", readOnly && "cursor-not-allowed bg-muted text-muted-foreground");
 const isTreeEditor =
