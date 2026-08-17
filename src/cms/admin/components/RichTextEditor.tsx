@@ -320,7 +320,7 @@ export function LinkDialog({
                     role="combobox"
                     aria-expanded={comboOpen}
                     size="lg"
-                    className="border-input bg-muted/30 hover:bg-muted dark:bg-input/30 dark:hover:bg-input/50 w-full justify-between text-sm font-normal"
+                    className="border-input bg-muted/30 hover:bg-muted dark:bg-input/10 dark:hover:bg-input/30 w-full justify-between text-sm font-normal"
                   >
                     <span className={cn("truncate", !selectedLabel && "text-muted-foreground")}>
                       {selectedLabel || "Search documents..."}
@@ -514,7 +514,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
       <input ref={hiddenRef} type="hidden" name={name} value={cmsJson} />
 
       {/* Toolbar */}
-      <div className="bg-muted/40 dark:bg-input/30 flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5">
+      <div className="bg-muted/40 dark:bg-input/10 flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5">
         <ToolbarButton
           onClick={() => editor?.chain().focus().toggleBold().run()}
           active={editor?.isActive("bold")}
