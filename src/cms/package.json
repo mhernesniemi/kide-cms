@@ -1,6 +1,6 @@
 {
   "name": "@kidecms/core",
-  "version": "0.14.3",
+  "version": "0.15.0",
   "description": "Kide CMS runtime — core library, admin UI, routes, and middleware for Astro. Shipped as TypeScript source.",
   "keywords": [
     "cms",

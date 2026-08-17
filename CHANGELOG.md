@@ -7,6 +7,53 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.15.0] - 2026-08-17
+
+### Added
+
+- Drag-and-drop upload on the assets page: drop files from your file manager anywhere
+  on the page to upload them into the open folder. Uses the same pipeline as the
+  Upload button (progress, single-upload redirect, bulk notice), and never triggers
+  from the existing drag-to-folder sorting of asset cards.
+- List views show a URL column for collections with a public route (`preview` or
+  `pathPrefix`): the document's live path as a link that opens in preview mode, with
+  `/` shown as "Homepage". Part of the default columns; when overriding
+  `views.list.columns`, opt in with `"__page"`. The Singles view has the same column.
+- Default list columns now include Created At (skipped for `timestamps: false`
+  collections).
+- `pnpm dev:preview` — a repo-local sandbox that assembles a starter into a sibling
+  project, seeds it, and live-syncs source edits into it. For working on the admin
+  against realistic content; excluded from scaffolded projects.
+
+### Changed
+
+- Admin responsive behavior reworked: the nav sidebar collapses into the mobile
+  drawer below 1400px (was 1024px), the edit view keeps its two-column field layout
+  down to 1024px (was 1536px), and the edit-view header stacks title and actions on
+  narrow screens instead of truncating the title.
+- The admin's `2xl` breakpoint is now 106.25rem/1700px (was 96rem/1536px), so the
+  roomier wide-screen spacing no longer triggers at ~110% browser zoom on a laptop.
+  Kept in rem deliberately: mixing units across breakpoints breaks Tailwind v4's
+  variant ordering, leaving the overridden tier silently losing the cascade.
+- Edit-view body padding is symmetric left/right (the left edge was wider at 2xl).
+- Single-file uploads land on the new asset's detail page again; bulk uploads show
+  upload progress and a completion notice instead of silently refreshing the list.
+- Asset-grid thumbnails crop around the asset's focal point when one is set.
+- Menu/taxonomy item editor inputs share one height and a lighter background
+  (label, link-type select, URL input, and document picker no longer mismatched).
+- Singles view columns renamed and reordered to match list views (URL instead of
+  API slug, "Updated At").
+
+### Fixed
+
+- Hover-revealed controls (image-field remove button, asset-card selection checkbox
+  and drag handle) were invisible when focused via keyboard — now revealed on focus.
+- Recent and Singles views always showed a Locales column, even in single-locale
+  projects; now gated the same way as collection list views.
+- In dev, uploading a single asset redirected to its detail page before Vite had
+  picked up the file, rendering a broken image until manual refresh. The settle
+  delay now covers the XHR flow (and production skips it entirely).
+
 ## [0.14.3] - 2026-08-15
 
 ### Fixed
