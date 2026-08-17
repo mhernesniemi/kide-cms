@@ -31,7 +31,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
   drawer below 1400px (was 1024px), the edit view keeps its two-column field layout
   down to 1024px (was 1536px), and the edit-view header stacks title and actions on
   narrow screens instead of truncating the title.
-- The admin's `2xl` breakpoint is now 106.25rem/1700px (was 96rem/1536px), so the
+- The admin's `2xl` breakpoint is now 100rem/1600px (was 96rem/1536px), so the
   roomier wide-screen spacing no longer triggers at ~110% browser zoom on a laptop.
   Kept in rem deliberately: mixing units across breakpoints breaks Tailwind v4's
   variant ordering, leaving the overridden tier silently losing the cascade.
