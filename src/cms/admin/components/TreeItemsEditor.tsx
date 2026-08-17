@@ -757,13 +757,19 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="bg-muted-strong/50 rounded-lg border">
+        <div
+          className={
+            items.length > 0
+              ? "bg-muted-strong/50 rounded-lg border"
+              : "bg-muted/20 flex h-20 items-center justify-center rounded-lg border border-dashed"
+          }
+        >
           {items.length > 0 ? (
             <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
               {items.map((item) => renderItem(item, 0))}
             </SortableContext>
           ) : (
-            <div className="text-muted-foreground py-8 text-center text-sm">{emptyLabel}</div>
+            <p className="text-muted-foreground text-sm">{emptyLabel}</p>
           )}
         </div>
         <DragOverlay dropAnimation={null}>

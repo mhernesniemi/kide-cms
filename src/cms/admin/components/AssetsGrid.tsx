@@ -687,22 +687,18 @@ export default function AssetsGrid({
                 <CardContent className="text-muted-foreground py-12 text-center text-sm">Searching…</CardContent>
               </Card>
             ) : (
-              <Card>
-                <CardContent className="py-12">
-                  <div className="text-center">
-                    <ImagePlus className="text-muted-foreground/30 mx-auto size-12" />
-                    <p className="text-muted-foreground mt-3 text-sm">
-                      {query.trim()
-                        ? `No assets match “${query.trim()}”.`
-                        : scope === "unfiled"
-                          ? "No unfiled assets."
-                          : scope === "all"
-                            ? "No assets uploaded yet."
-                            : "This folder is empty."}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="bg-muted/20 flex h-40 flex-col items-center justify-center gap-3 rounded-lg border border-dashed">
+                <ImagePlus className="text-muted-foreground/30 size-12" />
+                <p className="text-muted-foreground text-sm">
+                  {query.trim()
+                    ? `No assets match “${query.trim()}”.`
+                    : scope === "unfiled"
+                      ? "No unfiled assets."
+                      : scope === "all"
+                        ? "No assets uploaded yet."
+                        : "This folder is empty."}
+                </p>
+              </div>
             )}
 
             {/* Pagination (client-side — keeps the active filter without a reload) */}
