@@ -7,6 +7,30 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.16.0] - 2026-08-17
+
+### Added
+
+- Edit bar: logged-in editors browsing the public site get a floating "Edit this
+  page" chip linking straight to the document's edit view. Pages opt in by
+  rendering `data-cms-doc="<collection>:<id>"` (the marketing starter wires its
+  front page, pages, and posts). Anonymous visitors pay nothing: the injected
+  client only acts on a non-sensitive hint cookie set during admin visits, then
+  verifies the real session against a new `/api/cms/edit-bar` endpoint. The chip
+  is client-injected, so cached public HTML stays identical for everyone.
+  Disable with `admin.editBar: false`.
+
+### Changed
+
+- The URL column now links published documents to their live page and only uses
+  `?preview=true` for never-published drafts (which have no live page). Checking
+  "is my change live?" from a list view now shows the real site, not draft state.
+- The assets bulk-selection toolbar stays pinned to the top of the viewport while
+  scrolling a long grid.
+- Destructive buttons (Delete, Discard changes) got a visible border matching
+  their fill and higher-contrast text, aligning them with the other button
+  variants in both themes.
+
 ## [0.15.0] - 2026-08-17
 
 ### Added
