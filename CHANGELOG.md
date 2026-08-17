@@ -7,6 +7,28 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.16.3] - 2026-08-17
+
+### Fixed
+
+- Identical field classes could render visibly different background colors
+  (single-digit hex differences, e.g. the content editor vs. plain inputs in
+  dark mode): translucent fills composite differently across browser paint
+  layers (a `backdrop-filter` child promotes its container to its own layer).
+  Field surfaces now use precomputed **opaque** tokens — `--field` and
+  `--field-subtle` in `src/styles/admin.css` — so every field, empty state,
+  table, and picker renders the exact same pixel value by construction.
+
+### Changed
+
+- Extended color palette cleaned up: six dead tokens removed
+  (`foreground-secondary`, `foreground-tertiary`, `hover`, `input-border`,
+  `destructive-subtle`, `accent-subtle`) and the survivors renamed to the same
+  bare-name convention as the shadcn tokens (`--surface`, `--muted-strong`,
+  `--placeholder`, `--field`, `--field-subtle`), with `--color-*` names living
+  only in the `@theme inline` mapping. If your custom fields referenced the
+  removed tokens, define them in your own `admin.css`.
+
 ## [0.16.2] - 2026-08-17
 
 ### Removed
