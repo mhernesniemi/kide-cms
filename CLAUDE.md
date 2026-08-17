@@ -43,6 +43,16 @@ pnpm exec astro dev --background    # start detached
 pnpm exec astro dev status          # is a server already running?
 pnpm exec astro dev logs --follow   # tail background server logs
 pnpm exec astro dev stop            # stop the background server
+
+# Testing against realistic content (not the barebone default): assembles a starter
+# from starters/ into a self-contained sibling ../.preview/<starter>/ project (own
+# node_modules — no symlinks back here, see the script header for why), seeds it,
+# runs it on a fixed port (default 4326), then keeps watching this repo — saved
+# core/admin/starter edits sync into the preview live (collection changes also
+# re-push its schema). Content and any admin account persist; deleted files
+# linger until --fresh.
+pnpm dev:preview [starter] [--fresh] [--port=N]   # --fresh = full reset, clean DB
+
 pnpm build            # production build
 pnpm preview          # preview production build
 pnpm check            # astro check (types) + eslint (lint)
@@ -55,6 +65,7 @@ pnpm cms:upgrade      # in scaffolded client projects: prepare/apply a release-t
 pnpm cms:restore      # restore files from the latest upgrade backup
 pnpm verify:pack      # assert the @kidecms/core publish manifest ships only managed files
 pnpm verify:package   # assemble a package-mode project from HEAD, build+boot it, test eject
+pnpm verify:starters  # assemble each starters/* overlay, check+seed+build it
 ```
 
 All `cms:*` scripts run through the `kide` bin (`src/cms/internals/cli.mjs`), which works identically in embedded and package mode. `kide eject` converts a package-mode project to embedded (one-way).

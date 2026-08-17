@@ -10,6 +10,7 @@ import {
   Images,
   ImagePlus,
   Inbox,
+  Loader2,
   MoreHorizontal,
   Pencil,
   Search,
@@ -320,7 +321,10 @@ export default function AssetsGrid({
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
 
-  const uploadFormRef = useRef<HTMLFormElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -396,6 +400,48 @@ export default function AssetsGrid({
       }
     },
     [pageSize, scopeFolderParam],
+  );
+
+  // Upload via XHR (not fetch) so real byte-level progress is available for
+  // xhr.upload.onprogress — the point of this handler for bulk uploads. The
+  // server validates every file before storing any (see upload.ts), so this
+  // stays a single request for the whole batch rather than one per file.
+  const handleFilesSelected = useCallback(
+    (files: FileList) => {
+      if (files.length === 0) return;
+      setUploadError(null);
+      setUploading(true);
+      setUploadCount(files.length);
+      setUploadProgress(0);
+
+      const formData = new FormData();
+      for (const file of Array.from(files)) formData.append("file", file);
+      if (currentFolderId) formData.append("folder", currentFolderId);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/cms/assets/upload");
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => {
+        setUploading(false);
+        if (xhr.status >= 200 && xhr.status < 300) {
+          fetchPage(1, query);
+        } else {
+          try {
+            setUploadError(JSON.parse(xhr.responseText).error ?? "Upload failed.");
+          } catch {
+            setUploadError("Upload failed.");
+          }
+        }
+      };
+      xhr.onerror = () => {
+        setUploading(false);
+        setUploadError("Upload failed. Check your connection and try again.");
+      };
+      xhr.send(formData);
+    },
+    [currentFolderId, fetchPage, query],
   );
 
   // Debounce the filter box: re-query from page 1 on every keystroke. Skip the
@@ -615,31 +661,47 @@ export default function AssetsGrid({
                   className="pl-9 text-sm"
                 />
               </div>
-              <label className={cn(buttonVariants(), "shrink-0 cursor-pointer")}>
-                <Upload className="size-4" />
-                Upload
-                <form
-                  ref={uploadFormRef}
-                  method="post"
-                  action="/api/cms/assets/upload"
-                  encType="multipart/form-data"
+              <label
+                className={cn(
+                  buttonVariants(),
+                  "shrink-0",
+                  uploading ? "pointer-events-none opacity-70" : "cursor-pointer",
+                )}
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Uploading {uploadCount > 1 ? `${uploadCount} files` : "file"}… {uploadProgress}%
+                  </>
+                ) : (
+                  <>
+                    <Upload className="size-4" />
+                    Upload
+                  </>
+                )}
+                <input
+                  type="file"
+                  name="file"
+                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+                  multiple
+                  disabled={uploading}
                   className="hidden"
-                >
-                  <input type="hidden" name="redirectTo" value={assetsUrl({ scope })} />
-                  {currentFolderId && <input type="hidden" name="folder" value={currentFolderId} />}
-                  <input
-                    type="file"
-                    name="file"
-                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
-                    multiple
-                    required
-                    onChange={(e) => {
-                      if (e.target.value) uploadFormRef.current?.submit();
-                    }}
-                  />
-                </form>
+                  onChange={(e) => {
+                    if (e.target.files?.length) handleFilesSelected(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
               </label>
             </div>
+            {uploading && (
+              <div className="bg-muted h-1 w-full overflow-hidden rounded-full">
+                <div
+                  className="bg-primary h-full rounded-full transition-[width]"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            )}
+            {uploadError && <p className="text-destructive text-sm">{uploadError}</p>}
 
             {/* Selection toolbar */}
             {selectedIds.size > 0 && (

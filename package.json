@@ -34,6 +34,7 @@
     "verify:pack": "node scripts/verify-pack.mjs",
     "verify:package": "node scripts/verify-package-mode.mjs",
     "verify:starters": "node scripts/verify-starters.mjs",
+    "dev:preview": "node scripts/dev-preview.mjs",
     "test:workers": "vitest run --config vitest.workers.config.ts"
   },
   "dependencies": {
