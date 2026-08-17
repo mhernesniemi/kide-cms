@@ -44,7 +44,7 @@ const posts = defineCollection({
   searchable: true,
   versions: { max: 20 },
   fields: {
-    title: fields.text({ required: true, indexed: true, translatable: true }),
+    title: fields.text({ required: true, translatable: true }),
     slug: fields.slug({ from: "title", translatable: true }),
     excerpt: fields.text({ maxLength: 300, translatable: true }),
     image: fields.image(),
@@ -130,7 +130,6 @@ const pages = defineCollection({
 });
 
 export default defineConfig({
-  database: { dialect: "sqlite" },
   locales: {
     default: "en",
     supported: ["en"],

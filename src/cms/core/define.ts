@@ -3,11 +3,6 @@ export type CollectionLabels = {
   plural: string;
 };
 
-export type DatabaseConfig = {
-  dialect: "sqlite" | "postgres";
-  url?: string;
-};
-
 export type LocaleConfig = {
   default: string;
   supported: string[];
@@ -42,7 +37,6 @@ type BaseFieldConfig<TType extends string, TValue = unknown> = {
   description?: string;
   required?: boolean;
   defaultValue?: TValue;
-  indexed?: boolean;
   unique?: boolean;
   translatable?: boolean;
   condition?: FieldCondition;
@@ -446,7 +440,6 @@ export const isApprover = (config: CMSConfig, role: string | null | undefined): 
 };
 
 export type CMSConfig = {
-  database?: DatabaseConfig;
   locales?: LocaleConfig;
   admin?: AdminConfig;
   images?: ImagesConfig;

@@ -320,7 +320,7 @@ export function LinkDialog({
                     role="combobox"
                     aria-expanded={comboOpen}
                     size="lg"
-                    className="border-input bg-muted/30 hover:bg-muted dark:bg-input/10 dark:hover:bg-input/30 w-full justify-between text-sm font-normal"
+                    className="border-input bg-muted/30 hover:bg-muted dark:bg-input/20 dark:hover:bg-input/40 w-full justify-between text-sm font-normal"
                   >
                     <span className={cn("truncate", !selectedLabel && "text-muted-foreground")}>
                       {selectedLabel || "Search documents..."}

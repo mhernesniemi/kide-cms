@@ -73,7 +73,6 @@ export type {
   ContentBlockNode,
   ContentDocument,
   CollectionLabels,
-  DatabaseConfig,
   LocaleConfig,
   AdminConfig,
   IntegrationsConfig,

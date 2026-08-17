@@ -12,7 +12,7 @@ export default defineCollection({
     list: { columns: ["title", "__page", "_status", "_updatedAt"] },
   },
   fields: {
-    title: fields.text({ required: true, indexed: true }),
+    title: fields.text({ required: true }),
     slug: fields.slug({ from: "title", admin: { position: "sidebar" } }),
     excerpt: fields.text({ maxLength: 300, admin: { rows: 3 } }),
     image: fields.image(),

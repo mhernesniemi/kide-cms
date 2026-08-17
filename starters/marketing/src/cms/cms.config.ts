@@ -9,7 +9,6 @@ import forms from "./collections/forms";
 import formSubmissions from "./collections/form-submissions";
 
 export default defineConfig({
-  database: { dialect: "sqlite" },
   locales: {
     default: "en",
     supported: ["en"],
