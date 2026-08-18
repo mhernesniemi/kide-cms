@@ -616,8 +616,15 @@ export function RepeaterField({
     });
   });
 
+  // `_key` is editor-internal — never include it in the emitted value, and don't
+  // emit on mount (the initial value came from the form; re-emitting would mark it dirty).
+  const mountedRef = useRef(false);
   useEffect(() => {
-    onChange(items);
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    onChange(items.map(({ _key, ...rest }) => rest));
   }, [items]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Typed rows use the declared itemFields; legacy rows auto-detect string keys.

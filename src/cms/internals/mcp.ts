@@ -1,21 +1,148 @@
+/**
+ * Local stdio MCP server. This process owns the transport and the (static)
+ * tool list and never restarts; the project modules (cms.config, generated
+ * API, DB) load inside a child process (mcp-worker.ts). When the schema
+ * changes on disk, the next tool call respawns the worker — a fresh process
+ * gets a fresh ESM module registry — so agents pick up new collections
+ * without reconnecting the client. An in-process reload is not possible (the
+ * ESM module cache cannot be invalidated), and worker threads don't inherit
+ * tsx's resolver, so a forked process it is.
+ */
+import { fork } from "node:child_process";
+import { readdirSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-import { assets, closeDb, describeModel, folders } from "../core";
-import type { CollectionConfig } from "../core";
-import { loadGeneratedApi, loadProjectConfig } from "./project";
-
-const { cms } = await loadGeneratedApi();
-const config = await loadProjectConfig();
+import { projectPath } from "./project";
 
 const server = new McpServer({
   name: "kide-cms",
   version: "0.1.0",
 });
 
-const cmsRuntime = cms as Record<string, any> & { meta: typeof cms.meta };
-const model = describeModel(config);
+const WATCHED_FILES = ["src/cms/cms.config.ts", "src/cms/.generated/api.ts"];
+const COLLECTIONS_DIR = "src/cms/collections";
+
+const takeSnapshot = () => {
+  const entries = new Map<string, number | null>();
+  const record = (...segments: string[]) => {
+    try {
+      entries.set(segments.join("/"), statSync(projectPath(...segments)).mtimeMs);
+    } catch {
+      entries.set(segments.join("/"), null);
+    }
+  };
+  for (const file of WATCHED_FILES) record(file);
+  let collectionFiles: string[] = [];
+  try {
+    collectionFiles = readdirSync(projectPath(COLLECTIONS_DIR));
+  } catch {
+    // no collections directory
+  }
+  for (const name of collectionFiles) record(COLLECTIONS_DIR, name);
+  return entries;
+};
+
+const sameSnapshot = (a: Map<string, number | null>, b: Map<string, number | null>) =>
+  a.size === b.size && [...a].every(([key, value]) => b.get(key) === value);
+
+type WorkerResponse = { ready: true } | { id: number; ok: boolean; result?: unknown; error?: string };
+
+type WorkerHandle = {
+  call: (op: string, args?: Record<string, unknown>) => Promise<unknown>;
+  dispose: () => Promise<void>;
+  isDead: () => boolean;
+};
+
+const spawnWorker = (): Promise<WorkerHandle> =>
+  new Promise((resolve, reject) => {
+    const child = fork(fileURLToPath(new URL("./mcp-worker-boot.mjs", import.meta.url)), [], {
+      // stdout belongs to the MCP transport — route the child's output to stderr.
+      stdio: ["ignore", 2, 2, "ipc"],
+    });
+    // Don't let the worker keep this process alive once the client closes stdio.
+    child.unref();
+    child.channel?.unref();
+    const calls = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
+    let counter = 0;
+    let ready = false;
+    let dead: Error | null = null;
+
+    const handle: WorkerHandle = {
+      isDead: () => dead !== null,
+      call: (op, args) => {
+        if (dead) return Promise.reject(dead);
+        return new Promise((resolveCall, rejectCall) => {
+          const id = counter++;
+          calls.set(id, { resolve: resolveCall, reject: rejectCall });
+          child.send({ id, op, args });
+        });
+      },
+      dispose: async () => {
+        if (!dead) {
+          // Let the worker close the DB, but never hang a swap on it.
+          await Promise.race([handle.call("dispose"), new Promise((r) => setTimeout(r, 2000))]).catch(() => {});
+          dead = new Error("kide MCP worker was replaced.");
+        }
+        child.kill();
+      },
+    };
+
+    const die = (error: Error) => {
+      if (dead) return;
+      dead = error;
+      for (const entry of calls.values()) entry.reject(error);
+      calls.clear();
+      if (!ready) reject(error);
+    };
+
+    child.on("message", (message: WorkerResponse) => {
+      if ("ready" in message) {
+        ready = true;
+        resolve(handle);
+        return;
+      }
+      const entry = calls.get(message.id);
+      if (!entry) return;
+      calls.delete(message.id);
+      if (message.ok) entry.resolve(message.result);
+      else entry.reject(new Error(message.error ?? "kide MCP worker call failed."));
+    });
+    child.on("error", (error) => die(error instanceof Error ? error : new Error(String(error))));
+    child.on("exit", (code) => die(new Error(`kide MCP worker exited unexpectedly (code ${code}).`)));
+  });
+
+let active: WorkerHandle | null = null;
+let snapshot = takeSnapshot();
+let swapping: Promise<void> | null = null;
+
+const refreshWorker = (): Promise<void> => {
+  swapping ??= (async () => {
+    const previous = active;
+    active = null;
+    if (previous) {
+      console.error("[kide:mcp] schema change detected — reloading project modules");
+      await previous.dispose();
+    }
+    // Snapshot before spawning: a file that changes while the worker loads
+    // stays stale in the snapshot and triggers another reload on the next call.
+    snapshot = takeSnapshot();
+    active = await spawnWorker();
+  })().finally(() => {
+    swapping = null;
+  });
+  return swapping;
+};
+
+const workerCall = async (op: string, args?: Record<string, unknown>) => {
+  if (swapping) await swapping;
+  if (!active || active.isDead() || !sameSnapshot(snapshot, takeSnapshot())) await refreshWorker();
+  if (!active) throw new Error("kide MCP worker failed to start.");
+  return active.call(op, args);
+};
 
 const statusSchema = z.enum(["draft", "published", "scheduled", "any"]);
 const sortSchema = z.object({
@@ -24,60 +151,10 @@ const sortSchema = z.object({
 });
 const jsonObjectSchema = z.record(z.string(), z.unknown());
 
-const actor = {
-  id: process.env.KIDE_MCP_USER_ID || "mcp-local",
-  role: process.env.KIDE_MCP_USER_ROLE || "admin",
-  email: process.env.KIDE_MCP_USER_EMAIL || "mcp@local",
-};
-
-const runtimeContext = () => ({ user: actor });
-
 const toResult = (value: unknown) => ({
   structuredContent: { result: value },
   content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }],
 });
-
-const getCollection = (slug: string): CollectionConfig => {
-  const collection = config.collections.find((entry) => entry.slug === slug);
-  if (!collection) {
-    const available = config.collections.map((entry) => entry.slug).join(", ");
-    throw new Error(`Unknown collection "${slug}". Available collections: ${available}`);
-  }
-  return collection;
-};
-
-const getCollectionApi = (slug: string) => {
-  getCollection(slug);
-  const collectionApi = cmsRuntime[slug];
-  if (!collectionApi) throw new Error(`No API found for collection "${slug}".`);
-  return collectionApi;
-};
-
-const ensureMutableCollection = (collection: CollectionConfig) => {
-  if (collection.auth && process.env.KIDE_MCP_ALLOW_AUTH_COLLECTIONS !== "true") {
-    throw new Error(
-      `Collection "${collection.slug}" is an auth collection. Set KIDE_MCP_ALLOW_AUTH_COLLECTIONS=true to allow MCP mutations.`,
-    );
-  }
-};
-
-const pickCollectionFields = (collection: CollectionConfig, input: Record<string, unknown>) => {
-  const allowed = new Set(Object.keys(collection.fields));
-  return Object.fromEntries(Object.entries(input).filter(([key]) => allowed.has(key)));
-};
-
-const pickTranslatableFields = (collection: CollectionConfig, input: Record<string, unknown>) => {
-  return Object.fromEntries(
-    Object.entries(input).filter(([key]) => cms.meta.isTranslatableField(collection.slug, key)),
-  );
-};
-
-const collectionModel = (slug: string) => {
-  getCollection(slug);
-  const described = model.collections.find((collection) => collection.slug === slug);
-  if (!described) throw new Error(`No model manifest found for collection "${slug}".`);
-  return described;
-};
 
 server.registerResource(
   "kide-model",
@@ -88,7 +165,9 @@ server.registerResource(
     mimeType: "application/json",
   },
   async (uri) => ({
-    contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(model, null, 2) }],
+    contents: [
+      { uri: uri.href, mimeType: "application/json", text: JSON.stringify(await workerCall("model"), null, 2) },
+    ],
   }),
 );
 
@@ -99,7 +178,7 @@ server.registerTool(
     description: "List all Kide collections and their high-level metadata.",
     inputSchema: {},
   },
-  async () => toResult(cms.meta.getCollections()),
+  async () => toResult(await workerCall("listCollections")),
 );
 
 server.registerTool(
@@ -112,7 +191,7 @@ server.registerTool(
       collection: z.string().min(1),
     },
   },
-  async ({ collection }) => toResult(collectionModel(collection)),
+  async (args) => toResult(await workerCall("describeCollection", args)),
 );
 
 server.registerTool(
@@ -132,16 +211,7 @@ server.registerTool(
       locale: z.string().min(1).optional(),
     },
   },
-  async ({ collection, where, search, sort, limit, offset, status, locale }) => {
-    const collectionApi = getCollectionApi(collection);
-    const options = { where, search, sort, limit, offset, status, locale };
-    const [docs, totalDocs] = await Promise.all([
-      collectionApi.find(options, runtimeContext()),
-      collectionApi.count({ where, search, status, locale }, runtimeContext()),
-    ]);
-
-    return toResult({ docs, totalDocs, limit, offset });
-  },
+  async (args) => toResult(await workerCall("listDocuments", args)),
 );
 
 server.registerTool(
@@ -157,11 +227,7 @@ server.registerTool(
       locale: z.string().min(1).optional(),
     },
   },
-  async ({ collection, where, search, status, locale }) => {
-    const collectionApi = getCollectionApi(collection);
-    const totalDocs = await collectionApi.count({ where, search, status, locale }, runtimeContext());
-    return toResult({ totalDocs });
-  },
+  async (args) => toResult(await workerCall("countDocuments", args)),
 );
 
 server.registerTool(
@@ -176,12 +242,7 @@ server.registerTool(
       locale: z.string().min(1).optional(),
     },
   },
-  async ({ collection, id, status, locale }) => {
-    const collectionApi = getCollectionApi(collection);
-    const doc = await collectionApi.findById(id, { status, locale }, runtimeContext());
-    if (!doc) throw new Error(`No document found for "${collection}/${id}".`);
-    return toResult(doc);
-  },
+  async (args) => toResult(await workerCall("getDocument", args)),
 );
 
 server.registerTool(
@@ -195,14 +256,7 @@ server.registerTool(
       data: jsonObjectSchema,
     },
   },
-  async ({ collection, data }) => {
-    const collectionConfig = getCollection(collection);
-    ensureMutableCollection(collectionConfig);
-    const collectionApi = getCollectionApi(collection);
-    const cleaned = pickCollectionFields(collectionConfig, data);
-    const doc = await collectionApi.create(cleaned, runtimeContext());
-    return toResult(doc);
-  },
+  async (args) => toResult(await workerCall("createDocument", args)),
 );
 
 server.registerTool(
@@ -217,15 +271,7 @@ server.registerTool(
       data: jsonObjectSchema,
     },
   },
-  async ({ collection, id, data }) => {
-    const collectionConfig = getCollection(collection);
-    ensureMutableCollection(collectionConfig);
-    const collectionApi = getCollectionApi(collection);
-    const cleaned = pickCollectionFields(collectionConfig, data);
-    if (Object.keys(cleaned).length === 0) throw new Error("No declared collection fields were provided.");
-    const doc = await collectionApi.update(id, cleaned, runtimeContext());
-    return toResult(doc);
-  },
+  async (args) => toResult(await workerCall("updateDocument", args)),
 );
 
 server.registerTool(
@@ -238,12 +284,7 @@ server.registerTool(
       id: z.string().min(1),
     },
   },
-  async ({ collection, id }) => {
-    const collectionConfig = getCollection(collection);
-    ensureMutableCollection(collectionConfig);
-    const doc = await getCollectionApi(collection).publish(id, runtimeContext());
-    return toResult(doc);
-  },
+  async (args) => toResult(await workerCall("publishDocument", args)),
 );
 
 server.registerTool(
@@ -256,12 +297,7 @@ server.registerTool(
       id: z.string().min(1),
     },
   },
-  async ({ collection, id }) => {
-    const collectionConfig = getCollection(collection);
-    ensureMutableCollection(collectionConfig);
-    const doc = await getCollectionApi(collection).unpublish(id, runtimeContext());
-    return toResult(doc);
-  },
+  async (args) => toResult(await workerCall("unpublishDocument", args)),
 );
 
 server.registerTool(
@@ -276,12 +312,7 @@ server.registerTool(
       unpublishAt: z.string().min(1).nullable().optional(),
     },
   },
-  async ({ collection, id, publishAt, unpublishAt }) => {
-    const collectionConfig = getCollection(collection);
-    ensureMutableCollection(collectionConfig);
-    const doc = await getCollectionApi(collection).schedule(id, publishAt, unpublishAt ?? null, runtimeContext());
-    return toResult(doc);
-  },
+  async (args) => toResult(await workerCall("scheduleDocument", args)),
 );
 
 server.registerTool(
@@ -294,10 +325,7 @@ server.registerTool(
       id: z.string().min(1),
     },
   },
-  async ({ collection, id }) => {
-    const translations = await getCollectionApi(collection).getTranslations(id);
-    return toResult(translations);
-  },
+  async (args) => toResult(await workerCall("getTranslations", args)),
 );
 
 server.registerTool(
@@ -312,14 +340,7 @@ server.registerTool(
       data: jsonObjectSchema,
     },
   },
-  async ({ collection, id, locale, data }) => {
-    const collectionConfig = getCollection(collection);
-    ensureMutableCollection(collectionConfig);
-    const cleaned = pickTranslatableFields(collectionConfig, data);
-    if (Object.keys(cleaned).length === 0) throw new Error("No translatable fields were provided.");
-    const doc = await getCollectionApi(collection).upsertTranslation(id, locale, cleaned, runtimeContext());
-    return toResult(doc);
-  },
+  async (args) => toResult(await workerCall("upsertTranslation", args)),
 );
 
 server.registerTool(
@@ -334,11 +355,7 @@ server.registerTool(
       search: z.string().optional(),
     },
   },
-  async ({ limit, offset, folder, search }) => {
-    const items = await assets.find({ limit, offset, folder, search });
-    const totalAssets = await assets.count({ folder, search });
-    return toResult({ items, totalAssets, limit, offset });
-  },
+  async (args) => toResult(await workerCall("listAssets", args)),
 );
 
 server.registerTool(
@@ -355,21 +372,7 @@ server.registerTool(
       focalY: z.number().nullable().optional(),
     },
   },
-  async ({ id, alt, filename, folder, focalX, focalY }) => {
-    const updated = await assets.update(
-      id,
-      {
-        ...(alt !== undefined ? { alt } : {}),
-        ...(filename !== undefined ? { filename } : {}),
-        ...(folder !== undefined ? { folder } : {}),
-        ...(focalX !== undefined ? { focalX } : {}),
-        ...(focalY !== undefined ? { focalY } : {}),
-      },
-      { actor },
-    );
-    if (!updated) throw new Error(`No asset found for "${id}".`);
-    return toResult(updated);
-  },
+  async (args) => toResult(await workerCall("updateAsset", args)),
 );
 
 server.registerTool(
@@ -379,11 +382,13 @@ server.registerTool(
     description: "List Kide asset folders.",
     inputSchema: {},
   },
-  async () => toResult(await folders.findAll()),
+  async () => toResult(await workerCall("listAssetFolders")),
 );
 
 const shutdown = async () => {
-  await closeDb();
+  const current = active;
+  active = null;
+  if (current) await current.dispose();
 };
 
 process.on("SIGINT", () => {
@@ -391,6 +396,13 @@ process.on("SIGINT", () => {
 });
 process.on("SIGTERM", () => {
   void shutdown().finally(() => process.exit(0));
+});
+
+// Load the project eagerly so the first tool call is fast; a failure (e.g. a
+// type error in cms.config.ts) is reported per tool call and retried there,
+// instead of preventing the server from starting.
+void refreshWorker().catch((error: unknown) => {
+  console.error(`[kide:mcp] project load failed: ${error instanceof Error ? error.message : String(error)}`);
 });
 
 await server.connect(new StdioServerTransport());
