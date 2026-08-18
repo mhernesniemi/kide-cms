@@ -174,6 +174,13 @@ const ops: Record<string, (args: OpArgs) => unknown> = {
   },
 };
 
+// A missing cms_* table means the config declares a collection the database
+// doesn't have yet — the one sync step MCP can't do for the agent. Say so.
+const withSchemaHint = (message: string) =>
+  /no such table: cms_/i.test(message)
+    ? `${message}. The database schema is out of sync with the CMS config — run "pnpm cms:push" (or start the dev server, which pushes on boot), then retry.`
+    : message;
+
 process.on("message", (message: { id: number; op: string; args?: OpArgs }) => {
   void (async () => {
     try {
@@ -185,7 +192,7 @@ process.on("message", (message: { id: number; op: string; args?: OpArgs }) => {
       sendToParent({
         id: message.id,
         ok: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: withSchemaHint(error instanceof Error ? error.message : String(error)),
       });
     }
   })();
