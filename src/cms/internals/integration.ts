@@ -429,30 +429,44 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           }
 
           const configFilePath = path.join(root, configPath.replace(/\/?$/, ".ts"));
+          const collectionsDir = path.join(path.dirname(configFilePath), "collections");
           let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-          // macOS fs.watch on a single file also fires for sibling writes in the
-          // same directory tree — including the generator's own .generated/*
-          // output, which would loop regeneration forever. Only act when the
-          // config file's content actually changed.
-          let lastConfigContent: string | null = null;
-          try {
-            lastConfigContent = readFileSync(configFilePath, "utf-8");
-          } catch {
-            /* watch still registers; first event will populate it */
-          }
+          // macOS fs.watch also fires for sibling writes in the same directory
+          // tree — including the generator's own .generated/* output, which
+          // would loop regeneration forever. Only act when the content of a
+          // watched schema file actually changed.
+          const readSchemaFiles = () => {
+            const contents = new Map<string, string>();
+            const record = (filePath: string) => {
+              try {
+                contents.set(filePath, readFileSync(filePath, "utf-8"));
+              } catch {
+                /* deleted or unreadable — absence is the recorded state */
+              }
+            };
+            record(configFilePath);
+            let collectionFiles: string[] = [];
+            try {
+              collectionFiles = readdirSync(collectionsDir);
+            } catch {
+              /* no collections directory */
+            }
+            for (const name of collectionFiles) {
+              if (name.endsWith(".ts")) record(path.join(collectionsDir, name));
+            }
+            return contents;
+          };
+          const sameContents = (a: Map<string, string>, b: Map<string, string>) =>
+            a.size === b.size && [...a].every(([key, value]) => b.get(key) === value);
+          let lastSchemaContents = readSchemaFiles();
 
-          watch(configFilePath, () => {
+          const onSchemaFileEvent = () => {
             if (debounceTimer) clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
-              let content: string;
-              try {
-                content = readFileSync(configFilePath, "utf-8");
-              } catch {
-                return;
-              }
-              if (content === lastConfigContent) return;
-              lastConfigContent = content;
-              console.log("  [cms] Config changed, regenerating...");
+              const contents = readSchemaFiles();
+              if (sameContents(lastSchemaContents, contents)) return;
+              lastSchemaContents = contents;
+              console.log("  [cms] Schema changed, regenerating...");
               try {
                 runScript(root, generatorPath);
                 pushSchema(root, useD1);
@@ -461,7 +475,14 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
                 console.error("  [cms] Regeneration failed:", (error as Error).message);
               }
             }, 500);
-          });
+          };
+
+          watch(configFilePath, onSchemaFileEvent);
+          try {
+            watch(collectionsDir, onSchemaFileEvent);
+          } catch {
+            /* no collections directory — the config watch still covers registrations */
+          }
         }
       },
       "astro:server:start": ({ address }) => {
