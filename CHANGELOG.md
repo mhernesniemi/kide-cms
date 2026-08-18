@@ -7,6 +7,28 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.17.0] - 2026-08-18
+
+### Added
+
+- The dev server now watches the `collections/` directory, not just
+  `cms.config.ts`: adding, editing, or deleting a collection file regenerates
+  `.generated/` and pushes the schema automatically. Previously a field edit
+  inside an existing collection file showed up in the admin form (Vite module
+  reload) while the database column and validators lagged behind until
+  `cms.config.ts` itself changed.
+
+### Fixed
+
+- `kide mcp` picks up schema changes without a client reconnect. The stdio
+  server read `cms.config.ts` and the generated API once at startup, so a
+  collection added mid-session stayed invisible to MCP tools ("Unknown
+  collection") until the client reconnected. The project modules now load in a
+  child process that is respawned on the next tool call after `cms.config.ts`,
+  `collections/`, or `.generated/api.ts` change on disk. A broken config no
+  longer prevents the server from starting either — tool calls report the load
+  error until it's fixed.
+
 ## [0.16.3] - 2026-08-17
 
 ### Fixed
