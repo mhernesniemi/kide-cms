@@ -66,16 +66,22 @@ const contentToTiptap = (doc: ContentDocument | null | undefined): any => {
   return { type: "doc", content: content.length > 0 ? content : [{ type: "paragraph" }] };
 };
 
-const tiptapToContent = (json: any): ContentDocument => ({
-  type: "root",
-  children: (json.content ?? [])
+const isEmptyParagraph = (node: ContentNode | undefined) =>
+  node?.type === "paragraph" && !(node as { children?: unknown[] }).children?.length;
+
+const tiptapToContent = (json: any): ContentDocument => {
+  const children: ContentNode[] = (json.content ?? [])
     .map((node: any): ContentNode | null =>
       node.type === BLOCK_NODE_NAME
         ? { type: "block", blockType: node.attrs?.blockType ?? "", fields: node.attrs?.fields ?? {} }
         : (tiptapNodeToCms(node) as ContentNode | null),
     )
-    .filter(Boolean),
-});
+    .filter(Boolean);
+  // The editor keeps a paragraph after a trailing block so the cursor can get
+  // there — don't store it; it would render as visible empty space.
+  while (isEmptyParagraph(children[children.length - 1])) children.pop();
+  return { type: "root", children };
+};
 
 // -----------------------------------------------
 // Inline block node view
@@ -87,7 +93,7 @@ function isBlankFieldValue(value: unknown): boolean {
 }
 
 function BlockNodeView(props: NodeViewProps) {
-  const { node, updateAttributes, deleteNode, extension, selected } = props;
+  const { node, updateAttributes, deleteNode, extension } = props;
   const options = extension.options as BlockNodeOptions;
   const blockType = String(node.attrs.blockType ?? "");
   const fields = (node.attrs.fields ?? {}) as Record<string, unknown>;
@@ -172,40 +178,48 @@ function BlockNodeView(props: NodeViewProps) {
       })();
 
   return (
-    <NodeViewWrapper
-      className={cn("bg-muted/20 my-3 overflow-hidden rounded-lg border", selected && "border-ring bg-accent/40")}
-    >
-      <div className="bg-muted/40 flex items-center gap-2 px-3 py-2 select-none" contentEditable={false}>
+    <NodeViewWrapper className="bg-card my-3 overflow-hidden rounded-lg border">
+      {/* Header — entire row is clickable to expand/collapse, same as BlockEditor */}
+      <div
+        className="group/row bg-muted-strong/50 hover:bg-muted-strong/70 flex items-center gap-2 px-3 py-2 transition-colors select-none"
+        contentEditable={false}
+        onClick={() => setExpanded((v) => !v)}
+      >
         <span
           data-drag-handle
           draggable="true"
           className="text-muted-foreground/50 hover:text-muted-foreground -ml-1 cursor-grab rounded p-1 transition-colors active:cursor-grabbing"
           title="Drag to reorder"
+          onClick={(e) => e.stopPropagation()}
         >
           <GripVertical className="size-4" />
         </span>
 
-        <button type="button" onClick={() => setExpanded((v) => !v)} className="group/row flex items-center gap-2">
-          <ChevronRight
-            className={cn(
-              "text-muted-foreground group-hover/row:text-foreground/70 size-4 shrink-0 transition-[color,transform]",
-              expanded && "rotate-90",
-            )}
-          />
-          <span
-            className={cn(
-              "rounded px-2 py-0.5 text-xs font-medium",
-              isShared
-                ? "bg-primary/10 text-primary border-primary/20 border"
-                : "bg-secondary text-secondary-foreground",
-            )}
-          >
-            {isShared ? "Shared" : humanize(blockType)}
-          </span>
-          {isShared && sharedType && <span className="text-foreground/70 text-xs">{humanize(sharedType)}</span>}
-        </button>
+        <ChevronRight
+          className={cn(
+            "text-muted-foreground group-hover/row:text-foreground/70 size-4 shrink-0 transition-[color,transform]",
+            expanded && "rotate-90",
+          )}
+        />
 
-        {!expanded && preview && <span className="text-foreground/70 min-w-0 truncate text-sm">{preview}</span>}
+        <span
+          className={cn(
+            "rounded px-2 py-0.5 text-xs font-medium",
+            isShared
+              ? "bg-primary/10 text-primary border-primary/20 border"
+              : "bg-card text-secondary-foreground border",
+          )}
+        >
+          {isShared ? "Shared" : humanize(blockType)}
+        </span>
+
+        {isShared && sharedType && <span className="text-foreground/70 text-xs">{humanize(sharedType)}</span>}
+
+        {!expanded && preview && (
+          <span className="text-foreground/70 group-hover/row:text-foreground/85 min-w-0 truncate text-sm transition-colors">
+            {preview}
+          </span>
+        )}
 
         <div className="ml-auto flex shrink-0 items-center">
           <Button
@@ -214,7 +228,11 @@ function BlockNodeView(props: NodeViewProps) {
             size="icon"
             title={isShared ? "Detach shared section" : "Save as shared section"}
             className="text-muted-foreground hover:text-foreground size-7"
-            onClick={() => (isShared ? detach() : openSaveDialog())}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isShared) detach();
+              else openSaveDialog();
+            }}
           >
             {isShared ? <Unlink className="size-3.5" /> : <Save className="size-3.5" />}
           </Button>
@@ -224,7 +242,10 @@ function BlockNodeView(props: NodeViewProps) {
             size="icon"
             title="Remove block"
             className="text-muted-foreground hover:text-destructive size-7"
-            onClick={() => deleteNode()}
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteNode();
+            }}
           >
             <Trash2 className="size-3.5" />
           </Button>

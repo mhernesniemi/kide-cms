@@ -8,6 +8,11 @@ const li = (text: string) => ({
   children: [{ type: "paragraph", children: [{ type: "text", value: text }] }],
 });
 const ul = (...items: string[]) => ({ type: "list", ordered: false, children: items.map(li) });
+const block = (blockType: string, blockFields: Record<string, unknown>) => ({
+  type: "block",
+  blockType,
+  fields: blockFields,
+});
 
 const seeds: Record<string, SeedDocument[]> = {
   "front-page": [
@@ -73,39 +78,28 @@ const seeds: Record<string, SeedDocument[]> = {
       title: "About",
       slug: "about",
       seoDescription: "Who we are and why we build Acme.",
-      blocks: [
-        {
-          type: "text",
-          heading: "Built by a small team that ships",
-          content: rt(
-            p(
-              "Acme started in 2020 when three colleagues got tired of stitching together five tools to run one project. We decided to build the workspace we wished existed: fast, focused, and honest about what it does.",
-            ),
-            p(
-              "Today Acme is used by hundreds of teams, and we are still small on purpose. Small teams talk to their customers, ship weekly, and say no to features that add noise.",
-            ),
-          ),
-        },
-        {
-          type: "text",
-          heading: "What we believe",
-          content: rt(
-            ul(
-              "Software should save time, not demand it",
-              "Pricing should be simple enough to fit in one sentence",
-              "Your data belongs to you, exportable at any moment",
-              "Support is a feature, not a cost center",
-            ),
-          ),
-        },
-        {
-          type: "cta",
+      body: rt(
+        h2("Built by a small team that ships"),
+        p(
+          "Acme started in 2020 when three colleagues got tired of stitching together five tools to run one project. We decided to build the workspace we wished existed: fast, focused, and honest about what it does.",
+        ),
+        p(
+          "Today Acme is used by hundreds of teams, and we are still small on purpose. Small teams talk to their customers, ship weekly, and say no to features that add noise.",
+        ),
+        h2("What we believe"),
+        ul(
+          "Software should save time, not demand it",
+          "Pricing should be simple enough to fit in one sentence",
+          "Your data belongs to you, exportable at any moment",
+          "Support is a feature, not a cost center",
+        ),
+        block("cta", {
           heading: "Want to know more?",
           body: "We are happy to answer questions about the product, the team, or the roadmap.",
           buttonLabel: "Contact us",
           buttonHref: "/contact",
-        },
-      ],
+        }),
+      ),
       _status: "published",
     },
   ],

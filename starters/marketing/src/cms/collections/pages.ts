@@ -19,7 +19,7 @@ export default defineCollection({
       maxLength: 160,
       admin: { rows: 3, help: "Meta description for search engines. Max 160 characters.", position: "sidebar" },
     }),
-    blocks: fields.blocks({ shared: false, types: pageBlockTypes }),
+    body: fields.content({ blocks: { cta: pageBlockTypes.cta } }),
   },
   hooks: {
     afterPublish(doc, context) {

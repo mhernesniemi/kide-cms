@@ -8,20 +8,17 @@ const hasContent = Boolean(heading || body || (buttonLabel && href));
 
 {
   hasContent && (
-    <section class="pt-8 sm:pt-10">
-      <div class="mx-[calc(50%-50vw)] border-t border-gray-200" />
-      <div class="py-14 text-center sm:py-16">
-        {heading && <h2 class="mb-3 text-2xl font-semibold tracking-tight sm:text-3xl">{heading}</h2>}
-        {body && <p class="mx-auto mb-8 max-w-xl leading-relaxed text-gray-600">{body}</p>}
-        {buttonLabel && href && (
-          <a
-            href={href}
-            class="inline-block rounded-full bg-gray-950 px-6 py-2.5 text-sm font-medium text-white no-underline transition-colors hover:bg-gray-700"
-          >
-            {buttonLabel}
-          </a>
-        )}
-      </div>
+    <section class="my-8 rounded-2xl bg-gray-100 px-6 py-12 text-center sm:my-10 sm:py-14">
+      {heading && <h2 class="mb-3 text-2xl font-semibold tracking-tight sm:text-3xl">{heading}</h2>}
+      {body && <p class="mx-auto mb-8 max-w-xl leading-relaxed text-gray-600">{body}</p>}
+      {buttonLabel && href && (
+        <a
+          href={href}
+          class="inline-block rounded-full bg-gray-950 px-6 py-2.5 text-sm font-medium text-white no-underline transition-colors hover:bg-gray-700"
+        >
+          {buttonLabel}
+        </a>
+      )}
     </section>
   )
 }

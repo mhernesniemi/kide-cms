@@ -17,7 +17,15 @@ for (const [path, mod] of Object.entries(customComponents)) {
   componentMap[typeName] = mod.default;
 }
 
-const segments = contentSegments(content);
+// Trim trailing empty paragraphs (an editor artifact of ending the document
+// with a block) so they don't render as visible empty space.
+const children = [...(content?.children ?? [])];
+while (children.length > 0) {
+  const last = children[children.length - 1] as { type?: string; children?: unknown[] };
+  if (last.type !== "paragraph" || (last.children?.length ?? 0) > 0) break;
+  children.pop();
+}
+const segments = contentSegments(content ? { ...content, children } : content);
 const cmsRuntime = cms as Record<string, any>;
 const resolvedSegments: Array<(typeof segments)[number] | { kind: "missingShared"; ref: string }> = [];
 
