@@ -17,10 +17,14 @@ export default function InternalLinkPicker({
   editHref,
   linkOptions,
   onSelect,
+  className,
+  triggerClassName,
 }: {
   editHref: string;
   linkOptions: LinkOptionGroup[];
   onSelect: (item: { id: string; label: string; href: string }) => void;
+  className?: string;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = React.useState(false);
 
@@ -34,14 +38,14 @@ export default function InternalLinkPicker({
   }, [editHref, linkOptions]);
 
   return (
-    <div className="min-w-0 flex-1">
+    <div className={cn("min-w-0 flex-1", className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="input"
             role="combobox"
             aria-expanded={open}
-            className="h-9 w-full min-w-0 justify-between rounded-lg px-3 text-sm font-normal"
+            className={cn("h-9 w-full min-w-0 justify-between rounded-lg px-3 text-sm font-normal", triggerClassName)}
           >
             <span className={cn("truncate", !selectedLabel && "text-muted-foreground")}>
               {selectedLabel || "Search documents..."}

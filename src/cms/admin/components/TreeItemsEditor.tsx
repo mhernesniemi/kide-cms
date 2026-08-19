@@ -471,6 +471,8 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
             <InternalLinkPicker
               editHref={editing.href}
               linkOptions={linkOptions}
+              className="flex-3"
+              triggerClassName="bg-background h-7 rounded-md"
               onSelect={(item) => {
                 updateEditing({ href: item.href, ...(!editing.label ? { label: item.label } : {}) });
               }}

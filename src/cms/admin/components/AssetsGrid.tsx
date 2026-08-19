@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  CircleCheck,
   Folder,
   FolderPlus,
   GripVertical,
@@ -802,7 +803,20 @@ export default function AssetsGrid({
               </div>
             )}
             {uploadError && <p className="text-destructive text-sm">{uploadError}</p>}
-            {uploadNotice && <p className="text-muted-foreground text-sm">{uploadNotice}</p>}
+
+            {/* Same look and timing as the server-rendered Toast.astro */}
+            {uploadNotice && (
+              <div className="fixed top-4 left-1/2 z-[60] w-full max-w-sm -translate-x-1/2">
+                <div
+                  role="status"
+                  className="bg-card flex items-center gap-2 rounded-lg border border-green-500/30 px-5 py-3 text-sm shadow-lg"
+                  style={{ animation: "toast-in 0.25s ease-out, toast-out 0.3s ease-in 2.7s forwards" }}
+                >
+                  <CircleCheck className="size-4 shrink-0 text-green-600 dark:text-green-400" />
+                  <span className="text-green-700 dark:text-green-400">{uploadNotice}</span>
+                </div>
+              </div>
+            )}
 
             {/* Selection toolbar */}
             {selectedIds.size > 0 && (
