@@ -7,6 +7,36 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.17.1] - 2026-08-19
+
+### Changed
+
+- Marketing starter: regular pages now use a `content` field — prose-first
+  editing with an inline `cta` block — instead of the `blocks` builder; the
+  front page keeps the full block builder. The CTA block was restyled from a
+  full-bleed band into a simple rounded card inside the content column.
+
+### Fixed
+
+- Live preview now works when the preview tab is opened **after** edits were
+  made. The preview page announces itself on the `cms-preview` channel and the
+  admin form replays every field's current (unsaved) value — simple fields,
+  rich text, content, and blocks. Previously only the open-preview-first order
+  streamed changes.
+- A content document ending with a block no longer stores the editor's trailing
+  cursor paragraph, which rendered as visible empty space under the block on
+  the public site. The renderer also trims trailing empty paragraphs from
+  already-saved documents.
+- Inline block cards in the content editor now match the standalone blocks
+  editor styling — card background, header treatment, bordered type badge, and
+  the whole header row toggling expand/collapse — instead of a washed-out
+  variant with a selection ring.
+- Command menus (search palette, select fields): the keyboard-focused item now
+  has a visible background. `--accent` was identical to the near-white
+  `--muted`, making focus practically invisible in light mode.
+- `kide mcp`: a `no such table: cms_*` error now explains that the database
+  schema is out of sync with the CMS config and points to `pnpm cms:push`.
+
 ## [0.17.0] - 2026-08-18
 
 ### Added
