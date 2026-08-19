@@ -8,7 +8,7 @@ const formDoc = form ? await cms.forms.findById(String(form)) : null;
 
 {
   formDoc ? (
-    <section class="mx-auto max-w-2xl py-8 sm:py-10">
+    <section class="max-w-2xl py-8 sm:py-10">
       {heading && <h2 class="mb-3 text-2xl font-semibold tracking-tight sm:text-3xl">{heading}</h2>}
       {intro && <p class="mb-8 leading-relaxed text-gray-600">{intro}</p>}
       <CmsForm slug={String(formDoc.slug)} context={{ page: Astro.url.pathname }} />

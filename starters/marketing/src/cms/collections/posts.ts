@@ -1,4 +1,5 @@
 import { contentToPlainText, defineCollection, fields } from "@kidecms/core";
+import { pageBlockTypes } from "./page-blocks";
 
 export default defineCollection({
   slug: "posts",
@@ -16,7 +17,11 @@ export default defineCollection({
     slug: fields.slug({ from: "title", admin: { position: "sidebar" } }),
     excerpt: fields.text({ maxLength: 300, admin: { rows: 3 } }),
     image: fields.image(),
-    body: fields.content({ admin: { rows: 14 }, fullscreen: true }),
+    body: fields.content({
+      blocks: { cta: pageBlockTypes.cta, form: pageBlockTypes.form },
+      admin: { rows: 14 },
+      fullscreen: true,
+    }),
     category: fields.text({
       admin: { component: "taxonomy-select", placeholder: "categories", position: "sidebar" },
     }),
