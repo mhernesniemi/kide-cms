@@ -798,7 +798,13 @@ export default function DocumentsDataTable({
                 {headerGroup.headers
                   .filter((header) => header.column.id !== "search")
                   .map((header) => (
-                    <TableHead key={header.id} className={header.column.id === "select" ? "w-10" : undefined}>
+                    <TableHead
+                      key={header.id}
+                      className={cn(
+                        header.column.id === "select" && "w-10",
+                        header.column.id === primaryColumnKey && "max-sm:min-w-48",
+                      )}
+                    >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
@@ -821,6 +827,7 @@ export default function DocumentsDataTable({
                           // including a wrapped multi-line title, for a consistent row.
                           "align-middle break-words whitespace-normal",
                           cell.column.id === "select" && "w-10",
+                          cell.column.id === primaryColumnKey && "max-sm:min-w-48",
                         )}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
