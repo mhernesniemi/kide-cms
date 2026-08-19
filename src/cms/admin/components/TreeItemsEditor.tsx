@@ -298,9 +298,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
 
   const startEdit = (item: TreeItem) => {
     if (variant === "menu") {
-      // Same convention as LinkField: a leading "/" is an internal link, whether
-      // or not it matches a document (e.g. listing routes like /blog).
-      const isInternal = String(item.href ?? "").startsWith("/");
+      const isInternal = linkOptions.some((group) => group.items.some((li) => li.href === String(item.href ?? "")));
       setEditing({
         ...blankEdit(item.id),
         label: String(item.label ?? ""),
