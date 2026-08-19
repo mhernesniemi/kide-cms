@@ -41,8 +41,7 @@ export default function InternalLinkPicker({
             variant="input"
             role="combobox"
             aria-expanded={open}
-            size="sm"
-            className="bg-background w-full justify-between text-sm font-normal"
+            className="h-9 w-full justify-between rounded-lg px-3 text-sm font-normal"
           >
             <span className={cn("truncate", !selectedLabel && "text-muted-foreground")}>
               {selectedLabel || "Search documents..."}

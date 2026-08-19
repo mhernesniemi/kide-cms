@@ -23,8 +23,7 @@ const seeds: Record<string, SeedDocument[]> = {
           type: "hero",
           heading: "Launch faster, grow smarter",
           body: "Everything your team needs to plan, build, and ship — in one place, without the busywork.",
-          ctaLabel: "Get in touch",
-          ctaHref: "/contact",
+          cta: { type: "internal", url: "/contact", label: "Get in touch" },
         },
         {
           type: "features",

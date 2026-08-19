@@ -1,0 +1,21 @@
+---
+import CmsForm from "@/components/CmsForm.astro";
+import { cms } from "@/cms/.generated/api";
+
+const { heading, intro, form } = Astro.props;
+const formDoc = form ? await cms.forms.findById(String(form)) : null;
+---
+
+{
+  formDoc ? (
+    <section class="mx-auto max-w-2xl py-8 sm:py-10">
+      {heading && <h2 class="mb-3 text-2xl font-semibold tracking-tight sm:text-3xl">{heading}</h2>}
+      {intro && <p class="mb-8 leading-relaxed text-gray-600">{intro}</p>}
+      <CmsForm slug={String(formDoc.slug)} context={{ page: Astro.url.pathname }} />
+    </section>
+  ) : import.meta.env.DEV ? (
+    <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+      Form block: no form selected, or the referenced form was deleted.
+    </div>
+  ) : null
+}

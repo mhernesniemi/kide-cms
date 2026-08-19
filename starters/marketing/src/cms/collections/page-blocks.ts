@@ -5,8 +5,7 @@ export const pageBlockTypes = {
   hero: {
     heading: fields.text({ required: true }),
     body: fields.text({ admin: { rows: 3 } }),
-    ctaLabel: fields.text(),
-    ctaHref: fields.text({ admin: { placeholder: "/contact" } }),
+    cta: fields.link({ label: "Call to action" }),
   },
   text: {
     heading: fields.text(),
@@ -27,6 +26,11 @@ export const pageBlockTypes = {
     body: fields.text({ admin: { rows: 2 } }),
     buttonLabel: fields.text(),
     buttonHref: fields.text({ admin: { placeholder: "/contact" } }),
+  },
+  form: {
+    heading: fields.text(),
+    intro: fields.text({ admin: { rows: 2 } }),
+    form: fields.relation({ collection: "forms", required: true }),
   },
   faq: {
     heading: fields.text(),

@@ -64,53 +64,55 @@ export default function LinkField({ name, value: initial, onChange, linkOptions 
   return (
     <div className="space-y-2 rounded-md border p-3">
       {name && <input type="hidden" name={name} value={value.url ? JSON.stringify(value) : ""} ref={hiddenRef} />}
-      <div className="grid gap-1">
-        <Label className="text-xs">{hasPicker ? "Link" : "URL"}</Label>
-        {hasPicker ? (
-          <div className="flex items-center gap-2">
-            <Select
-              items={[
-                { value: "internal", label: "Internal" },
-                { value: "external", label: "External" },
-              ]}
-              value={linkType}
-              onValueChange={(v) => setLinkType((v as "internal" | "external") ?? "internal")}
-            >
-              <SelectTrigger className="w-28 shrink-0 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="internal">Internal</SelectItem>
-                  <SelectItem value="external">External</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            {linkType === "internal" ? (
-              <InternalLinkPicker
-                editHref={value.url ?? ""}
-                linkOptions={linkOptions}
-                onSelect={(item) => set({ url: item.href, ...(value.label ? {} : { label: item.label }) })}
-              />
-            ) : (
-              <Input
-                value={value.url ?? ""}
-                placeholder="https://example.com"
-                onChange={(e) => set({ url: e.target.value })}
-              />
-            )}
-          </div>
-        ) : (
-          <Input
-            value={value.url ?? ""}
-            placeholder="https://example.com  or  /about"
-            onChange={(e) => set({ url: e.target.value })}
-          />
-        )}
-      </div>
-      <div className="grid gap-1">
-        <Label className="text-xs">Label</Label>
-        <Input value={value.label ?? ""} placeholder="Link text" onChange={(e) => set({ label: e.target.value })} />
+      <div className="flex flex-wrap items-start gap-2">
+        <div className="grid min-w-56 flex-3 gap-1">
+          <Label className="text-xs">{hasPicker ? "Link" : "URL"}</Label>
+          {hasPicker ? (
+            <div className="flex items-center gap-2">
+              <Select
+                items={[
+                  { value: "internal", label: "Internal" },
+                  { value: "external", label: "External" },
+                ]}
+                value={linkType}
+                onValueChange={(v) => setLinkType((v as "internal" | "external") ?? "internal")}
+              >
+                <SelectTrigger className="w-28 shrink-0 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="internal">Internal</SelectItem>
+                    <SelectItem value="external">External</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              {linkType === "internal" ? (
+                <InternalLinkPicker
+                  editHref={value.url ?? ""}
+                  linkOptions={linkOptions}
+                  onSelect={(item) => set({ url: item.href, ...(value.label ? {} : { label: item.label }) })}
+                />
+              ) : (
+                <Input
+                  value={value.url ?? ""}
+                  placeholder="https://example.com"
+                  onChange={(e) => set({ url: e.target.value })}
+                />
+              )}
+            </div>
+          ) : (
+            <Input
+              value={value.url ?? ""}
+              placeholder="https://example.com  or  /about"
+              onChange={(e) => set({ url: e.target.value })}
+            />
+          )}
+        </div>
+        <div className="grid min-w-40 flex-2 gap-1">
+          <Label className="text-xs">Label</Label>
+          <Input value={value.label ?? ""} placeholder="Link text" onChange={(e) => set({ label: e.target.value })} />
+        </div>
       </div>
       <label className="text-muted-foreground group inline-flex cursor-pointer items-center gap-2 text-sm">
         <Checkbox

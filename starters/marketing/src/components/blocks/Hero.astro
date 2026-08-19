@@ -1,10 +1,11 @@
 ---
 import { safeUrl } from "@kidecms/core";
 
-const { heading, body, ctaLabel, ctaHref } = Astro.props;
+const { heading, body, cta } = Astro.props;
+const link = cta && typeof cta === "object" ? (cta as { url?: string; label?: string; newTab?: boolean }) : null;
 // Astro escapes attribute values but does not reject URL schemes.
-const href = ctaHref ? safeUrl(String(ctaHref)) : null;
-const hasContent = Boolean(heading || body || (ctaLabel && href));
+const href = link?.url ? safeUrl(String(link.url)) : null;
+const hasContent = Boolean(heading || body || (link?.label && href));
 ---
 
 {
@@ -13,12 +14,14 @@ const hasContent = Boolean(heading || body || (ctaLabel && href));
       <div class="max-w-2xl">
         {heading && <h1 class="mb-5 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">{heading}</h1>}
         {body && <p class="mb-8 text-lg leading-relaxed text-gray-600">{body}</p>}
-        {ctaLabel && href && (
+        {link?.label && href && (
           <a
             href={href}
+            target={link.newTab ? "_blank" : undefined}
+            rel={link.newTab ? "noopener noreferrer" : undefined}
             class="inline-block rounded-full bg-gray-950 px-6 py-2.5 text-sm font-medium text-white no-underline transition-colors hover:bg-gray-700"
           >
-            {ctaLabel}
+            {link.label}
           </a>
         )}
       </div>
