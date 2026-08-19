@@ -6,6 +6,7 @@ export default defineCollection({
   labelField: "label",
   timestamps: true,
   admin: { group: "Library", icon: "Inbox", weight: 45 },
+  access: { create: () => false },
   views: {
     list: { columns: ["label", "form", "_createdAt", "status"] },
   },
