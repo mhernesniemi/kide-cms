@@ -8,21 +8,18 @@ const hasContent = Boolean(heading) || items.length > 0;
 
 {
   hasContent && (
-    <section>
-      <div class="mx-[calc(50%-50vw)] border-t border-gray-200" />
-      <div class="py-12 sm:py-16">
-        {heading && <h2 class="mb-8 text-2xl font-semibold tracking-tight sm:text-3xl">{heading}</h2>}
-        {items.length > 0 && (
-          <dl class="m-0 max-w-2xl divide-y divide-gray-200">
-            {items.map((item) => (
-              <div class="py-5 first:pt-0 last:pb-0">
-                {item.title && <dt class="mb-1.5 font-medium">{item.title}</dt>}
-                {item.description && <dd class="m-0 text-sm leading-relaxed text-gray-600">{item.description}</dd>}
-              </div>
-            ))}
-          </dl>
-        )}
-      </div>
+    <section class="py-12 sm:py-16">
+      {heading && <h2 class="mb-8 text-2xl font-semibold tracking-tight sm:text-3xl">{heading}</h2>}
+      {items.length > 0 && (
+        <dl class="m-0 max-w-2xl divide-y divide-gray-200">
+          {items.map((item) => (
+            <div class="py-5 first:pt-0 last:pb-0">
+              {item.title && <dt class="mb-1.5 font-medium">{item.title}</dt>}
+              {item.description && <dd class="m-0 text-sm leading-relaxed text-gray-600">{item.description}</dd>}
+            </div>
+          ))}
+        </dl>
+      )}
     </section>
   )
 }

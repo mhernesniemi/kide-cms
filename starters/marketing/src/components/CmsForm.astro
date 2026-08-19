@@ -20,6 +20,9 @@ const fieldConfigs = form && Array.isArray(form.fields) ? (form.fields as FormFi
 const submitted = Astro.url.searchParams.get("submitted") === "1";
 const formError = Astro.url.searchParams.get("formError");
 const action = `/api/cms/forms/submit/${slug}`;
+
+const inputClass =
+  "rounded-md border border-gray-300 px-3.5 py-2.5 transition-colors outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-950/10";
 ---
 
 {
@@ -64,7 +67,7 @@ const action = `/api/cms/forms/submit/${slug}`;
                 rows={field.rows ?? 4}
                 placeholder={field.placeholder ?? ""}
                 required={field.required}
-                class="rounded-md border border-gray-300 px-3.5 py-2.5 transition-colors outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-950/10"
+                class={inputClass}
               />
             </label>
           );
@@ -77,12 +80,7 @@ const action = `/api/cms/forms/submit/${slug}`;
                 {field.label}
                 {field.required && <span aria-hidden="true"> *</span>}
               </span>
-              <select
-                id={inputId}
-                name={field.name}
-                required={field.required}
-                class="rounded-md border border-gray-300 px-3.5 py-2.5 transition-colors outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-950/10"
-              >
+              <select id={inputId} name={field.name} required={field.required} class={inputClass}>
                 <option value="">Select…</option>
                 {(field.options ?? []).map((opt) => (
                   <option value={opt}>{opt}</option>
@@ -118,7 +116,7 @@ const action = `/api/cms/forms/submit/${slug}`;
               placeholder={field.placeholder ?? ""}
               required={field.required}
               maxlength={field.maxLength}
-              class="rounded-md border border-gray-300 px-3.5 py-2.5 transition-colors outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-950/10"
+              class={inputClass}
             />
           </label>
         );

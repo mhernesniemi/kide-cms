@@ -34,14 +34,14 @@ export default function InternalLinkPicker({
   }, [editHref, linkOptions]);
 
   return (
-    <div className="min-w-0 flex-3">
+    <div className="min-w-0 flex-1">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="input"
             role="combobox"
             aria-expanded={open}
-            className="h-9 w-full justify-between rounded-lg px-3 text-sm font-normal"
+            className="h-9 w-full min-w-0 justify-between rounded-lg px-3 text-sm font-normal"
           >
             <span className={cn("truncate", !selectedLabel && "text-muted-foreground")}>
               {selectedLabel || "Search documents..."}

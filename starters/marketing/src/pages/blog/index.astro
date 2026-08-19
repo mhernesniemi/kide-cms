@@ -15,7 +15,7 @@ Astro.cache.set({ tags: ["posts"] });
   <main class="mx-auto max-w-2xl px-6 py-14 sm:py-20">
     <h1 class="mb-10 text-3xl font-semibold tracking-tight sm:text-4xl">Blog</h1>
     {posts.length === 0 && <p class="text-gray-500">No published posts yet.</p>}
-    <ul class="m-0 grid list-none gap-0 divide-y divide-gray-100 p-0">
+    <ul class="m-0 list-none divide-y divide-gray-100 p-0">
       {
         posts.map((post) => (
           <li>

@@ -8,10 +8,12 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import InternalLinkPicker, { type LinkOptionGroup } from "./InternalLinkPicker";
 
 // A structured link control: URL + label + open-in-new-tab, stored as
-// { type, url, label, newTab }. A leading "/" is treated as an internal link.
-// When linkOptions are provided, internal links are chosen with a document
+// { type, url, label, title, newTab }. A leading "/" is treated as an internal
+// link. When linkOptions are provided, internal links are chosen with a document
 // picker instead of a hand-typed path (which silently breaks on slug edits).
-type LinkValue = { type?: string; url?: string; label?: string; newTab?: boolean };
+// `title` is the picked document's title — renderers use it as the link text
+// when `label` is left empty.
+type LinkValue = { type?: string; url?: string; label?: string; title?: string; newTab?: boolean };
 
 type Props = {
   name?: string;
@@ -64,11 +66,11 @@ export default function LinkField({ name, value: initial, onChange, linkOptions 
   return (
     <div className="space-y-2 rounded-md border p-3">
       {name && <input type="hidden" name={name} value={value.url ? JSON.stringify(value) : ""} ref={hiddenRef} />}
-      <div className="flex flex-wrap items-start gap-2">
-        <div className="grid min-w-56 flex-3 gap-1">
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div className="grid gap-1">
           <Label className="text-xs">{hasPicker ? "Link" : "URL"}</Label>
           {hasPicker ? (
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <Select
                 items={[
                   { value: "internal", label: "Internal" },
@@ -91,13 +93,13 @@ export default function LinkField({ name, value: initial, onChange, linkOptions 
                 <InternalLinkPicker
                   editHref={value.url ?? ""}
                   linkOptions={linkOptions}
-                  onSelect={(item) => set({ url: item.href, ...(value.label ? {} : { label: item.label }) })}
+                  onSelect={(item) => set({ url: item.href, title: item.label })}
                 />
               ) : (
                 <Input
                   value={value.url ?? ""}
                   placeholder="https://example.com"
-                  onChange={(e) => set({ url: e.target.value })}
+                  onChange={(e) => set({ url: e.target.value, title: undefined })}
                 />
               )}
             </div>
@@ -105,13 +107,17 @@ export default function LinkField({ name, value: initial, onChange, linkOptions 
             <Input
               value={value.url ?? ""}
               placeholder="https://example.com  or  /about"
-              onChange={(e) => set({ url: e.target.value })}
+              onChange={(e) => set({ url: e.target.value, title: undefined })}
             />
           )}
         </div>
-        <div className="grid min-w-40 flex-2 gap-1">
+        <div className="grid gap-1">
           <Label className="text-xs">Label</Label>
-          <Input value={value.label ?? ""} placeholder="Link text" onChange={(e) => set({ label: e.target.value })} />
+          <Input
+            value={value.label ?? ""}
+            placeholder={value.title || "Link text"}
+            onChange={(e) => set({ label: e.target.value })}
+          />
         </div>
       </div>
       <label className="text-muted-foreground group inline-flex cursor-pointer items-center gap-2 text-sm">
