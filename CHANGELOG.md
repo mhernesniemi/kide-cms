@@ -7,6 +7,36 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.18.0] - 2026-08-19
+
+### Added
+
+- Form submissions now behave like an inbox: opening a `new` submission
+  automatically marks it `read` (system-side, like email), and the submission
+  view's dead Save button was replaced with an Archive / Unarchive action. The
+  `status` field was previously unreachable — nothing could ever leave "new".
+- Marketing starter: a `form` block. Editors can place any admin-built form on
+  the front page or inline in page content via a relation picker; rendering
+  delegates to the existing `CmsForm` component.
+- Link fields: the picked document's title is stored alongside the URL, and an
+  empty Label now falls back to it at render time. Picking a document no longer
+  overwrites a label you typed.
+
+### Changed
+
+- Marketing starter: the hero block uses a structured link field (internal
+  document picker) for its CTA instead of hand-typed label/href text fields,
+  and renders as a full-width light grey band. The CTA block is a rounded card
+  and the full-bleed divider lines between blocks are gone.
+
+### Fixed
+
+- Link field layout: Link and Label sit on one row with fixed column widths — a
+  long picked document title truncates instead of inflating the picker (grid
+  `minmax(0, …fr)` tracks plus a `min-w-0` on the picker row). The picker
+  trigger also matches standard field height and background now, and the
+  redundant `(internal)`/`(external)` hint is gone.
+
 ## [0.17.1] - 2026-08-19
 
 ### Changed
