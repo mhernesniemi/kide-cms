@@ -127,7 +127,6 @@ export default function LinkField({ name, value: initial, onChange, linkOptions 
           onCheckedChange={(checked) => set({ newTab: Boolean(checked) })}
         />
         Open in new tab
-        {value.url && <span className="ml-auto text-xs">({value.type})</span>}
       </label>
     </div>
   );
