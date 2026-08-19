@@ -422,6 +422,17 @@ export default function ContentEditor({
     }
   }, [cmsJson]);
 
+  // Replay the current value when a preview tab opened after edits announces itself
+  useEffect(() => {
+    if (!previewChannelRef.current) previewChannelRef.current = new BroadcastChannel("cms-preview");
+    const channel = previewChannelRef.current;
+    channel.onmessage = (e: MessageEvent) => {
+      if (e.data?.type === "preview-ready") {
+        channel.postMessage({ field: name, value: cmsJson, render: "content" });
+      }
+    };
+  }, [cmsJson, name]);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [

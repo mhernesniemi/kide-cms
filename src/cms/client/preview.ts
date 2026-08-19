@@ -9,6 +9,7 @@ if (new URLSearchParams(location.search).has("preview")) {
       location.reload();
       return;
     }
+    if (!d.field) return;
 
     const els = document.querySelectorAll<HTMLElement>(`[data-cms="${d.field}"]`);
     if (!els.length) return;
@@ -32,6 +33,10 @@ if (new URLSearchParams(location.search).has("preview")) {
       els.forEach((el) => (el.textContent = d.value));
     }
   };
+
+  // Ask any open admin tab to replay its current (possibly unsaved) field values,
+  // so a preview opened after edits were made still shows them.
+  ch.postMessage({ type: "preview-ready" });
 }
 
 // --- Edit bar: "Edit this page" chip on public pages for logged-in editors ---

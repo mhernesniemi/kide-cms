@@ -302,10 +302,16 @@ export default function BlockEditor({
     }
   }, []);
 
-  // Live preview: broadcast block data for server-side rendering
+  // Live preview: broadcast block data for server-side rendering. Also replay the
+  // current value when a preview tab opened after edits announces itself.
   useEffect(() => {
     if (!previewChannelRef.current) previewChannelRef.current = new BroadcastChannel("cms-preview");
-    previewChannelRef.current.postMessage({ field: name, value: serializeBlocks(blocks), render: "blocks" });
+    const channel = previewChannelRef.current;
+    const broadcast = () => channel.postMessage({ field: name, value: serializeBlocks(blocks), render: "blocks" });
+    broadcast();
+    channel.onmessage = (e: MessageEvent) => {
+      if (e.data?.type === "preview-ready") broadcast();
+    };
   }, [blocks, name]);
 
   const updateBlocks = useCallback(

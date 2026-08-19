@@ -77,6 +77,18 @@ export default function UnsavedGuard({
       previewChannel.postMessage({ field: target.name, value: target.value });
     };
 
+    // A preview tab opened after edits were made announces itself; replay the
+    // current value of every simple field so it doesn't miss unsaved changes.
+    previewChannel.onmessage = (e: MessageEvent) => {
+      if (e.data?.type !== "preview-ready") return;
+      for (const el of Array.from(form.elements)) {
+        const input = el as HTMLInputElement;
+        if (!input.name || input.name.startsWith("_") || input.name === "redirectTo") continue;
+        if (input.type === "hidden" || input.type === "submit" || input.type === "button") continue;
+        previewChannel.postMessage({ field: input.name, value: input.value });
+      }
+    };
+
     form.addEventListener("input", checkDirty);
     form.addEventListener("input", broadcastField);
     form.addEventListener("change", checkDirty);
