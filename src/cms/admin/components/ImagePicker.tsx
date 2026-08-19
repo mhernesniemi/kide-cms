@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { ImagePlus, Loader2, Upload, X } from "lucide-react";
-import { cn, thumbnail } from "../lib/utils";
+import { cn, focalPointStyle, thumbnail } from "../lib/utils";
 import { Button } from "./ui/button";
 import ImageBrowseDialog from "./ImageBrowseDialog";
 
@@ -14,6 +14,7 @@ type Props = {
 export default function ImagePicker({ name, value: initialValue, onChange: onChangeProp }: Props) {
   const [value, setValue] = useState(initialValue ?? "");
   const [assetId, setAssetId] = useState<string | null>(null);
+  const [focal, setFocal] = useState<{ focalX: number | null; focalY: number | null } | null>(null);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -26,7 +27,10 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
     fetch(`/api/cms/assets?url=${encodeURIComponent(value)}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((asset) => {
-        if (asset?._id) setAssetId(asset._id);
+        if (asset?._id) {
+          setAssetId(asset._id);
+          setFocal({ focalX: asset.focalX ?? null, focalY: asset.focalY ?? null });
+        }
       })
       .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -53,6 +57,7 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
         const asset = await res.json();
         setValue(asset.url);
         setAssetId(asset._id);
+        setFocal({ focalX: asset.focalX ?? null, focalY: asset.focalY ?? null });
         onChangeProp?.(asset.url);
       } catch (e) {
         console.error("Upload failed:", e);
@@ -91,7 +96,12 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
                 assetId && "hover:border-foreground/50 cursor-pointer",
               )}
             >
-              <img src={imgSrc} alt="" className="size-full object-cover" />
+              <img
+                src={imgSrc}
+                alt=""
+                className="size-full object-cover"
+                style={localPreview ? undefined : focal ? focalPointStyle(focal) : undefined}
+              />
             </a>
           ) : (
             <div className="bg-field flex size-40 items-center justify-center rounded-lg border">
@@ -141,6 +151,7 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
           setLocalPreview(null);
           setValue(asset.url);
           setAssetId(asset._id);
+          setFocal({ focalX: asset.focalX ?? null, focalY: asset.focalY ?? null });
           onChangeProp?.(asset.url);
         }}
       />

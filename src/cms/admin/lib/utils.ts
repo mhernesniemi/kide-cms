@@ -17,3 +17,15 @@ export function thumbnail(src: string, width: number = 480): string {
   const w = clampWidth(width);
   return `/api/cms/img${src}?w=${w}`;
 }
+
+/**
+ * `object-position` style for an `object-cover` thumbnail, so the visible crop
+ * follows the asset's focal point instead of centering, when one is set.
+ */
+export function focalPointStyle(asset: {
+  focalX?: number | null;
+  focalY?: number | null;
+}): { objectPosition: string } | undefined {
+  if (asset.focalX == null || asset.focalY == null) return undefined;
+  return { objectPosition: `${asset.focalX}% ${asset.focalY}%` };
+}

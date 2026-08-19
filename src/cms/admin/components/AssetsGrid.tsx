@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
-import type { CSSProperties } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -31,7 +30,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { cn, thumbnail } from "../lib/utils";
+import { cn, focalPointStyle, thumbnail } from "../lib/utils";
 import { Badge } from "./ui/badge";
 import { Button, buttonVariants } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
@@ -82,13 +81,6 @@ type Props = {
   total: number;
   pageSize: number;
 };
-
-// object-cover crops around the CSS center by default — steer it to the asset's
-// focal point instead, when one is set.
-function focalPointStyle(asset: Pick<AssetItem, "focalX" | "focalY">): CSSProperties | undefined {
-  if (asset.focalX == null || asset.focalY == null) return undefined;
-  return { objectPosition: `${asset.focalX}% ${asset.focalY}%` };
-}
 
 // Build a "/admin/assets" URL for a sidebar scope ("all" | "unfiled" | folderId).
 // "all" is the bare route; "unfiled" and folder ids ride on the `folder` param.

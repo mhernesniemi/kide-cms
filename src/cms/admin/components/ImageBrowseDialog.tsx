@@ -1,13 +1,15 @@
 import { useState, useCallback, useEffect } from "react";
 import { ChevronRight, Folder, Loader2, X } from "lucide-react";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { thumbnail } from "../lib/utils";
+import { focalPointStyle, thumbnail } from "../lib/utils";
 
 type AssetRecord = {
   _id: string;
   filename: string;
   mimeType: string;
   url: string;
+  focalX?: number | null;
+  focalY?: number | null;
   _createdAt: string;
 };
 
@@ -156,7 +158,12 @@ export default function ImageBrowseDialog({ open, onOpenChange, onSelect }: Prop
                       }}
                       className="hover:border-foreground relative aspect-square overflow-hidden rounded-lg border transition-colors"
                     >
-                      <img src={thumbnail(asset.url)} alt={asset.filename} className="size-full object-cover" />
+                      <img
+                        src={thumbnail(asset.url)}
+                        alt={asset.filename}
+                        className="size-full object-cover"
+                        style={focalPointStyle(asset)}
+                      />
                     </button>
                   ))}
                 </div>
