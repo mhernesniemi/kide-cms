@@ -7,6 +7,32 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.18.1] - 2026-08-20
+
+### Added
+
+- Marketing starter: the posts `body` content field now offers the `cta` and
+  `form` blocks inline, same as pages.
+
+### Changed
+
+- Marketing starter: the Submissions list no longer shows a "New Submission"
+  button — submissions only ever come from the public form endpoint, so the
+  collection now declares `access: { create: () => false }`.
+
+### Fixed
+
+- Admin thumbnails respect the asset's focal point everywhere: the media
+  library browse dialog and the image field preview now steer their
+  `object-cover` crop with `object-position`, matching the assets grid.
+- Bulk asset uploads report completion with the standard floating toast instead
+  of inline text above the grid.
+- Menus editor: the internal-link picker regained its compact size and correct
+  row proportions (a link-field restyle had squeezed it, which also narrowed
+  the results dropdown). The picker now accepts caller styling overrides.
+- Marketing starter: the form block aligns with the content column instead of
+  centering itself mid-page.
+
 ## [0.18.0] - 2026-08-19
 
 ### Added
