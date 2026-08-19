@@ -1,5 +1,5 @@
 ---
-import { ArrowLeft, ArrowUpRight, Dot, Lock } from "lucide-react";
+import { Archive, ArrowLeft, ArrowUpRight, Dot, Lock } from "lucide-react";
 
 import AdminCard from "../components/AdminCard.astro";
 import AiGenerateButton from "../components/AiGenerateButton";
@@ -122,6 +122,12 @@ const formTab = "edit" as "edit" | "submissions";
 
 // --- Form-submissions-specific: custom read-only view ---
 const isSubmissionView = collection.slug === "form-submissions" && mode === "edit";
+// Opening a new submission marks it read, like email. System write: the
+// read-only `data` field's access rule must not block the status flip.
+if (isSubmissionView && doc && documentId && doc.status === "new") {
+  await collectionApi.update(documentId, { status: "read" }, { _system: true });
+  doc.status = "read";
+}
 const parentFormTitle =
   isSubmissionView && doc?.form ? await loadParentFormTitle(String(doc.form), cmsRuntime, runtimeContext) : null;
 const submissionData = (isSubmissionView && doc?.data ? doc.data : {}) as Record<string, unknown>;
@@ -284,6 +290,16 @@ const publishBlocked =
               >
                 Save translation
               </button>
+            ) : isSubmissionView && documentId ? (
+              <form method="post" action={getFormAction(collection.slug, documentId)}>
+                <input type="hidden" name="_action" value="update" />
+                <input type="hidden" name="status" value={doc?.status === "archived" ? "read" : "archived"} />
+                <input type="hidden" name="redirectTo" value={`/admin/${collection.slug}`} />
+                <button class={buttonVariants({ variant: "outline" })} type="submit">
+                  <Archive className="size-3.5" />
+                  {doc?.status === "archived" ? "Unarchive" : "Archive"}
+                </button>
+              </form>
             ) : (
               <>
                 <button
