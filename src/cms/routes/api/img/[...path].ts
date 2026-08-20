@@ -27,7 +27,7 @@ export const GET: APIRoute = async ({ params, url }) => {
   // and uploads live in object storage rather than public/ — so transformImage
   // can't run. Attempt it, but fall back to streaming the untransformed original
   // from storage so images still load. (In production on Cloudflare this route
-  // is bypassed entirely: cmsImage() emits /cdn-cgi/image URLs there.)
+  // is bypassed entirely: cmsImageUrl() emits /cdn-cgi/image URLs there.)
   try {
     const result = await transformImage(src, {
       width: num("w"),

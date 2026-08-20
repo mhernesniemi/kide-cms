@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, like, lte, ne, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
+import { setUsageConfig } from "./asset-usage";
 import { recordAudit, type AuditActor } from "./audit";
 import { hashPassword, MIN_PASSWORD_LENGTH } from "./auth";
 import type { CMSConfig, CollectionConfig, FieldConfig, RichTextDocument } from "./define";
@@ -406,6 +407,10 @@ export const createCms = (config: CMSConfig) => {
     );
   }
   const collectionMap = getCollectionMap(config);
+
+  // Lets assets.delete() check whether a file is still referenced without every
+  // caller having to thread the config in.
+  setUsageConfig(config);
 
   // Webhook `name` routes deliveries — must be unique and non-empty.
   const webhookNames = (config.admin?.webhooks ?? []).map((webhook) => webhook.name.trim());

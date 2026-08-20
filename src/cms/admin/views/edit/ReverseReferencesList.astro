@@ -2,9 +2,14 @@
 import AdminCard from "../../components/AdminCard.astro";
 import type { ReverseRef } from "../../lib/edit-data";
 
-const { reverseRefs, variant = "editorial" } = Astro.props as {
+const {
+  reverseRefs,
+  variant = "editorial",
+  title = "Referenced by",
+} = Astro.props as {
   reverseRefs: ReverseRef[];
   variant?: "editorial" | "record";
+  title?: string;
 };
 
 const allDocs = reverseRefs.flatMap((ref) =>
@@ -57,10 +62,10 @@ const hidden = allDocs.slice(30);
       );
 
       return variant === "record" ? (
-        <AdminCard title="Referenced by">{list}</AdminCard>
+        <AdminCard title={title}>{list}</AdminCard>
       ) : (
         <div class="grid gap-2">
-          <span class="text-foreground/80 text-sm leading-none font-medium">Referenced by</span>
+          <span class="text-foreground/80 text-sm leading-none font-medium">{title}</span>
           {list}
         </div>
       );

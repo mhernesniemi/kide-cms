@@ -1,7 +1,7 @@
 ---
 import PublicLayout from "@/layouts/PublicLayout.astro";
 import ContentRenderer from "@/components/ContentRenderer.astro";
-import CmsPicture from "@/components/CmsPicture.astro";
+import CmsImage from "@/components/CmsImage.astro";
 import { cms } from "@/cms/.generated/api";
 import { cacheTags } from "@kidecms/core";
 
@@ -23,7 +23,7 @@ else Astro.cache.set({ tags: cacheTags("posts", doc._id) });
     <h1 data-cms="title" class="mt-6 mb-3 text-3xl font-semibold tracking-tight sm:text-4xl">{doc.title}</h1>
     {
       doc.image && (
-        <CmsPicture
+        <CmsImage
           src={doc.image}
           alt={doc.title}
           preset="banner"

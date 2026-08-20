@@ -122,7 +122,16 @@ async function main() {
   // drizzle-kit's hasDataLoss misses plain DROP COLUMN — classify statement shapes too.
   // (`__new_` is drizzle's table-recreate pattern: create copy, insert-select, drop old.)
   const isDestructive = (stmt: string) => /\bDROP\s+TABLE\b|\bDROP\s+COLUMN\b|\bDELETE\s+FROM\b|__new_/i.test(stmt);
-  const losesData = hasDataLoss || statements.some(isDestructive);
+
+  // `hasDataLoss` describes the whole diff, including the runtime FTS tables filtered
+  // out above — dropping those is not data loss (ensureSearchSchema rebuilds them), so
+  // the flag alone would block any additive change made while a search index exists.
+  // Judge what we are actually going to run, and only defer to drizzle's flag when
+  // something outside the search index could be behind it.
+  const droppedSearchIndex = statementsToExecute.some(isSearchIndexStatement);
+  const searchIndexIsTheOnlyLoss =
+    droppedSearchIndex && statementsToExecute.every((stmt) => isSearchIndexStatement(stmt) || !isDestructive(stmt));
+  const losesData = statements.some(isDestructive) || (hasDataLoss && !searchIndexIsTheOnlyLoss);
 
   if (statements.length === 0) {
     console.log("[cms:push] Schema already in sync.");

@@ -325,6 +325,9 @@ export default function AssetsGrid({
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkUsage, setBulkUsage] = useState<{ tone: "warn" | "muted"; message: string } | null>(null);
+  // Guards against a slow lookup from a previous dialog landing on a new selection.
+  const bulkUsageRequest = useRef(0);
   const [createName, setCreateName] = useState("");
   const [renameName, setRenameName] = useState("");
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
@@ -581,6 +584,69 @@ export default function AssetsGrid({
   function resetDialogState() {
     setLoading(false);
     setError(null);
+    setBulkUsage(null);
+    bulkUsageRequest.current += 1;
+  }
+
+  /**
+   * Reports where the selected assets are used. Always sets a message — silence
+   * would make "none are used" indistinguishable from "the check failed", which
+   * is how a broken usage lookup goes unnoticed for a long time. The message is
+   * the whole dialog body, not an aside: what happens to the content is the point
+   * of the decision, so it must not read as a footnote to a generic warning.
+   */
+  async function loadBulkUsage(ids: string[]) {
+    const token = ++bulkUsageRequest.current;
+    const one = ids.length === 1;
+    const subject = one ? "This asset" : `These ${ids.length} assets`;
+    const settle = (tone: "warn" | "muted", message: string) => {
+      if (token === bulkUsageRequest.current) setBulkUsage({ tone, message });
+    };
+
+    settle("muted", `Checking where ${one ? "this asset is" : "these assets are"} used…`);
+    try {
+      const res = await fetch(`/api/cms/asset-usage?ids=${ids.map(encodeURIComponent).join(",")}`);
+      if (!res.ok) {
+        settle(
+          "muted",
+          `Couldn't check where ${one ? "this asset is" : "these assets are"} used. Deleting cannot be undone.`,
+        );
+        return;
+      }
+      const { counts, incomplete } = (await res.json()) as {
+        counts: Record<string, number>;
+        incomplete?: string[];
+      };
+      const used = ids.filter((id) => (counts[id] ?? 0) > 0);
+
+      if (used.length > 0) {
+        const places = used.reduce((sum, id) => sum + (counts[id] ?? 0), 0);
+        const where = places === 1 ? "1 place" : `${places} places`;
+        const subjectUsed = one
+          ? "This asset is"
+          : `${used.length} of these ${ids.length} assets ${used.length === 1 ? "is" : "are"}`;
+        settle(
+          "warn",
+          `${subjectUsed} used in ${where} — deleting will leave ${places === 1 ? "that place" : "those places"} without an image. This cannot be undone.`,
+        );
+        return;
+      }
+
+      if (incomplete?.length) {
+        settle(
+          "warn",
+          `Couldn't search ${incomplete.join(", ")}, so ${one ? "this asset" : "these assets"} may still be in use. Deleting cannot be undone.`,
+        );
+        return;
+      }
+
+      settle("muted", `${subject} ${one ? "isn't" : "aren't"} used by any document. Deleting cannot be undone.`);
+    } catch {
+      settle(
+        "muted",
+        `Couldn't check where ${one ? "this asset is" : "these assets are"} used. Deleting cannot be undone.`,
+      );
+    }
   }
 
   async function handleCreateFolder() {
@@ -634,7 +700,8 @@ export default function AssetsGrid({
     setLoading(true);
     setError(null);
     const ids = Array.from(selectedIds);
-    const results = await Promise.all(ids.map((id) => fetch(`/api/cms/assets/${id}`, { method: "DELETE" })));
+    // force=1: the dialog already showed the usage warning and the editor accepted it.
+    const results = await Promise.all(ids.map((id) => fetch(`/api/cms/assets/${id}?force=1`, { method: "DELETE" })));
     const failed = results.filter((r) => !r.ok).length;
     if (failed > 0 && failed === ids.length) {
       setLoading(false);
@@ -821,6 +888,7 @@ export default function AssetsGrid({
                     onClick={() => {
                       resetDialogState();
                       setBulkDeleteOpen(true);
+                      void loadBulkUsage(Array.from(selectedIds));
                     }}
                   >
                     <Trash2 className="size-3.5" />
@@ -1033,10 +1101,10 @@ export default function AssetsGrid({
       <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete assets</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete {selectedIds.size} asset{selectedIds.size > 1 ? "s" : ""}? This action
-              cannot be undone.
+            <DialogTitle>Delete {selectedIds.size === 1 ? "asset" : `${selectedIds.size} assets`}</DialogTitle>
+            <DialogDescription className={cn(bulkUsage?.tone === "warn" && "text-foreground font-medium")}>
+              {bulkUsage?.message ??
+                `Deleting ${selectedIds.size === 1 ? "this asset" : "these assets"} cannot be undone.`}
             </DialogDescription>
           </DialogHeader>
           {error && <p className="text-destructive text-sm">{error}</p>}

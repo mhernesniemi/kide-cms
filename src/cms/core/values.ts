@@ -6,7 +6,7 @@ import type {
   RichTextDocument,
   RichTextNode,
 } from "./define";
-import { cmsImage, cmsSrcset } from "./image";
+import { cmsImageUrl, cmsSrcset } from "./image";
 
 export const cloneValue = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -320,7 +320,7 @@ const renderNode = (node: RichTextNode): string => {
       const sizes = "(max-width: 768px) 100vw, 768px";
       const avif = escapeHtml(cmsSrcset(src, undefined, "avif"));
       const webp = escapeHtml(cmsSrcset(src, undefined, "webp"));
-      const fallback = escapeHtml(cmsImage(src, 1024));
+      const fallback = escapeHtml(cmsImageUrl(src, 1024));
       return `<picture><source type="image/avif" srcset="${avif}" sizes="${sizes}" /><source type="image/webp" srcset="${webp}" sizes="${sizes}" /><img src="${fallback}" alt="${alt}" loading="lazy" class="h-auto max-w-full rounded-lg" /></picture>`;
     }
     const safeSrc = safeUrl(src);

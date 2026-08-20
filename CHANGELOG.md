@@ -7,6 +7,63 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+### Added
+
+- Asset delete-safety. `assets.delete()` now refuses to delete an upload that is
+  still referenced and throws `AssetInUseError` (carrying the list of documents)
+  unless called with `{ force: true }`; `DELETE /api/cms/assets/:id` answers
+  **409** with the same payload, and `?force=1` proceeds. The check lives in core
+  because the endpoint is reachable directly, not only through the admin.
+- `findAssetUsage()` / `countAssetUsage()` — where an upload is used. Candidate
+  columns are derived from the collection config (`image` fields match exactly,
+  JSON-serialized fields by substring), and the scan covers translations tables
+  and the `_published` snapshot, so an image that survives only in published
+  content still counts as used.
+- `GET /api/cms/asset-usage` — `?id=` for the detail list, `?ids=` for batch
+  counts. Deliberately outside `/api/cms/assets/…`, where a static segment is
+  shadowed by the `[id]` route whenever it is not registered.
+- Admin: the asset edit page gained a "Used in" card listing the documents that
+  reference it; the assets grid warns before bulk-deleting anything still in use.
+- Indexes on `cms_assets.storage_path`, `.hash`, and `.folder` — `findByUrl` runs
+  on every image render and had none.
+
+### Changed
+
+- **Breaking:** `cmsImage()` is now `cmsImageUrl()`, and `<CmsPicture>` is now
+  `<CmsImage>` (`src/components/CmsImage.astro`). Renaming both makes the split
+  legible: `<CmsImage>` is how you render an image, `cmsImageUrl()` is for when
+  you need a URL string instead of an element (og:image, CSS `background-image`,
+  JSON-LD, email). Update imports — `cmsSrcset` is unchanged.
+- A deleted or missing upload no longer renders a broken image. `<CmsImage>`
+  renders nothing when the asset is gone, and `stripMissingAssetImages()` drops
+  dead inline images from rich-text and content fields before rendering.
+- **Breaking:** `findAssetUsage()` returns `{ refs, incomplete }` and
+  `countAssetUsage()` returns `{ counts, incomplete }`. `incomplete` names
+  collections that could not be searched, so a caller can never read a partial
+  scan as "unused" — `assets.delete()` now refuses in that case too, and the
+  delete dialogs say so rather than staying silent.
+- Delete dialogs report the outcome of the reference check in every case — used,
+  not used, or could not be checked. Previously a failed lookup was swallowed and
+  looked identical to "nothing references this".
+
+### Fixed
+
+- `cms:push` no longer refuses additive schema changes. drizzle-kit's
+  `hasDataLoss` covers the whole diff including the runtime FTS search tables,
+  which `push.ts` already filters out of what it executes — so any additive
+  change made while a search index existed was blocked with a "this diff loses
+  data" message listing only harmless statements.
+- `dev:preview` clears Vite's prebundle cache when `pnpm install` relinks
+  `node_modules` without changing the lockfile. The stale cache broke hydration
+  across every admin island and survived server restarts, since Vite keys the
+  cache on the lockfile.
+- `dev:preview` restarts the preview server when the integration changes or a new
+  route file appears. Injected routes are registered once at
+  `astro:config:setup`, so a synced-in route was silently absent until a manual
+  restart, and requests fell through to whatever else matched.
+
 ## [0.18.1] - 2026-08-20
 
 ### Added

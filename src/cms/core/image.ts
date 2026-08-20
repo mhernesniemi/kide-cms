@@ -70,7 +70,16 @@ function isCloudflare(): boolean {
   return typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
 }
 
-export function cmsImage(src: string, width?: number, format: Format = "webp", crop?: CropOptions): string {
+/**
+ * Builds a URL for one rendition. This is the low-level primitive — it cannot
+ * read the asset record, so it knows nothing about the stored focal point or the
+ * intrinsic dimensions, and it does not check that the upload still exists.
+ *
+ * To render an image, use `<CmsImage>`, which does all three. Reach for this only
+ * when you need a string rather than an element: og:image, CSS background-image,
+ * JSON-LD, email HTML.
+ */
+export function cmsImageUrl(src: string, width?: number, format: Format = "webp", crop?: CropOptions): string {
   if (!src) return "";
 
   const ratio = parseAspect(crop?.aspect);
@@ -110,7 +119,7 @@ export function cmsSrcset(
   crop?: CropOptions,
 ): string {
   if (!src) return "";
-  return widths.map((width) => `${cmsImage(src, width, format, crop)} ${width}w`).join(", ");
+  return widths.map((width) => `${cmsImageUrl(src, width, format, crop)} ${width}w`).join(", ");
 }
 
 export type TransformOptions = {

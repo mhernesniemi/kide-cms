@@ -70,7 +70,7 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
   const isInvitePage = pathname === "/admin/invite";
   const isInviteApi = pathname === "/api/cms/auth/invite";
 
-  // Public despite the /api/cms prefix: cmsImage() puts these URLs on public pages.
+  // Public despite the /api/cms prefix: cmsImageUrl() puts these URLs on public pages.
   // Only reads files under public/, which are served unauthenticated anyway.
   const isPublicImageApi = pathname.startsWith("/api/cms/img/");
 

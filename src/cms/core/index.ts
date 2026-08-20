@@ -140,8 +140,10 @@ export {
 } from "./auth";
 export type { SessionUser } from "./auth";
 
-export { assets, folders } from "./assets";
+export { assets, folders, stripMissingAssetImages } from "./assets";
 export type { AssetRecord, FolderRecord } from "./assets";
+export { AssetInUseError, countAssetUsage, findAssetUsage } from "./asset-usage";
+export type { AssetUsageRef, AssetUsageResult } from "./asset-usage";
 
 export { parseBlocks, parseList, cacheTags } from "./content";
 export { renderRichText, createRichTextFromPlainText, richTextToPlainText, htmlToRichText } from "./richtext";
@@ -169,7 +171,7 @@ export {
   contentToPlainText,
 } from "./values";
 export type { ContentSegment } from "./values";
-export { cmsImage, cmsSrcset, transformImage, DEFAULT_PRESETS, resolveImagePreset } from "./image";
+export { cmsImageUrl, cmsSrcset, transformImage, DEFAULT_PRESETS, resolveImagePreset } from "./image";
 export type { CropOptions, TransformOptions } from "./image";
 
 export {

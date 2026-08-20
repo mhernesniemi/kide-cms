@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CalendarClock, CheckIcon, EllipsisVertical } from "lucide-react";
+import { cn } from "../lib/utils";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -52,6 +53,12 @@ type Props = {
   versions?: Version[];
   restoreEndpoint?: string;
   redirectTo?: string;
+  /** Overrides the reference lookup — assets report usage from a different endpoint. */
+  referencesEndpoint?: string;
+  /** Noun used in the delete dialog ("document", "asset", …). */
+  entityLabel?: string;
+  /** Adds `_force=1` to the delete submit, telling the API the warning was shown and accepted. */
+  forceOnConfirm?: boolean;
 };
 
 export default function DocumentActions({
@@ -69,10 +76,13 @@ export default function DocumentActions({
   versions = [],
   restoreEndpoint,
   redirectTo,
+  referencesEndpoint,
+  entityLabel = "document",
+  forceOnConfirm,
 }: Props) {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [refWarning, setRefWarning] = useState<string | null>(null);
+  const [refWarning, setRefWarning] = useState<{ tone: "warn" | "muted"; message: string } | null>(null);
   const [publishAt, setPublishAt] = useState(currentPublishAt ? toLocalDatetime(currentPublishAt) : "");
   const [unpublishAt, setUnpublishAt] = useState(currentUnpublishAt ? toLocalDatetime(currentUnpublishAt) : "");
 
@@ -102,11 +112,21 @@ export default function DocumentActions({
     }
   };
 
-  const submitAction = (action: string) => {
+  const submitAction = (action: string, force?: boolean) => {
     const form = document.getElementById(formId) as HTMLFormElement | null;
     if (!form) return;
     const input = form.querySelector<HTMLInputElement>('input[name="_action"]');
     if (input) input.value = action;
+    if (force) {
+      let forceInput = form.querySelector<HTMLInputElement>('input[name="_force"]');
+      if (!forceInput) {
+        forceInput = document.createElement("input");
+        forceInput.type = "hidden";
+        forceInput.name = "_force";
+        form.appendChild(forceInput);
+      }
+      forceInput.value = "1";
+    }
     form.submit();
   };
 
@@ -228,23 +248,45 @@ export default function DocumentActions({
               variant="destructive"
               onClick={async () => {
                 setRefWarning(null);
-                if (collectionSlug && documentId) {
-                  try {
-                    const res = await fetch(`/api/cms/references/${collectionSlug}/${documentId}`);
-                    if (res.ok) {
-                      const { refs, total } = await res.json();
-                      if (total > 0) {
-                        const parts = refs.map(
-                          (r: { collection: string; count: number }) => `${r.count} ${r.collection.toLowerCase()}`,
-                        );
-                        setRefWarning(
-                          `This document is referenced by ${parts.join(", ")}. Deleting it will leave broken references.`,
-                        );
-                      }
-                    }
-                  } catch {}
-                }
+                const endpoint =
+                  referencesEndpoint ??
+                  (collectionSlug && documentId ? `/api/cms/references/${collectionSlug}/${documentId}` : null);
                 setDeleteOpen(true);
+                if (!endpoint) return;
+
+                // Always report the outcome. Staying silent on a failed lookup makes
+                // "nothing references this" and "the check never ran" identical, which
+                // is exactly how a broken reference check goes unnoticed.
+                try {
+                  const res = await fetch(endpoint);
+                  if (!res.ok) {
+                    setRefWarning({ tone: "muted", message: `Couldn't check what references this ${entityLabel}.` });
+                    return;
+                  }
+                  const payload = await res.json();
+                  const parts = summarizeRefs(payload);
+                  if (parts.length > 0) {
+                    setRefWarning({
+                      tone: "warn",
+                      message: `This ${entityLabel} is referenced by ${parts.join(", ")} — deleting it will leave those references broken. This cannot be undone.`,
+                    });
+                  } else if (Array.isArray(payload.incomplete) && payload.incomplete.length > 0) {
+                    setRefWarning({
+                      tone: "warn",
+                      message: `Couldn't search ${payload.incomplete.join(", ")}, so this ${entityLabel} may still be referenced. Deleting it cannot be undone.`,
+                    });
+                  } else {
+                    setRefWarning({
+                      tone: "muted",
+                      message: `Nothing references this ${entityLabel}. Deleting it cannot be undone.`,
+                    });
+                  }
+                } catch {
+                  setRefWarning({
+                    tone: "muted",
+                    message: `Couldn't check what references this ${entityLabel}. Deleting it cannot be undone.`,
+                  });
+                }
               }}
             >
               Delete
@@ -302,19 +344,16 @@ export default function DocumentActions({
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete document</AlertDialogTitle>
-            <AlertDialogDescription>
-              {refWarning && (
-                <span className="mb-2 block font-medium text-amber-600 dark:text-amber-400">{refWarning}</span>
-              )}
-              This action cannot be undone. This will permanently delete this document.
+            <AlertDialogTitle>Delete {entityLabel}</AlertDialogTitle>
+            <AlertDialogDescription className={cn(refWarning?.tone === "warn" && "text-foreground font-medium")}>
+              {refWarning?.message ?? `Deleting this ${entityLabel} cannot be undone.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogClose>
               <Button variant="outline">Cancel</Button>
             </AlertDialogClose>
-            <Button variant="destructive" onClick={() => submitAction("delete")}>
+            <Button variant="destructive" onClick={() => submitAction("delete", forceOnConfirm)}>
               Delete
             </Button>
           </AlertDialogFooter>
@@ -330,4 +369,25 @@ function toLocalDatetime(iso: string): string {
   const offset = date.getTimezoneOffset();
   const local = new Date(date.getTime() - offset * 60000);
   return local.toISOString().slice(0, 16);
+}
+
+/**
+ * Both reference endpoints answer "where is this used" in their own shape:
+ * `/api/cms/references/*` returns pre-counted `refs`, the asset endpoint returns
+ * the matching documents grouped by collection.
+ */
+function summarizeRefs(payload: {
+  refs?: Array<{ collection: string; count: number }>;
+  usage?: Array<{ collectionLabel: string; docs: unknown[] }>;
+  incomplete?: string[];
+}): string[] {
+  if (Array.isArray(payload.usage)) {
+    return payload.usage
+      .filter((entry) => entry.docs.length > 0)
+      .map((entry) => `${entry.docs.length} ${entry.collectionLabel.toLowerCase()}`);
+  }
+  if (Array.isArray(payload.refs)) {
+    return payload.refs.filter((ref) => ref.count > 0).map((ref) => `${ref.count} ${ref.collection.toLowerCase()}`);
+  }
+  return [];
 }

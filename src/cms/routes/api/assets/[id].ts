@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
-import { assets } from "virtual:kide/runtime";
+import config from "virtual:kide/config";
+import { AssetInUseError, assets } from "virtual:kide/runtime";
 
 export const prerender = false;
 
@@ -42,11 +43,21 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
   return Response.json(result);
 };
 
-export const DELETE: APIRoute = async ({ params, locals }) => {
+export const DELETE: APIRoute = async ({ params, request, locals }) => {
   const id = params.id;
   if (!id) return new Response(null, { status: 400 });
 
-  await assets.delete(id, { actor: getActor(locals) });
+  const force = new URL(request.url).searchParams.get("force") === "1";
+
+  try {
+    await assets.delete(id, { actor: getActor(locals), force, config });
+  } catch (error) {
+    if (error instanceof AssetInUseError) {
+      return Response.json({ error: error.message, usage: error.usage, incomplete: error.incomplete }, { status: 409 });
+    }
+    throw error;
+  }
+
   return new Response(null, { status: 204 });
 };
 
@@ -60,7 +71,17 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
   const actor = getActor(locals);
 
   if (method === "DELETE" || action === "delete") {
-    await assets.delete(id, { actor });
+    try {
+      await assets.delete(id, { actor, force: formData.get("_force") === "1", config });
+    } catch (error) {
+      if (error instanceof AssetInUseError) {
+        return new Response(null, {
+          status: 303,
+          headers: { Location: `/admin/assets/${id}?_toast=error&_msg=${encodeURIComponent(error.message)}` },
+        });
+      }
+      throw error;
+    }
     return new Response(null, {
       status: 303,
       headers: { Location: "/admin/assets?_toast=success&_msg=Asset+deleted" },

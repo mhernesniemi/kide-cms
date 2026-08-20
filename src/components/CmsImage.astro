@@ -1,5 +1,13 @@
 ---
-import { assets, cmsImage, cmsSrcset, resolveImagePreset } from "@kidecms/core";
+/**
+ * The way to render a CMS image. Resolves the asset's stored focal point, sets
+ * width/height to prevent layout shift, emits AVIF + WebP sources, and renders
+ * nothing when the upload is gone.
+ *
+ * Need a URL string instead of an element — og:image, CSS background-image,
+ * JSON-LD, email HTML? Use `cmsImageUrl()` / `cmsSrcset()` from @kidecms/core.
+ */
+import { assets, cmsImageUrl, cmsSrcset, resolveImagePreset } from "@kidecms/core";
 import type { CropOptions, ImagePreset } from "@kidecms/core";
 import config from "@/cms/cms.config";
 
@@ -38,6 +46,11 @@ const isUpload = typeof src === "string" && src.startsWith("/uploads/");
 
 // Look up the asset once for focal point + intrinsic dimensions.
 const asset = isUpload ? await assets.findByUrl(src) : null;
+
+// The asset is gone (deleted, storage loss, imported content pointing nowhere).
+// Every rendition URL below would 404, so render nothing rather than a broken image.
+const isMissing = isUpload && !asset;
+
 const focalX = focalXProp ?? asset?.focalX ?? null;
 const focalY = focalYProp ?? asset?.focalY ?? null;
 
@@ -73,7 +86,7 @@ function parseRatio(a?: string): number | undefined {
 const imgWidth = base.widths[Math.floor(base.widths.length / 2)] ?? base.widths[0];
 const ratio = parseRatio(base.aspect) ?? (asset?.width && asset?.height ? asset.width / asset.height : undefined);
 const imgHeight = ratio ? Math.round(imgWidth / ratio) : undefined;
-const imgSrc = isUpload ? cmsImage(src, imgWidth, "webp", { aspect: base.aspect, focalX, focalY }) : src;
+const imgSrc = isUpload ? cmsImageUrl(src, imgWidth, "webp", { aspect: base.aspect, focalX, focalY }) : src;
 
 // The server only crops (and honors the focal point) for presets with an
 // aspect; anything else is resize-only. When a caller then crops in the
@@ -84,7 +97,7 @@ const focalStyle = focalX != null && focalY != null ? `object-position: ${focalX
 ---
 
 {
-  isUpload ? (
+  isMissing ? null : isUpload ? (
     <picture>
       {sources.map((s) => (
         <source media={s.media} srcset={s.srcset} type={s.type} sizes={s.sizes} />

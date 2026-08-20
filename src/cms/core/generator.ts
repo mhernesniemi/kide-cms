@@ -151,7 +151,11 @@ const generateSchemaFile = (config: CMSConfig): string => {
   storagePath: text("storage_path").notNull(),
   hash: text("hash"),
   _createdAt: text("_created_at").notNull(),
-});`);
+}, (table) => ({
+  storagePathIdx: index("assets_storage_path_idx").on(table.storagePath),
+  hashIdx: index("assets_hash_idx").on(table.hash),
+  folderIdx: index("assets_folder_idx").on(table.folder),
+}));`);
   parts.push("");
   parts.push(`export const cmsAssetFolders = sqliteTable("cms_asset_folders", {
   _id: text("_id").primaryKey(),

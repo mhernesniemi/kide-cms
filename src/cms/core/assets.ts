@@ -2,11 +2,23 @@ import { createHash } from "node:crypto";
 import { and, desc, eq, isNull, like, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
+import { AssetInUseError, findAssetUsage, getUsageConfig } from "./asset-usage";
+import type { CMSConfig } from "./define";
 import { logAudit, type AuditActor } from "./audit";
 import { getDb, getStorage } from "./runtime";
 import { getSchema } from "./schema";
 
-export type AssetContext = { actor?: AuditActor };
+export type AssetContext = {
+  actor?: AuditActor;
+  /** Skip the in-use check. The admin sets this once the editor has confirmed the warning. */
+  force?: boolean;
+  /**
+   * Config used for the in-use check. Pass it explicitly from any caller that
+   * deletes — relying on the copy `createCms()` registers makes the guard depend
+   * on whether something else in the process imported the generated API first.
+   */
+  config?: CMSConfig;
+};
 
 export type AssetRecord = {
   _id: string;
@@ -208,6 +220,25 @@ export const assets = {
     const rows = await db.select().from(schema.cmsAssets).where(eq(schema.cmsAssets._id, id)).limit(1);
     if (rows.length === 0) return;
     const asset = rows[0] as any;
+
+    // Guarded here, not only in the admin — DELETE /api/cms/assets/:id is reachable
+    // directly. Never skip the check silently: with no config there is nothing to
+    // check against, and proceeding would delete a referenced asset without a word.
+    // Callers that genuinely want an unchecked delete pass `force`.
+    if (!context?.force) {
+      const config = context?.config ?? getUsageConfig();
+      if (!config) {
+        throw new Error(
+          "assets.delete() cannot check whether this asset is in use — pass `config` in the context " +
+            "(or `force: true` to delete without checking).",
+        );
+      }
+      const { refs, incomplete } = await findAssetUsage(config, asset.storagePath);
+      // A collection we could not search is not evidence of "unused" — refuse
+      // rather than delete something that may still be referenced.
+      if (refs.length > 0 || incomplete.length > 0) throw new AssetInUseError(id, refs, incomplete);
+    }
+
     await storage.deleteFile(asset.storagePath);
     await db.delete(schema.cmsAssets).where(eq(schema.cmsAssets._id, id));
 
@@ -333,4 +364,65 @@ export const folders = {
     await db.update(schema.cmsAssetFolders).set({ parent: null }).where(eq(schema.cmsAssetFolders.parent, id));
     await db.delete(schema.cmsAssetFolders).where(eq(schema.cmsAssetFolders._id, id));
   },
+};
+
+type RichTextLikeNode = { type?: string; src?: unknown; children?: unknown[]; [key: string]: unknown };
+
+const collectLocalImageSrcs = (node: unknown, into: Set<string>): void => {
+  if (Array.isArray(node)) {
+    for (const child of node) collectLocalImageSrcs(child, into);
+    return;
+  }
+  if (!node || typeof node !== "object") return;
+
+  const candidate = node as RichTextLikeNode;
+  if (candidate.type === "image" && typeof candidate.src === "string" && candidate.src.startsWith("/uploads/")) {
+    into.add(candidate.src);
+  }
+  if (Array.isArray(candidate.children)) collectLocalImageSrcs(candidate.children, into);
+};
+
+const withoutMissingImages = <T>(node: T, missing: Set<string>): T => {
+  if (Array.isArray(node)) {
+    return node
+      .filter((child) => {
+        const candidate = child as RichTextLikeNode | null;
+        return !(
+          candidate &&
+          typeof candidate === "object" &&
+          candidate.type === "image" &&
+          typeof candidate.src === "string" &&
+          missing.has(candidate.src)
+        );
+      })
+      .map((child) => withoutMissingImages(child, missing)) as unknown as T;
+  }
+  if (!node || typeof node !== "object") return node;
+
+  const candidate = node as RichTextLikeNode;
+  if (!Array.isArray(candidate.children)) return node;
+  return { ...candidate, children: withoutMissingImages(candidate.children, missing) } as unknown as T;
+};
+
+/**
+ * Drops `image` nodes whose upload no longer exists from a rich-text / content
+ * document. The renderers are synchronous string builders, so this is the async
+ * pass that keeps a deleted asset from emitting a <picture> of 404s.
+ *
+ * Returns the document unchanged when nothing is missing (the common case).
+ */
+export const stripMissingAssetImages = async <T>(document: T): Promise<T> => {
+  const srcs = new Set<string>();
+  collectLocalImageSrcs(document, srcs);
+  if (srcs.size === 0) return document;
+
+  const missing = new Set<string>();
+  await Promise.all(
+    [...srcs].map(async (src) => {
+      if (!(await assets.findByUrl(src))) missing.add(src);
+    }),
+  );
+  if (missing.size === 0) return document;
+
+  return withoutMissingImages(document, missing);
 };

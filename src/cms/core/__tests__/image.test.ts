@@ -4,42 +4,42 @@ import path from "node:path";
 import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { cmsImage, cmsSrcset, DEFAULT_PRESETS, resolveImagePreset, transformImage } from "../image";
+import { cmsImageUrl, cmsSrcset, DEFAULT_PRESETS, resolveImagePreset, transformImage } from "../image";
 
-describe("cmsImage", () => {
+describe("cmsImageUrl", () => {
   it("returns empty string for empty src", () => {
-    expect(cmsImage("", 800)).toBe("");
+    expect(cmsImageUrl("", 800)).toBe("");
   });
 
   it("builds a transform URL with snapped width", () => {
     // 800 snaps to nearest allowed width (768)
-    expect(cmsImage("/uploads/a.jpg", 800)).toBe("/api/cms/img/uploads/a.jpg?w=768");
+    expect(cmsImageUrl("/uploads/a.jpg", 800)).toBe("/api/cms/img/uploads/a.jpg?w=768");
   });
 
   it("omits format param for the webp default and includes it otherwise", () => {
-    expect(cmsImage("/uploads/a.jpg", 320)).not.toContain("f=");
-    expect(cmsImage("/uploads/a.jpg", 320, "avif")).toContain("f=avif");
+    expect(cmsImageUrl("/uploads/a.jpg", 320)).not.toContain("f=");
+    expect(cmsImageUrl("/uploads/a.jpg", 320, "avif")).toContain("f=avif");
   });
 
   it("derives height from aspect ratio", () => {
     // w=1280, aspect 21/9 → h=549
-    const url = cmsImage("/uploads/a.jpg", 1280, "webp", { aspect: "21/9" });
+    const url = cmsImageUrl("/uploads/a.jpg", 1280, "webp", { aspect: "21/9" });
     expect(url).toContain("w=1280");
     expect(url).toContain("h=549");
   });
 
   it("includes focal params only when cropping", () => {
-    const cropped = cmsImage("/uploads/a.jpg", 1280, "webp", { aspect: "16/9", focalX: 30, focalY: 70 });
+    const cropped = cmsImageUrl("/uploads/a.jpg", 1280, "webp", { aspect: "16/9", focalX: 30, focalY: 70 });
     expect(cropped).toContain("fx=30");
     expect(cropped).toContain("fy=70");
 
     // No aspect → no crop → focal params are meaningless and omitted
-    const uncropped = cmsImage("/uploads/a.jpg", 1280, "webp", { focalX: 30, focalY: 70 });
+    const uncropped = cmsImageUrl("/uploads/a.jpg", 1280, "webp", { focalX: 30, focalY: 70 });
     expect(uncropped).not.toContain("fx=");
   });
 
   it("omits focal params when no focal point is set, so the transform picks one", () => {
-    const url = cmsImage("/uploads/a.jpg", 1280, "webp", { aspect: "16/9" });
+    const url = cmsImageUrl("/uploads/a.jpg", 1280, "webp", { aspect: "16/9" });
     expect(url).toContain("h=720");
     expect(url).not.toContain("fx=");
     expect(url).not.toContain("fy=");
@@ -47,13 +47,13 @@ describe("cmsImage", () => {
 
   it("accepts aspect in /, : and x notations", () => {
     for (const aspect of ["16/9", "16:9", "16x9"]) {
-      expect(cmsImage("/uploads/a.jpg", 1280, "webp", { aspect })).toContain("h=720");
+      expect(cmsImageUrl("/uploads/a.jpg", 1280, "webp", { aspect })).toContain("h=720");
     }
   });
 
   it("ignores malformed aspect ratios", () => {
-    expect(cmsImage("/uploads/a.jpg", 1280, "webp", { aspect: "wide" })).not.toContain("h=");
-    expect(cmsImage("/uploads/a.jpg", 1280, "webp", { aspect: "16/0" })).not.toContain("h=");
+    expect(cmsImageUrl("/uploads/a.jpg", 1280, "webp", { aspect: "wide" })).not.toContain("h=");
+    expect(cmsImageUrl("/uploads/a.jpg", 1280, "webp", { aspect: "16/0" })).not.toContain("h=");
   });
 });
 

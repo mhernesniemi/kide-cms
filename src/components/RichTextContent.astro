@@ -1,5 +1,5 @@
 ---
-import { renderRichText } from "@kidecms/core";
+import { renderRichText, stripMissingAssetImages } from "@kidecms/core";
 
 const { content, className } = Astro.props;
 const parsed =
@@ -12,7 +12,8 @@ const parsed =
         }
       })()
     : content;
-const html = renderRichText(parsed);
+// Inline images whose upload is gone would render as a <picture> of 404s.
+const html = renderRichText(await stripMissingAssetImages(parsed));
 ---
 
 {html && <div class:list={["prose", className]} set:html={html} />}

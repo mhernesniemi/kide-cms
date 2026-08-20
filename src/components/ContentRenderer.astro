@@ -1,6 +1,6 @@
 ---
 import { cms } from "@/cms/.generated/api";
-import { SHARED_BLOCK_TYPE, contentSegments, renderRichText } from "@kidecms/core";
+import { SHARED_BLOCK_TYPE, contentSegments, renderRichText, stripMissingAssetImages } from "@kidecms/core";
 import type { ContentDocument } from "@kidecms/core";
 
 const { content, status = "published" } = Astro.props as {
@@ -31,7 +31,8 @@ const resolvedSegments: Array<(typeof segments)[number] | { kind: "missingShared
 
 for (const segment of segments) {
   if (segment.kind === "richText") {
-    resolvedSegments.push(segment);
+    // Inline images whose upload is gone would render as a <picture> of 404s.
+    resolvedSegments.push({ ...segment, doc: await stripMissingAssetImages(segment.doc) });
     continue;
   }
 

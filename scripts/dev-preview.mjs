@@ -66,12 +66,55 @@ rmSync(path.join(previewDir, "starter.json"), { force: true });
 rmSync(path.join(previewDir, "adapters"), { recursive: true, force: true });
 
 run("pnpm install"); // fast on a warm store, and self-heals an interrupted install
+clearStaleViteCache();
 run("pnpm cms:push"); // runs cms:generate first; both no-op fast when nothing changed
 if (existsSync(path.join(previewDir, "src/cms/seed.ts"))) run("pnpm exec kide seed"); // skips non-empty collections
 
 // --- Live sync while the server runs ---
 
 const IGNORE = /(^|\/)(node_modules|\.generated|\.git|\.astro|data|dist)(\/|$)|\.DS_Store$|^starter\.json$/;
+
+// `pnpm install` can relink node_modules without changing the lockfile ("Already
+// up to date"), and Vite keys its prebundle cache on the lockfile — so the cache
+// survives, now built against different files. Hydration then dies across every
+// island and a restart does not help, because a restart does not invalidate it.
+function clearStaleViteCache() {
+  const viteDir = path.join(previewDir, "node_modules/.vite");
+  const viteMeta = path.join(viteDir, "deps/_metadata.json");
+  const modulesState = path.join(previewDir, "node_modules/.modules.yaml");
+  if (!existsSync(viteMeta) || !existsSync(modulesState)) return;
+  if (statSync(modulesState).mtimeMs <= statSync(viteMeta).mtimeMs) return;
+  rmSync(viteDir, { recursive: true, force: true });
+  console.log("[dev-preview] cleared stale Vite dep cache (node_modules changed after it was built)");
+}
+
+// Injected routes are registered once, in the integration's astro:config:setup —
+// syncing a new route file into a running server does nothing, and the request
+// falls through to whatever else matches. Restart so the route actually exists.
+let restartTimer = null;
+let restarting = false;
+// Without a TTY, `astro dev` detaches and our child exits immediately — the real
+// server is a separate background process, so killing the child restarts nothing.
+let detached = false;
+const scheduleServerRestart = (reason) => {
+  if (restartTimer) clearTimeout(restartTimer);
+  restartTimer = setTimeout(() => {
+    console.log(`[dev-preview] ${reason} — restarting the preview server to register routes`);
+    restarting = true;
+    if (detached) {
+      try {
+        run("pnpm exec astro dev stop");
+      } catch {
+        // already gone
+      }
+      restarting = false;
+      detached = false;
+      startServer();
+    } else {
+      child.kill();
+    }
+  }, 300);
+};
 
 // Schema-affecting syncs regenerate + push in the preview (debounced). The
 // integration's own config watcher only reacts to cms.config.ts content
@@ -91,10 +134,13 @@ const scheduleSchemaRefresh = () => {
 const syncFile = (srcAbs, rel) => {
   if (IGNORE.test(rel) || !existsSync(srcAbs) || statSync(srcAbs).isDirectory()) return;
   const destAbs = path.join(previewDir, rel);
+  const isNewFile = !existsSync(destAbs);
   mkdirSync(path.dirname(destAbs), { recursive: true });
   cpSync(srcAbs, destAbs);
   console.log(`[dev-preview] synced ${rel}`);
   if (/(^|\/)collections\//.test(rel) || rel.endsWith("cms.config.ts")) scheduleSchemaRefresh();
+  if (rel.endsWith("internals/integration.ts")) scheduleServerRestart("integration changed");
+  else if (isNewFile && /(^|\/)routes\//.test(rel)) scheduleServerRestart(`new route ${rel}`);
 };
 
 watch(path.join(root, "src"), { recursive: true }, (_, rel) => {
@@ -107,9 +153,19 @@ watch(overlayDir, { recursive: true }, (_, rel) => {
   if (rel) syncFile(path.join(overlayDir, rel), rel);
 });
 
-const child = spawn("pnpm", ["exec", "astro", "dev", "--port", port], { cwd: previewDir, stdio: "inherit" });
-child.on("exit", (code) => {
-  if (code) process.exit(code);
-  // Detached background server (non-TTY): stay alive so the watcher keeps syncing.
-  console.log("[dev-preview] watching for changes (Ctrl+C to stop)");
-});
+let child;
+const startServer = () => {
+  child = spawn("pnpm", ["exec", "astro", "dev", "--port", port], { cwd: previewDir, stdio: "inherit" });
+  child.on("exit", (code) => {
+    if (restarting) {
+      restarting = false;
+      startServer();
+      return;
+    }
+    if (code) process.exit(code);
+    // Detached background server (non-TTY): stay alive so the watcher keeps syncing.
+    detached = true;
+    console.log("[dev-preview] watching for changes (Ctrl+C to stop)");
+  });
+};
+startServer();

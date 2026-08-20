@@ -310,6 +310,10 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           entrypoint: new URL("../routes/api/assets/index.ts", import.meta.url),
         });
         injectRoute({
+          pattern: "/api/cms/asset-usage",
+          entrypoint: new URL("../routes/api/asset-usage.ts", import.meta.url),
+        });
+        injectRoute({
           pattern: "/api/cms/collaboration",
           entrypoint: new URL("../routes/api/collaboration/index.ts", import.meta.url),
         });

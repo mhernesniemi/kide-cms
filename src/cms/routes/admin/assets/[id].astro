@@ -6,12 +6,13 @@ import DocumentActions from "../../../admin/components/DocumentActions";
 import AiGenerateButton from "../../../admin/components/AiGenerateButton";
 import FocalPointSelector from "../../../admin/components/FocalPointSelector";
 import UnsavedGuard from "../../../admin/components/UnsavedGuard";
+import ReverseReferencesList from "../../../admin/views/edit/ReverseReferencesList.astro";
 import TreeSelect, { flattenByParent } from "../../../admin/components/TreeSelect";
 import { buttonVariants } from "../../../admin/components/ui/button";
 import { Label } from "../../../admin/components/ui/label";
 import { Textarea } from "../../../admin/components/ui/textarea";
 import config from "virtual:kide/config";
-import { assets, folders, isAiEnabled } from "virtual:kide/runtime";
+import { assets, findAssetUsage, folders, isAiEnabled } from "virtual:kide/runtime";
 import { formatDate, initDateFormat, DEFAULT_PRESETS } from "../../../core";
 import AdminLayout from "../../../admin/layouts/AdminLayout.astro";
 
@@ -43,6 +44,9 @@ for (const [name, preset] of Object.entries(mergedPresets)) {
   seenAspects.add(preset.aspect);
   cropPresets.push({ name, aspect: preset.aspect });
 }
+const { refs: usage, incomplete: usageIncomplete } = await findAssetUsage(config, asset.storagePath);
+const usageCount = usage.reduce((sum, ref) => sum + ref.docs.length, 0);
+
 const currentFolder = asset.folder ? await folders.findById(asset.folder) : null;
 const allFolders = await folders.findAll();
 
@@ -84,7 +88,14 @@ const folderItems = flattenByParent(
       <button type="submit" form="asset-form" value="save" disabled class={buttonVariants({ variant: "outline" })}>
         Save
       </button>
-      <DocumentActions client:load formId="asset-form" showDelete={true} />
+      <DocumentActions
+        client:load
+        formId="asset-form"
+        showDelete={true}
+        entityLabel="asset"
+        referencesEndpoint={`/api/cms/asset-usage?id=${asset._id}`}
+        forceOnConfirm={true}
+      />
     </div>
 
     <UnsavedGuard client:load formId="asset-form" isNew={false} isDraft={false} />
@@ -109,41 +120,6 @@ const folderItems = flattenByParent(
         </div>
 
         <div class="space-y-6 text-sm [&_input]:text-sm [&_textarea]:text-sm">
-          <AdminCard title="Info">
-            <dl class="grid gap-3">
-              <div>
-                <dt class="text-muted-foreground text-xs">Filename</dt>
-                <dd class="mt-0.5">{asset.filename}</dd>
-              </div>
-              <div>
-                <dt class="text-muted-foreground text-xs">Type</dt>
-                <dd class="mt-0.5">{asset.mimeType}</dd>
-              </div>
-              <div>
-                <dt class="text-muted-foreground text-xs">Size</dt>
-                <dd class="mt-0.5">{formatSize(asset.size)}</dd>
-              </div>
-              {
-                asset.width && asset.height && (
-                  <div>
-                    <dt class="text-muted-foreground text-xs">Dimensions</dt>
-                    <dd class="mt-0.5">
-                      {asset.width} &times; {asset.height} px
-                    </dd>
-                  </div>
-                )
-              }
-              <div>
-                <dt class="text-muted-foreground text-xs">Path</dt>
-                <dd class="mt-0.5 font-mono text-xs break-all">{asset.storagePath}</dd>
-              </div>
-              <div>
-                <dt class="text-muted-foreground text-xs">Created</dt>
-                <dd class="mt-0.5">{formatDate(asset._createdAt)}</dd>
-              </div>
-            </dl>
-          </AdminCard>
-
           <AdminCard title="Details">
             <div class="grid gap-5">
               <div class="grid gap-2">
@@ -182,6 +158,55 @@ const folderItems = flattenByParent(
               </div>
             </div>
           </AdminCard>
+
+          <AdminCard title="Info">
+            <dl class="grid gap-3">
+              <div>
+                <dt class="text-muted-foreground text-xs">Filename</dt>
+                <dd class="mt-0.5">{asset.filename}</dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground text-xs">Type</dt>
+                <dd class="mt-0.5">{asset.mimeType}</dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground text-xs">Size</dt>
+                <dd class="mt-0.5">{formatSize(asset.size)}</dd>
+              </div>
+              {
+                asset.width && asset.height && (
+                  <div>
+                    <dt class="text-muted-foreground text-xs">Dimensions</dt>
+                    <dd class="mt-0.5">
+                      {asset.width} &times; {asset.height} px
+                    </dd>
+                  </div>
+                )
+              }
+              <div>
+                <dt class="text-muted-foreground text-xs">Path</dt>
+                <dd class="mt-0.5 font-mono text-xs break-all">{asset.storagePath}</dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground text-xs">Created</dt>
+                <dd class="mt-0.5">{formatDate(asset._createdAt)}</dd>
+              </div>
+            </dl>
+          </AdminCard>
+
+          {
+            usageCount > 0 ? (
+              <ReverseReferencesList reverseRefs={usage} variant="record" title="Used in" />
+            ) : (
+              <AdminCard title="Used in">
+                <p class="text-muted-foreground text-sm">
+                  {usageIncomplete.length > 0
+                    ? `Could not check ${usageIncomplete.join(", ")} — usage is unknown.`
+                    : "Not used by any document."}
+                </p>
+              </AdminCard>
+            )
+          }
         </div>
       </div>
     </form>
