@@ -7,6 +7,63 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.20.0] - 2026-08-20
+
+> **Schema change** — run `pnpm cms:push` (Cloudflare D1: apply migrations) after
+> upgrading. The diff is additive (one nullable column plus indexes) and touches no
+> existing rows, but comment queries select `edited_at`, so an unpushed database
+> will error on them.
+
+### Added
+
+- **Needs you** — a queue of the documents actually waiting on you: your own open
+  assignments, plus everything submitted for review if you are an approver. It sits
+  above Recent with a count badge, and only appears when collaboration is switched
+  on for a collection you can read. `collaboration.assignedTo()` existed and was
+  read by nothing; this makes review states into a workflow instead of per-document
+  decoration.
+- Comments can be edited by their author, with an `(edited)` marker. Deliberately
+  author-only — unlike delete, rewriting words that appear under someone else's name
+  is not something an approver should be able to do.
+- Comment delete is reachable at last. `deleteComment` was implemented and
+  authorized end to end but no UI ever called it. Resolve, Edit and Delete now live
+  in a per-comment menu.
+- Indexes on `cms_locks(collection, document_id)`, on `(_status, _publish_at)` and
+  `(_status, _unpublish_at)` for drafts-enabled collections, and on
+  `cms_collaboration(editor)` / `(review_state)`. Every one backs a query the CMS
+  runs on its own — lock acquisition on each edit-page open, the publish sweep on
+  each cron tick, the nav badge on each admin render — and each was a full scan.
+
+### Changed
+
+- **A failed save now points at the field that caused it.** The error carries the
+  field name, so the admin expands the field's group if collapsed, scrolls to it,
+  focuses it, and marks it invalid until you start typing. Previously a transient
+  toast was the only clue, and the field could be inside a collapsed panel.
+- Validation messages read as labels: "Title is required." rather than
+  `Field "title" is required.`
+- Native browser validation bubbles are suppressed in favour of the admin's own
+  reporting. The browser's constraint engine still runs (`required`, `maxlength`,
+  `type=email`); only its presentation is replaced, so the same missing field looks
+  identical whether the browser or the server caught it.
+- First-run setup is gated on an **admin** existing rather than any user at all.
+  An invite that created an editor before the first admin would otherwise leave a
+  project permanently redirected to a login it had no account for.
+- Assignee menu: one row per person. "Assign to me" is a distinct action above a
+  separator rather than a duplicate of your own roster entry, and the empty state
+  reads "No assignee" with a placeholder avatar instead of "none".
+- Comment composer grows with its content instead of scrolling a one-line field;
+  Shift+Enter inserts a newline.
+- Collaboration rows and comments are removed when their document is deleted. They
+  outlived it before, and an orphaned review row still counted toward the badge.
+
+### Fixed
+
+- `indexed` is no longer documented as a field option in `CLAUDE.md` or the public
+  field reference — it was never implemented in `BaseFieldConfig` or the generator.
+- Removed a stray `admin/components/Untitled` file that was accidentally committed
+  and shipped inside the npm package in 0.19.0 and 0.19.1.
+
 ## [0.19.1] - 2026-08-20
 
 ### Changed
