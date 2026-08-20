@@ -7,6 +7,18 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.19.1] - 2026-08-20
+
+### Changed
+
+- Assets: the filter/upload row is now sticky, and selecting assets swaps the
+  Upload button for the selection count and its Delete/Cancel actions instead of
+  inserting a separate toolbar above the grid. The row is a permanent element
+  whose contents change, so selecting no longer shifts the grid down, and the
+  actions stay reachable while scrolling. The row carries a bottom border and a
+  hairline background bleed so thumbnails scrolling underneath do not show
+  through at its edges.
+
 ## [0.19.0] - 2026-08-20
 
 ### Added
