@@ -85,6 +85,88 @@
 </script>
 
 <script is:inline>
+  // A toast alone leaves the editor hunting for which field it means — especially
+  // in a long form where the culprit may sit inside a collapsed group. Point at it:
+  // open its group, scroll it into view, focus it, and mark it invalid until touched.
+  function clearInvalidMarks() {
+    // Both markers, because they are mutually exclusive: an input carries
+    // aria-invalid only, a composite control carries data-cms-invalid only.
+    // Scoped to the form so a component managing its own aria-invalid is untouched.
+    var form = document.getElementById("document-form");
+    if (!form) return;
+    form.querySelectorAll("[data-cms-invalid], [aria-invalid='true']").forEach(function (el) {
+      el.removeAttribute("data-cms-invalid");
+      el.removeAttribute("aria-invalid");
+    });
+  }
+
+  function highlightInvalidField(fieldName) {
+    clearInvalidMarks();
+    if (!fieldName) return;
+    var wrapper = document.querySelector('[data-field-name="' + CSS.escape(fieldName) + '"]');
+    if (!wrapper) return;
+
+    // Collapsible groups are <details>; a field inside a closed one is invisible.
+    var group = wrapper.closest("details");
+    if (group && !group.open) group.open = true;
+
+    var control = wrapper.querySelector("input, textarea, select, [contenteditable='true']");
+    if (control) {
+      // Inputs and textareas already style [aria-invalid]; adding the fallback
+      // outline on top of that border+ring reads as an error about an error.
+      control.setAttribute("aria-invalid", "true");
+    } else {
+      wrapper.setAttribute("data-cms-invalid", "");
+    }
+    // Drop the mark as soon as they start fixing it — keeping it red while someone
+    // types is nagging, and the server re-marks on the next submit if still wrong.
+    // Listening on the wrapper covers composite controls (pickers, block editors)
+    // whose events come from a child rather than an input we can find.
+    wrapper.addEventListener("input", clearInvalidMarks, { once: true });
+    wrapper.addEventListener("change", clearInvalidMarks, { once: true });
+    wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (control && typeof control.focus === "function") {
+      setTimeout(function () {
+        control.focus({ preventScroll: true });
+      }, 300);
+    }
+  }
+
+  function showErrorToast(msg, fieldName) {
+    var existing = document.getElementById("admin-toast");
+    if (existing) existing.parentElement.remove();
+    var w = document.createElement("div");
+    w.className = "fixed top-4 left-1/2 z-50 w-full max-w-sm -translate-x-1/2";
+    w.innerHTML =
+      '<div id="admin-toast" role="alert" class="bg-card flex items-center gap-2 rounded-lg border border-red-500/30 px-5 py-3 text-sm shadow-lg" style="animation:toast-in .25s ease-out,toast-out .3s ease-in 4.7s forwards">' +
+      '<svg class="size-4 shrink-0 text-red-600 dark:text-red-400" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>' +
+      '<span class="text-red-700 dark:text-red-400"></span></div>';
+    // Carries document data (hook errors quote field values) — never innerHTML.
+    w.querySelector("span").textContent = msg;
+    document.body.appendChild(w);
+    setTimeout(function () {
+      w.remove();
+    }, 5200);
+    highlightInvalidField(fieldName);
+  }
+
+  // The browser's own bubble is OS-styled, says "Please fill out this field", and
+  // shows only one field at a time — three ways it disagrees with how the admin
+  // reports the identical error from the server. Keep the browser's constraint
+  // engine (required, maxlength, type=email all still apply) and replace only its
+  // presentation, so a missing Title looks the same whoever caught it.
+  function reportClientValidity(f) {
+    if (f.checkValidity()) return true;
+    var invalid = f.querySelector(":invalid");
+    if (!invalid) return false;
+    var wrapper = invalid.closest("[data-field-name]");
+    var fieldName = wrapper ? wrapper.getAttribute("data-field-name") : null;
+    var label = wrapper ? wrapper.querySelector("label") : null;
+    var labelText = label ? label.textContent.replace(/\*/g, "").trim() : "";
+    showErrorToast(labelText ? labelText + " is required." : invalid.validationMessage, fieldName);
+    return false;
+  }
+
   (function () {
     var form = document.getElementById("document-form");
     if (!form) return;
@@ -92,9 +174,13 @@
       var first = form.querySelector('input[type="text"], textarea');
       if (first) first.focus();
     }
+    // Suppress the native bubbles; reportClientValidity() below re-runs the same
+    // checks and presents them in the admin's own language.
+    form.setAttribute("novalidate", "");
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       var f = e.target;
+      if (!reportClientValidity(f)) return;
       var sub = e.submitter;
       var fd = new FormData(f);
       if (sub && sub.name && sub.value) fd.set(sub.name, sub.value);
@@ -106,21 +192,10 @@
         .then(function (res) {
           var u = new URL(res.url);
           if (u.searchParams.get("_toast") === "error") {
-            var existing = document.getElementById("admin-toast");
-            if (existing) existing.parentElement.remove();
-            var msg = decodeURIComponent(u.searchParams.get("_msg") || "Something went wrong");
-            var w = document.createElement("div");
-            w.className = "fixed top-4 left-1/2 z-50 w-full max-w-sm -translate-x-1/2";
-            w.innerHTML =
-              '<div id="admin-toast" role="alert" class="bg-card flex items-center gap-2 rounded-lg border border-red-500/30 px-5 py-3 text-sm shadow-lg" style="animation:toast-in .25s ease-out,toast-out .3s ease-in 4.7s forwards">' +
-              '<svg class="size-4 shrink-0 text-red-600 dark:text-red-400" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>' +
-              '<span class="text-red-700 dark:text-red-400"></span></div>';
-            // Carries document data (hook errors quote field values) — never innerHTML.
-            w.querySelector("span").textContent = msg;
-            document.body.appendChild(w);
-            setTimeout(function () {
-              w.remove();
-            }, 5200);
+            showErrorToast(
+              decodeURIComponent(u.searchParams.get("_msg") || "Something went wrong"),
+              u.searchParams.get("_field"),
+            );
             return;
           }
           if (u.searchParams.get("_toast") === "success") {

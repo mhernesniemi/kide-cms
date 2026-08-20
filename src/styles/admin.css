@@ -303,3 +303,12 @@
 .dark .tiptap p.is-empty::before {
   color: var(--placeholder) !important;
 }
+
+/* Fallback marker for a rejected field with no native invalid styling — composite
+   controls (pickers, block and rich-text editors) whose focusable element is not
+   an input. Anything with [aria-invalid] styles itself and never gets this. */
+[data-cms-invalid]:not([aria-invalid]) {
+  outline: 1px solid var(--destructive);
+  outline-offset: 3px;
+  border-radius: var(--radius-lg);
+}

@@ -3,7 +3,7 @@ import type { APIRoute } from "astro";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { collaboration } from "virtual:kide/runtime";
-import { formatPagePath, getPageHref, isApprover, resolveCollaboration } from "../../../core";
+import { FieldError, formatPagePath, getPageHref, isApprover, resolveCollaboration } from "../../../core";
 import { loadSharedSectionUsageCounts } from "../../../admin/lib/edit-data";
 
 export const prerender = false;
@@ -32,14 +32,18 @@ const isFormRequest = (request: Request) => {
 };
 
 // Append _toast and _msg params so the layout can render a server-side toast
-const redirect = (location: string, toast?: { status: "success" | "error"; msg: string }) => {
+const redirect = (location: string, toast?: { status: "success" | "error"; msg: string; field?: string }) => {
   let target = location;
   if (toast) {
     const sep = target.includes("?") ? "&" : "?";
     target += `${sep}_toast=${toast.status}&_msg=${encodeURIComponent(toast.msg)}`;
+    // The admin uses this to focus and mark the offending input.
+    if (toast.field) target += `&_field=${encodeURIComponent(toast.field)}`;
   }
   return new Response(null, { status: 303, headers: { Location: target } });
 };
+
+const camelCaseColumn = (column: string) => column.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase());
 
 const stripToastParams = (url: string) => {
   const [path, query] = url.split("?");
@@ -206,15 +210,18 @@ const handleHtmlMutation = async (
     return redirect(redirectTo);
   } catch (error) {
     let msg = error instanceof Error ? error.message : `Failed to ${action}`;
+    // Structured where we raise it ourselves; parsed only where SQLite is the source.
+    let field = error instanceof FieldError ? error.field : undefined;
     if (msg.toLowerCase().includes("unique constraint failed")) {
       const match = msg.match(/unique constraint failed:\s*\S+\.(\w+)/i);
-      const field = match ? match[1] : "field";
-      msg = `A document with this ${field} already exists`;
+      const column = match ? match[1] : null;
+      field = column ? camelCaseColumn(column) : undefined;
+      msg = `A document with this ${column ?? "field"} already exists`;
     } else if (msg.startsWith("Failed query:")) {
       msg = `Failed to ${action} ${collection.labels.singular.toLowerCase()}`;
     }
     const fallback = documentId ? redirectTo : redirectTo || `/admin/${collectionSlug}/new`;
-    return redirect(fallback, { status: "error", msg });
+    return redirect(fallback, { status: "error", msg, field });
   }
 };
 

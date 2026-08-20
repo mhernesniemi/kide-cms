@@ -104,7 +104,7 @@ export type {
   WithSiteOptions,
 } from "./define";
 
-export { createCms } from "./api";
+export { createCms, FieldError } from "./api";
 export type { FindOptions } from "./api";
 
 export { enqueueTask, drainTasks, tickSchedules, pruneTasks } from "./tasks";

@@ -165,6 +165,24 @@ const coerceFieldValue = (field: FieldConfig, value: unknown): unknown => {
   }
 };
 
+/** "seoDescription" -> "Seo description", unless the field declares a label. */
+const fieldLabel = (fieldName: string, field: FieldConfig): string =>
+  field.label ??
+  fieldName
+    .replace(/^_+/, "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/^./, (c) => c.toUpperCase());
+
+export class FieldError extends Error {
+  readonly field: string;
+
+  constructor(field: string, message: string) {
+    super(message);
+    this.name = "FieldError";
+    this.field = field;
+  }
+}
+
 const prepareIncomingData = (
   collection: CollectionConfig,
   input: Record<string, unknown>,
@@ -205,7 +223,7 @@ const prepareIncomingData = (
   for (const [fieldName, field] of Object.entries(collection.fields)) {
     if (!field.required) continue;
     const candidate = data[fieldName] ?? existing?.[fieldName];
-    if (isEmptyValue(candidate)) throw new Error(`Field "${fieldName}" is required.`);
+    if (isEmptyValue(candidate)) throw new FieldError(fieldName, `${fieldLabel(fieldName, field)} is required.`);
   }
 
   for (const [fieldName, field] of Object.entries(collection.fields)) {
@@ -213,7 +231,10 @@ const prepareIncomingData = (
     if (!maxItems) continue;
     const candidate = data[fieldName] ?? existing?.[fieldName];
     if (Array.isArray(candidate) && candidate.length > maxItems) {
-      throw new Error(`Field "${fieldName}" allows at most ${maxItems} item${maxItems === 1 ? "" : "s"}.`);
+      throw new FieldError(
+        fieldName,
+        `${fieldLabel(fieldName, field)} allows at most ${maxItems} item${maxItems === 1 ? "" : "s"}.`,
+      );
     }
   }
 
@@ -395,6 +416,10 @@ const getTableRefs = async (collectionSlug: string) => {
   return tables;
 };
 
+/**
+ * A validation failure that knows which field caused it, so the admin can point at
+ * the offending input instead of showing a toast and leaving the editor to hunt.
+ */
 export const createCms = (config: CMSConfig) => {
   // A partially-evaluated config here means a module cycle: cms.config.ts
   // statically imported a module that itself imports the generated API (which
