@@ -30,6 +30,8 @@ export type CommentRecord = {
   authorEmail: string | null;
   resolved: boolean;
   createdAt: string;
+  /** Set the first time the author rewrites the body; null means never edited. */
+  editedAt: string | null;
 };
 
 export type ActivityRecord = {
@@ -216,6 +218,7 @@ export const collaboration = {
       body,
       authorId: actor?.id ?? null,
       authorEmail: actor?.email ?? null,
+      editedAt: null,
       resolved: false,
       createdAt: new Date().toISOString(),
     };
@@ -244,9 +247,37 @@ export const collaboration = {
       body: row.body,
       authorId: row.authorId ?? null,
       authorEmail: row.authorEmail ?? null,
+      editedAt: row.editedAt ?? null,
       resolved: !!row.resolved,
       createdAt: row.createdAt,
     };
+  },
+
+  /**
+   * Rewrites a comment body and stamps `editedAt`. Authorship is enforced by the
+   * caller — unlike delete, an approver must not rewrite words that appear under
+   * someone else's name.
+   */
+  async updateComment(id: string, body: string, actor: AuditActor): Promise<CommentRecord> {
+    const trimmed = body.trim();
+    if (!trimmed) throw new Error("Comment cannot be empty.");
+
+    const db = await getDb();
+    const schema = getSchema();
+    const rows = await db.select().from(schema.cmsComments).where(eq(schema.cmsComments._id, id)).limit(1);
+    const row = rows[0] as any;
+    if (!row) throw new Error("Comment not found.");
+
+    const editedAt = new Date().toISOString();
+    await db.update(schema.cmsComments).set({ body: trimmed, editedAt }).where(eq(schema.cmsComments._id, id));
+    await recordAudit({
+      action: "collab.comment.edit",
+      resourceType: "content",
+      resourceCollection: row.collection,
+      resourceId: row.documentId,
+      actor,
+    });
+    return { ...(row as CommentRecord), body: trimmed, editedAt };
   },
 
   async resolveComment(id: string, resolved: boolean, actor: AuditActor): Promise<void> {

@@ -45,6 +45,15 @@ export const GET: APIRoute = async ({ url }) => {
   return Response.json({ state, comments, activity });
 };
 
+// Editing is author-only, deliberately narrower than resolve/delete: removing a
+// comment is moderation, but rewriting the words under someone else's name and
+// avatar is not something an approver should be able to do.
+const authorizeCommentEdit = async (commentId: string, actor: { id: string }) => {
+  const comment = await collaboration.getComment(commentId);
+  if (!comment || !isEnabled(comment.collection)) return null;
+  return comment.authorId === actor.id ? comment : null;
+};
+
 // POST /api/cms/collaboration  { collection, id, action, ...payload }
 export const POST: APIRoute = async ({ request, locals }) => {
   const actor = getActor(locals);
@@ -84,6 +93,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
           actor,
         );
         return Response.json({ comment });
+      }
+      case "updateComment": {
+        const comment = await authorizeCommentEdit(String((body as any).commentId), actor);
+        if (!comment) return forbidden();
+        const updated = await collaboration.updateComment(comment._id, String((body as any).body ?? ""), actor);
+        return Response.json({ comment: updated });
       }
       case "resolveComment": {
         const comment = await authorizeComment(String((body as any).commentId), actor);

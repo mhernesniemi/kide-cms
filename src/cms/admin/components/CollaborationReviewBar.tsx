@@ -124,7 +124,15 @@ export default function CollaborationReviewBar(props: Props) {
     }
   };
 
-  const commentInputRef = useRef<HTMLInputElement>(null);
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Grow with the text instead of scrolling a one-line box: a comment you cannot
+  // read back while writing it is the main thing wrong with a single-line field.
+  const autoGrow = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  };
   const openComments = (focus = false) => {
     setTab("comments");
     setOpen(true);
@@ -145,9 +153,11 @@ export default function CollaborationReviewBar(props: Props) {
           field: null,
           body,
           resolved: false,
+          edited: false,
         },
       ]);
       setDraft("");
+      if (commentInputRef.current) commentInputRef.current.style.height = "auto";
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "Could not add comment.");
     }
@@ -166,6 +176,35 @@ export default function CollaborationReviewBar(props: Props) {
 
   // Mirrors the server rule in authorizeComment(): the author, or an approver
   // tidying a thread. The API re-checks — this only decides what to render.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+
+  // Author-only, matching the server. Approvers can remove a comment but not
+  // rewrite one that carries someone else's name.
+  const canEditComment = (comment: CollabComment) => !!currentUser && comment.author.id === currentUser.id;
+
+  const startEdit = (comment: CollabComment) => {
+    setEditingId(comment.id);
+    setEditDraft(comment.body);
+  };
+
+  const saveEdit = async (comment: CollabComment) => {
+    const body = editDraft.trim();
+    if (!body || body === comment.body) {
+      setEditingId(null);
+      return;
+    }
+    const snapshot = comments;
+    setComments((prev) => prev.map((c) => (c.id === comment.id ? { ...c, body, edited: true } : c)));
+    setEditingId(null);
+    try {
+      await post({ action: "updateComment", commentId: comment.id, body });
+    } catch (err) {
+      setComments(snapshot);
+      window.alert(err instanceof Error ? err.message : "Could not save comment.");
+    }
+  };
+
   const canDeleteComment = (comment: CollabComment) =>
     !!currentUser && (comment.author.id === currentUser.id || canApprove);
 
@@ -369,10 +408,12 @@ export default function CollaborationReviewBar(props: Props) {
                   <li className="text-muted-foreground px-4 py-8 text-center text-sm">No comments yet.</li>
                 )}
                 {comments.map((c) => (
-                  <li key={c.id} className="flex gap-3 px-4 py-3">
-                    <Avatar initials={c.author.initials} color={c.author.color} size="size-7" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <li key={c.id} className="px-4 py-4">
+                    {/* Same border+padding as the body below, so the avatar's left edge
+                        lines up with the comment text in both read and edit states. */}
+                    <div className="flex min-w-0 items-center gap-3 border border-transparent px-2">
+                      <Avatar initials={c.author.initials} color={c.author.color} size="size-7" />
+                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
                         <span className="text-sm font-medium">{c.author.name}</span>
                         <span className="text-muted-foreground text-xs">{c.time}</span>
                         {c.field && (
@@ -389,6 +430,9 @@ export default function CollaborationReviewBar(props: Props) {
                             <EllipsisVertical className="size-3.5" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="min-w-32">
+                            {canEditComment(c) && (
+                              <DropdownMenuItem onClick={() => startEdit(c)}>Edit</DropdownMenuItem>
+                            )}
                             <DropdownMenuItem onClick={() => toggleResolve(c)}>
                               {c.resolved ? "Reopen" : "Resolve"}
                             </DropdownMenuItem>
@@ -400,49 +444,123 @@ export default function CollaborationReviewBar(props: Props) {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      <p className={cn("mt-1 text-sm", c.resolved && "text-muted-foreground line-through")}>{c.body}</p>
                     </div>
+                    {editingId === c.id ? (
+                      <form
+                        className="mt-2 grid gap-2"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          void saveEdit(c);
+                        }}
+                      >
+                        <textarea
+                          autoFocus
+                          rows={1}
+                          ref={autoGrow}
+                          value={editDraft}
+                          onChange={(e) => {
+                            setEditDraft(e.target.value);
+                            autoGrow(e.target);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") setEditingId(null);
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              void saveEdit(c);
+                            }
+                          }}
+                          className="border-input bg-background w-full resize-none rounded-md border px-2 py-1 text-sm outline-none"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(null)}
+                            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                          >
+                            Cancel
+                          </button>
+                          <button type="submit" disabled={busy} className={cn(buttonVariants({ size: "sm" }))}>
+                            Save
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <p
+                        className={cn(
+                          "mt-2 rounded-md border border-transparent px-2 py-1 text-sm whitespace-pre-wrap",
+                          c.resolved && "text-muted-foreground line-through",
+                        )}
+                      >
+                        {c.body}
+                        {c.edited && <span className="text-muted-foreground ml-1.5 text-[10px]">(edited)</span>}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>
-              <div className="bg-background sticky bottom-0 flex items-center gap-2 border-t px-4 py-3">
-                <MessageSquarePlus className="text-muted-foreground size-4 shrink-0" />
-                <input
-                  ref={commentInputRef}
-                  type="text"
-                  value={draft}
-                  disabled={busy || !currentUser}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") submitComment();
-                  }}
-                  placeholder={currentUser ? "Write a comment…" : "Sign in to comment"}
-                  className="border-input bg-background w-full rounded-md border px-3 py-1.5 text-sm outline-none"
-                />
+              <div className="bg-background sticky bottom-0 flex items-start gap-2 border-t px-4 py-3">
+                <MessageSquarePlus className="text-muted-foreground mt-2 size-4 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <textarea
+                    ref={commentInputRef}
+                    rows={1}
+                    value={draft}
+                    disabled={busy || !currentUser}
+                    onChange={(e) => {
+                      setDraft(e.target.value);
+                      autoGrow(e.target);
+                    }}
+                    onKeyDown={(e) => {
+                      // Enter sends; Shift+Enter starts a new line.
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        submitComment();
+                      }
+                    }}
+                    placeholder={currentUser ? "Write a comment…" : "Sign in to comment"}
+                    className="border-input bg-background w-full resize-none rounded-md border px-3 py-1.5 text-sm outline-none"
+                  />
+                  {draft.trim() && (
+                    // Only the non-obvious half needs teaching — they already found Enter.
+                    <p className="text-muted-foreground mt-1.5 flex items-center gap-1.5 text-xs">
+                      <kbd className="text-foreground/45 inline-flex items-center gap-1 rounded border px-1.5 py-0.5 font-sans text-[11px] leading-none font-medium">
+                        Shift + Enter
+                      </kbd>
+                      for a new line
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           )}
 
-          {tab === "activity" && (
-            <ul className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
-              {activity.length === 0 && <li className="text-muted-foreground text-center text-sm">No activity yet.</li>}
-              {activity.map((a, i) => (
-                <li key={i} className="flex gap-3">
-                  <div className="flex flex-col items-center">
-                    <Avatar initials={a.actor.initials} color={a.actor.color} />
-                    {i < activity.length - 1 && <GitCommitVertical className="text-border mt-1 size-4" />}
-                  </div>
-                  <div className="min-w-0 flex-1 pt-0.5">
-                    <p className="text-sm">
-                      <span className="font-medium">{a.actor.name}</span>{" "}
-                      <span className="text-muted-foreground">{a.text}</span>
-                    </p>
-                    <span className="text-muted-foreground text-xs">{a.time}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+          {tab === "activity" &&
+            (activity.length === 0 ? (
+              // Centre it: a lone line pinned to the top of a full-height sheet reads
+              // as a layout bug rather than an empty state.
+              <div className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-2 px-4 text-sm">
+                <Clock className="size-5 opacity-40" />
+                <p>No activity yet.</p>
+              </div>
+            ) : (
+              <ul className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
+                {activity.map((a, i) => (
+                  <li key={i} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <Avatar initials={a.actor.initials} color={a.actor.color} />
+                      {i < activity.length - 1 && <GitCommitVertical className="text-border mt-1 size-4" />}
+                    </div>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <p className="text-sm">
+                        <span className="font-medium">{a.actor.name}</span>{" "}
+                        <span className="text-muted-foreground">{a.text}</span>
+                      </p>
+                      <span className="text-muted-foreground text-xs">{a.time}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ))}
         </SheetContent>
       </Sheet>
     </>

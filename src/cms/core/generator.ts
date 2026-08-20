@@ -261,6 +261,7 @@ const generateSchemaFile = (config: CMSConfig): string => {
   authorEmail: text("author_email"),
   resolved: integer("resolved", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull(),
+  editedAt: text("edited_at"),
 }, (table) => ({
   docIdx: index("comments_doc_idx").on(table.collection, table.documentId),
 }));`);

@@ -10,6 +10,7 @@ export type CollabComment = {
   field: string | null;
   body: string;
   resolved: boolean;
+  edited: boolean;
 };
 export type CollabActivity = { actor: CollabUser; text: string; time: string };
 
@@ -157,6 +158,7 @@ export async function loadCollaborationData(opts: {
       field: c.field ?? null,
       body: String(c.body),
       resolved: Boolean(c.resolved),
+      edited: !!c.editedAt,
     }))
     // listComments is newest-first; show comments oldest-first like a thread.
     .reverse();
