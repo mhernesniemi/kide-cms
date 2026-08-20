@@ -80,7 +80,19 @@ const generateMainTable = (collection: CollectionConfig): string => {
     columns.push(`  _updatedAt: text("_updated_at").notNull(),`);
   }
 
-  return `export const ${varName} = sqliteTable("${tableName}", {\n${columns.join("\n")}\n});`;
+  // scheduled.processPublishing() sweeps every drafts-enabled collection on each
+  // cron tick, filtering on _status plus the due timestamp. Without these it is a
+  // full table scan per collection, per tick.
+  const indexes: string[] = [];
+  if (collection.drafts) {
+    const idxPrefix = snakeCase(collection.slug);
+    indexes.push(`  publishIdx: index("${idxPrefix}_publish_idx").on(table._status, table._publishAt),`);
+    indexes.push(`  unpublishIdx: index("${idxPrefix}_unpublish_idx").on(table._status, table._unpublishAt),`);
+  }
+
+  const body = `{\n${columns.join("\n")}\n}`;
+  if (indexes.length === 0) return `export const ${varName} = sqliteTable("${tableName}", ${body});`;
+  return `export const ${varName} = sqliteTable("${tableName}", ${body}, (table) => ({\n${indexes.join("\n")}\n}));`;
 };
 
 const generateTranslationsTable = (config: CMSConfig, collection: CollectionConfig): string | null => {
@@ -177,7 +189,9 @@ const generateSchemaFile = (config: CMSConfig): string => {
   userId: text("user_id").notNull(),
   userEmail: text("user_email").notNull(),
   lockedAt: text("locked_at").notNull(),
-});`);
+}, (table) => ({
+  docIdx: index("locks_doc_idx").on(table.collection, table.documentId),
+}));`);
   parts.push("");
   parts.push(`export const cmsInvites = sqliteTable("cms_invites", {
   _id: text("_id").primaryKey(),

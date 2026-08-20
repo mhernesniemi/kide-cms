@@ -83,7 +83,10 @@ export const cmsArticles = sqliteTable("cms_articles", {
   _published: text("_published"),
   _createdAt: text("_created_at").notNull(),
   _updatedAt: text("_updated_at").notNull(),
-});
+}, (table) => ({
+  publishIdx: index("articles_publish_idx").on(table._status, table._publishAt),
+  unpublishIdx: index("articles_unpublish_idx").on(table._status, table._unpublishAt),
+}));
 
 export const cmsArticlesTranslations = sqliteTable("cms_articles_translations", {
   _id: text("_id").primaryKey(),
@@ -149,7 +152,9 @@ export const cmsLocks = sqliteTable("cms_locks", {
   userId: text("user_id").notNull(),
   userEmail: text("user_email").notNull(),
   lockedAt: text("locked_at").notNull(),
-});
+}, (table) => ({
+  docIdx: index("locks_doc_idx").on(table.collection, table.documentId),
+}));
 
 export const cmsInvites = sqliteTable("cms_invites", {
   _id: text("_id").primaryKey(),

@@ -195,7 +195,7 @@ Astro 7, React 19, Drizzle ORM (SQLite dev), Zod, Tiptap, shadcn/ui, Tailwind CS
 
 ## Field Types
 
-All fields share base options: `label`, `description`, `required`, `defaultValue`, `indexed`, `unique`, `translatable`, `condition`, `admin`, `access`.
+All fields share base options: `label`, `description`, `required`, `defaultValue`, `unique`, `translatable`, `condition`, `admin`, `access`.
 
 | Field      | Type-specific options                                                                                                                                                                                                                                                                                                                      |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
