@@ -803,7 +803,7 @@ export default function AssetsGrid({
 
           {/* ── Main: search, grid, pagination ── */}
           <div className="min-w-0 space-y-4 lg:border-l lg:pl-8">
-            <div className="top-0 z-20 flex items-center justify-between gap-3 pt-1 pb-4">
+            <div className="bg-background sticky top-0 z-20 -mx-0.5 flex items-center justify-between gap-3 border-b px-0.5 py-3">
               <div className="relative w-full sm:max-w-xs">
                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
@@ -813,39 +813,62 @@ export default function AssetsGrid({
                   className="pl-9 text-sm"
                 />
               </div>
-              <label
-                className={cn(
-                  buttonVariants(),
-                  "shrink-0",
-                  uploading ? "pointer-events-none opacity-70" : "cursor-pointer",
-                )}
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    {uploadProgress < 100
-                      ? `Uploading ${uploadCount > 1 ? `${uploadCount} files` : "file"}… ${uploadProgress}%`
-                      : "Processing…"}
-                  </>
-                ) : (
-                  <>
-                    <Upload className="size-4" />
-                    Upload
-                  </>
-                )}
-                <input
-                  type="file"
-                  name="file"
-                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
-                  multiple
-                  disabled={uploading}
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files?.length) handleFilesSelected(e.target.files);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
+              {selectedIds.size > 0 ? (
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="text-sm font-medium">
+                    {selectedIds.size}
+                    <span className="hidden sm:inline"> selected</span>
+                  </span>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      resetDialogState();
+                      setBulkDeleteOpen(true);
+                      void loadBulkUsage(Array.from(selectedIds));
+                    }}
+                  >
+                    <Trash2 className="size-4" />
+                    Delete
+                  </Button>
+                  <Button variant="outline" onClick={clearSelection}>
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <label
+                  className={cn(
+                    buttonVariants(),
+                    "shrink-0",
+                    uploading ? "pointer-events-none opacity-70" : "cursor-pointer",
+                  )}
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      {uploadProgress < 100
+                        ? `Uploading ${uploadCount > 1 ? `${uploadCount} files` : "file"}… ${uploadProgress}%`
+                        : "Processing…"}
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="size-4" />
+                      Upload
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    name="file"
+                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+                    multiple
+                    disabled={uploading}
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.length) handleFilesSelected(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
             </div>
             {uploading && (
               <div
@@ -873,30 +896,6 @@ export default function AssetsGrid({
                 >
                   <CircleCheck className="size-4 shrink-0 text-green-600 dark:text-green-400" />
                   <span className="text-green-700 dark:text-green-400">{uploadNotice}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Selection toolbar */}
-            {selectedIds.size > 0 && (
-              <div className="bg-background sticky top-4 z-20 flex items-center justify-between gap-3 rounded-lg border px-3 py-2 shadow-sm">
-                <span className="text-sm font-medium">{selectedIds.size} selected</span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => {
-                      resetDialogState();
-                      setBulkDeleteOpen(true);
-                      void loadBulkUsage(Array.from(selectedIds));
-                    }}
-                  >
-                    <Trash2 className="size-3.5" />
-                    Delete
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={clearSelection}>
-                    Cancel
-                  </Button>
                 </div>
               </div>
             )}
