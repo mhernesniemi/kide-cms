@@ -5,6 +5,7 @@ import {
   Check,
   ChevronDown,
   Clock,
+  EllipsisVertical,
   GitCommitVertical,
   MessageSquare,
   MessageSquarePlus,
@@ -163,6 +164,22 @@ export default function CollaborationReviewBar(props: Props) {
     }
   };
 
+  // Mirrors the server rule in authorizeComment(): the author, or an approver
+  // tidying a thread. The API re-checks — this only decides what to render.
+  const canDeleteComment = (comment: CollabComment) =>
+    !!currentUser && (comment.author.id === currentUser.id || canApprove);
+
+  const deleteComment = async (comment: CollabComment) => {
+    const snapshot = comments;
+    setComments((prev) => prev.filter((c) => c.id !== comment.id));
+    try {
+      await post({ action: "deleteComment", commentId: comment.id });
+    } catch (err) {
+      setComments(snapshot);
+      window.alert(err instanceof Error ? err.message : "Could not delete comment.");
+    }
+  };
+
   const meta = REVIEW_STATE_META[reviewState];
   const canEdit = reviewState === "in_progress" || reviewState === "changes_requested";
 
@@ -270,8 +287,8 @@ export default function CollaborationReviewBar(props: Props) {
               className="hover:bg-foreground/5 flex items-center gap-1.5 rounded-md px-1.5 py-1 outline-none disabled:opacity-60"
             >
               <span className="text-muted-foreground text-xs">Assignee</span>
-              {editor && <Avatar initials={editor.initials} color={editor.color} />}
-              <span className={cn("text-sm", editor ? "font-medium" : "text-muted-foreground")}>
+              {editor ? <Avatar initials={editor.initials} color={editor.color} /> : <EmptyAvatar />}
+              <span className={cn("text-sm", editor && "font-medium")}>
                 {editor ? (editor.id === currentUser?.id ? "You" : editor.name) : "No assignee"}
               </span>
               <ChevronDown className="text-muted-foreground size-3.5" />
@@ -363,14 +380,25 @@ export default function CollaborationReviewBar(props: Props) {
                             on {c.field}
                           </span>
                         )}
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => toggleResolve(c)}
-                          className="text-muted-foreground hover:text-foreground ml-auto text-[10px] font-medium"
-                        >
-                          {c.resolved ? "Reopen" : "Resolve"}
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            disabled={busy}
+                            aria-label="Comment actions"
+                            className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground ml-auto rounded-md p-1 outline-none disabled:opacity-60"
+                          >
+                            <EllipsisVertical className="size-3.5" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="min-w-32">
+                            <DropdownMenuItem onClick={() => toggleResolve(c)}>
+                              {c.resolved ? "Reopen" : "Resolve"}
+                            </DropdownMenuItem>
+                            {canDeleteComment(c) && (
+                              <DropdownMenuItem variant="destructive" onClick={() => deleteComment(c)}>
+                                Delete
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                       <p className={cn("mt-1 text-sm", c.resolved && "text-muted-foreground line-through")}>{c.body}</p>
                     </div>
