@@ -7,6 +7,12 @@ import { getSchema } from "./schema";
 
 // `in_progress` is the default before any collaboration row exists.
 export const REVIEW_STATES = ["in_progress", "ready_for_review", "changes_requested", "approved"] as const;
+
+/**
+ * States that still represent outstanding work. "approved" is deliberately absent:
+ * a queue that keeps finished documents forever stops being read.
+ */
+export const OPEN_REVIEW_STATES = ["in_progress", "ready_for_review", "changes_requested"] as const;
 export type ReviewState = (typeof REVIEW_STATES)[number];
 
 const DEFAULT_STATE: ReviewState = "in_progress";
@@ -104,6 +110,26 @@ export const collaboration = {
       collection: String(r.collection),
       documentId: String(r.documentId),
       reviewState: isReviewState(r.reviewState) ? r.reviewState : DEFAULT_STATE,
+    }));
+  },
+
+  // Every document sitting in one of these review states, whoever holds it.
+  // Approvers need "waiting on me", which is not the same question as "assigned to me".
+  async inReviewStates(
+    states: readonly ReviewState[],
+  ): Promise<Array<{ collection: string; documentId: string; reviewState: ReviewState; editor: string | null }>> {
+    if (states.length === 0) return [];
+    const db = await getDb();
+    const schema = getSchema();
+    const rows = await db
+      .select()
+      .from(schema.cmsCollaboration)
+      .where(inArray(schema.cmsCollaboration.reviewState, states as unknown as string[]));
+    return (rows as any[]).map((r) => ({
+      collection: String(r.collection),
+      documentId: String(r.documentId),
+      reviewState: isReviewState(r.reviewState) ? r.reviewState : DEFAULT_STATE,
+      editor: r.editor ?? null,
     }));
   },
 
@@ -273,4 +299,20 @@ export const collaboration = {
       .limit(limit);
     return rows as ActivityRecord[];
   },
+};
+
+/**
+ * Drops a document's collaboration row and its comments. Called when the document
+ * itself is deleted — a review row with no document behind it would still be
+ * counted and listed as outstanding work.
+ */
+export const removeCollaborationFor = async (collection: string, documentId: string): Promise<void> => {
+  const db = await getDb();
+  const schema = getSchema();
+  await db
+    .delete(schema.cmsCollaboration)
+    .where(and(eq(schema.cmsCollaboration.collection, collection), eq(schema.cmsCollaboration.documentId, documentId)));
+  await db
+    .delete(schema.cmsComments)
+    .where(and(eq(schema.cmsComments.collection, collection), eq(schema.cmsComments.documentId, documentId)));
 };

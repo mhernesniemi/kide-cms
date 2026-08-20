@@ -5,17 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Input } from "../../admin/components/ui/input";
 import { Label } from "../../admin/components/ui/label";
 import { buttonVariants } from "../../admin/components/ui/button";
+import { eq } from "drizzle-orm";
 import { getDb } from "virtual:kide/db";
 import { MIN_PASSWORD_LENGTH } from "../../core";
 
 export const prerender = false;
 
-// If users already exist, redirect to login
+// Setup is done once an admin exists — seeded editors must not close this door.
 const db = await getDb();
 const schema = await import("virtual:kide/schema");
 const tables = schema.cmsTables as Record<string, { main: any }>;
 if (tables.users) {
-  const rows = await db.select().from(tables.users.main).limit(1);
+  const rows = await db.select().from(tables.users.main).where(eq(tables.users.main.role, "admin")).limit(1);
   if (rows.length > 0) {
     return Astro.redirect("/admin/login");
   }

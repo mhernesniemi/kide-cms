@@ -194,7 +194,13 @@ export { readLimitedFormData, PayloadTooLargeError } from "./http";
 
 export { recordAudit, logAudit, pruneAuditLog, auditRequestMeta, tokenReference } from "./audit";
 export type { AuditEvent, AuditActor } from "./audit";
-export { collaboration, REVIEW_STATES, isReviewState } from "./collaboration";
+export {
+  collaboration,
+  OPEN_REVIEW_STATES,
+  removeCollaborationFor,
+  REVIEW_STATES,
+  isReviewState,
+} from "./collaboration";
 export type { ReviewState, CollaborationState, CommentRecord, ActivityRecord } from "./collaboration";
 
 export {

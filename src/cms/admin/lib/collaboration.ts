@@ -176,3 +176,92 @@ export async function loadCollaborationData(opts: {
     currentUser: currentUser ? toUser(currentUser.id, currentUser.email) : null,
   };
 }
+
+// --- "Needs you" queue ---------------------------------------------------
+
+export type NeedsYouItem = {
+  collectionSlug: string;
+  documentId: string;
+  reviewState: ReviewState;
+  /** Why it is in the queue: the user holds it, or it is waiting on their approval. */
+  reason: "assigned" | "awaiting_review";
+};
+
+type NeedsYouOpts = {
+  collaboration: {
+    assignedTo: (
+      userId: string,
+    ) => Promise<Array<{ collection: string; documentId: string; reviewState: ReviewState }>>;
+    inReviewStates: (
+      states: readonly ReviewState[],
+    ) => Promise<Array<{ collection: string; documentId: string; reviewState: ReviewState; editor: string | null }>>;
+  };
+  userId: string;
+  isApprover: boolean;
+  /** Slugs the user may read AND that have collaboration switched on. */
+  eligibleSlugs: Set<string>;
+};
+
+/**
+ * The documents genuinely waiting on this person: their own unfinished
+ * assignments, plus — for approvers — anything submitted for review by anyone.
+ * "Assigned to me" alone is the wrong question for an approver, who never holds
+ * the documents they are being asked to look at.
+ */
+export async function loadNeedsYou(opts: NeedsYouOpts): Promise<NeedsYouItem[]> {
+  const { collaboration, userId, isApprover, eligibleSlugs } = opts;
+  if (eligibleSlugs.size === 0 || !userId) return [];
+
+  const open: ReadonlyArray<ReviewState> = ["in_progress", "ready_for_review", "changes_requested"];
+  const byKey = new Map<string, NeedsYouItem>();
+
+  const [mine, awaiting] = await Promise.all([
+    collaboration.assignedTo(userId).catch(() => []),
+    isApprover ? collaboration.inReviewStates(["ready_for_review"]).catch(() => []) : Promise.resolve([]),
+  ]);
+
+  for (const row of mine) {
+    if (!eligibleSlugs.has(row.collection) || !open.includes(row.reviewState)) continue;
+    byKey.set(`${row.collection}:${row.documentId}`, {
+      collectionSlug: row.collection,
+      documentId: row.documentId,
+      reviewState: row.reviewState,
+      reason: "assigned",
+    });
+  }
+
+  for (const row of awaiting) {
+    if (!eligibleSlugs.has(row.collection)) continue;
+    const key = `${row.collection}:${row.documentId}`;
+    // Something you hold *and* must approve stays listed once, as your own work.
+    if (byKey.has(key)) continue;
+    byKey.set(key, {
+      collectionSlug: row.collection,
+      documentId: row.documentId,
+      reviewState: row.reviewState,
+      reason: "awaiting_review",
+    });
+  }
+
+  return [...byKey.values()];
+}
+
+/**
+ * Collections the user may read that also have collaboration switched on. Shared
+ * by the nav badge and the view so a count can never disagree with its own list.
+ */
+export function eligibleCollabSlugs(
+  config: any,
+  user: { role?: string } | null | undefined,
+  resolveCollaboration: (config: any, slug: string) => { enabled: boolean },
+  canRead: (config: any, user: any, slug: string) => boolean,
+): Set<string> {
+  const slugs = new Set<string>();
+  for (const collection of config.collections ?? []) {
+    if (collection.auth) continue;
+    if (!resolveCollaboration(config, collection.slug).enabled) continue;
+    if (!canRead(config, user, collection.slug)) continue;
+    slugs.add(collection.slug);
+  }
+  return slugs;
+}

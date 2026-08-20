@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, like, lte, ne, or, sql } from "drizzle-orm
 import { nanoid } from "nanoid";
 
 import { setUsageConfig } from "./asset-usage";
+import { removeCollaborationFor } from "./collaboration";
 import { recordAudit, type AuditActor } from "./audit";
 import { hashPassword, MIN_PASSWORD_LENGTH } from "./auth";
 import type { CMSConfig, CollectionConfig, FieldConfig, RichTextDocument } from "./define";
@@ -902,6 +903,9 @@ export const createCms = (config: CMSConfig) => {
         }
         if (tables.translations) await db.delete(tables.translations).where(eq(tables.translations._entityId, id));
         if (tables.versions) await db.delete(tables.versions).where(eq(tables.versions._docId, id));
+        // Collaboration rows outlive their document otherwise, and an orphaned
+        // review row still counts towards the "Needs you" badge.
+        await removeCollaborationFor(slug, id);
 
         await collection.hooks?.afterDelete?.(existing, hookContext);
         auditContent("content.delete", slug, id, context);

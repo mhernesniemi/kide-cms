@@ -14,4 +14,9 @@ export default defineConfig({
     supported: ["en"],
   },
   collections: [users, frontPage, pages, posts, taxonomies, menus, forms, formSubmissions],
+  // Editorial review on the two collections editors actually work in. Approval is
+  // not required to publish — the workflow is visible without gating anything.
+  collaboration: {
+    collections: ["pages", "posts"],
+  },
 });

@@ -60,8 +60,10 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     return Response.json({ error: "Users collection not configured." }, { status: 500 });
   }
 
-  // Prevent setup if users already exist (fast path / friendly redirect).
-  const existing = await db.select().from(tables.users.main).limit(1);
+  // Prevent setup if an admin already exists (fast path / friendly redirect).
+  // Deliberately admin-scoped: seeded demo editors, or an invite that created an
+  // editor first, must not strand a project with no way to make its first admin.
+  const existing = await db.select().from(tables.users.main).where(eq(tables.users.main.role, "admin")).limit(1);
   if (existing.length > 0) {
     return new Response(null, {
       status: 303,
@@ -74,12 +76,12 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   const hashedPassword = await hashPassword(password);
 
   // Atomic winner election that leaves no orphan state: a single conditional insert creates
-  // the first admin only if the table is still empty. Self-recovering — if anything fails
-  // there's no marker to strand setup, and a retry just runs the same guarded insert.
+  // the first admin only if none exists yet. Self-recovering — if anything fails there's no
+  // marker to strand setup, and a retry just runs the same guarded insert.
   await db.run(sql`
     INSERT INTO cms_users (_id, name, email, role, password, _created_at, _updated_at)
     SELECT ${id}, ${name}, ${email}, 'admin', ${hashedPassword}, ${now}, ${now}
-    WHERE NOT EXISTS (SELECT 1 FROM cms_users)
+    WHERE NOT EXISTS (SELECT 1 FROM cms_users WHERE role = 'admin')
   `);
 
   // Confirm we won the race (our row exists). If not, another concurrent setup created the

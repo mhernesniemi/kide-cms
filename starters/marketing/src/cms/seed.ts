@@ -15,6 +15,18 @@ const block = (blockType: string, blockFields: Record<string, unknown>) => ({
 });
 
 const seeds: Record<string, SeedDocument[]> = {
+  // Demo editors, so the assignee picker and review workflow have people in them.
+  // Fake, like the rest of the seeded content — a project that wants a clean start
+  // scaffolds without seeding.
+  //
+  // Passwordless on purpose: they fill the roster without being accounts anyone can
+  // sign in to. First-run setup is gated on an *admin* existing rather than any user
+  // at all, so these cannot lock a new project out of /admin/setup.
+  users: [
+    { name: "Iris Lindqvist", email: "iris@example.com", role: "editor" },
+    { name: "Tomas Rehn", email: "tomas@example.com", role: "editor" },
+    { name: "Noor Haddad", email: "noor@example.com", role: "editor" },
+  ],
   "front-page": [
     {
       seoDescription: "Acme helps small teams launch faster with less overhead.",

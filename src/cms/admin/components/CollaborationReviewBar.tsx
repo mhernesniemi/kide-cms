@@ -1,11 +1,25 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Check, ChevronDown, Clock, GitCommitVertical, MessageSquare, MessageSquarePlus } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Clock,
+  GitCommitVertical,
+  MessageSquare,
+  MessageSquarePlus,
+  UserRound,
+} from "lucide-react";
 
 import { cn } from "../lib/utils";
 import { buttonVariants } from "./ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
 import { REVIEW_STATE_META, type CollabActivity, type CollabComment, type CollabUser } from "../lib/collaboration";
 import type { ReviewState } from "../../core";
@@ -22,6 +36,19 @@ type Props = {
   // Whether the current user can approve / request changes (role-based).
   canApprove: boolean;
 };
+
+function EmptyAvatar({ size = "size-6" }: { size?: string }) {
+  return (
+    <span
+      className={cn(
+        size,
+        "border-muted-foreground/80 text-muted-foreground inline-flex shrink-0 items-center justify-center rounded-full border border-dashed",
+      )}
+    >
+      <UserRound className="size-3" />
+    </span>
+  );
+}
 
 function Avatar({ initials, color, size = "size-6" }: { initials: string; color: string; size?: string }) {
   return (
@@ -47,6 +74,13 @@ export default function CollaborationReviewBar(props: Props) {
   const [tab, setTab] = useState<"comments" | "activity">("comments");
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Self-assign stays a one-click action at the top — with a long roster, hunting
+  // for your own name is the slow path. It is only offered when it would change
+  // something, and you are then dropped from the roster below so the same person
+  // never appears twice.
+  const showAssignToMe = !!currentUser && editor?.id !== currentUser.id;
+  const rosterUsers = showAssignToMe ? assignableUsers.filter((u) => u.id !== currentUser!.id) : assignableUsers;
 
   const post = async (payload: Record<string, unknown>) => {
     setBusy(true);
@@ -238,25 +272,29 @@ export default function CollaborationReviewBar(props: Props) {
               <span className="text-muted-foreground text-xs">Assignee</span>
               {editor && <Avatar initials={editor.initials} color={editor.color} />}
               <span className={cn("text-sm", editor ? "font-medium" : "text-muted-foreground")}>
-                {editor?.name ?? "none"}
+                {editor ? (editor.id === currentUser?.id ? "You" : editor.name) : "No assignee"}
               </span>
               <ChevronDown className="text-muted-foreground size-3.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-48">
-              {currentUser && editor?.id !== currentUser.id && (
-                <DropdownMenuItem onClick={() => changeEditor(currentUser.id)}>
-                  <Avatar initials={currentUser.initials} color={currentUser.color} size="size-5" />
-                  <span className="flex-1">Assign to me</span>
-                </DropdownMenuItem>
+              {showAssignToMe && currentUser && (
+                <>
+                  <DropdownMenuItem onClick={() => changeEditor(currentUser.id)}>
+                    <Avatar initials={currentUser.initials} color={currentUser.color} size="size-5" />
+                    <span className="flex-1 font-medium">Assign to me</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
               )}
               <DropdownMenuItem onClick={() => changeEditor("")}>
-                <span className="text-muted-foreground flex-1">Unassigned</span>
+                <EmptyAvatar size="size-5" />
+                <span className="flex-1">No assignee</span>
                 {!editor && <Check className="text-muted-foreground size-3.5" />}
               </DropdownMenuItem>
-              {assignableUsers.map((u) => (
+              {rosterUsers.map((u) => (
                 <DropdownMenuItem key={u.id} onClick={() => changeEditor(u.id)}>
                   <Avatar initials={u.initials} color={u.color} size="size-5" />
-                  <span className="flex-1">{u.name}</span>
+                  <span className="flex-1">{u.id === currentUser?.id ? `${u.name} (you)` : u.name}</span>
                   {editor?.id === u.id && <Check className="text-muted-foreground size-3.5" />}
                 </DropdownMenuItem>
               ))}

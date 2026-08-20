@@ -1,0 +1,100 @@
+---
+import DocumentsDataTable from "../components/DocumentsDataTable";
+import config from "virtual:kide/config";
+import { cms } from "virtual:kide/api";
+import { collaboration } from "virtual:kide/runtime";
+import { formatDate, getLabelField, isApprover, resolveCollaboration } from "../../core";
+import { canRead, getVisualStatus } from "../lib/access";
+import { REVIEW_STATE_META, eligibleCollabSlugs, loadNeedsYou } from "../lib/collaboration";
+
+const user = Astro.locals.user;
+const runtimeContext = user ? { user } : {};
+const cmsRuntime = cms as Record<string, any>;
+const defaultLocale = config.locales?.default ?? "en";
+
+const eligible = eligibleCollabSlugs(config, user, resolveCollaboration, canRead);
+const approver = isApprover(config, user?.role);
+
+const items = user
+  ? await loadNeedsYou({ collaboration, userId: String(user.id), isApprover: approver, eligibleSlugs: eligible })
+  : [];
+
+// Hydrate each queued document. A row whose document is gone is skipped rather
+// than rendered as a broken link.
+type Hydrated = { item: (typeof items)[number]; doc: Record<string, unknown>; collection: any };
+const hydrated: Hydrated[] = [];
+for (const item of items) {
+  const collection = config.collections.find((c: any) => c.slug === item.collectionSlug);
+  const api = cmsRuntime[item.collectionSlug];
+  if (!collection || !api) continue;
+  const doc = await api
+    .findById(item.documentId, { status: "any", locale: defaultLocale }, runtimeContext)
+    .catch(() => null);
+  if (!doc) continue;
+  hydrated.push({ item, doc, collection });
+}
+
+hydrated.sort((a, b) => String(b.doc._updatedAt ?? "").localeCompare(String(a.doc._updatedAt ?? "")));
+
+const rows = hydrated.map(({ item, doc, collection }) => {
+  const displayTitle = collection.singleton
+    ? collection.labels.singular
+    : String(doc[getLabelField(collection)] ?? doc.slug ?? collection.labels.singular);
+
+  return {
+    id: `${item.collectionSlug}:${item.documentId}`,
+    editHref: `/admin/${item.collectionSlug}/${item.documentId}`,
+    status: collection.drafts ? getVisualStatus(doc) : "",
+    singleton: collection.singleton,
+    locales: [defaultLocale],
+    searchText: displayTitle,
+    values: {
+      title: displayTitle,
+      collection: collection.labels.singular,
+      _review: REVIEW_STATE_META[item.reviewState].label,
+      _reason: item.reason === "assigned" ? "Assigned to you" : "Waiting for your review",
+      _updatedAt: formatDate(doc._updatedAt),
+    },
+  };
+});
+---
+
+<section class="space-y-6 px-4 py-6 lg:py-8 lg:pr-8 lg:pl-12">
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Needs you</h1>
+      <p class="text-muted-foreground mt-1 text-sm">
+        {
+          approver
+            ? "Documents assigned to you, and anything submitted for review."
+            : "Documents assigned to you that still need work."
+        }
+      </p>
+    </div>
+  </div>
+  {
+    rows.length === 0 ? (
+      <div class="text-muted-foreground rounded-lg border border-dashed px-6 py-12 text-center text-sm">
+        Nothing needs you right now.
+      </div>
+    ) : (
+      <DocumentsDataTable
+        client:load
+        collectionSlug="needs-you"
+        draftsEnabled={true}
+        duplicateEnabled={false}
+        showLocalesColumn={false}
+        title="Needs you"
+        columns={[
+          { key: "title", label: "Title" },
+          { key: "collection", label: "Collection" },
+          { key: "_reason", label: "Why" },
+          { key: "_review", label: "Review" },
+          { key: "_updatedAt", label: "Updated" },
+        ]}
+        data={rows}
+        searchPlaceholder="Filter…"
+      />
+    )
+  }
+</section>

@@ -2,6 +2,8 @@ import { defineMiddleware } from "astro:middleware";
 import type { APIContext, MiddlewareNext } from "astro";
 import { readEnv, resolveAdminAuth, runWithRequestScope } from "../core";
 import type { RequestScope, SessionUser } from "../core";
+import { eq } from "drizzle-orm";
+
 import config from "virtual:kide/config";
 import { getSessionUser } from "virtual:kide/runtime";
 import { getDb } from "virtual:kide/db";
@@ -142,7 +144,11 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
       const schema = await import("virtual:kide/schema");
       const tables = schema.cmsTables as Record<string, { main: any }>;
       if (tables.users) {
-        const rows = await db.select().from(tables.users.main).limit(1);
+        // Setup is complete once an *admin* exists, not merely a user. Seeded demo
+        // editors (or an invite-created editor) would otherwise skip first-run
+        // setup and leave the project with no way in. The API guards deleting or
+        // demoting the last admin, so "no admin" only ever means "not set up yet".
+        const rows = await db.select().from(tables.users.main).where(eq(tables.users.main.role, "admin")).limit(1);
         hasUsers = rows.length > 0;
       } else {
         hasUsers = true;

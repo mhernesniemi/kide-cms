@@ -82,6 +82,7 @@ export const formatDate = (value: unknown): string => {
 export type AdminRoute =
   | { kind: "dashboard" }
   | { kind: "recent" }
+  | { kind: "needs-you" }
   | { kind: "singles" }
   | { kind: "list"; collectionSlug: string }
   | { kind: "new"; collectionSlug: string }
@@ -92,6 +93,7 @@ export const resolveAdminRoute = (path: string | undefined): AdminRoute => {
 
   if (segments.length === 0) return { kind: "dashboard" };
   if (segments[0] === "recent" && segments.length === 1) return { kind: "recent" };
+  if (segments[0] === "needs-you" && segments.length === 1) return { kind: "needs-you" };
   if (segments[0] === "singles" && segments.length === 1) return { kind: "singles" };
   if (segments.length === 1) return { kind: "list", collectionSlug: segments[0] };
   if (segments[1] === "new") return { kind: "new", collectionSlug: segments[0] };

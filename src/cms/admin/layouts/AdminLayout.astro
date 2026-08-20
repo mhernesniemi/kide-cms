@@ -1,6 +1,7 @@
 ---
 import "virtual:kide/admin-css";
 import { cms } from "virtual:kide/api";
+import config from "virtual:kide/config";
 
 import {
   ChevronDown,
@@ -79,6 +80,10 @@ import MobileSidebar from "../components/MobileSidebar";
 import SidebarUserMenu from "../components/SidebarUserMenu";
 import Toast from "../components/Toast.astro";
 import { cn } from "../lib/utils";
+import { eligibleCollabSlugs, loadNeedsYou } from "../lib/collaboration";
+import { canRead } from "../lib/access";
+import { isApprover, resolveCollaboration } from "../../core";
+import { collaboration } from "virtual:kide/runtime";
 
 const {
   title = "Admin",
@@ -130,6 +135,25 @@ const pinnedIcons: Record<string, any> = {
   authors: PencilRuler,
   users: Users,
 };
+
+// "Needs you" queue — the nav entry only exists when collaboration is switched on
+// for at least one readable collection, and its badge is the whole notification
+// story for now: without a count nobody visits a queue they have to remember.
+const needsYouSlugs = eligibleCollabSlugs(config, user, resolveCollaboration, canRead);
+let needsYouCount = 0;
+if (needsYouSlugs.size > 0 && user) {
+  try {
+    const queue = await loadNeedsYou({
+      collaboration,
+      userId: String(user.id),
+      isApprover: isApprover(config, user.role),
+      eligibleSlugs: needsYouSlugs,
+    });
+    needsYouCount = queue.length;
+  } catch {
+    // Table may not exist yet on first run — a missing badge beats a broken layout.
+  }
+}
 
 // Unread submissions badge — shown next to "Forms" in the sidebar.
 let unreadSubmissions = 0;
@@ -187,10 +211,25 @@ type NavItem = {
   weight: number;
   group: string;
   badge?: number;
+  /** Word after the count. "new" suits an inbox of arrivals; a work queue is not new. */
+  badgeLabel?: string;
 };
 const navItems: NavItem[] = [];
 
 // Built-in nav items with default weights (spaced by 10 for easy interleaving)
+if (needsYouSlugs.size > 0) {
+  navItems.push({
+    href: "/admin/needs-you",
+    label: "Needs you",
+    Icon: Inbox,
+    active: activeCollection === "needs-you",
+    badge: needsYouCount > 0 ? needsYouCount : undefined,
+    badgeLabel: "open",
+    weight: -10,
+    group: "Content",
+  });
+}
+
 navItems.push({
   href: "/admin/recent",
   label: "Recent",
@@ -390,7 +429,7 @@ const navGroups = [...new Set(navItems.map((item) => item.group))]
                         <span class="flex-1">{item.label}</span>
                         {item.badge ? (
                           <span class="text-muted-foreground/80 text-xs tabular-nums">
-                            {item.badge > 99 ? "99+" : item.badge} new
+                            {item.badge > 99 ? "99+" : item.badge} {item.badgeLabel ?? "new"}
                           </span>
                         ) : null}
                       </a>
@@ -470,7 +509,7 @@ const navGroups = [...new Set(navItems.map((item) => item.group))]
                             <span class="flex-1">{item.label}</span>
                             {item.badge ? (
                               <span class="text-muted-foreground/80 text-xs tabular-nums">
-                                {item.badge > 99 ? "99+" : item.badge} new
+                                {item.badge > 99 ? "99+" : item.badge} {item.badgeLabel ?? "new"}
                               </span>
                             ) : null}
                           </a>

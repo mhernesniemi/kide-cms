@@ -247,6 +247,8 @@ const generateSchemaFile = (config: CMSConfig): string => {
   updatedAt: text("updated_at").notNull(),
 }, (table) => ({
   pk: primaryKey({ columns: [table.collection, table.documentId] }),
+  editorIdx: index("collaboration_editor_idx").on(table.editor),
+  reviewStateIdx: index("collaboration_review_state_idx").on(table.reviewState),
 }));`);
   parts.push("");
   parts.push(`export const cmsComments = sqliteTable("cms_comments", {

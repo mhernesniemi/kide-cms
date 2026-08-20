@@ -3,6 +3,7 @@ import AdminLayout from "../../admin/layouts/AdminLayout.astro";
 import AccessDeniedView from "../../admin/views/AccessDeniedView.astro";
 import EditView from "../../admin/views/EditView.astro";
 import ListView from "../../admin/views/ListView.astro";
+import NeedsYouView from "../../admin/views/NeedsYouView.astro";
 import RecentView from "../../admin/views/RecentView.astro";
 import SinglesView from "../../admin/views/SinglesView.astro";
 import config from "virtual:kide/config";
@@ -26,7 +27,11 @@ if (route.kind === "dashboard") return Astro.redirect("/admin/recent");
 const collectionSlug = "collectionSlug" in route ? route.collectionSlug : null;
 const collection = collectionSlug ? (cms.meta.getCollection(collectionSlug) as any) : null;
 const canAccessCurrent =
-  route.kind === "recent" || route.kind === "singles" || !collectionSlug || canRead(config, user, collectionSlug);
+  route.kind === "recent" ||
+  route.kind === "needs-you" ||
+  route.kind === "singles" ||
+  !collectionSlug ||
+  canRead(config, user, collectionSlug);
 
 // Singletons: redirect list/new to the single document's edit page
 if (collection?.singleton && canAccessCurrent && (route.kind === "list" || route.kind === "new")) {
@@ -40,11 +45,14 @@ if (collection?.singleton && canAccessCurrent && (route.kind === "list" || route
 const title =
   route.kind === "recent"
     ? "Recent | Kide CMS"
-    : route.kind === "singles"
-      ? "Singles | Kide CMS"
-      : `${collection?.labels?.plural ?? "Admin"} | Kide CMS`;
+    : route.kind === "needs-you"
+      ? "Needs you | Kide CMS"
+      : route.kind === "singles"
+        ? "Singles | Kide CMS"
+        : `${collection?.labels?.plural ?? "Admin"} | Kide CMS`;
 
-const activeCollection = route.kind === "recent" ? "recent" : (collectionSlug ?? "singles");
+const activeCollection =
+  route.kind === "recent" ? "recent" : route.kind === "needs-you" ? "needs-you" : (collectionSlug ?? "singles");
 ---
 
 <AdminLayout
@@ -55,8 +63,13 @@ const activeCollection = route.kind === "recent" ? "recent" : (collectionSlug ??
   customNav={config.admin?.nav}
 >
   {route.kind === "recent" && <RecentView />}
+  {route.kind === "needs-you" && <NeedsYouView />}
   {route.kind === "singles" && <SinglesView />}
-  {route.kind !== "recent" && route.kind !== "singles" && !canAccessCurrent && <AccessDeniedView />}
+  {
+    route.kind !== "recent" && route.kind !== "needs-you" && route.kind !== "singles" && !canAccessCurrent && (
+      <AccessDeniedView />
+    )
+  }
   {route.kind === "list" && canAccessCurrent && collection && <ListView collection={collection} />}
   {
     (route.kind === "new" || route.kind === "edit") && canAccessCurrent && collection && (
