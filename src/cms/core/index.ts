@@ -165,11 +165,13 @@ export {
   slugify,
   escapeHtml,
   safeUrl,
+  resolveLinkUrl,
   serializeFieldValue,
   contentSegments,
   contentBlocks,
   contentToPlainText,
 } from "./values";
+export type { StoredLink } from "./values";
 export type { ContentSegment } from "./values";
 export { cmsImageUrl, cmsSrcset, transformImage, DEFAULT_PRESETS, resolveImagePreset } from "./image";
 export type { CropOptions, TransformOptions } from "./image";

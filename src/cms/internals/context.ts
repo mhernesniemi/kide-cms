@@ -48,8 +48,10 @@ export const createCmsContext = async () => {
     /** The resolved CMS config. */
     config,
     /** Validate + create a batch of documents. Pass `{ dryRun: true }` for a report only. */
-    load: (items: ImportItem[], options?: { dryRun?: boolean; context?: Record<string, unknown> }) =>
-      importDocuments(cms as Record<string, any>, config, items, options),
+    load: (
+      items: ImportItem[],
+      options?: { dryRun?: boolean; throwOnFailed?: boolean; context?: Record<string, unknown> },
+    ) => importDocuments(cms as Record<string, any>, config, items, options),
     /** The machine-readable content model (same as `.kide/model.json`). */
     model: () => describeModel(config),
     /** Rebuild the search index for all searchable collections (uses this config's locales). */

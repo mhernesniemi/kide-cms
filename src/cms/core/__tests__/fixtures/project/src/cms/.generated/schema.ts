@@ -1,26 +1,38 @@
 // auto-generated — do not edit
 import { sqliteTable, text, integer, real, unique, index, primaryKey } from "drizzle-orm/sqlite-core";
 
-export const cmsUsers = sqliteTable("cms_users", {
-  _id: text("_id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  role: text("role").default("editor"),
-  password: text("password"),
-  _createdAt: text("_created_at").notNull(),
-  _updatedAt: text("_updated_at").notNull(),
-});
+export const cmsUsers = sqliteTable(
+  "cms_users",
+  {
+    _id: text("_id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    role: text("role").default("editor"),
+    password: text("password"),
+    _createdAt: text("_created_at").notNull(),
+    _updatedAt: text("_updated_at").notNull(),
+  },
+  (table) => ({
+    updatedIdx: index("users_updated_idx").on(table._updatedAt),
+  }),
+);
 
-export const cmsAuthors = sqliteTable("cms_authors", {
-  _id: text("_id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  slug: text("slug").unique(),
-  title: text("title"),
-  avatar: text("avatar"),
-  _createdAt: text("_created_at").notNull(),
-  _updatedAt: text("_updated_at").notNull(),
-});
+export const cmsAuthors = sqliteTable(
+  "cms_authors",
+  {
+    _id: text("_id").primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    slug: text("slug").unique(),
+    title: text("title"),
+    avatar: text("avatar"),
+    _createdAt: text("_created_at").notNull(),
+    _updatedAt: text("_updated_at").notNull(),
+  },
+  (table) => ({
+    updatedIdx: index("authors_updated_idx").on(table._updatedAt),
+  }),
+);
 
 export const cmsAuthorsTranslations = sqliteTable(
   "cms_authors_translations",
@@ -37,24 +49,33 @@ export const cmsAuthorsTranslations = sqliteTable(
   }),
 );
 
-export const cmsPosts = sqliteTable("cms_posts", {
-  _id: text("_id").primaryKey(),
-  title: text("title").notNull(),
-  slug: text("slug").unique(),
-  excerpt: text("excerpt"),
-  image: text("image"),
-  body: text("body"),
-  category: text("category"),
-  author: text("author"),
-  seoDescription: text("seo_description"),
-  _status: text("_status").notNull().default("draft"),
-  _publishedAt: text("_published_at"),
-  _publishAt: text("_publish_at"),
-  _unpublishAt: text("_unpublish_at"),
-  _published: text("_published"),
-  _createdAt: text("_created_at").notNull(),
-  _updatedAt: text("_updated_at").notNull(),
-});
+export const cmsPosts = sqliteTable(
+  "cms_posts",
+  {
+    _id: text("_id").primaryKey(),
+    title: text("title").notNull(),
+    slug: text("slug").unique(),
+    excerpt: text("excerpt"),
+    image: text("image"),
+    body: text("body"),
+    category: text("category"),
+    author: text("author"),
+    seoDescription: text("seo_description"),
+    listed: integer("listed", { mode: "boolean" }).default(false),
+    _status: text("_status").notNull().default("draft"),
+    _publishedAt: text("_published_at"),
+    _publishAt: text("_publish_at"),
+    _unpublishAt: text("_unpublish_at"),
+    _published: text("_published"),
+    _createdAt: text("_created_at").notNull(),
+    _updatedAt: text("_updated_at").notNull(),
+  },
+  (table) => ({
+    publishIdx: index("posts_publish_idx").on(table._status, table._publishAt),
+    unpublishIdx: index("posts_unpublish_idx").on(table._status, table._unpublishAt),
+    updatedIdx: index("posts_updated_idx").on(table._updatedAt),
+  }),
+);
 
 export const cmsPostsTranslations = sqliteTable(
   "cms_posts_translations",
@@ -64,11 +85,12 @@ export const cmsPostsTranslations = sqliteTable(
       .notNull()
       .references(() => cmsPosts._id, { onDelete: "cascade" }),
     _languageCode: text("_language_code").notNull(),
-    title: text("title").notNull(),
-    slug: text("slug").unique(),
+    title: text("title"),
+    slug: text("slug"),
     excerpt: text("excerpt"),
     body: text("body"),
     seoDescription: text("seo_description"),
+    listed: integer("listed", { mode: "boolean" }),
   },
   (table) => ({
     uniqueLocale: unique().on(table._entityId, table._languageCode),
@@ -85,23 +107,31 @@ export const cmsPostsVersions = sqliteTable("cms_posts_versions", {
   _createdAt: text("_created_at").notNull(),
 });
 
-export const cmsPages = sqliteTable("cms_pages", {
-  _id: text("_id").primaryKey(),
-  title: text("title").notNull(),
-  slug: text("slug").unique(),
-  summary: text("summary"),
-  image: text("image"),
-  relatedPosts: text("related_posts"),
-  seoDescription: text("seo_description"),
-  blocks: text("blocks"),
-  _status: text("_status").notNull().default("draft"),
-  _publishedAt: text("_published_at"),
-  _publishAt: text("_publish_at"),
-  _unpublishAt: text("_unpublish_at"),
-  _published: text("_published"),
-  _createdAt: text("_created_at").notNull(),
-  _updatedAt: text("_updated_at").notNull(),
-});
+export const cmsPages = sqliteTable(
+  "cms_pages",
+  {
+    _id: text("_id").primaryKey(),
+    title: text("title").notNull(),
+    slug: text("slug").unique(),
+    summary: text("summary"),
+    image: text("image"),
+    relatedPosts: text("related_posts"),
+    seoDescription: text("seo_description"),
+    blocks: text("blocks"),
+    _status: text("_status").notNull().default("draft"),
+    _publishedAt: text("_published_at"),
+    _publishAt: text("_publish_at"),
+    _unpublishAt: text("_unpublish_at"),
+    _published: text("_published"),
+    _createdAt: text("_created_at").notNull(),
+    _updatedAt: text("_updated_at").notNull(),
+  },
+  (table) => ({
+    publishIdx: index("pages_publish_idx").on(table._status, table._publishAt),
+    unpublishIdx: index("pages_unpublish_idx").on(table._status, table._unpublishAt),
+    updatedIdx: index("pages_updated_idx").on(table._updatedAt),
+  }),
+);
 
 export const cmsPagesTranslations = sqliteTable(
   "cms_pages_translations",
@@ -111,8 +141,8 @@ export const cmsPagesTranslations = sqliteTable(
       .notNull()
       .references(() => cmsPages._id, { onDelete: "cascade" }),
     _languageCode: text("_language_code").notNull(),
-    title: text("title").notNull(),
-    slug: text("slug").unique(),
+    title: text("title"),
+    slug: text("slug"),
     summary: text("summary"),
     seoDescription: text("seo_description"),
     blocks: text("blocks"),
@@ -132,21 +162,29 @@ export const cmsPagesVersions = sqliteTable("cms_pages_versions", {
   _createdAt: text("_created_at").notNull(),
 });
 
-export const cmsAssets = sqliteTable("cms_assets", {
-  _id: text("_id").primaryKey(),
-  filename: text("filename").notNull(),
-  mimeType: text("mime_type").notNull(),
-  size: integer("size").notNull(),
-  width: integer("width"),
-  height: integer("height"),
-  focalX: real("focal_x"),
-  focalY: real("focal_y"),
-  alt: text("alt"),
-  folder: text("folder"),
-  storagePath: text("storage_path").notNull(),
-  hash: text("hash"),
-  _createdAt: text("_created_at").notNull(),
-});
+export const cmsAssets = sqliteTable(
+  "cms_assets",
+  {
+    _id: text("_id").primaryKey(),
+    filename: text("filename").notNull(),
+    mimeType: text("mime_type").notNull(),
+    size: integer("size").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    focalX: real("focal_x"),
+    focalY: real("focal_y"),
+    alt: text("alt"),
+    folder: text("folder"),
+    storagePath: text("storage_path").notNull(),
+    hash: text("hash"),
+    _createdAt: text("_created_at").notNull(),
+  },
+  (table) => ({
+    storagePathIdx: index("assets_storage_path_idx").on(table.storagePath),
+    hashIdx: index("assets_hash_idx").on(table.hash),
+    folderIdx: index("assets_folder_idx").on(table.folder),
+  }),
+);
 
 export const cmsAssetFolders = sqliteTable("cms_asset_folders", {
   _id: text("_id").primaryKey(),
@@ -161,14 +199,20 @@ export const cmsSessions = sqliteTable("cms_sessions", {
   expiresAt: text("expires_at").notNull(),
 });
 
-export const cmsLocks = sqliteTable("cms_locks", {
-  _id: text("_id").primaryKey(),
-  collection: text("collection").notNull(),
-  documentId: text("document_id").notNull(),
-  userId: text("user_id").notNull(),
-  userEmail: text("user_email").notNull(),
-  lockedAt: text("locked_at").notNull(),
-});
+export const cmsLocks = sqliteTable(
+  "cms_locks",
+  {
+    _id: text("_id").primaryKey(),
+    collection: text("collection").notNull(),
+    documentId: text("document_id").notNull(),
+    userId: text("user_id").notNull(),
+    userEmail: text("user_email").notNull(),
+    lockedAt: text("locked_at").notNull(),
+  },
+  (table) => ({
+    docIdx: index("locks_doc_idx").on(table.collection, table.documentId),
+  }),
+);
 
 export const cmsInvites = sqliteTable("cms_invites", {
   _id: text("_id").primaryKey(),
@@ -253,6 +297,8 @@ export const cmsCollaboration = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.collection, table.documentId] }),
+    editorIdx: index("collaboration_editor_idx").on(table.editor),
+    reviewStateIdx: index("collaboration_review_state_idx").on(table.reviewState),
   }),
 );
 
@@ -268,6 +314,7 @@ export const cmsComments = sqliteTable(
     authorEmail: text("author_email"),
     resolved: integer("resolved", { mode: "boolean" }).notNull().default(false),
     createdAt: text("created_at").notNull(),
+    editedAt: text("edited_at"),
   },
   (table) => ({
     docIdx: index("comments_doc_idx").on(table.collection, table.documentId),

@@ -1,11 +1,12 @@
 ---
-import { safeUrl } from "@kidecms/core";
+import { resolveLinkUrl, type StoredLink } from "@kidecms/core";
+import { cms } from "@/cms/.generated/api";
 
 const { heading, body, cta } = Astro.props;
-const link =
-  cta && typeof cta === "object" ? (cta as { url?: string; label?: string; title?: string; newTab?: boolean }) : null;
-// Astro escapes attribute values but does not reject URL schemes.
-const href = link?.url ? safeUrl(String(link.url)) : null;
+const link = cta && typeof cta === "object" ? (cta as StoredLink) : null;
+// Resolves the linked document's current route (slug edits included); external
+// and hand-typed URLs pass through scheme-checked.
+const href = await resolveLinkUrl(cms as Record<string, any>, link);
 // An empty label falls back to the linked document's title.
 const linkLabel = link?.label || link?.title;
 const hasContent = Boolean(heading || body || (linkLabel && href));

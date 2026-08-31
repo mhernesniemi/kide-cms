@@ -72,6 +72,8 @@ if (dry.failed) {
   process.exit(1);
 }
 
+// A real run throws ImportFailedError if any document fails to write (the error
+// carries the full report), so a half-applied import can never look like success.
 await load(items);
 await reindex();
 await dispose();

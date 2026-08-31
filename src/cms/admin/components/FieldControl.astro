@@ -108,6 +108,7 @@ const toSubFieldMeta = (subField: FieldConfig): SubFieldMeta => ({
   of: "of" in subField && subField.of ? { type: subField.of.type } : undefined,
   collection: "collection" in subField ? subField.collection : undefined,
   hasMany: "hasMany" in subField ? subField.hasMany : undefined,
+  condition: subField.condition,
   itemFields:
     "itemFields" in subField && subField.itemFields
       ? Object.fromEntries(Object.entries(subField.itemFields).map(([name, f]) => [name, toSubFieldMeta(f)]))

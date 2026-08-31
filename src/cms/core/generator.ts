@@ -33,7 +33,7 @@ const isJsonField = (field: FieldConfig) =>
   field.type === "blocks" ||
   (field.type === "relation" && field.hasMany);
 
-const generateColumnDef = (fieldName: string, field: FieldConfig): string => {
+const generateColumnDef = (fieldName: string, field: FieldConfig, options: { bare?: boolean } = {}): string => {
   const colName = snakeCase(fieldName);
   let col: string;
 
@@ -45,13 +45,17 @@ const generateColumnDef = (fieldName: string, field: FieldConfig): string => {
     col = `text("${colName}")`;
   }
 
-  if (field.required && !field.condition) col += ".notNull()";
-  if (field.unique) col += ".unique()";
-  if (field.defaultValue !== undefined && !isJsonField(field)) {
-    if (field.type === "number" || field.type === "boolean") {
-      col += `.default(${field.defaultValue})`;
-    } else {
-      col += `.default(${JSON.stringify(field.defaultValue)})`;
+  // Translations rows are a sparse overlay (readers skip null): every column
+  // stays nullable, un-unique, and default-free regardless of the field config.
+  if (!options.bare) {
+    if (field.required && !field.condition) col += ".notNull()";
+    if (field.unique) col += ".unique()";
+    if (field.defaultValue !== undefined && !isJsonField(field)) {
+      if (field.type === "number" || field.type === "boolean") {
+        col += `.default(${field.defaultValue})`;
+      } else {
+        col += `.default(${JSON.stringify(field.defaultValue)})`;
+      }
     }
   }
 
@@ -117,7 +121,7 @@ const generateTranslationsTable = (config: CMSConfig, collection: CollectionConf
   ];
 
   for (const fieldName of translatableFields) {
-    columns.push(generateColumnDef(fieldName, collection.fields[fieldName]));
+    columns.push(generateColumnDef(fieldName, collection.fields[fieldName], { bare: true }));
   }
 
   return `export const ${varName} = sqliteTable("${tableName}", {\n${columns.join("\n")}\n}, (table) => ({\n  uniqueLocale: unique().on(table._entityId, table._languageCode),\n}));`;

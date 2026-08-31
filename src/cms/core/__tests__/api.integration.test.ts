@@ -12,6 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as generatedSchema from "./fixtures/project/src/cms/.generated/schema";
 import config from "./fixtures/config";
 import { createCms } from "../api";
+import { resolveLinkUrl } from "../values";
 import { createInvite, consumeInvite, createSession, hashToken, validateInvite, validateSession } from "../auth";
 import { configureCmsRuntime, resetCmsRuntime } from "../runtime";
 import { initSchema, resetSchema } from "../schema";
@@ -207,6 +208,43 @@ describe("translations", () => {
     // …but not under a locale whose translation overrides the value.
     const crossLocale = await (cms as any).posts.findOne({ slug: "localized-lookup", locale: "fi", status: "any" });
     expect(crossLocale).toBeNull();
+  });
+
+  it("filters on a translatable boolean field under a locale", async () => {
+    const post = await (cms as any).posts.create({ title: "Boolean filter", slug: "boolean-filter", listed: true });
+
+    // The locale-aware where uses raw SQL for translatable fields — booleans must bind as 0/1.
+    const listed = await (cms as any).posts.find({ where: { listed: true }, locale: "fi", status: "any" });
+    expect(listed.some((d: any) => d._id === post._id)).toBe(true);
+
+    // A flag-only overlay (no other fields) both writes and filters per locale.
+    await (cms as any).posts.upsertTranslation(post._id, "fi", { listed: false });
+    const afterOverlay = await (cms as any).posts.find({ where: { listed: true }, locale: "fi", status: "any" });
+    expect(afterOverlay.some((d: any) => d._id === post._id)).toBe(false);
+    const stillListedInBase = await (cms as any).posts.find({ where: { listed: true }, locale: "en", status: "any" });
+    expect(stillListedInBase.some((d: any) => d._id === post._id)).toBe(true);
+  });
+});
+
+describe("resolveLinkUrl", () => {
+  it("resolves the current route from the stored document reference, surviving slug edits", async () => {
+    const post = await (cms as any).posts.create({ title: "Linked doc", slug: "linked-doc" });
+    await (cms as any).posts.publish(post._id);
+    const link = { url: "/blog/stale-cached-path", docId: post._id, collection: "posts" };
+    expect(await resolveLinkUrl(cms as any, link)).toBe("/blog/linked-doc");
+
+    await (cms as any).posts.update(post._id, { slug: "renamed-doc" });
+    await (cms as any).posts.publish(post._id);
+    expect(await resolveLinkUrl(cms as any, link)).toBe("/blog/renamed-doc");
+  });
+
+  it("falls back to the cached url when there is no live reference", async () => {
+    expect(await resolveLinkUrl(cms as any, { url: "https://example.com" })).toBe("https://example.com");
+    expect(await resolveLinkUrl(cms as any, { url: "/blog/cached", docId: "gone", collection: "posts" })).toBe(
+      "/blog/cached",
+    );
+    expect(await resolveLinkUrl(cms as any, { url: "javascript:alert(1)" })).toBe(null);
+    expect(await resolveLinkUrl(cms as any, null)).toBe(null);
   });
 });
 

@@ -273,6 +273,38 @@ export const safeUrl = (value: string): string | null => {
   }
 };
 
+/** Value shape stored by the admin's link field. */
+export type StoredLink = {
+  type?: string;
+  url?: string;
+  label?: string;
+  title?: string;
+  newTab?: boolean;
+  docId?: string;
+  collection?: string;
+};
+
+/**
+ * Current href for a stored link value. A link picked with the internal
+ * document picker carries a document reference (docId + collection) — resolve
+ * the document's route fresh so the link survives slug edits. The stored `url`
+ * is the fallback: external links, hand-typed paths, links saved before the
+ * reference existed, and references to unpublished or deleted documents.
+ */
+export const resolveLinkUrl = async (
+  cms: Record<string, any>,
+  link: StoredLink | null | undefined,
+): Promise<string | null> => {
+  if (!link) return null;
+  const fallback = link.url ? safeUrl(String(link.url)) : null;
+  if (!link.docId || !link.collection) return fallback;
+  const api = cms[link.collection];
+  if (!api?.findById) return fallback;
+  const doc = await api.findById(link.docId).catch(() => null);
+  if (!doc) return fallback;
+  return cms.meta?.getRouteForDocument?.(link.collection, doc) ?? fallback;
+};
+
 const renderNode = (node: RichTextNode): string => {
   if (node.type === "text") {
     let content = escapeHtml(String(node.value ?? ""));

@@ -123,18 +123,33 @@ export type ImportReport = {
   errors: Array<{ collection: string; id: unknown; message: string }>;
 };
 
+/** Thrown by a real (non-dry) import run that had failures. Carries the full report. */
+export class ImportFailedError extends Error {
+  report: ImportReport;
+  constructor(report: ImportReport) {
+    const first = report.errors[0]?.message ?? report.invalid[0]?.errors[0]?.message ?? "see report";
+    super(`Import failed for ${report.failed} of ${report.total} documents (first: ${first})`);
+    this.name = "ImportFailedError";
+    this.report = report;
+  }
+}
+
 type AnyCms = Record<string, any>;
 
 /**
  * Validate then (unless dryRun) create every item via the typed API. Use
  * `{ _system: true, _skipSearch: true }` context for bulk imports and call
  * `reindex()` once afterwards.
+ *
+ * A real run throws ImportFailedError when any document fails, so a half-applied
+ * import can't look like success; pass `throwOnFailed: false` to get the report
+ * back instead. Dry runs always return the report.
  */
 export const importDocuments = async (
   cms: AnyCms,
   config: CMSConfig,
   items: ImportItem[],
-  options: { dryRun?: boolean; context?: Record<string, unknown> } = {},
+  options: { dryRun?: boolean; throwOnFailed?: boolean; context?: Record<string, unknown> } = {},
 ): Promise<ImportReport> => {
   const dryRun = options.dryRun ?? false;
   const context = options.context ?? { _system: true, _skipSearch: true };
@@ -178,6 +193,7 @@ export const importDocuments = async (
       report.failed++;
     }
   }
+  if (!dryRun && report.failed > 0 && (options.throwOnFailed ?? true)) throw new ImportFailedError(report);
   return report;
 };
 

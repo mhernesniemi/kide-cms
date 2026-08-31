@@ -80,6 +80,7 @@ export default function SharedSectionBlockField({ name, value, types }: Props) {
               meta={meta}
               value={block[fieldName]}
               onChange={(v) => updateField(fieldName, v)}
+              siblings={block}
             />
           ))}
         </div>

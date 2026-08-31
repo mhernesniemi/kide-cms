@@ -44,11 +44,17 @@ const parseRecreate = (): string[] => {
   const arg = process.argv.find((a) => a.startsWith("--recreate="))?.slice("--recreate=".length);
   const raw = process.env.RECREATE ?? arg ?? "";
   const tables = new Set<string>();
+  // Same slug → table-name mapping as the generator, so e.g. front-page finds cms_front_page.
+  const snakeCase = (value: string) =>
+    value
+      .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+      .replace(/[^a-zA-Z0-9]+/g, "_")
+      .toLowerCase();
   for (const name of raw
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean)) {
-    const base = name.startsWith("cms_") ? name : `cms_${name}`;
+    const base = name.startsWith("cms_") ? name : `cms_${snakeCase(name)}`;
     tables.add(base);
     tables.add(`${base}_translations`);
     tables.add(`${base}_versions`);
@@ -73,7 +79,7 @@ async function main() {
       sqlite.close();
       process.exit(1);
     }
-    for (const t of recreate) sqlite.exec(`DROP TABLE IF EXISTS ${t}`);
+    for (const t of recreate) sqlite.exec(`DROP TABLE IF EXISTS "${t}"`);
     console.log(`[cms:push] dropped for recreate: ${recreate.join(", ")}`);
   }
 

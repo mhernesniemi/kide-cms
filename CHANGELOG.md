@@ -7,6 +7,35 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+> **Schema change** — run `pnpm cms:push` (Cloudflare D1: apply migrations): translations-table
+> columns are now plain nullable columns.
+
+### Changed
+
+- **`load()` (bulk import) now throws `ImportFailedError` when any document fails to write**, so a
+  half-applied import can't end with a success message. The error carries the full report; pass
+  `{ throwOnFailed: false }` for the old return-the-report behavior. Dry runs are unchanged.
+- Translations tables no longer copy `notNull`/`unique`/`default` from the base field config. A
+  translation row is a sparse overlay (readers already skip null), so e.g. a flag-only overlay row
+  no longer needs dummy values for required base fields.
+- Internal links picked with the document picker now store the document reference (`docId` +
+  `collection`) alongside the cached `url` and title. New core helper `resolveLinkUrl(cms, link)`
+  resolves the target's current route at render time — links survive slug edits, with the cached
+  `url` as fallback for external links, old values, and unpublished/deleted targets. The marketing
+  starter's Hero uses it; hand-editing a URL clears the reference.
+- `condition` on block sub-fields is honoured: conditional fields show/hide inside the block editor,
+  inline content blocks, shared sections and repeater rows, with the same matching rules as the edit
+  form. Previously conditions only worked on top-level collection fields.
+
+### Fixed
+
+- `where` on a translatable boolean field with a `locale` no longer throws — the raw-SQL overlay
+  branch now binds booleans as 0/1.
+- `cms:push --recreate=<slug>` works for slugs that aren't already snake_case (e.g. `front-page`):
+  the slug is mapped to its table name the same way the generator does, and identifiers are quoted.
+
 ## [0.21.0] - 2026-08-31
 
 > **Schema change** — run `pnpm cms:push` (Cloudflare D1: apply migrations) to create the new indexes.

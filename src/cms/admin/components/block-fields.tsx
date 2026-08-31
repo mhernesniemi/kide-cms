@@ -46,9 +46,19 @@ export type SubFieldMeta = {
   of?: { type: string };
   collection?: string;
   hasMany?: boolean;
+  condition?: { field: string; value: string | string[] | boolean };
   /** Typed repeater row schema (json + admin.component "repeater"). */
   itemFields?: Record<string, SubFieldMeta>;
 };
+
+/** Same semantics as the edit form's conditional-visibility script (EditScripts). */
+export function matchesCondition(expected: string | string[] | boolean, current: unknown): boolean {
+  if (Array.isArray(expected)) return expected.some((v) => String(v) === String(current ?? ""));
+  if (typeof expected === "boolean") {
+    return expected ? current === true || current === "true" : !current || current === "false";
+  }
+  return String(expected) === String(current ?? "");
+}
 
 export type BlockTypesMeta = Record<string, Record<string, SubFieldMeta>>;
 
@@ -99,6 +109,7 @@ export function SubField({
   meta,
   value,
   onChange,
+  siblings,
   linkOptions = [],
 }: {
   blockKey: string;
@@ -106,10 +117,14 @@ export function SubField({
   meta: SubFieldMeta;
   value: unknown;
   onChange: (value: unknown) => void;
+  /** The block's other field values — evaluated against `meta.condition`. */
+  siblings?: Record<string, unknown>;
   linkOptions?: LinkableCollection[];
 }) {
   const label = meta.label ?? humanize(fieldName);
   const fieldId = `${blockKey}_${fieldName}`;
+
+  if (meta.condition && !matchesCondition(meta.condition.value, siblings?.[meta.condition.field])) return null;
 
   return (
     <div className="grid gap-2">
@@ -527,6 +542,7 @@ function SortableRepeaterItem({
                   meta={itemFields[key]}
                   value={item[key]}
                   onChange={(v) => onUpdate(key, v)}
+                  siblings={item}
                   linkOptions={linkOptions}
                 />
               ))

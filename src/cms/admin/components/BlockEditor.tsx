@@ -248,6 +248,7 @@ function SortableBlock({
                 meta={meta}
                 value={block[fieldName]}
                 onChange={(v) => onUpdateField(fieldName, v)}
+                siblings={block}
                 linkOptions={linkOptions}
               />
             ))

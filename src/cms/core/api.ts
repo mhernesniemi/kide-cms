@@ -553,8 +553,10 @@ export const createCms = (config: CMSConfig) => {
               // this, e.g. findOne({ slug, locale: "en" }) can never match a
               // translated slug.
               const tr = tables.translations;
+              // Raw SQL skips drizzle's column mapper, so booleans must be bound as 0/1.
+              const bound = typeof value === "boolean" ? (value ? 1 : 0) : value;
               conditions.push(
-                sql`(EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale} AND ${tr[key]} = ${value}) OR (${tables.main[key]} = ${value} AND NOT EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale} AND ${tr[key]} IS NOT NULL)))`,
+                sql`(EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale} AND ${tr[key]} = ${bound}) OR (${tables.main[key]} = ${bound} AND NOT EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale} AND ${tr[key]} IS NOT NULL)))`,
               );
             } else {
               conditions.push(eq(tables.main[key], value));

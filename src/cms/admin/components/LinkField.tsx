@@ -8,12 +8,21 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import InternalLinkPicker, { type LinkableCollection } from "./InternalLinkPicker";
 
 // A structured link control: URL + label + open-in-new-tab, stored as
-// { type, url, label, title, newTab }. A leading "/" is treated as an internal
-// link. When linkable collections are provided, internal links are chosen with a
-// document picker instead of a hand-typed path (which silently breaks on slug edits).
-// `title` is the picked document's title — renderers use it as the link text
-// when `label` is left empty.
-type LinkValue = { type?: string; url?: string; label?: string; title?: string; newTab?: boolean };
+// { type, url, label, title, newTab, docId, collection }. A leading "/" is
+// treated as an internal link. When linkable collections are provided, internal
+// links are chosen with a document picker; the pick stores the document
+// reference (docId + collection) so renderers can resolve the current route via
+// resolveLinkUrl(), with `url` kept as a cached fallback. `title` is the picked
+// document's title — renderers use it as the link text when `label` is left empty.
+type LinkValue = {
+  type?: string;
+  url?: string;
+  label?: string;
+  title?: string;
+  newTab?: boolean;
+  docId?: string;
+  collection?: string;
+};
 
 type Props = {
   name?: string;
@@ -94,13 +103,17 @@ export default function LinkField({ name, value: initial, onChange, linkOptions 
                   editHref={value.url ?? ""}
                   editTitle={value.title}
                   collections={linkOptions}
-                  onSelect={(item) => set({ url: item.href, title: item.label })}
+                  onSelect={(item) =>
+                    set({ url: item.href, title: item.label, docId: item.id, collection: item.collection })
+                  }
                 />
               ) : (
                 <Input
                   value={value.url ?? ""}
                   placeholder="https://example.com"
-                  onChange={(e) => set({ url: e.target.value, title: undefined })}
+                  onChange={(e) =>
+                    set({ url: e.target.value, title: undefined, docId: undefined, collection: undefined })
+                  }
                 />
               )}
             </div>
@@ -108,7 +121,7 @@ export default function LinkField({ name, value: initial, onChange, linkOptions 
             <Input
               value={value.url ?? ""}
               placeholder="https://example.com  or  /about"
-              onChange={(e) => set({ url: e.target.value, title: undefined })}
+              onChange={(e) => set({ url: e.target.value, title: undefined, docId: undefined, collection: undefined })}
             />
           )}
         </div>

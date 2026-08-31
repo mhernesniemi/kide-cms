@@ -71,3 +71,27 @@ describe("importDocuments dry-run", () => {
     expect(report.invalid[0].errors.length).toBeGreaterThan(0);
   });
 });
+
+describe("importDocuments real run", () => {
+  const failingCms = {
+    posts: {
+      create: async () => {
+        throw new Error("NOT NULL constraint failed: cms_posts.title");
+      },
+    },
+  };
+  const items = [{ collection: "posts", data: { title: "Valid but doomed" } }];
+
+  it("throws on write failures so a half-applied import cannot look like success", async () => {
+    await expect(importDocuments(failingCms as never, config, items)).rejects.toMatchObject({
+      name: "ImportFailedError",
+      report: { failed: 1, total: 1 },
+    });
+  });
+
+  it("returns the report instead with throwOnFailed: false", async () => {
+    const report = await importDocuments(failingCms as never, config, items, { throwOnFailed: false });
+    expect(report.failed).toBe(1);
+    expect(report.errors[0].message).toContain("NOT NULL");
+  });
+});

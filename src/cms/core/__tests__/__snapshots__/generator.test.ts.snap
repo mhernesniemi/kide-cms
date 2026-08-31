@@ -93,7 +93,7 @@ export const cmsArticlesTranslations = sqliteTable("cms_articles_translations", 
   _id: text("_id").primaryKey(),
   _entityId: text("_entity_id").notNull().references(() => cmsArticles._id, { onDelete: "cascade" }),
   _languageCode: text("_language_code").notNull(),
-  title: text("title").notNull(),
+  title: text("title"),
   body: text("body"),
 }, (table) => ({
   uniqueLocale: unique().on(table._entityId, table._languageCode),

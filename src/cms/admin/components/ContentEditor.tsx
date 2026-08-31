@@ -283,6 +283,7 @@ function BlockNodeView(props: NodeViewProps) {
                   meta={meta}
                   value={fields[fieldName]}
                   onChange={(v) => updateField(fieldName, v)}
+                  siblings={fields}
                   linkOptions={options.linkOptions ?? []}
                 />
               ))}

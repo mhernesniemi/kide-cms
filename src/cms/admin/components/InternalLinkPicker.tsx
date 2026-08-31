@@ -7,7 +7,7 @@ import DocumentCombobox from "./DocumentCombobox";
 /** A collection whose documents can be the target of an internal link. */
 export type LinkableCollection = { collection: string; label: string };
 
-export type LinkTarget = { id: string; label: string; href: string };
+export type LinkTarget = { id: string; collection: string; label: string; href: string };
 
 /**
  * Picks an internal document by searching the linkable collections on the
@@ -42,7 +42,7 @@ export default function InternalLinkPicker({
         display={editTitle || editHref}
         isSelected={(hit) => !!editHref && hit.href === editHref}
         onPick={(hit) => {
-          if (hit.href) onSelect({ id: hit.docId, label: hit.title, href: hit.href });
+          if (hit.href) onSelect({ id: hit.docId, collection: hit.collection, label: hit.title, href: hit.href });
         }}
         closeOnPick
         triggerClassName={cn("h-9 min-w-0 rounded-lg px-3", triggerClassName)}

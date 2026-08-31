@@ -63,6 +63,7 @@ const posts = defineCollection({
     category: fields.text({ admin: { component: "taxonomy-select", placeholder: "categories" } }),
     author: fields.relation({ collection: "authors" }),
     seoDescription: fields.text({ maxLength: 160, translatable: true }),
+    listed: fields.boolean({ translatable: true, defaultValue: false }),
   },
   hooks: {
     beforeCreate(data) {
