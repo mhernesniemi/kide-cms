@@ -51,6 +51,7 @@ type Args = {
   corePath?: string;
   apply?: boolean;
   allowDirty: boolean;
+  install: boolean;
   agent: "auto" | "none" | "claude" | "codex" | "cursor";
   help: boolean;
 };
@@ -102,6 +103,7 @@ Options:
   --apply              Apply the managed patch even when not selected by default
   --packet-only        Only write the upgrade packet; do not change project files
   --allow-dirty        Allow applying on top of an uncommitted worktree
+  --no-install         Skip the automatic \`pnpm install\` after a package-mode bump
   --agent <name>       auto, none, claude, codex, or cursor (default: auto)
   --help               Show this help
 
@@ -114,6 +116,7 @@ Examples:
 const parseArgs = (argv: string[]): Args => {
   const args: Args = {
     allowDirty: false,
+    install: true,
     agent: (process.env.KIDE_UPGRADE_AGENT as Args["agent"]) || "auto",
     help: false,
   };
@@ -151,6 +154,8 @@ const parseArgs = (argv: string[]): Args => {
       args.apply = false;
     } else if (arg === "--allow-dirty") {
       args.allowDirty = true;
+    } else if (arg === "--no-install") {
+      args.install = false;
     } else if (arg === "--agent") {
       args.agent = parseAgent(takeValue(i, arg));
       i += 1;
@@ -753,9 +758,22 @@ async function main() {
 
     console.log(`[cms:upgrade] Packet ready: ${packetRelative}`);
     if (applied && mode === "package") {
-      console.log(
-        `[cms:upgrade] Bumped @kidecms/core to ^${versionFromRef(targetRef)} and updated .kide-version — run \`pnpm install\`, then review careful-review.patch.`,
-      );
+      console.log(`[cms:upgrade] Bumped @kidecms/core to ^${versionFromRef(targetRef)} and updated .kide-version.`);
+      if (args.install) {
+        // The bump only edits package.json — without the install the project
+        // still runs the old core, so finish the delivery here.
+        console.log("[cms:upgrade] Installing…");
+        const install = spawnSync("pnpm", ["install"], { cwd, stdio: "inherit" });
+        if (install.status === 0) {
+          console.log("[cms:upgrade] Installed. Review careful-review.patch to finish.");
+        } else {
+          console.log("[cms:upgrade] pnpm install failed — run it manually, then review careful-review.patch.");
+        }
+      } else {
+        console.log(
+          "[cms:upgrade] Skipped install (--no-install) — run `pnpm install`, then review careful-review.patch.",
+        );
+      }
     } else if (applied) {
       console.log(`[cms:upgrade] Applied managed runtime changes and updated .kide-version to ${targetRef}.`);
     } else if (applyError) {
