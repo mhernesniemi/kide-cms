@@ -222,11 +222,15 @@
 }
 
 /* ── Tiptap editor styles ────────────────────────────────────────── */
+/* Content typography only — block-card form UI ([data-node-view-wrapper]) is excluded,
+   since these unlayered rules would beat its layered Tailwind utilities. The second
+   selector re-includes nested rich-text editors inside a card. */
 .tiptap {
   outline: none;
 }
 
-.tiptap p {
+.tiptap p:not([data-node-view-wrapper] *),
+[data-node-view-wrapper] .tiptap p {
   margin: 0.5em 0;
   color: inherit;
   font-size: inherit;
@@ -242,35 +246,41 @@
   height: 0;
 }
 
-.tiptap h2 {
+.tiptap h2:not([data-node-view-wrapper] *),
+[data-node-view-wrapper] .tiptap h2 {
   font-size: 1.25rem;
   font-weight: 600;
   margin: 1em 0 0.5em;
 }
 
-.tiptap h3 {
+.tiptap h3:not([data-node-view-wrapper] *),
+[data-node-view-wrapper] .tiptap h3 {
   font-size: 1.1rem;
   font-weight: 600;
   margin: 0.75em 0 0.4em;
 }
 
-.tiptap ul {
+.tiptap ul:not([data-node-view-wrapper] *),
+[data-node-view-wrapper] .tiptap ul {
   padding-left: 1.5em;
   margin: 0.5em 0;
   list-style-type: disc;
 }
 
-.tiptap ol {
+.tiptap ol:not([data-node-view-wrapper] *),
+[data-node-view-wrapper] .tiptap ol {
   padding-left: 1.5em;
   margin: 0.5em 0;
   list-style-type: decimal;
 }
 
-.tiptap li {
+.tiptap li:not([data-node-view-wrapper] *),
+[data-node-view-wrapper] .tiptap li {
   margin: 0.2em 0;
 }
 
-.tiptap blockquote {
+.tiptap blockquote:not([data-node-view-wrapper] *),
+[data-node-view-wrapper] .tiptap blockquote {
   border-left: 3px solid var(--border);
   padding-left: 1em;
   margin: 0.5em 0;

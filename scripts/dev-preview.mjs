@@ -154,18 +154,31 @@ watch(overlayDir, { recursive: true }, (_, rel) => {
 });
 
 let child;
+let serverStartedAt = 0;
 const startServer = () => {
+  serverStartedAt = Date.now();
   child = spawn("pnpm", ["exec", "astro", "dev", "--port", port], { cwd: previewDir, stdio: "inherit" });
-  child.on("exit", (code) => {
+  child.on("exit", (code, signal) => {
     if (restarting) {
       restarting = false;
       startServer();
       return;
     }
     if (code) process.exit(code);
-    // Detached background server (non-TTY): stay alive so the watcher keeps syncing.
-    detached = true;
-    console.log("[dev-preview] watching for changes (Ctrl+C to stop)");
+    if (signal === "SIGINT") return; // Ctrl+C hit the whole process group — we're exiting too
+    if (!process.stdout.isTTY) {
+      // Detached background server (non-TTY): stay alive so the watcher keeps syncing.
+      detached = true;
+      console.log("[dev-preview] watching for changes (Ctrl+C to stop)");
+      return;
+    }
+    // In a TTY the server never detaches — a clean exit means it was killed from outside.
+    if (Date.now() - serverStartedAt < 5000) {
+      console.error("[dev-preview] server exited right after starting — not restarting, check the output above");
+      process.exit(1);
+    }
+    console.log("[dev-preview] server exited unexpectedly (killed from outside?) — restarting");
+    startServer();
   });
 };
 startServer();
