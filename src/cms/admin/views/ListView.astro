@@ -158,7 +158,9 @@ const formatColumnValue = (column: string, entry: Record<string, unknown>, pageP
   if (column === "_status") return getVisualStatus(entry);
   if (column === "__usage") return `${sharedSectionUsageCounts[String(entry._id)] ?? 0} places`;
   if (column === "__page") return formatPagePath(pagePath);
-  if (column === "_updatedAt" || column === "_createdAt") return formatDate(entry[column]);
+  // Timestamps and any `date` field render with the admin date settings, not as raw ISO strings.
+  if (column === "_updatedAt" || column === "_createdAt" || collection.fields[column]?.type === "date")
+    return formatDate(entry[column]);
   if (column.startsWith("_")) return String(entry[column] ?? "—");
   return formatFieldValue(collection.fields[column], entry[column], relationLabels);
 };

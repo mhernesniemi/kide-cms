@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -12,13 +12,12 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Check, ChevronsUpDown, GripVertical, Plus, Trash2 } from "lucide-react";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "./ui/button";
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "./ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 import { cn } from "../lib/utils";
+import DocumentCombobox, { useRelationLabels } from "./DocumentCombobox";
 
 type Option = { value: string; label: string };
 
@@ -27,7 +26,8 @@ type Props = {
   value?: string;
   hasMany?: boolean;
   maxItems?: number;
-  options: Option[];
+  /** Labels already known for selected values (optional seed — anything missing is resolved on mount). */
+  options?: Option[];
   collectionSlug: string;
   collectionLabel: string;
   labelField?: string;
@@ -92,12 +92,11 @@ export default function RelationField({
   value: initialValue,
   hasMany = false,
   maxItems,
-  options: initialOptions,
+  options: initialOptions = [],
   collectionSlug,
   collectionLabel,
   labelField = "title",
 }: Props) {
-  const [options, setOptions] = useState(initialOptions);
   const [selected, setSelected] = useState<string[]>(() => {
     if (!initialValue) return [];
     if (hasMany) {
@@ -110,8 +109,9 @@ export default function RelationField({
     }
     return initialValue ? [initialValue] : [];
   });
-  const [open, setOpen] = useState(false);
+  const { getLabel: findLabel, remember } = useRelationLabels(collectionSlug, selected, initialOptions);
   const [sheetOpen, setSheetOpen] = useState(false);
+
   const hiddenRef = useRef<HTMLInputElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -122,15 +122,18 @@ export default function RelationField({
     hiddenRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
   }, [hiddenValue]);
 
-  const getLabel = useCallback((id: string) => options.find((o) => o.value === id)?.label ?? id, [options]);
+  const getLabel = (id: string) => findLabel(id) ?? "…";
 
   const atMax = hasMany && maxItems !== undefined && selected.length >= maxItems;
 
-  const displayLabel = useMemo(() => {
-    if (selected.length === 0) return "";
-    if (hasMany) return maxItems ? `${selected.length}/${maxItems} selected` : `${selected.length} selected`;
-    return getLabel(selected[0]);
-  }, [selected, hasMany, maxItems, getLabel]);
+  const displayLabel =
+    selected.length === 0
+      ? ""
+      : hasMany
+        ? maxItems
+          ? `${selected.length}/${maxItems} selected`
+          : `${selected.length} selected`
+        : getLabel(selected[0]);
 
   const selectItem = (id: string) => {
     if (hasMany) {
@@ -141,7 +144,6 @@ export default function RelationField({
       });
     } else {
       setSelected((prev) => (prev[0] === id ? [] : [id]));
-      setOpen(false);
     }
   };
 
@@ -171,12 +173,7 @@ export default function RelationField({
         .then((doc) => {
           if (doc) {
             const label = String(doc[labelField] ?? doc.slug ?? docId);
-            setOptions((prev) => {
-              const exists = prev.some((o) => o.value === docId);
-              return exists
-                ? prev.map((o) => (o.value === docId ? { ...o, label } : o))
-                : [{ value: docId, label }, ...prev];
-            });
+            remember([{ docId, title: label }]);
             if (hasMany) {
               setSelected((prev) => (prev.includes(docId) ? prev : [...prev, docId]));
             } else {
@@ -189,7 +186,7 @@ export default function RelationField({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [sheetOpen, collectionSlug, hasMany, labelField]);
+  }, [sheetOpen, collectionSlug, hasMany, labelField, remember]);
 
   return (
     <div className="space-y-2">
@@ -208,42 +205,19 @@ export default function RelationField({
         </DndContext>
       )}
 
-      {/* Combobox */}
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="input"
-            role="combobox"
-            aria-expanded={open}
-            size="lg"
-            className="w-full justify-between text-sm font-normal"
-          >
-            <span className={cn("truncate", !displayLabel && "text-muted-foreground")}>
-              {displayLabel || `Search ${collectionLabel.toLowerCase()}...`}
-            </span>
-            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
-          <Command>
-            <CommandInput placeholder={`Search ${collectionLabel.toLowerCase()}...`} />
-            <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
-              {options.map((o) => (
-                <CommandItem
-                  key={o.value}
-                  value={o.label}
-                  onSelect={() => selectItem(o.value)}
-                  className={cn(atMax && !selected.includes(o.value) && "opacity-40")}
-                >
-                  <Check className={cn("ml-1 size-4", selected.includes(o.value) ? "opacity-100" : "opacity-0")} />
-                  {o.label}
-                </CommandItem>
-              ))}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      <DocumentCombobox
+        collections={[collectionSlug]}
+        placeholder={`Search ${collectionLabel.toLowerCase()}...`}
+        display={displayLabel}
+        isSelected={(hit) => selected.includes(hit.docId)}
+        onPick={(hit) => {
+          remember([hit]);
+          selectItem(hit.docId);
+        }}
+        closeOnPick={!hasMany}
+        dimUnselected={atMax}
+        size="lg"
+      />
 
       {/* Create new button */}
       <Button

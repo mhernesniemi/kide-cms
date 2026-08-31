@@ -7,6 +7,29 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+> **Schema change** — run `pnpm cms:push` (Cloudflare D1: apply migrations) to create the new indexes.
+
+### Changed
+
+- Admin list columns for `date` fields use the configured admin date format instead of the raw ISO string.
+- Every timestamped collection table gets an index on `_updated_at`. Admin lists, the Recent view and
+  `sort: { field: "_updatedAt" }` queries no longer full-scan and temp-sort each table per request.
+- Recent view: collections with `admin.sidebar: false` are skipped, and only the 50 winning documents are
+  loaded (previously 50 full documents per collection were fetched and mostly discarded).
+- Relation comboboxes and internal-link pickers search on the server (`/api/cms/admin/search`, now with
+  `collection`, `ids` and `limit` parameters and an `href` in results) instead of preloading catalogues:
+  the edit page no longer loads 100 documents per relation field and 200 per linkable collection, and
+  every document is reachable by typing — not just the newest ones. `loadRelationOptions` /
+  `loadMenuLinkOptions` are replaced by `loadRelationMeta` / `loadLinkableCollections`; the
+  `LinkOptionGroup` type is now `LinkableCollection` (`{ collection, label }`).
+- All relation pickers share one searching combobox (`DocumentCombobox`): relation sub-fields inside
+  blocks, inline content blocks, shared sections and repeater rows now use it too (previously a select
+  fed from a preloaded list). Search results are ordered by last update, labels for a document's
+  existing selections are resolved server-side when the edit form renders, and read-only relation
+  fields display document titles instead of an empty select.
+
 ## [0.20.0] - 2026-08-20
 
 > **Schema change** — run `pnpm cms:push` (Cloudflare D1: apply migrations) after

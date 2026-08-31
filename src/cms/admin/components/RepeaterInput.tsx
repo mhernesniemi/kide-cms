@@ -1,7 +1,7 @@
 import { useState } from "react";
 
-import { RepeaterField, type RelationOption, type SubFieldMeta } from "./block-fields";
-import type { LinkOptionGroup } from "./InternalLinkPicker";
+import { RepeaterField, type SubFieldMeta } from "./block-fields";
+import type { LinkableCollection } from "./InternalLinkPicker";
 
 /**
  * Standalone form control for top-level repeater fields —
@@ -14,14 +14,12 @@ export default function RepeaterInput({
   name,
   value,
   itemFields,
-  relationOptions,
   linkOptions,
 }: {
   name: string;
   value?: string;
   itemFields?: Record<string, SubFieldMeta>;
-  relationOptions?: RelationOption[];
-  linkOptions?: LinkOptionGroup[];
+  linkOptions?: LinkableCollection[];
 }) {
   const [items, setItems] = useState<unknown>(() => {
     try {
@@ -36,7 +34,6 @@ export default function RepeaterInput({
       <RepeaterField
         blockKey={name}
         itemFields={itemFields}
-        relationOptions={relationOptions}
         linkOptions={linkOptions}
         value={items}
         onChange={setItems}

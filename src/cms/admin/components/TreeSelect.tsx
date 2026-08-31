@@ -78,6 +78,7 @@ export default function TreeSelect({
 }: Props) {
   const [value, setValue] = useState(initialValue ?? "");
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const hiddenRef = useRef<HTMLInputElement>(null);
   const isInitial = useRef(true);
 
@@ -91,10 +92,21 @@ export default function TreeSelect({
 
   const selected = items.find((i) => i.value === value);
 
+  // Filtering is ours, not cmdk's: cmdk reorders the DOM while filtering (and
+  // doesn't restore it when the query clears), which would bump the pinned
+  // "None" row around — and "None" is a clear-action, not a match for any query.
+  const q = query.trim().toLowerCase();
+  const filtered = q ? items.filter((item) => item.path.join(" / ").toLowerCase().includes(q)) : items;
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) setQuery("");
+  };
+
   return (
     <div className="space-y-2">
       <input ref={hiddenRef} type="hidden" name={name} value={value} />
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <Button
             variant="input"
@@ -122,31 +134,33 @@ export default function TreeSelect({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
-          <Command>
-            <CommandInput placeholder={searchPlaceholder} />
+          <Command shouldFilter={false}>
+            <CommandInput value={query} onValueChange={setQuery} placeholder={searchPlaceholder} />
             <CommandList>
-              <CommandEmpty>{emptyMessage}</CommandEmpty>
-              <CommandItem
-                value="__none__"
-                onSelect={() => {
-                  setValue("");
-                  onChangeProp?.("");
-                  setOpen(false);
-                }}
-              >
-                <div className="flex items-center">
-                  <Check className={cn("mr-2 ml-1 size-4 shrink-0", !value ? "opacity-100" : "opacity-0")} />
-                  <span className="text-muted-foreground">None</span>
-                </div>
-              </CommandItem>
-              {items.map((item) => (
+              {filtered.length === 0 && <CommandEmpty>{emptyMessage}</CommandEmpty>}
+              {!q && (
+                <CommandItem
+                  value="__none__"
+                  onSelect={() => {
+                    setValue("");
+                    onChangeProp?.("");
+                    handleOpenChange(false);
+                  }}
+                >
+                  <div className="flex items-center">
+                    <Check className={cn("mr-2 ml-1 size-4 shrink-0", !value ? "opacity-100" : "opacity-0")} />
+                    <span className="text-muted-foreground">None</span>
+                  </div>
+                </CommandItem>
+              )}
+              {filtered.map((item) => (
                 <CommandItem
                   key={item.value}
                   value={item.path.join(" / ")}
                   onSelect={() => {
                     setValue(item.value === value ? "" : item.value);
                     onChangeProp?.(item.value === value ? "" : item.value);
-                    setOpen(false);
+                    handleOpenChange(false);
                   }}
                 >
                   <div className="flex items-center" style={{ paddingLeft: `${item.depth * 1.25}rem` }}>

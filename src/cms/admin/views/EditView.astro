@@ -32,11 +32,11 @@ import {
 } from "../lib/access";
 import {
   loadDocument,
-  loadMenuLinkOptions,
+  loadLinkableCollections,
   loadParentFormTitle,
-  loadRelationOptions,
+  loadRelationLabels,
+  loadRelationMeta,
   loadReverseRefs,
-  loadSharedBlockRelationOptions,
   loadSharedSectionOptions,
 } from "../lib/edit-data";
 import EditScripts from "./edit/EditScripts.astro";
@@ -96,8 +96,12 @@ if (mode === "edit" && documentId) {
   }
 }
 
-const { relationOptionsByField, relationMetaByField } = await loadRelationOptions(
+const relationMetaByField = loadRelationMeta(collection, config, user);
+// Seed labels for the ids this document already points at, so relation fields
+// render named selections immediately instead of resolving them client-side.
+const relationLabelsByField = await loadRelationLabels(
   collection,
+  doc,
   config,
   user,
   cmsRuntime,
@@ -105,13 +109,10 @@ const { relationOptionsByField, relationMetaByField } = await loadRelationOption
   runtimeContext,
 );
 const sharedBlockTypes = getSharedBlockTypes(config);
-const [sharedBlockRelationOptions, sharedSectionOptions] = await Promise.all([
-  loadSharedBlockRelationOptions(config, user, cmsRuntime, defaultLocale, runtimeContext),
-  loadSharedSectionOptions(config, user, cmsRuntime, defaultLocale, runtimeContext),
-]);
-// Loaded for every collection: menu trees and any link field (standalone or
-// inside blocks) offer the same internal-document picker.
-const menuLinkOptions = await loadMenuLinkOptions(config, user, cmsRuntime, defaultLocale, runtimeContext);
+const sharedSectionOptions = await loadSharedSectionOptions(config, user, cmsRuntime, defaultLocale, runtimeContext);
+// Menu trees and any link field (standalone or inside blocks) share the same
+// internal-document picker; it searches these collections on the server.
+const linkableCollections = loadLinkableCollections(config, user);
 const reverseRefs =
   mode === "edit" && documentId
     ? await loadReverseRefs(collection, documentId, config, user, cmsRuntime, defaultLocale, runtimeContext)
@@ -180,10 +181,6 @@ const previewUrl = hasPreview
 
 const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
 const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
-const blockRelationOptions: Record<string, Array<{ value: string; label: string }>> = {};
-for (const [key, opts] of Object.entries(relationOptionsByField)) {
-  if (key.startsWith("block:")) blockRelationOptions[key] = opts;
-}
 
 // Editorial collaboration UI — shown only for collections in the collaboration
 // list, and only on normal document edits (not submissions or the translation form).
@@ -491,12 +488,10 @@ const publishBlocked =
                           field={collection.fields[fieldName]}
                           value={getCurrentValue(fieldName)}
                           readOnly={isFieldReadOnly(fieldName)}
-                          relationOptions={relationOptionsByField[fieldName] ?? []}
                           relationMeta={relationMetaByField[fieldName]}
-                          menuLinkOptions={menuLinkOptions}
-                          blockRelationOptions={blockRelationOptions}
+                          relationOptions={relationLabelsByField[fieldName] ?? []}
+                          linkableCollections={linkableCollections}
                           sharedBlockTypes={sharedBlockTypes}
-                          sharedBlockRelationOptions={sharedBlockRelationOptions}
                           sharedSectionOptions={sharedSectionOptions}
                         />
                       );
@@ -565,12 +560,10 @@ const publishBlocked =
                                     field={collection.fields[fieldName]}
                                     value={getCurrentValue(fieldName)}
                                     readOnly={isFieldReadOnly(fieldName)}
-                                    relationOptions={relationOptionsByField[fieldName] ?? []}
                                     relationMeta={relationMetaByField[fieldName]}
-                                    menuLinkOptions={menuLinkOptions}
-                                    blockRelationOptions={blockRelationOptions}
+                                    relationOptions={relationLabelsByField[fieldName] ?? []}
+                                    linkableCollections={linkableCollections}
                                     sharedBlockTypes={sharedBlockTypes}
-                                    sharedBlockRelationOptions={sharedBlockRelationOptions}
                                     sharedSectionOptions={sharedSectionOptions}
                                   />
                                   {aiEnabled && fieldName === "seoDescription" && !isFieldReadOnly(fieldName) && (
@@ -679,12 +672,10 @@ const publishBlocked =
                               field={fieldDef}
                               value={getCurrentValue(fieldName)}
                               readOnly={isFieldReadOnly(fieldName)}
-                              relationOptions={relationOptionsByField[fieldName] ?? []}
                               relationMeta={relationMetaByField[fieldName]}
-                              menuLinkOptions={menuLinkOptions}
-                              blockRelationOptions={blockRelationOptions}
+                              relationOptions={relationLabelsByField[fieldName] ?? []}
+                              linkableCollections={linkableCollections}
                               sharedBlockTypes={sharedBlockTypes}
-                              sharedBlockRelationOptions={sharedBlockRelationOptions}
                               sharedSectionOptions={sharedSectionOptions}
                             />
                             {aiEnabled &&

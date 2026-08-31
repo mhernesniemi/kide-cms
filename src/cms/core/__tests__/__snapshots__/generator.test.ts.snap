@@ -86,6 +86,7 @@ export const cmsArticles = sqliteTable("cms_articles", {
 }, (table) => ({
   publishIdx: index("articles_publish_idx").on(table._status, table._publishAt),
   unpublishIdx: index("articles_unpublish_idx").on(table._status, table._unpublishAt),
+  updatedIdx: index("articles_updated_idx").on(table._updatedAt),
 }));
 
 export const cmsArticlesTranslations = sqliteTable("cms_articles_translations", {

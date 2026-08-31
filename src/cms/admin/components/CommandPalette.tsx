@@ -5,29 +5,20 @@ import * as React from "react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 
-type Result = {
-  collection: string;
-  collectionLabel: string;
-  docId: string;
-  title: string;
-  editUrl: string;
-  status: string | null;
-};
+import { MIN_QUERY_LENGTH, useDocumentSearch, type DocumentHit } from "../lib/use-document-search";
 
-const MIN_QUERY_LENGTH = 2;
-const DEBOUNCE_MS = 150;
+type Result = DocumentHit;
 
 export default function CommandPalette() {
   const [open, setOpen] = React.useState(false);
-  const [query, setQuery] = React.useState("");
-  const [results, setResults] = React.useState<Result[]>([]);
-  const [loading, setLoading] = React.useState(false);
-  // Controlled cmdk selection so we can force "highlight first item" every time the result
-  // set changes — cmdk would otherwise hold onto the previous highlight even when that item
-  // is no longer in the list (especially with shouldFilter={false}).
-  const [selected, setSelected] = React.useState("");
+  const { query, setQuery, results, loading, reset } = useDocumentSearch({ enabled: open });
+  // Controlled cmdk selection so the first hit is highlighted whenever the result
+  // set changes — cmdk would otherwise hold onto a highlight that is no longer in
+  // the list (especially with shouldFilter={false}).
+  const [chosen, setChosen] = React.useState("");
 
   const itemValue = (r: Result) => `${r.collection}:${r.docId}`;
+  const selected = results.some((r) => itemValue(r) === chosen) ? chosen : results[0] ? itemValue(results[0]) : "";
 
   React.useEffect(() => {
     const keyHandler = (e: KeyboardEvent) => {
@@ -45,60 +36,16 @@ export default function CommandPalette() {
     };
   }, []);
 
-  const handleOpenChange = React.useCallback((next: boolean) => {
-    setOpen(next);
-    if (!next) {
-      setQuery("");
-      setResults([]);
-      setLoading(false);
-      setSelected("");
-    }
-  }, []);
-
-  const handleQueryChange = React.useCallback((next: string) => {
-    setQuery(next);
-    if (next.trim().length < MIN_QUERY_LENGTH) {
-      setResults([]);
-      setLoading(false);
-      setSelected("");
-    } else {
-      setLoading(true);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    const trimmed = query.trim();
-    if (trimmed.length < MIN_QUERY_LENGTH) return;
-
-    const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/cms/admin/search?q=${encodeURIComponent(trimmed)}`, {
-          signal: controller.signal,
-          credentials: "same-origin",
-        });
-        if (!res.ok) {
-          setResults([]);
-          setLoading(false);
-          return;
-        }
-        const data = (await res.json()) as { results?: Result[] };
-        const next = Array.isArray(data.results) ? data.results : [];
-        setResults(next);
-        setSelected(next.length > 0 ? itemValue(next[0]) : "");
-        setLoading(false);
-      } catch (err) {
-        if ((err as { name?: string })?.name !== "AbortError") {
-          setResults([]);
-          setLoading(false);
-        }
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => {
+      setOpen(next);
+      if (!next) {
+        reset();
+        setChosen("");
       }
-    }, DEBOUNCE_MS);
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [query]);
+    },
+    [reset],
+  );
 
   const grouped = React.useMemo(() => {
     // Group by collectionLabel rather than collection slug so that all singletons
@@ -129,8 +76,8 @@ export default function CommandPalette() {
         <DialogDescription className="sr-only">
           Search content collections by title and open the edit view.
         </DialogDescription>
-        <Command shouldFilter={false} value={selected} onValueChange={setSelected}>
-          <CommandInput value={query} onValueChange={handleQueryChange} placeholder="Search content…" autoFocus />
+        <Command shouldFilter={false} value={selected} onValueChange={setChosen}>
+          <CommandInput value={query} onValueChange={setQuery} placeholder="Search content…" autoFocus />
           <CommandList className="max-h-[60vh]">
             {showHint && (
               <div className="text-muted-foreground py-6 text-center text-sm">

@@ -35,11 +35,7 @@ type RelationMeta = {
   labelField?: string;
 };
 
-type LinkOptionGroup = {
-  collection: string;
-  label: string;
-  items: Array<{ id: string; label: string; href: string }>;
-};
+type LinkableCollection = { collection: string; label: string };
 
 type SharedSectionOption = {
   id: string;
@@ -55,10 +51,8 @@ const {
   relationOptions = [],
   relationMeta,
   readOnly = false,
-  menuLinkOptions = [],
-  blockRelationOptions = {},
+  linkableCollections = [],
   sharedBlockTypes = {},
-  sharedBlockRelationOptions = {},
   sharedSectionOptions = [],
 } = Astro.props as {
   name: string;
@@ -67,10 +61,8 @@ const {
   relationOptions?: RelationOption[];
   relationMeta?: RelationMeta;
   readOnly?: boolean;
-  menuLinkOptions?: LinkOptionGroup[];
-  blockRelationOptions?: Record<string, RelationOption[]>;
+  linkableCollections?: LinkableCollection[];
   sharedBlockTypes?: Record<string, Record<string, FieldConfig>>;
-  sharedBlockRelationOptions?: Record<string, RelationOption[]>;
   sharedSectionOptions?: SharedSectionOption[];
 };
 
@@ -305,14 +297,14 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
           />
         )}
 
+        {/* No name attribute — the stored value must never be submitted (or clobbered) from here. */}
         {field.type === "relation" && (readOnly || !relationMeta) && (
-          <SelectField
-            client:load
-            name={name}
-            value={String(value ?? "")}
-            placeholder="Select a document"
-            disabled={readOnly}
-            items={relationOptions}
+          <Input
+            className={controlClass}
+            type="text"
+            id={name}
+            defaultValue={relationOptions.length > 0 ? relationOptions.map((o) => o.label).join(", ") : serializedValue}
+            readOnly
           />
         )}
 
@@ -339,8 +331,7 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
             initialValue={value ? JSON.stringify(value) : ""}
             rows={rows}
             types={blockTypesMeta}
-            blockRelationOptions={blockRelationOptions}
-            linkOptions={menuLinkOptions}
+            linkOptions={linkableCollections}
             sharedSections={sharedSectionOptions}
             fullscreen={field.fullscreen !== false}
           />
@@ -364,7 +355,7 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
             value={serializedValue}
             variant="menu"
             label={label}
-            linkOptions={menuLinkOptions}
+            linkOptions={linkableCollections}
           />
         )}
 
@@ -373,17 +364,11 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
         )}
 
         {field.type === "json" && field.admin?.component === "shared-section-block" && !readOnly && (
-          <SharedSectionBlockField
-            client:load
-            name={name}
-            value={serializedValue}
-            types={sharedBlockTypesMeta}
-            blockRelationOptions={sharedBlockRelationOptions}
-          />
+          <SharedSectionBlockField client:load name={name} value={serializedValue} types={sharedBlockTypesMeta} />
         )}
 
         {field.type === "json" && field.admin?.component === "link" && !readOnly && (
-          <LinkField client:load name={name} value={serializedValue} linkOptions={menuLinkOptions} />
+          <LinkField client:load name={name} value={serializedValue} linkOptions={linkableCollections} />
         )}
 
         {field.type === "json" && field.admin?.component === "repeater" && !readOnly && (
@@ -398,7 +383,7 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
                   )
                 : undefined
             }
-            linkOptions={menuLinkOptions}
+            linkOptions={linkableCollections}
           />
         )}
 
@@ -424,8 +409,7 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
             name={name}
             value={serializedValue}
             types={blockTypesMeta}
-            blockRelationOptions={blockRelationOptions}
-            linkOptions={menuLinkOptions}
+            linkOptions={linkableCollections}
             sharedSections={"shared" in field && field.shared === false ? [] : sharedSectionOptions}
             sharedEnabled={!("shared" in field && field.shared === false)}
           />

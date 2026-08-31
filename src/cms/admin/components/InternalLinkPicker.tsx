@@ -1,84 +1,52 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
-import { Button } from "./ui/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { cn } from "../lib/utils";
+import DocumentCombobox from "./DocumentCombobox";
 
-export type LinkOptionGroup = {
-  collection: string;
-  label: string;
-  items: Array<{ id: string; label: string; href: string }>;
-};
+/** A collection whose documents can be the target of an internal link. */
+export type LinkableCollection = { collection: string; label: string };
 
+export type LinkTarget = { id: string; label: string; href: string };
+
+/**
+ * Picks an internal document by searching the linkable collections on the
+ * server. The stored value is the document's public route (plus its title),
+ * so selection is matched by href rather than id.
+ */
 export default function InternalLinkPicker({
   editHref,
-  linkOptions,
+  editTitle,
+  collections,
   onSelect,
   className,
   triggerClassName,
 }: {
   editHref: string;
-  linkOptions: LinkOptionGroup[];
-  onSelect: (item: { id: string; label: string; href: string }) => void;
+  /** Title stored with the link — shown instead of the raw path. */
+  editTitle?: string;
+  collections: LinkableCollection[];
+  onSelect: (item: LinkTarget) => void;
   className?: string;
   triggerClassName?: string;
 }) {
-  const [open, setOpen] = React.useState(false);
-
-  const selectedLabel = React.useMemo(() => {
-    if (!editHref) return "";
-    for (const group of linkOptions) {
-      const found = group.items.find((item) => item.href === editHref);
-      if (found) return found.label;
-    }
-    return editHref;
-  }, [editHref, linkOptions]);
+  const slugs = React.useMemo(() => collections.map((c) => c.collection), [collections]);
 
   return (
     <div className={cn("min-w-0 flex-1", className)}>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="input"
-            role="combobox"
-            aria-expanded={open}
-            className={cn("h-9 w-full min-w-0 justify-between rounded-lg px-3 text-sm font-normal", triggerClassName)}
-          >
-            <span className={cn("truncate", !selectedLabel && "text-muted-foreground")}>
-              {selectedLabel || "Search documents..."}
-            </span>
-            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Search documents..." />
-            <CommandList>
-              <CommandEmpty>No documents found.</CommandEmpty>
-              {linkOptions.map((group) => (
-                <CommandGroup key={group.collection} heading={group.label}>
-                  {group.items.map((item) => (
-                    <CommandItem
-                      key={item.id}
-                      value={`${item.label} ${item.href}`}
-                      onSelect={() => {
-                        onSelect(item);
-                        setOpen(false);
-                      }}
-                    >
-                      <Check className={cn("size-4", editHref === item.href ? "opacity-100" : "opacity-0")} />
-                      {item.label}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              ))}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      <DocumentCombobox
+        collections={slugs}
+        groups={collections}
+        limit={10}
+        placeholder="Search documents..."
+        display={editTitle || editHref}
+        isSelected={(hit) => !!editHref && hit.href === editHref}
+        onPick={(hit) => {
+          if (hit.href) onSelect({ id: hit.docId, label: hit.title, href: hit.href });
+        }}
+        closeOnPick
+        triggerClassName={cn("h-9 min-w-0 rounded-lg px-3", triggerClassName)}
+      />
     </div>
   );
 }

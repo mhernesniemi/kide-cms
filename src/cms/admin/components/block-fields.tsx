@@ -24,7 +24,8 @@ import ImagePicker from "./ImagePicker";
 import SelectField from "./SelectField";
 import ColorField from "./ColorField";
 import LinkField from "./LinkField";
-import type { LinkOptionGroup } from "./InternalLinkPicker";
+import type { LinkableCollection } from "./InternalLinkPicker";
+import DocumentCombobox, { useRelationLabels } from "./DocumentCombobox";
 import YoutubeField from "./YoutubeField";
 
 // -----------------------------------------------
@@ -50,8 +51,6 @@ export type SubFieldMeta = {
 };
 
 export type BlockTypesMeta = Record<string, Record<string, SubFieldMeta>>;
-
-export type RelationOption = { value: string; label: string };
 
 export function generateKey() {
   return "blk_" + Math.random().toString(36).slice(2, 9);
@@ -100,7 +99,6 @@ export function SubField({
   meta,
   value,
   onChange,
-  relationOptions = [],
   linkOptions = [],
 }: {
   blockKey: string;
@@ -108,8 +106,7 @@ export function SubField({
   meta: SubFieldMeta;
   value: unknown;
   onChange: (value: unknown) => void;
-  relationOptions?: RelationOption[];
-  linkOptions?: LinkOptionGroup[];
+  linkOptions?: LinkableCollection[];
 }) {
   const label = meta.label ?? humanize(fieldName);
   const fieldId = `${blockKey}_${fieldName}`;
@@ -121,14 +118,7 @@ export function SubField({
         {meta.required ? " *" : ""}
       </Label>
       {meta.admin?.help && <p className="text-muted-foreground text-xs leading-5">{meta.admin.help}</p>}
-      <SubFieldControl
-        fieldId={fieldId}
-        meta={meta}
-        value={value}
-        onChange={onChange}
-        relationOptions={relationOptions}
-        linkOptions={linkOptions}
-      />
+      <SubFieldControl fieldId={fieldId} meta={meta} value={value} onChange={onChange} linkOptions={linkOptions} />
     </div>
   );
 }
@@ -181,16 +171,15 @@ function RelationControl({
   meta,
   value,
   onChange,
-  relationOptions,
 }: {
   fieldId: string;
   meta: SubFieldMeta;
   value: unknown;
   onChange: (value: unknown) => void;
-  relationOptions: RelationOption[];
 }) {
   const selected = parseSelected(meta, value);
-  const getLabel = (id: string) => relationOptions?.find((o) => o.value === id)?.label ?? id;
+  const collectionSlug = meta.collection ?? "";
+  const { getLabel, remember } = useRelationLabels(collectionSlug, selected);
   const toggle = (id: string) => {
     if (meta.hasMany) {
       const next = selected.includes(id) ? selected.filter((v) => v !== id) : [...selected, id];
@@ -208,7 +197,7 @@ function RelationControl({
               key={id}
               className="bg-card text-secondary-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-sm"
             >
-              {getLabel(id)}
+              {getLabel(id) ?? "…"}
               <button
                 type="button"
                 onClick={() => toggle(id)}
@@ -220,18 +209,17 @@ function RelationControl({
           ))}
         </div>
       )}
-      <SelectField
-        name={fieldId}
-        value={meta.hasMany ? "" : (selected[0] ?? "")}
-        placeholder={`Select ${meta.label?.toLowerCase() ?? "item"}...`}
-        items={(relationOptions ?? []).map((o) => ({ value: o.value, label: o.label }))}
-        onChange={(v) => {
-          if (meta.hasMany && v) {
-            if (!selected.includes(v)) onChange([...selected, v]);
-          } else {
-            onChange(v);
-          }
+      <DocumentCombobox
+        collections={[collectionSlug]}
+        placeholder={`Search ${meta.label?.toLowerCase() ?? "documents"}...`}
+        display={meta.hasMany ? "" : selected[0] ? (getLabel(selected[0]) ?? "…") : ""}
+        isSelected={(hit) => selected.includes(hit.docId)}
+        onPick={(hit) => {
+          remember([hit]);
+          toggle(hit.docId);
         }}
+        closeOnPick={!meta.hasMany}
+        triggerId={fieldId}
       />
     </div>
   );
@@ -278,15 +266,13 @@ export function SubFieldControl({
   meta,
   value,
   onChange,
-  relationOptions = [],
   linkOptions = [],
 }: {
   fieldId: string;
   meta: SubFieldMeta;
   value: unknown;
   onChange: (value: unknown) => void;
-  relationOptions?: RelationOption[];
-  linkOptions?: LinkOptionGroup[];
+  linkOptions?: LinkableCollection[];
 }) {
   const strValue = value == null ? "" : String(value);
 
@@ -384,15 +370,7 @@ export function SubFieldControl({
       );
 
     case "relation":
-      return (
-        <RelationControl
-          fieldId={fieldId}
-          meta={meta}
-          value={value}
-          onChange={onChange}
-          relationOptions={relationOptions}
-        />
-      );
+      return <RelationControl fieldId={fieldId} meta={meta} value={value} onChange={onChange} />;
 
     case "array":
       return <ArrayControl fieldId={fieldId} meta={meta} value={value} onChange={onChange} />;
@@ -403,7 +381,6 @@ export function SubFieldControl({
           <RepeaterField
             blockKey={fieldId}
             itemFields={meta.itemFields}
-            relationOptions={relationOptions}
             linkOptions={linkOptions}
             value={value}
             onChange={onChange}
@@ -440,7 +417,6 @@ function SortableRepeaterItem({
   item,
   fieldKeys,
   itemFields,
-  relationOptions,
   linkOptions,
   index,
   isExpanded,
@@ -454,8 +430,7 @@ function SortableRepeaterItem({
   item: Record<string, unknown>;
   fieldKeys: string[];
   itemFields?: Record<string, SubFieldMeta>;
-  relationOptions?: RelationOption[];
-  linkOptions?: LinkOptionGroup[];
+  linkOptions?: LinkableCollection[];
   index: number;
   isExpanded: boolean;
   autoFocus?: boolean;
@@ -552,7 +527,6 @@ function SortableRepeaterItem({
                   meta={itemFields[key]}
                   value={item[key]}
                   onChange={(v) => onUpdate(key, v)}
-                  relationOptions={relationOptions}
                   linkOptions={linkOptions}
                 />
               ))
@@ -593,15 +567,13 @@ function parseArray(value: unknown): unknown[] {
 export function RepeaterField({
   blockKey,
   itemFields,
-  relationOptions,
   linkOptions,
   value,
   onChange,
 }: {
   blockKey: string;
   itemFields?: Record<string, SubFieldMeta>;
-  relationOptions?: RelationOption[];
-  linkOptions?: LinkOptionGroup[];
+  linkOptions?: LinkableCollection[];
   value: unknown;
   onChange: (value: unknown) => void;
 }) {
@@ -707,7 +679,6 @@ export function RepeaterField({
               item={item}
               fieldKeys={fieldKeys}
               itemFields={itemFields}
-              relationOptions={relationOptions}
               linkOptions={linkOptions}
               index={index}
               isExpanded={expandedKeys.has(String(item._key))}

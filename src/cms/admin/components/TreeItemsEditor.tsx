@@ -30,7 +30,7 @@ import { Input } from "./ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "./ui/collapsible";
 import { cn } from "../lib/utils";
-import InternalLinkPicker, { type LinkOptionGroup } from "./InternalLinkPicker";
+import InternalLinkPicker, { type LinkableCollection } from "./InternalLinkPicker";
 import {
   type TreeItem,
   generateId,
@@ -67,7 +67,7 @@ type Props = {
   value?: string;
   variant: "menu" | "taxonomy";
   label?: string;
-  linkOptions?: LinkOptionGroup[];
+  linkOptions?: LinkableCollection[];
 };
 
 function blankEdit(id: string): EditState {
@@ -298,7 +298,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
 
   const startEdit = (item: TreeItem) => {
     if (variant === "menu") {
-      const isInternal = linkOptions.some((group) => group.items.some((li) => li.href === String(item.href ?? "")));
+      const isInternal = String(item.href ?? "").startsWith("/");
       setEditing({
         ...blankEdit(item.id),
         label: String(item.label ?? ""),
@@ -470,7 +470,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
           ) : (
             <InternalLinkPicker
               editHref={editing.href}
-              linkOptions={linkOptions}
+              collections={linkOptions}
               className="flex-3"
               triggerClassName="bg-background h-7 rounded-md"
               onSelect={(item) => {

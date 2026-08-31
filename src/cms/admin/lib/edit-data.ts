@@ -2,7 +2,6 @@ import {
   SHARED_SECTIONS_COLLECTION,
   extractSharedSectionRefsFromDocument,
   getLabelField,
-  getSharedBlockTypes,
   type SharedSectionOption,
 } from "../../core";
 import { canRead } from "./access";
@@ -43,11 +42,77 @@ export type RelationMeta = {
   labelField?: string;
 };
 
-export type RelationOptions = {
-  relationOptionsByField: Record<string, Array<{ value: string; label: string }>>;
-  relationMetaByField: Record<string, RelationMeta>;
-};
+/** Relation metadata for the edit form. Option lists are no longer preloaded:
+ * the combobox searches the target collection on the server and resolves
+ * labels for already-selected ids itself (see RelationField). */
+export function loadRelationMeta(collection: CollectionLike, config: any, user: User): Record<string, RelationMeta> {
+  const relationMetaByField: Record<string, RelationMeta> = {};
+  for (const [fieldName, field] of Object.entries(collection.fields) as [string, any][]) {
+    if (field.type !== "relation" || !canRead(config, user, field.collection)) continue;
+    const relatedCollection = config.collections.find((c: any) => c.slug === field.collection);
+    if (!relatedCollection) continue;
+    relationMetaByField[fieldName] = {
+      collectionSlug: field.collection,
+      collectionLabel: relatedCollection.labels.singular,
+      hasMany: field.hasMany ?? false,
+      labelField: getLabelField(relatedCollection),
+    };
+  }
+  return relationMetaByField;
+}
 
+/** Labels for the ids a document's relation fields currently point at, so the
+ * edit form renders selections named without a client round trip. Only the
+ * selected ids are fetched — never a catalogue. */
+export async function loadRelationLabels(
+  collection: CollectionLike,
+  doc: Record<string, unknown> | null,
+  config: any,
+  user: User,
+  cmsRuntime: CmsRuntime,
+  defaultLocale: string,
+  runtimeContext: RuntimeContext,
+): Promise<Record<string, Array<{ value: string; label: string }>>> {
+  const labelsByField: Record<string, Array<{ value: string; label: string }>> = {};
+  if (!doc) return labelsByField;
+
+  for (const [fieldName, field] of Object.entries(collection.fields) as [string, any][]) {
+    if (field.type !== "relation" || !canRead(config, user, field.collection)) continue;
+    const relatedCollection = config.collections.find((c: any) => c.slug === field.collection);
+    const api = cmsRuntime[field.collection];
+    if (!relatedCollection || !api) continue;
+
+    let raw = doc[fieldName];
+    if (field.hasMany && typeof raw === "string") {
+      try {
+        raw = JSON.parse(raw);
+      } catch {
+        raw = [];
+      }
+    }
+    const ids = field.hasMany ? (Array.isArray(raw) ? raw.map(String) : []) : raw ? [String(raw)] : [];
+    if (ids.length === 0) continue;
+
+    const labelField = getLabelField(relatedCollection);
+    const relatedDocs = await Promise.all(
+      ids.map((id) =>
+        api
+          .find({ where: { _id: id }, status: "any", limit: 1, locale: defaultLocale }, runtimeContext)
+          .then((docs: Array<Record<string, unknown>>) => docs[0])
+          .catch(() => undefined),
+      ),
+    );
+    labelsByField[fieldName] = ids.flatMap((id, i) => {
+      const related = relatedDocs[i];
+      return related ? [{ value: id, label: String(related[labelField] ?? related.slug ?? id) }] : [];
+    });
+  }
+
+  return labelsByField;
+}
+
+/** Label lookup for list columns that show a relation. Capped; fine for the
+ * small reference collections such columns usually point at. */
 export const loadRelationOptionList = async (
   collectionSlug: string,
   config: any,
@@ -66,91 +131,6 @@ export const loadRelationOptionList = async (
     label: String(item[labelField] ?? item.slug ?? item._id),
   }));
 };
-
-/** Fetch relation option lists for top-level relation fields and any relations nested inside blocks. */
-export async function loadRelationOptions(
-  collection: CollectionLike,
-  config: any,
-  user: User,
-  cmsRuntime: CmsRuntime,
-  defaultLocale: string,
-  runtimeContext: RuntimeContext,
-): Promise<RelationOptions> {
-  const relationOptionsByField: Record<string, Array<{ value: string; label: string }>> = {};
-  const relationMetaByField: Record<string, RelationMeta> = {};
-
-  for (const [fieldName, field] of Object.entries(collection.fields) as [string, any][]) {
-    if (field.type === "relation" && canRead(config, user, field.collection)) {
-      const relatedCollection = config.collections.find((c: any) => c.slug === field.collection);
-      relationOptionsByField[fieldName] = await loadRelationOptionList(
-        field.collection,
-        config,
-        cmsRuntime,
-        defaultLocale,
-        runtimeContext,
-      );
-      if (relatedCollection) {
-        relationMetaByField[fieldName] = {
-          collectionSlug: field.collection,
-          collectionLabel: relatedCollection.labels.singular,
-          hasMany: field.hasMany ?? false,
-          labelField: getLabelField(relatedCollection),
-        };
-      }
-    }
-    // Relations nested inside block types — both standalone `blocks` fields and inline
-    // blocks in a `content` field use the same `block:<field>:<type>:<subField>` key scheme.
-    // The parent field name keeps two block-bearing fields that share a block-type name
-    // (but target different collections) from colliding.
-    const blockTypes = field.type === "blocks" ? field.types : field.type === "content" ? field.blocks : null;
-    if (blockTypes) {
-      for (const [typeName, typeFields] of Object.entries(blockTypes)) {
-        for (const [subFieldName, subField] of Object.entries(typeFields as Record<string, any>) as [string, any][]) {
-          if (subField.type === "relation" && canRead(config, user, subField.collection)) {
-            const key = `block:${fieldName}:${typeName}:${subFieldName}`;
-            if (!relationOptionsByField[key]) {
-              relationOptionsByField[key] = await loadRelationOptionList(
-                subField.collection,
-                config,
-                cmsRuntime,
-                defaultLocale,
-                runtimeContext,
-              );
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return { relationOptionsByField, relationMetaByField };
-}
-
-export async function loadSharedBlockRelationOptions(
-  config: any,
-  user: User,
-  cmsRuntime: CmsRuntime,
-  defaultLocale: string,
-  runtimeContext: RuntimeContext,
-): Promise<Record<string, Array<{ value: string; label: string }>>> {
-  const relationOptions: Record<string, Array<{ value: string; label: string }>> = {};
-  const sharedBlockTypes = getSharedBlockTypes(config);
-
-  for (const [typeName, typeFields] of Object.entries(sharedBlockTypes)) {
-    for (const [fieldName, field] of Object.entries(typeFields) as [string, any][]) {
-      if (field.type !== "relation" || !canRead(config, user, field.collection)) continue;
-      relationOptions[`shared:${typeName}:${fieldName}`] = await loadRelationOptionList(
-        field.collection,
-        config,
-        cmsRuntime,
-        defaultLocale,
-        runtimeContext,
-      );
-    }
-  }
-
-  return relationOptions;
-}
 
 export async function loadSharedSectionOptions(
   config: any,
@@ -262,45 +242,20 @@ export async function loadSharedSectionUsageCounts(
   return counts;
 }
 
-export type MenuLinkGroup = {
-  collection: string;
-  label: string;
-  items: Array<{ id: string; label: string; href: string }>;
-};
+export type LinkableCollection = { collection: string; label: string };
 
-/** For menu editing: list linkable published documents across content collections. */
-export async function loadMenuLinkOptions(
-  config: any,
-  user: User,
-  cmsRuntime: CmsRuntime,
-  defaultLocale: string,
-  runtimeContext: RuntimeContext,
-): Promise<MenuLinkGroup[]> {
-  const linkableCollections = config.collections.filter(
-    (c: any) =>
-      !c.singleton &&
-      !["users", "menus", "taxonomies", "authors"].includes(c.slug) &&
-      c.fields.slug &&
-      canRead(config, user, c.slug),
-  );
-  const menuLinkOptions: MenuLinkGroup[] = [];
-  for (const lc of linkableCollections) {
-    const lcApi = cmsRuntime[lc.slug];
-    const lcDocs = await lcApi.find(
-      { status: "published", limit: 200, sort: { field: "_updatedAt", direction: "desc" }, locale: defaultLocale },
-      runtimeContext,
-    );
-    menuLinkOptions.push({
-      collection: lc.slug,
-      label: lc.labels.plural,
-      items: lcDocs.map((d: Record<string, unknown>) => ({
-        id: String(d._id),
-        label: String(d[getLabelField(lc)] ?? d.slug ?? d._id),
-        href: cmsRuntime.meta.getRouteForDocument(lc.slug, d),
-      })),
-    });
-  }
-  return menuLinkOptions;
+/** Collections whose documents an internal link may point at. The picker
+ * searches them on the server; nothing is preloaded. */
+export function loadLinkableCollections(config: any, user: User): LinkableCollection[] {
+  return config.collections
+    .filter(
+      (c: any) =>
+        !c.singleton &&
+        !["users", "menus", "taxonomies", "authors"].includes(c.slug) &&
+        c.fields.slug &&
+        canRead(config, user, c.slug),
+    )
+    .map((c: any) => ({ collection: c.slug, label: c.labels.plural }));
 }
 
 export type ReverseRef = {

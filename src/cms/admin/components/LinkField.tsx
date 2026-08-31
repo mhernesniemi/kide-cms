@@ -5,12 +5,12 @@ import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import InternalLinkPicker, { type LinkOptionGroup } from "./InternalLinkPicker";
+import InternalLinkPicker, { type LinkableCollection } from "./InternalLinkPicker";
 
 // A structured link control: URL + label + open-in-new-tab, stored as
 // { type, url, label, title, newTab }. A leading "/" is treated as an internal
-// link. When linkOptions are provided, internal links are chosen with a document
-// picker instead of a hand-typed path (which silently breaks on slug edits).
+// link. When linkable collections are provided, internal links are chosen with a
+// document picker instead of a hand-typed path (which silently breaks on slug edits).
 // `title` is the picked document's title — renderers use it as the link text
 // when `label` is left empty.
 type LinkValue = { type?: string; url?: string; label?: string; title?: string; newTab?: boolean };
@@ -19,7 +19,7 @@ type Props = {
   name?: string;
   value?: string | LinkValue;
   onChange?: (value: LinkValue) => void;
-  linkOptions?: LinkOptionGroup[];
+  linkOptions?: LinkableCollection[];
 };
 
 function parse(v: unknown): LinkValue {
@@ -92,7 +92,8 @@ export default function LinkField({ name, value: initial, onChange, linkOptions 
               {linkType === "internal" ? (
                 <InternalLinkPicker
                   editHref={value.url ?? ""}
-                  linkOptions={linkOptions}
+                  editTitle={value.title}
+                  collections={linkOptions}
                   onSelect={(item) => set({ url: item.href, title: item.label })}
                 />
               ) : (

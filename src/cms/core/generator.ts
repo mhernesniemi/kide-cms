@@ -84,10 +84,16 @@ const generateMainTable = (collection: CollectionConfig): string => {
   // cron tick, filtering on _status plus the due timestamp. Without these it is a
   // full table scan per collection, per tick.
   const indexes: string[] = [];
+  const idxPrefix = snakeCase(collection.slug);
   if (collection.drafts) {
-    const idxPrefix = snakeCase(collection.slug);
     indexes.push(`  publishIdx: index("${idxPrefix}_publish_idx").on(table._status, table._publishAt),`);
     indexes.push(`  unpublishIdx: index("${idxPrefix}_unpublish_idx").on(table._status, table._unpublishAt),`);
+  }
+  // The admin lists, the Recent view and most editorial listings sort by
+  // _updatedAt; without an index each of them is a full scan plus a temp
+  // sort per collection, per request — noticeable from a few thousand rows.
+  if (collection.timestamps !== false) {
+    indexes.push(`  updatedIdx: index("${idxPrefix}_updated_idx").on(table._updatedAt),`);
   }
 
   const body = `{\n${columns.join("\n")}\n}`;

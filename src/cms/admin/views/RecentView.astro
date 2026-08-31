@@ -1,8 +1,9 @@
 ---
+import { desc } from "drizzle-orm";
 import DocumentsDataTable from "../components/DocumentsDataTable";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
-import { formatDate, getLabelField, getTranslatableFieldNames } from "../../core";
+import { formatDate, getDb, getLabelField, getSchema, getTranslatableFieldNames } from "../../core";
 import { canRead, getVisualStatus } from "../lib/access";
 
 const user = Astro.locals.user;
@@ -10,28 +11,50 @@ const runtimeContext = user ? { user } : {};
 const cmsRuntime = cms as Record<string, any>;
 const defaultLocale = config.locales?.default ?? "en";
 const locales = config.locales?.supported ?? [];
+const RECENT_LIMIT = 50;
 
+// Bulk/system collections hidden from the sidebar (redirects, logs, …) are not
+// "recent work" either — and they tend to be the biggest tables.
 const pinnedSlugs = new Set(["taxonomies", "menus", "authors", "users"]);
 const contentCollections = config.collections.filter(
-  (c) => !c.auth && !pinnedSlugs.has(c.slug) && canRead(config, user, c.slug),
+  (c) => !c.auth && !pinnedSlugs.has(c.slug) && c.admin?.sidebar !== false && canRead(config, user, c.slug),
 );
 // Same rule as ListView: a Locales column is only meaningful with more than one
 // locale and at least one of the mixed-in collections having translatable fields.
 const showLocalesColumn =
   locales.length > 1 && contentCollections.some((cc) => getTranslatableFieldNames(cc).length > 0);
 
-const allEntries: Array<{ doc: Record<string, unknown>; collection: (typeof contentCollections)[0] }> = [];
+// Two passes so the page cost stays flat as content grows:
+//   1. one tiny (_id, _updatedAt) query per collection — index-backed, no JSON
+//   2. load only the 50 winning documents through the API (access rules,
+//      translations, published snapshot) instead of 50 × N full documents.
+const db = await getDb();
+const schema = getSchema();
+const candidates: Array<{ id: string; updatedAt: string; collection: (typeof contentCollections)[0] }> = [];
 for (const cc of contentCollections) {
-  const api = cmsRuntime[cc.slug];
-  const docs = await api.find(
-    { status: "any", locale: defaultLocale, sort: { field: "_updatedAt", direction: "desc" }, limit: 50 },
+  const table = (schema.cmsTables as Record<string, { main: any }>)[cc.slug]?.main;
+  if (!table?._updatedAt) continue;
+  const rows = (await db
+    .select({ id: table._id, updatedAt: table._updatedAt })
+    .from(table)
+    .orderBy(desc(table._updatedAt))
+    .limit(RECENT_LIMIT)) as Array<{ id: string; updatedAt: string }>;
+  for (const row of rows)
+    candidates.push({ id: String(row.id), updatedAt: String(row.updatedAt ?? ""), collection: cc });
+}
+candidates.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+const allEntries: Array<{ doc: Record<string, unknown>; collection: (typeof contentCollections)[0] }> = [];
+for (const candidate of candidates.slice(0, RECENT_LIMIT)) {
+  // find() (not findById) so per-document read rules apply exactly as in ListView.
+  const [doc] = await cmsRuntime[candidate.collection.slug].find(
+    { where: { _id: candidate.id }, status: "any", locale: defaultLocale, limit: 1 },
     runtimeContext,
   );
-  for (const doc of docs) allEntries.push({ doc, collection: cc });
+  if (doc) allEntries.push({ doc, collection: candidate.collection });
 }
-allEntries.sort((a, b) => String(b.doc._updatedAt ?? "").localeCompare(String(a.doc._updatedAt ?? "")));
 
-const recentRows = allEntries.slice(0, 50).map(({ doc, collection: cc }) => {
+const recentRows = allEntries.map(({ doc, collection: cc }) => {
   const displayTitle = cc.singleton
     ? cc.labels.singular
     : String(doc[getLabelField(cc)] ?? doc.slug ?? cc.labels.singular);

@@ -2,14 +2,13 @@
 
 import { useMemo, useState } from "react";
 
-import { SubField, blankBlockFields, humanize, type BlockTypesMeta, type RelationOption } from "./block-fields";
+import { SubField, blankBlockFields, humanize, type BlockTypesMeta } from "./block-fields";
 import SelectField from "./SelectField";
 
 type Props = {
   name: string;
   value?: string;
   types: BlockTypesMeta;
-  blockRelationOptions?: Record<string, RelationOption[]>;
 };
 
 type SharedBlock = {
@@ -35,7 +34,7 @@ function parseInitialBlock(value: string | undefined, types: BlockTypesMeta): Sh
   }
 }
 
-export default function SharedSectionBlockField({ name, value, types, blockRelationOptions = {} }: Props) {
+export default function SharedSectionBlockField({ name, value, types }: Props) {
   const [block, setBlock] = useState<SharedBlock>(() => parseInitialBlock(value, types));
   const typeNames = Object.keys(types);
   const selectedType = block.type;
@@ -49,8 +48,6 @@ export default function SharedSectionBlockField({ name, value, types, blockRelat
   const updateField = (fieldName: string, fieldValue: unknown) => {
     setBlock((prev) => ({ ...prev, [fieldName]: fieldValue }));
   };
-
-  const relationOptionsFor = (fieldName: string) => blockRelationOptions[`shared:${selectedType}:${fieldName}`] ?? [];
 
   if (typeNames.length === 0) {
     return (
@@ -83,7 +80,6 @@ export default function SharedSectionBlockField({ name, value, types, blockRelat
               meta={meta}
               value={block[fieldName]}
               onChange={(v) => updateField(fieldName, v)}
-              relationOptions={meta.type === "relation" ? relationOptionsFor(fieldName) : []}
             />
           ))}
         </div>

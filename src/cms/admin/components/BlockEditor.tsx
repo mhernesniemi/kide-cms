@@ -25,10 +25,9 @@ import {
   getPreviewText,
   humanize,
   type BlockTypesMeta,
-  type RelationOption,
   type SubFieldMeta,
 } from "./block-fields";
-import type { LinkOptionGroup } from "./InternalLinkPicker";
+import type { LinkableCollection } from "./InternalLinkPicker";
 
 type Block = {
   _key: string;
@@ -47,8 +46,7 @@ type Props = {
   name: string;
   value?: string;
   types: BlockTypesMeta;
-  blockRelationOptions?: Record<string, RelationOption[]>;
-  linkOptions?: LinkOptionGroup[];
+  linkOptions?: LinkableCollection[];
   sharedSections?: SharedSectionOption[];
   sharedEnabled?: boolean;
 };
@@ -92,7 +90,6 @@ function SortableBlock({
   onSaveShared,
   sharedEnabled,
   onUpdateField,
-  getRelationOptions,
   linkOptions = [],
   sharedSection,
 }: {
@@ -107,8 +104,7 @@ function SortableBlock({
   onSaveShared: () => void;
   sharedEnabled: boolean;
   onUpdateField: (fieldName: string, value: unknown) => void;
-  getRelationOptions: (blockType: string, fieldName: string) => RelationOption[];
-  linkOptions?: LinkOptionGroup[];
+  linkOptions?: LinkableCollection[];
   sharedSection?: SharedSectionOption;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
@@ -252,7 +248,6 @@ function SortableBlock({
                 meta={meta}
                 value={block[fieldName]}
                 onChange={(v) => onUpdateField(fieldName, v)}
-                relationOptions={meta.type === "relation" ? getRelationOptions(block.type, fieldName) : []}
                 linkOptions={linkOptions}
               />
             ))
@@ -271,7 +266,6 @@ export default function BlockEditor({
   name,
   value,
   types,
-  blockRelationOptions = {},
   linkOptions = [],
   sharedSections = [],
   sharedEnabled = true,
@@ -513,9 +507,6 @@ export default function BlockEditor({
                   onSaveShared={() => saveAsShared(block._key)}
                   sharedEnabled={sharedEnabled}
                   onUpdateField={(fn, v) => updateField(block._key, fn, v)}
-                  getRelationOptions={(blockType, fieldName) =>
-                    blockRelationOptions[`block:${name}:${blockType}:${fieldName}`] ?? []
-                  }
                   linkOptions={linkOptions}
                   sharedSection={sharedSection}
                 />
