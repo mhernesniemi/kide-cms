@@ -21,7 +21,7 @@ Kide is a code-first CMS inside Astro (collections in `src/cms/collections/`, lo
 ## Golden path
 
 ```bash
-pnpm cms:generate && pnpm cms:push     # sync schema (use --recreate=slug for renames/drops)
+pnpm cms:generate && pnpm cms:push     # sync schema (renames/drops: --recreate=slug --allow-data-loss)
 node --import tsx scripts/your-import.ts   # see MIGRATING.md for the importer recipe
 pnpm cms:reindex                       # build search (or context.reindex())
 ```

@@ -7,6 +7,34 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.25.0] - 2026-09-02
+
+### Added
+
+- **Migration dry-run validates translations before any write.** `load()` now checks each item's
+  `translations` overlay up front: a collection with no `translatable: true` fields (or a project
+  with no `locales`) is an error, the default locale and unsupported locales are errors, and overlay
+  keys that `upsertTranslation` would silently drop are warnings. Previously the first
+  `upsertTranslation` failure surfaced only after every base document had been created.
+- **Nested shapes are validated as warnings.** Inline `content` blocks, standalone `blocks` fields
+  and repeater rows are checked against their declared sub-fields; undeclared keys and type
+  mismatches land in `report.warnings` (e.g. `body[3]<quote>.quoteText — not a declared field`)
+  instead of showing up as raw JSON in the editor. Documents still count as valid — read the warnings.
+
+### Changed
+
+- `MODEL.md` explains the **i18n** column (only `translatable: true` fields accept per-locale
+  values) and no longer describes `fields.color()` as having custom/hex entry.
+- `MIGRATING.md`: `RECREATE=` needs `--allow-data-loss`; mark translated fields `translatable: true`;
+  pick `locales.default` as the site's primary language; repeater rows keep extra keys.
+- Editor toolbars: the active formatting state is clearly visible in the light theme (bubble menu
+  and rich-text toolbar now use a darker pressed background than hover).
+
+### Fixed
+
+- `fields.color()` shows an off-palette stored value as a "Custom" swatch with its hex and keeps it
+  selectable, instead of rendering the empty placeholder while silently holding the value.
+
 ## [0.24.0] - 2026-09-02
 
 ### Changed
