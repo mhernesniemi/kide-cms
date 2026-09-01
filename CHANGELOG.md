@@ -7,6 +7,19 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.25.1] - 2026-09-02
+
+### Fixed
+
+- **Taxonomy/menu editors no longer crash on imported items without `children`.** The tree editor
+  now normalises its value on load (missing `children` → `[]`, missing `id` → generated), so a
+  flat `terms: [{ id, name, slug }]` renders instead of throwing "Cannot read properties of
+  undefined (reading 'length')".
+- `MODEL.md` describes `taxonomy-terms` and `menu-items` fields with their real value shapes
+  (previously reported as `json | any`), and `load({ dryRun: true })` warns about tree items
+  missing `id`, `children` or the per-variant keys. The WordPress recipe in `MIGRATING.md` now
+  shows `children: []` on every term.
+
 ## [0.25.0] - 2026-09-02
 
 ### Added
