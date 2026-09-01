@@ -69,11 +69,23 @@ const gitIsDirty = () => {
 
 const readJson = (file: string) => JSON.parse(readFileSync(file, "utf-8"));
 
-const updateStamp = (patch: Record<string, unknown>) => {
+// Eject is where the version stamp becomes meaningful: the vendored files'
+// baseline is the installed package version, and the patch-upgrade flow diffs
+// against it. Package-mode scaffolds carry no stamp, so create one here.
+const writeStamp = (version: string) => {
   const stampPath = path.join(cwd, ".kide-version");
-  if (!existsSync(stampPath)) return;
-  const stamp = readJson(stampPath);
-  writeFileSync(stampPath, `${JSON.stringify({ ...stamp, ...patch }, null, 2)}\n`);
+  const existing = existsSync(stampPath) ? readJson(stampPath) : {};
+  const stamp = {
+    template: "https://github.com/mhernesniemi/kide-cms",
+    ...existing,
+    kideVersion: version,
+    ref: `v${version}`,
+    commit: null,
+    mode: "embedded",
+    corePath: "src/cms",
+    ejectedAt: new Date().toISOString(),
+  };
+  writeFileSync(stampPath, `${JSON.stringify(stamp, null, 2)}\n`);
 };
 
 const eject = () => {
@@ -116,9 +128,13 @@ const eject = () => {
   }
 
   rootPkg.dependencies["@kidecms/core"] = "workspace:*";
+  // The patch-upgrade flow starts existing at eject — make its scripts reachable.
+  rootPkg.scripts = rootPkg.scripts ?? {};
+  rootPkg.scripts["cms:upgrade"] ??= "kide upgrade";
+  rootPkg.scripts["cms:restore"] ??= "kide restore";
   writeFileSync(rootPkgPath, `${JSON.stringify(rootPkg, null, 2)}\n`);
 
-  updateStamp({ mode: "embedded", ejectedAt: new Date().toISOString() });
+  writeStamp(version);
 
   console.log("[kide:eject] Running pnpm install...");
   try {

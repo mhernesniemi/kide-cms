@@ -7,12 +7,17 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
-## [Unreleased]
+## [0.23.0] - 2026-09-01
 
 ### Changed
 
-- `cms:upgrade` in package mode runs `pnpm install` automatically after bumping `@kidecms/core`, so
-  the project actually runs the new version when the command finishes. `--no-install` skips it.
+- **Package-mode projects upgrade with plain `pnpm add @kidecms/core@latest`.** `cms:upgrade` in a
+  package-mode project now prints that guidance instead of running a patch flow; new package-mode
+  scaffolds ship without the `cms:upgrade`/`cms:restore` scripts and without `.kide-version`
+  (`create-kide-app` ≥0.4.0). `kide eject` now writes the `.kide-version` stamp (baseline = the
+  installed version) and adds the upgrade scripts — the patch flow starts existing exactly when the
+  runtime becomes vendored. Check the CHANGELOG on upgrade for schema changes and the rare change to
+  project-owned files.
 
 ## [0.22.0] - 2026-08-31
 

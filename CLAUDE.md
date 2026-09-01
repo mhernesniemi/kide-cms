@@ -61,7 +61,7 @@ pnpm format           # prettier --write .
 pnpm cms:generate     # regenerate src/cms/.generated/ from cms.config.ts
 pnpm cms:admin        # create an admin user from CLI
 pnpm cms:describe     # write .kide/model.json + MODEL.md (the migration model manifest)
-pnpm cms:upgrade      # in scaffolded client projects: prepare/apply a release-tag core upgrade packet
+pnpm cms:upgrade      # in embedded/ejected client projects: prepare/apply a release-tag core upgrade packet
 pnpm cms:restore      # restore files from the latest upgrade backup
 pnpm verify:pack      # assert the @kidecms/core publish manifest ships only managed files
 pnpm verify:package   # assemble a package-mode project from HEAD, build+boot it, test eject
@@ -72,7 +72,7 @@ All `cms:*` scripts run through the `kide` bin (`src/cms/internals/cli.mjs`), wh
 
 > **Migrating content in?** Read `AGENTS.md` (repo root) and run the `/migrate` skill. The short version: `pnpm cms:describe` → read `MODEL.md` → write an importer that matches the value shapes → `createCmsContext().load(items, { dryRun: true })` to validate → import → verify.
 
-> **Upgrading a scaffolded client project?** Run `pnpm cms:upgrade <target-tag>` from the client project. It reads `.kide-version`, writes `.kide/upgrade/<from>-to-<to>/`, applies only managed runtime paths when the worktree is clean, and leaves project-sensitive files in `careful-review.patch`. Claude/Codex/Cursor should read `agent-instructions.md` from that packet and finish the merge from there. If no local agent exists, the packet is still complete for manual review. To abandon an upgrade attempt, run `pnpm cms:restore` or preview with `pnpm cms:restore --dry-run`.
+> **Upgrading a scaffolded client project?** Package mode: `pnpm add @kidecms/core@latest`, then check the CHANGELOG for schema changes (`pnpm cms:push`) and the rare project-owned-file change — there is no packet flow and no `.kide-version`. Embedded/ejected projects: run `pnpm cms:upgrade <target-tag>` from the client project. It reads `.kide-version`, writes `.kide/upgrade/<from>-to-<to>/`, applies only managed runtime paths when the worktree is clean, and leaves project-sensitive files in `careful-review.patch`. Claude/Codex/Cursor should read `agent-instructions.md` from that packet and finish the merge from there. If no local agent exists, the packet is still complete for manual review. To abandon an upgrade attempt, run `pnpm cms:restore` or preview with `pnpm cms:restore --dry-run`.
 
 ## Deployment
 

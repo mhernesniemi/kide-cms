@@ -51,7 +51,6 @@ type Args = {
   corePath?: string;
   apply?: boolean;
   allowDirty: boolean;
-  install: boolean;
   agent: "auto" | "none" | "claude" | "codex" | "cursor";
   help: boolean;
 };
@@ -103,7 +102,6 @@ Options:
   --apply              Apply the managed patch even when not selected by default
   --packet-only        Only write the upgrade packet; do not change project files
   --allow-dirty        Allow applying on top of an uncommitted worktree
-  --no-install         Skip the automatic \`pnpm install\` after a package-mode bump
   --agent <name>       auto, none, claude, codex, or cursor (default: auto)
   --help               Show this help
 
@@ -116,7 +114,6 @@ Examples:
 const parseArgs = (argv: string[]): Args => {
   const args: Args = {
     allowDirty: false,
-    install: true,
     agent: (process.env.KIDE_UPGRADE_AGENT as Args["agent"]) || "auto",
     help: false,
   };
@@ -154,8 +151,6 @@ const parseArgs = (argv: string[]): Args => {
       args.apply = false;
     } else if (arg === "--allow-dirty") {
       args.allowDirty = true;
-    } else if (arg === "--no-install") {
-      args.install = false;
     } else if (arg === "--agent") {
       args.agent = parseAgent(takeValue(i, arg));
       i += 1;
@@ -591,10 +586,27 @@ async function main() {
   const stamp = readStamp(cwd);
   const repo = args.repo ?? stamp?.template ?? DEFAULT_REPO;
   const corePath = args.corePath ?? stamp?.corePath ?? DEFAULT_CORE_PATH;
-  // Package mode: managed runtime comes from the @kidecms/core dependency, so
-  // upgrades bump that version; only project-owned template files need review.
   const mode: "embedded" | "package" =
     stamp?.mode ?? (existsSync(path.join(cwd, corePath, "core")) ? "embedded" : "package");
+
+  // Patch-based upgrades exist for vendored runtimes. A package-mode project
+  // gets the runtime from npm — upgrading is a dependency bump, and project
+  // files are the user's own (release notes flag the rare change to them).
+  if (mode === "package") {
+    console.log(
+      [
+        "[cms:upgrade] This is a package-mode project — no patch upgrade needed.",
+        "",
+        "  pnpm add @kidecms/core@latest",
+        "",
+        "Then check the release notes (CHANGELOG) for schema changes (`pnpm cms:push`)",
+        "and for the rare change to project-owned files. `cms:upgrade` applies to",
+        "embedded projects and projects converted with `kide eject`.",
+      ].join("\n"),
+    );
+    return;
+  }
+
   const fromRef = args.fromRef ?? stamp?.ref ?? stamp?.commit ?? null;
 
   if (!fromRef) {
@@ -644,7 +656,7 @@ async function main() {
       `${JSON.stringify(changedFilesJson(repoDir, fromCommit, toCommit), null, 2)}\n`,
     );
     writeReleaseNotes(repoDir, fromCommit, toCommit, packetDir);
-    backupFiles(cwd, packetDir, mode === "package" ? ["package.json", ".kide-version"] : [...managed, ".kide-version"]);
+    backupFiles(cwd, packetDir, [...managed, ".kide-version"]);
 
     let applied = false;
     let applyError: string | null = null;
@@ -674,24 +686,7 @@ async function main() {
       writeFileSync(path.join(cwd, ".kide-version"), `${JSON.stringify(nextStamp, null, 2)}\n`);
     };
 
-    if (shouldApply && mode === "package") {
-      // Managed runtime changes arrive via the published package — bump the
-      // dependency instead of patching files that only exist in node_modules.
-      const targetVersion = versionFromRef(targetRef);
-      const pkgJsonPath = path.join(cwd, "package.json");
-      const pkgJson = JSON.parse(readFileSync(pkgJsonPath, "utf-8"));
-      if (!targetVersion) {
-        applyError = `Target ref "${targetRef}" is not a release tag — cannot derive an @kidecms/core version.`;
-      } else if (!pkgJson.dependencies?.["@kidecms/core"]) {
-        applyError = "package.json has no @kidecms/core dependency — is this really a package-mode project?";
-      } else {
-        pkgJson.dependencies["@kidecms/core"] = `^${targetVersion}`;
-        writeFileSync(pkgJsonPath, `${JSON.stringify(pkgJson, null, 2)}\n`);
-        applied = true;
-        stampUpgrade();
-      }
-      recordBackupAttemptState(cwd, packetDir);
-    } else if (shouldApply && managedPatch.trim()) {
+    if (shouldApply && managedPatch.trim()) {
       const patchPath = path.join(packetDir, "managed-runtime.patch");
       const result = tryRun("git", ["apply", "--3way", relativeToCwd(cwd, patchPath)], { cwd });
       if (result.ok) {
@@ -733,11 +728,7 @@ async function main() {
         targetRef,
         corePath,
         mode,
-        applyMode: shouldApply
-          ? mode === "package"
-            ? "dependency bump attempted"
-            : "managed patch attempted"
-          : "packet only",
+        applyMode: shouldApply ? "managed patch attempted" : "packet only",
         managed,
         careful,
         other,
@@ -757,24 +748,7 @@ async function main() {
     );
 
     console.log(`[cms:upgrade] Packet ready: ${packetRelative}`);
-    if (applied && mode === "package") {
-      console.log(`[cms:upgrade] Bumped @kidecms/core to ^${versionFromRef(targetRef)} and updated .kide-version.`);
-      if (args.install) {
-        // The bump only edits package.json — without the install the project
-        // still runs the old core, so finish the delivery here.
-        console.log("[cms:upgrade] Installing…");
-        const install = spawnSync("pnpm", ["install"], { cwd, stdio: "inherit" });
-        if (install.status === 0) {
-          console.log("[cms:upgrade] Installed. Review careful-review.patch to finish.");
-        } else {
-          console.log("[cms:upgrade] pnpm install failed — run it manually, then review careful-review.patch.");
-        }
-      } else {
-        console.log(
-          "[cms:upgrade] Skipped install (--no-install) — run `pnpm install`, then review careful-review.patch.",
-        );
-      }
-    } else if (applied) {
+    if (applied) {
       console.log(`[cms:upgrade] Applied managed runtime changes and updated .kide-version to ${targetRef}.`);
     } else if (applyError) {
       console.log("[cms:upgrade] Managed patch needs help. See conflicts.json and agent-instructions.md.");
