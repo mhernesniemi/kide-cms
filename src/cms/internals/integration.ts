@@ -116,9 +116,13 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
       "astro:config:setup": ({ command, updateConfig, injectRoute, injectScript, addMiddleware }) => {
         const root = process.cwd();
 
-        // Generate a wrapper CSS that adds @source directives and imports user's admin CSS
+        // Generate a wrapper CSS: Tailwind sources + the core admin chrome +
+        // the project's theme file. Chrome (layers, focus, editor styles,
+        // variants) is core-owned and updates with the package; the project
+        // file defines only color tokens.
         const adminDir = packagePath("admin");
         const routesDir = packagePath("routes");
+        const adminBaseCss = path.join(adminDir, "admin-base.css");
         // tw-animate-css is a CSS-only package (exports only a "style" condition),
         // so Node resolution can't reach into it — walk the module paths instead.
         const twAnimateCssPath = resolvePackageFile("tw-animate-css", "dist/tw-animate.css");
@@ -131,24 +135,9 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           [
             `@source "${adminDir}";`,
             `@source "${routesDir}";`,
+            `@import "${adminBaseCss}";`,
             `@import "${twAnimateCssPath}";`,
             `@import "${userAdminCss}";`,
-            "",
-            "/* shadcn component styles (accordion, state variants) */",
-            "@theme inline {",
-            "  @keyframes accordion-down { from { height: 0 } to { height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto)) } }",
-            "  @keyframes accordion-up { from { height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto)) } to { height: 0 } }",
-            "}",
-            '@custom-variant data-open { &:where([data-state="open"]), &:where([data-open]:not([data-open="false"])) { @slot; } }',
-            '@custom-variant data-closed { &:where([data-state="closed"]), &:where([data-closed]:not([data-closed="false"])) { @slot; } }',
-            '@custom-variant data-checked { &:where([data-state="checked"]), &:where([data-checked]:not([data-checked="false"])) { @slot; } }',
-            '@custom-variant data-unchecked { &:where([data-state="unchecked"]), &:where([data-unchecked]:not([data-unchecked="false"])) { @slot; } }',
-            '@custom-variant data-selected { &:where([data-selected="true"]) { @slot; } }',
-            '@custom-variant data-disabled { &:where([data-disabled="true"]), &:where([data-disabled]:not([data-disabled="false"])) { @slot; } }',
-            '@custom-variant data-active { &:where([data-state="active"]), &:where([data-active]:not([data-active="false"])) { @slot; } }',
-            '@custom-variant data-horizontal { &:where([data-orientation="horizontal"]) { @slot; } }',
-            '@custom-variant data-vertical { &:where([data-orientation="vertical"]) { @slot; } }',
-            "@utility no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; &::-webkit-scrollbar { display: none; } }",
             "",
           ].join("\n"),
         );

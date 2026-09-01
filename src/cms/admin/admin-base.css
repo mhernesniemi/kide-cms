@@ -1,0 +1,312 @@
+/* Admin chrome — owned by @kidecms/core and updated with it. The project's
+   src/styles/admin.css defines only the color tokens this file consumes;
+   everything mechanical (layers, focus, editor styles, variants) lives here. */
+@import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
+
+/* Token → utility wiring. Which tokens exist is core's contract; their values
+   come from the project's :root/.dark blocks. */
+@theme inline {
+  --breakpoint-2xl: 100rem; /* 1600px */
+
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-strong: var(--muted-strong);
+  --color-field: var(--field);
+  --color-field-subtle: var(--field-subtle);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
+
+  /* shadcn component styles (accordion, state variants) */
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto));
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto));
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+@custom-variant data-open {
+  &:where([data-state="open"]),
+  &:where([data-open]:not([data-open="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-closed {
+  &:where([data-state="closed"]),
+  &:where([data-closed]:not([data-closed="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-checked {
+  &:where([data-state="checked"]),
+  &:where([data-checked]:not([data-checked="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-unchecked {
+  &:where([data-state="unchecked"]),
+  &:where([data-unchecked]:not([data-unchecked="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-selected {
+  &:where([data-selected="true"]) {
+    @slot;
+  }
+}
+@custom-variant data-disabled {
+  &:where([data-disabled="true"]),
+  &:where([data-disabled]:not([data-disabled="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-active {
+  &:where([data-state="active"]),
+  &:where([data-active]:not([data-active="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-horizontal {
+  &:where([data-orientation="horizontal"]) {
+    @slot;
+  }
+}
+@custom-variant data-vertical {
+  &:where([data-orientation="vertical"]) {
+    @slot;
+  }
+}
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   FOCUS — one universal rule for the whole admin.
+   Every focusable element (input, button, link, checkbox, radio, [tabindex],
+   contenteditable, …) gets the same ring automatically. There is nothing to
+   add per component. To restyle focus everywhere, change the three
+   --focus-ring-* vars in the project's admin.css. Nothing else sets focus styles.
+   ════════════════════════════════════════════════════════════════════════ */
+*:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Rich-text editor: the focusable element is the inner contenteditable, but we
+   want the ring around the whole bordered box. Ring the container instead, and
+   suppress it while a toolbar button has focus (the button shows its own ring). */
+.tiptap:focus-visible {
+  outline: none;
+}
+[data-slot="editor"]:focus-within:not(:has([data-slot="button"]:focus-visible)) {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Menus / selects / command palette: items show focus as a background highlight,
+   not the ring; and a popup trigger must not keep the ring while its popup is
+   open (base-ui re-focuses the trigger on pointer interaction, which would
+   otherwise trip :focus-visible). Keyboard focus on the trigger itself, when
+   closed, still gets the normal ring. */
+[data-slot="dropdown-menu-item"]:focus-visible,
+[data-slot="dropdown-menu-sub-trigger"]:focus-visible,
+[data-slot="select-item"]:focus-visible,
+[data-slot="command-item"]:focus-visible,
+[data-popup-open]:focus-visible {
+  outline: none;
+}
+
+/* ── Dark mode: native input controls, select arrow, focus ring ──── */
+.dark input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.dark select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+}
+
+.dark *:focus-visible {
+  --tw-ring-offset-color: var(--surface);
+}
+
+/* ── Strip focus styles from command input ────────────────────────── */
+[data-slot="command-input"] {
+  border: none;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  outline: none;
+}
+
+[data-slot="command-input"]:focus,
+[data-slot="command-input"]:focus-visible {
+  border: none;
+  box-shadow: none;
+  outline: none;
+  --tw-ring-shadow: none;
+  --tw-ring-offset-shadow: none;
+}
+
+/* ── Tiptap editor styles ────────────────────────────────────────── */
+/* Content typography only — block-card form UI ([data-node-view-wrapper]) is excluded,
+   since these unlayered rules would beat its layered Tailwind utilities. The second
+   selector re-includes rich-text sub-fields (a nested .tiptap inside a block card). */
+.tiptap {
+  outline: none;
+}
+
+.tiptap p:not([data-node-view-wrapper] *),
+[data-node-view-wrapper] .tiptap p {
+  margin: 0.5em 0;
+  color: inherit;
+  font-size: inherit;
+  line-height: 1.6;
+}
+
+/* Command hint on the empty field / the cursor's empty paragraph ("Type / for commands…"). */
+.tiptap p.is-empty::before {
+  content: attr(data-placeholder);
+  color: var(--placeholder);
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+.tiptap h2:not([data-node-view-wrapper] *),
+[data-node-view-wrapper] .tiptap h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1em 0 0.5em;
+}
+
+.tiptap h3:not([data-node-view-wrapper] *),
+[data-node-view-wrapper] .tiptap h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0.75em 0 0.4em;
+}
+
+.tiptap ul:not([data-node-view-wrapper] *),
+[data-node-view-wrapper] .tiptap ul {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+  list-style-type: disc;
+}
+
+.tiptap ol:not([data-node-view-wrapper] *),
+[data-node-view-wrapper] .tiptap ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+  list-style-type: decimal;
+}
+
+.tiptap li:not([data-node-view-wrapper] *),
+[data-node-view-wrapper] .tiptap li {
+  margin: 0.2em 0;
+}
+
+.tiptap blockquote:not([data-node-view-wrapper] *),
+[data-node-view-wrapper] .tiptap blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1em;
+  margin: 0.5em 0;
+  color: var(--muted-foreground);
+}
+
+/* ── Toast animations ────────────────────────────────────────────── */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+}
+
+/* ── Dark mode: Tiptap placeholder ───────────────────────────────── */
+.dark .tiptap p.is-empty::before {
+  color: var(--placeholder) !important;
+}
+
+/* Fallback marker for a rejected field with no native invalid styling — composite
+   controls (pickers, block and rich-text editors) whose focusable element is not
+   an input. Anything with [aria-invalid] styles itself and never gets this. */
+[data-cms-invalid]:not([aria-invalid]) {
+  outline: 1px solid var(--destructive);
+  outline-offset: 3px;
+  border-radius: var(--radius-lg);
+}

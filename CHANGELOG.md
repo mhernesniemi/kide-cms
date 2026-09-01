@@ -7,6 +7,19 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+### Changed
+
+- **Admin chrome CSS is core-owned.** Layout, focus system, editor (Tiptap) styles, shadcn variants
+  and the token → utility mapping moved from the project's `src/styles/admin.css` into
+  `@kidecms/core` (`admin/admin-base.css`, wired in by the integration), so admin styling fixes now
+  ship with the package instead of being frozen at scaffold time. The project's `admin.css` is now
+  purely the theme: the `:root` / `.dark` color-token blocks. **Existing projects:** slim your
+  `src/styles/admin.css` to just those token blocks (drop `@import "tailwindcss"`, the
+  `@custom-variant`, `@theme inline`, and everything below the token blocks) — otherwise the old
+  copies of those rules linger and shadow core updates.
+
 ## [0.23.1] - 2026-09-01
 
 ### Fixed
