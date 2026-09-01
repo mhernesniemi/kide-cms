@@ -16,6 +16,7 @@ const posts = defineCollection({
     body: fields.content({ blocks: { quote: { text: fields.text(), tone: fields.select({ options: ["calm"] }) } } }),
     logos: fields.json({ admin: { component: "repeater" }, itemFields: { image: fields.image(), alt: fields.text() } }),
     sections: fields.blocks({ types: { hero: { heading: fields.text() } } }),
+    terms: fields.json({ admin: { component: "taxonomy-terms" } }),
   },
 });
 const config = defineConfig({ collections: [posts] });
@@ -81,6 +82,24 @@ describe("validateDocument", () => {
     expect(r.warnings).toEqual([{ field: "logos[0].wpImageId", message: "not a declared field" }]);
   });
 
+  it("warns about tree items missing what the editor needs", () => {
+    const r = validateDocument(posts, {
+      title: "Hi",
+      terms: [
+        { id: "a", name: "A", slug: "a" },
+        { id: "b", name: "B", slug: "b", children: [{ name: "C" }] },
+      ],
+    });
+    expect(r.ok).toBe(true);
+    expect(r.warnings.map((w) => w.field)).toEqual([
+      "terms[0].children",
+      "terms[1].children[0].id",
+      "terms[1].children[0].slug",
+      "terms[1].children[0].children",
+    ]);
+    expect(validateDocument(posts, { title: "Hi", terms: "nope" }).ok).toBe(false);
+  });
+
   it("warns about standalone block types and fields", () => {
     const r = validateDocument(posts, { title: "Hi", sections: [{ type: "hero", title: "x" }, { type: "nope" }] });
     expect(r.ok).toBe(true);
@@ -125,6 +144,8 @@ describe("describeModel", () => {
     expect(post.slug).toBe("posts");
     expect((post.fields.title as { control: string }).control).toBe(FIELD_MODEL.text.control);
     expect((post.fields.body as { blockTypes: object }).blockTypes).toHaveProperty("quote");
+    expect((post.fields.terms as { type: string; valueShape: string }).type).toBe("taxonomy-terms");
+    expect((post.fields.terms as { valueShape: string }).valueShape).toContain("children");
   });
 });
 

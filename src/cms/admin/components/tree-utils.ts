@@ -18,13 +18,26 @@ export function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+/** Imported values often omit `children` (or `id`); fill them in so the editor never
+ * reads `.children.length` off undefined. Extra keys are kept. */
+export function normalizeItems(list: unknown): TreeItem[] {
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === "object" && !Array.isArray(item))
+    .map((item) => ({
+      ...item,
+      id: typeof item.id === "string" && item.id ? item.id : generateId(),
+      children: normalizeItems(item.children),
+    }));
+}
+
 export function parseItems(value?: string): TreeItem[] {
   if (!value) return [];
   try {
-    const parsed = JSON.parse(value);
-    if (Array.isArray(parsed)) return parsed;
-  } catch {}
-  return [];
+    return normalizeItems(JSON.parse(value));
+  } catch {
+    return [];
+  }
 }
 
 export function cloneItems(items: TreeItem[]): TreeItem[] {

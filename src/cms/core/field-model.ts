@@ -63,6 +63,18 @@ export const FIELD_MODEL: Record<string, FieldModelEntry> = {
     control: "link control (internal page picker / external URL + label + new-tab)",
     valueShape: "{ type:'internal'|'external', url:string, label?:string, newTab?:boolean }",
   },
+  "taxonomy-terms": {
+    storage: "json",
+    control: "term tree editor (nested, sortable; feeds taxonomy-select fields by slug)",
+    valueShape:
+      "Array<{ id:string, name:string, slug:string, children:Term[] }> — `children` required on every term (use [])",
+  },
+  "menu-items": {
+    storage: "json",
+    control: "menu tree editor (nested to 3 levels, sortable, internal/external links)",
+    valueShape:
+      "Array<{ id:string, label:string, href:string, target?:'_blank', children:Item[] }> — `children` required on every item (use [])",
+  },
   relation: {
     storage: "text (json when hasMany)",
     control: "relation picker (single dropdown, or chips + dropdown when hasMany)",
@@ -120,10 +132,10 @@ const typeSpecific = (field: FieldConfig): Record<string, unknown> => {
 };
 
 export const describeField = (name: string, field: FieldConfig): Record<string, unknown> => {
-  // `color`/`link` are admin.component helpers over text/json — report them as
-  // their effective semantic type so the manifest is honest about the control.
+  // `color`/`link`/tree editors are admin.component helpers over text/json — report
+  // them as their effective semantic type so the manifest is honest about the control.
   const component = field.admin?.component;
-  const effectiveType = component === "color" || component === "link" ? component : field.type;
+  const effectiveType = component && component in FIELD_MODEL ? component : field.type;
   const model = FIELD_MODEL[effectiveType] ?? { storage: "json", control: "unknown", valueShape: "unknown" };
   return {
     name,

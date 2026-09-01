@@ -59,9 +59,14 @@ const validateField = (
     case "content":
       validateContent(name, field, value, errors, warnings);
       break;
-    case "json":
-      if (field.itemFields && Array.isArray(value)) validateRows(name, field.itemFields, value, warnings);
+    case "json": {
+      const component = field.admin?.component;
+      if (component === "taxonomy-terms" || component === "menu-items") {
+        if (!Array.isArray(value)) errors.push({ field: name, message: `${component} expects an array` });
+        else validateTree(name, component, value, warnings);
+      } else if (field.itemFields && Array.isArray(value)) validateRows(name, field.itemFields, value, warnings);
       break;
+    }
     case "blocks":
       if (!Array.isArray(value)) errors.push({ field: name, message: "blocks expects an array" });
       else validateBlockList(name, field.types, value, warnings);
@@ -104,6 +109,37 @@ const validateRows = (
       return;
     }
     validateShape(`${name}[${i}]`, itemFields, row as Record<string, unknown>, warnings);
+  });
+};
+
+const TREE_ITEM_KEYS = {
+  "taxonomy-terms": ["name", "slug"],
+  "menu-items": ["label", "href"],
+} as const;
+
+/** Tree editors (menus, taxonomy terms) need `id` + `children` on every node. */
+const validateTree = (
+  prefix: string,
+  component: keyof typeof TREE_ITEM_KEYS,
+  items: unknown[],
+  warnings: ValidationIssue[],
+) => {
+  items.forEach((item, i) => {
+    const at = `${prefix}[${i}]`;
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      warnings.push({ field: at, message: "tree item expects an object" });
+      return;
+    }
+    const node = item as Record<string, unknown>;
+    for (const key of ["id", ...TREE_ITEM_KEYS[component]]) {
+      if (typeof node[key] !== "string" || !node[key])
+        warnings.push({ field: `${at}.${key}`, message: "expected a string" });
+    }
+    if (!Array.isArray(node.children)) {
+      warnings.push({ field: `${at}.children`, message: "expected an array (use [] for a leaf)" });
+      return;
+    }
+    validateTree(`${at}.children`, component, node.children, warnings);
   });
 };
 

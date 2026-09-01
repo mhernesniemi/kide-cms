@@ -113,8 +113,10 @@ The hard, source-specific parts (capture once, reuse):
   groups translations. Collapse a group into one base doc in `locales.default` + a
   `translations` overlay per other locale. A post that only exists in one language becomes
   a base doc with no overlay — pick the default locale so that is the common case.
-- **Categories:** build a `taxonomies` doc (`slug: "categories"`, `terms: [{id,name,slug}]`)
+- **Categories:** build a `taxonomies` doc (`slug: "categories"`,
+  `terms: [{ id, name, slug, children: [] }]` — `children` on every term, nest WP parents there)
   and set each post's `category` to the term slug, so the admin `taxonomy-select` is populated.
+  Menus are the same tree shape: `items: [{ id, label, href, children: [] }]`.
 - **GDPR:** skip `wp_users`/employees/personal data and author links unless explicitly cleared.
 - **Published-only** (if requested): keep `post_status` in `{publish, private}`, set all
   imported docs `_status: "published"`.
