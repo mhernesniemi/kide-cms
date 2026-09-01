@@ -7,6 +7,14 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.23.1] - 2026-09-01
+
+### Fixed
+
+- `cms:push --allow-data-loss` no longer crashes with "index … already exists" when a table rebuild
+  is involved — drizzle-kit emits each unique index statement twice during a recreate, and the
+  duplicate is now dropped before executing. (The failed run rolled back cleanly; no data was at risk.)
+
 ## [0.23.0] - 2026-09-01
 
 ### Changed

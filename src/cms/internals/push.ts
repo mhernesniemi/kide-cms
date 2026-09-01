@@ -123,7 +123,9 @@ async function main() {
     }
   }
   const { statementsToExecute, hasDataLoss } = diff;
-  const statements = statementsToExecute.filter((stmt) => !isSearchIndexStatement(stmt));
+  // drizzle-kit emits each unique index twice when it recreates a table — the
+  // second identical CREATE crashes SQLite, so drop exact duplicates.
+  const statements = [...new Set(statementsToExecute)].filter((stmt) => !isSearchIndexStatement(stmt));
 
   // drizzle-kit's hasDataLoss misses plain DROP COLUMN — classify statement shapes too.
   // (`__new_` is drizzle's table-recreate pattern: create copy, insert-select, drop old.)
