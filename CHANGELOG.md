@@ -7,7 +7,7 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
-## [Unreleased]
+## [0.24.0] - 2026-09-02
 
 ### Changed
 
