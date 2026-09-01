@@ -357,7 +357,7 @@ const ToolbarButton = ({
     title={title}
     className={cn(
       "disabled:hover:text-muted-foreground inline-flex size-8 items-center justify-center rounded-md transition-colors outline-none disabled:opacity-50 disabled:hover:bg-transparent",
-      active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted-strong hover:text-foreground",
+      active ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:bg-muted-strong hover:text-foreground",
     )}
   >
     {children}
