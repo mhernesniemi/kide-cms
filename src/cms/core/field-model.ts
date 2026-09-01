@@ -35,7 +35,8 @@ export const FIELD_MODEL: Record<string, FieldModelEntry> = {
   select: { storage: "text", control: "dropdown", valueShape: "string (one of `options`)" },
   color: {
     storage: "text",
-    control: "colour swatch picker (brand palette + custom + hex)",
+    control:
+      "colour swatch picker — palette from admin.colors (or per-field colors); no free hex entry, off-palette values show as 'Custom'",
     valueShape: "hex string e.g. '#00BB5F' (empty string = inherit default)",
   },
   richText: {

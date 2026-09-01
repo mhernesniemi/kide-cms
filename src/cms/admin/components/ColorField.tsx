@@ -41,13 +41,17 @@ export default function ColorField({ name, value: initial, placeholder, colors =
     onChange?.(v);
   };
 
-  const selected = colors.find((c) => c.value.toLowerCase() === value.trim().toLowerCase());
+  // A stored value outside the palette (imported content, a palette edit) must stay
+  // visible and re-selectable rather than collapsing into the empty placeholder.
+  const known = colors.find((c) => c.value.toLowerCase() === value.trim().toLowerCase());
+  const options = value && !known ? [{ label: "Custom", value }, ...colors] : colors;
+  const selected = known ?? options.find((c) => c.value === value);
 
   return (
     <div className="relative">
       {name && <input type="hidden" name={name} value={value} ref={hiddenRef} />}
 
-      <Select items={colors} value={value} onValueChange={(v) => set((v as string) ?? "")}>
+      <Select items={options} value={value} onValueChange={(v) => set((v as string) ?? "")}>
         <SelectTrigger className={cn("w-full", value && "pr-14")}>
           {selected ? (
             <span className="flex flex-1 items-center gap-2">
@@ -61,7 +65,7 @@ export default function ColorField({ name, value: initial, placeholder, colors =
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            {colors.map((c) => (
+            {options.map((c) => (
               <SelectItem key={c.value} value={c.value}>
                 <Swatch color={c.value} />
                 <span className="flex-1">{c.label}</span>

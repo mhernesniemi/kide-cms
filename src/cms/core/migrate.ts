@@ -6,6 +6,7 @@
  * (internals/describe.ts) and `createCmsContext` (internals/context.ts).
  */
 import type { CMSConfig, CollectionConfig, FieldConfig } from "./define";
+import { getTranslatableFieldNames } from "./define";
 import { describeModel, FIELD_MODEL, CONTENT_AST_SCHEMA } from "./field-model";
 
 export type ValidationIssue = { field: string; message: string };
@@ -58,10 +59,68 @@ const validateField = (
     case "content":
       validateContent(name, field, value, errors, warnings);
       break;
+    case "json":
+      if (field.itemFields && Array.isArray(value)) validateRows(name, field.itemFields, value, warnings);
+      break;
+    case "blocks":
+      if (!Array.isArray(value)) errors.push({ field: name, message: "blocks expects an array" });
+      else validateBlockList(name, field.types, value, warnings);
+      break;
     case "date":
       if (Number.isNaN(Date.parse(String(value)))) warnings.push({ field: name, message: "date is not parseable" });
       break;
   }
+};
+
+/**
+ * Nested shapes (inline/standalone block fields, repeater rows) are stored as
+ * the importer wrote them — the API does not re-validate them on save. Check
+ * them anyway so a wrong key surfaces in the report instead of as raw JSON in
+ * the editor, but as warnings: the top-level document still counts as valid.
+ */
+const validateShape = (
+  prefix: string,
+  declared: Record<string, FieldConfig>,
+  value: Record<string, unknown>,
+  warnings: ValidationIssue[],
+) => {
+  const nested: ValidationIssue[] = [];
+  for (const [key, sub] of Object.entries(declared)) validateField(`${prefix}.${key}`, sub, value[key], nested, nested);
+  for (const key of Object.keys(value)) {
+    if (!(key in declared)) nested.push({ field: `${prefix}.${key}`, message: "not a declared field" });
+  }
+  warnings.push(...nested);
+};
+
+const validateRows = (
+  name: string,
+  itemFields: Record<string, FieldConfig>,
+  rows: unknown[],
+  warnings: ValidationIssue[],
+) => {
+  rows.forEach((row, i) => {
+    if (!row || typeof row !== "object" || Array.isArray(row)) {
+      warnings.push({ field: `${name}[${i}]`, message: "repeater row expects an object" });
+      return;
+    }
+    validateShape(`${name}[${i}]`, itemFields, row as Record<string, unknown>, warnings);
+  });
+};
+
+const validateBlockList = (
+  name: string,
+  types: Record<string, Record<string, FieldConfig>>,
+  blocks: unknown[],
+  warnings: ValidationIssue[],
+) => {
+  blocks.forEach((block, i) => {
+    const { type, ...fields } = (block ?? {}) as { type?: string } & Record<string, unknown>;
+    if (!type || !(type in types)) {
+      warnings.push({ field: `${name}[${i}]`, message: `block type '${type}' is not declared in this field's types` });
+      return;
+    }
+    validateShape(`${name}[${i}]<${type}>`, types[type], fields, warnings);
+  });
 };
 
 const validateContent = (
@@ -75,15 +134,20 @@ const validateContent = (
     errors.push({ field: name, message: "content expects { type:'root', children:[…] }" });
     return;
   }
-  const declared = new Set(Object.keys(field.blocks ?? {}));
-  for (const node of (value as { children?: Array<{ type?: string; blockType?: string }> }).children ?? []) {
-    if (node?.type === "block" && node.blockType && !declared.has(node.blockType)) {
+  const declared = field.blocks ?? {};
+  const children = (value as { children?: Array<{ type?: string; blockType?: string; fields?: unknown }> }).children;
+  (children ?? []).forEach((node, i) => {
+    if (node?.type !== "block" || !node.blockType) return;
+    if (!(node.blockType in declared)) {
       warnings.push({
         field: name,
         message: `inline block '${node.blockType}' is not declared in this field's blocks`,
       });
+      return;
     }
-  }
+    const fields = node.fields && typeof node.fields === "object" ? (node.fields as Record<string, unknown>) : {};
+    validateShape(`${name}[${i}]<${node.blockType}>`, declared[node.blockType], fields, warnings);
+  });
 };
 
 /** Validate a document's fields against its collection schema. */
@@ -96,6 +160,61 @@ export const validateDocument = (collection: CollectionConfig, data: Record<stri
   for (const key of Object.keys(data)) {
     if (key.startsWith("_")) continue;
     if (!(key in collection.fields)) warnings.push({ field: key, message: "not a declared field (will be ignored)" });
+  }
+  return { ok: errors.length === 0, errors, warnings };
+};
+
+/**
+ * Validate an import item's per-locale overlays. Translation tables only exist
+ * for fields marked `translatable: true`, and `upsertTranslation` silently drops
+ * everything else — so catch both here, before the base document is written.
+ */
+export const validateTranslations = (
+  config: CMSConfig,
+  collection: CollectionConfig,
+  translations: Record<string, Record<string, unknown>> | undefined,
+): ValidationResult => {
+  const errors: ValidationIssue[] = [];
+  const warnings: ValidationIssue[] = [];
+  const locales = Object.keys(translations ?? {});
+  if (locales.length === 0) return { ok: true, errors, warnings };
+
+  const translatable = new Set(getTranslatableFieldNames(collection));
+  if (!config.locales || translatable.size === 0) {
+    errors.push({
+      field: "translations",
+      message: !config.locales
+        ? "no locales configured (set `locales` in cms.config.ts)"
+        : `collection has no translatable fields (mark them \`translatable: true\`, then cms:generate + cms:push)`,
+    });
+    return { ok: false, errors, warnings };
+  }
+
+  for (const locale of locales) {
+    const prefix = `translations.${locale}`;
+    if (locale === config.locales.default) {
+      errors.push({ field: prefix, message: `'${locale}' is the default locale — put it in \`data\`` });
+      continue;
+    }
+    if (!config.locales.supported.includes(locale)) {
+      errors.push({ field: prefix, message: `'${locale}' is not in locales.supported` });
+      continue;
+    }
+    const overlay = translations![locale] ?? {};
+    const keys = Object.keys(overlay).filter((k) => !k.startsWith("_"));
+    const kept = keys.filter((k) => translatable.has(k));
+    for (const key of keys) {
+      if (!translatable.has(key))
+        warnings.push({ field: `${prefix}.${key}`, message: "not a translatable field (will be dropped)" });
+    }
+    if (keys.length && kept.length === 0) {
+      errors.push({
+        field: prefix,
+        message: "none of these fields are translatable — the whole translation would be dropped",
+      });
+      continue;
+    }
+    for (const key of kept) validateField(`${prefix}.${key}`, collection.fields[key], overlay[key], errors, warnings);
   }
   return { ok: errors.length === 0, errors, warnings };
 };
@@ -173,10 +292,13 @@ export const importDocuments = async (
       report.failed++;
       continue;
     }
-    const result = validateDocument(collection, item.data);
-    if (result.warnings.length) report.warnings.push({ collection: item.collection, id, warnings: result.warnings });
-    if (!result.ok) {
-      report.invalid.push({ collection: item.collection, id, errors: result.errors });
+    const doc = validateDocument(collection, item.data);
+    const i18n = validateTranslations(config, collection, item.translations);
+    const warnings = [...doc.warnings, ...i18n.warnings];
+    const errors = [...doc.errors, ...i18n.errors];
+    if (warnings.length) report.warnings.push({ collection: item.collection, id, warnings });
+    if (errors.length) {
+      report.invalid.push({ collection: item.collection, id, errors });
       report.failed++;
       continue;
     }
@@ -235,6 +357,10 @@ export const renderModelMarkdown = (config: CMSConfig): string => {
   out.push("");
   out.push(`**Locales:** default \`${model.locales.default}\`, supported \`${model.locales.supported.join(", ")}\``);
   out.push("");
+  out.push("> The **i18n** column is `yes` only for fields declared `translatable: true`. Only those");
+  out.push("> fields accept per-locale values (`translations` in an import item, `upsertTranslation`);");
+  out.push("> everything else is base-locale only. A collection with no `yes` has no translation table.");
+  out.push("");
 
   out.push("## Field types");
   out.push("");
@@ -252,8 +378,9 @@ export const renderModelMarkdown = (config: CMSConfig): string => {
   out.push(`root: ${CONTENT_AST_SCHEMA.root}`);
   for (const [k, v] of Object.entries(CONTENT_AST_SCHEMA.nodes)) out.push(`  ${k}: ${v}`);
   out.push("```");
-  out.push("> A `content` field stores any `{type:'root'}` doc as-is — inline block `fields` are not");
-  out.push("> validated. Build prose with `htmlToRichText(html)`; declare `blocks` for the editor.");
+  out.push("> A `content` field stores any `{type:'root'}` doc as-is — the API does not check inline");
+  out.push("> block `fields` on save, but `load({ dryRun: true })` reports mismatches as warnings.");
+  out.push("> Build prose with `htmlToRichText(html)`; declare `blocks` for the editor.");
   out.push("");
 
   for (const collection of model.collections) {
