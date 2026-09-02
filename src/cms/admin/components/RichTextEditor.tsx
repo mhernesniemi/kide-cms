@@ -26,6 +26,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { cn } from "../lib/utils";
+import { toggleHeading } from "../lib/editor-commands";
 import ImageBrowseDialog from "./ImageBrowseDialog";
 
 // -----------------------------------------------
@@ -544,7 +545,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
         <div className="bg-border mx-1 h-5 w-px" />
 
         <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+          onClick={() => editor && toggleHeading(editor, 2)}
           active={editor?.isActive("heading", { level: 2 })}
           disabled={!editor || markdownMode}
           title="Heading 2"
@@ -552,7 +553,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
           <Heading2 className="size-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+          onClick={() => editor && toggleHeading(editor, 3)}
           active={editor?.isActive("heading", { level: 3 })}
           disabled={!editor || markdownMode}
           title="Heading 3"

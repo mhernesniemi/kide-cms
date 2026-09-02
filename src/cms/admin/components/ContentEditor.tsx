@@ -25,6 +25,7 @@ import { Button, buttonVariants } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { cn } from "../lib/utils";
+import { toggleHeading } from "../lib/editor-commands";
 import {
   LinkDialog,
   fetchLinkGroups,
@@ -660,14 +661,14 @@ export default function ContentEditor({
               </ToolbarButton>
               <div className="bg-border mx-0.5 h-5 w-px" />
               <ToolbarButton
-                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                onClick={() => editor && toggleHeading(editor, 2)}
                 active={editor.isActive("heading", { level: 2 })}
                 title="Heading 2"
               >
                 <Heading2 className="size-4" />
               </ToolbarButton>
               <ToolbarButton
-                onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+                onClick={() => editor && toggleHeading(editor, 3)}
                 active={editor.isActive("heading", { level: 3 })}
                 title="Heading 3"
               >

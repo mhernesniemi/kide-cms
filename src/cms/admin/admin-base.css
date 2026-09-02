@@ -248,6 +248,11 @@
   margin: 0.75em 0 0.4em;
 }
 
+/* A bold mark inside a heading (legacy imports) must not out-weigh the heading. */
+.tiptap :is(h1, h2, h3, h4, h5, h6) strong {
+  font-weight: inherit;
+}
+
 .tiptap ul:not([data-node-view-wrapper] *),
 [data-node-view-wrapper] .tiptap ul {
   padding-left: 1.5em;
