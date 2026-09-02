@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { Editor } from "@tiptap/core";
 import Image from "@tiptap/extension-image";
 import { NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
 import { ImageIcon, Trash2 } from "lucide-react";
@@ -9,23 +10,52 @@ import { Input } from "./ui/input";
 import ImageBrowseDialog from "./ImageBrowseDialog";
 import { cn, thumbnail } from "../lib/utils";
 
+/** Node views only re-render on node/selection changes, so track editor focus ourselves. */
+function useEditorFocus(editor: Editor) {
+  const [focused, setFocused] = useState(editor.isFocused);
+  useEffect(() => {
+    const on = () => setFocused(true);
+    const off = () => setFocused(false);
+    editor.on("focus", on);
+    editor.on("blur", off);
+    return () => {
+      editor.off("focus", on);
+      editor.off("blur", off);
+    };
+  }, [editor]);
+  return focused;
+}
+
 /**
  * Inline image in rich text / content fields. Selecting it reveals alt text,
  * replace (asset browser) and remove, so an image is editable rather than a
  * fixed blob that can only be deleted.
  */
-function ImageNodeView({ node, selected, editor, updateAttributes, deleteNode }: NodeViewProps) {
+function ImageNodeView({ node, selected, editor, getPos, updateAttributes, deleteNode }: NodeViewProps) {
   const [browseOpen, setBrowseOpen] = useState(false);
   const [focusWithin, setFocusWithin] = useState(false);
+  const focused = useEditorFocus(editor);
   const src = String(node.attrs.src ?? "");
   const alt = String(node.attrs.alt ?? "");
-  // `selected` alone is true on page load (the initial selection lands on the first
-  // block), so require focus too — a click on the image gives both.
-  const active = editor.isEditable && ((selected && editor.isFocused) || focusWithin);
 
-  // Dragging a full-size image hides the drop target under the ghost. Tiptap sets
-  // the ghost to the node's DOM from React's root listener, so override it from a
-  // document-level listener, which runs after it.
+  // On load the initial selection sits on the first block, so `selected` alone
+  // would show the controls before anyone clicked — require editor focus too.
+  const active = editor.isEditable && ((selected && focused) || focusWithin);
+
+  // A click on a non-editable node view doesn't focus the editor by itself.
+  // Focus synchronously: the async `focus()` command re-syncs the selection
+  // from the DOM afterwards and would undo the node selection.
+  const select = () => {
+    const pos = getPos();
+    if (typeof pos !== "number") return;
+    editor.view.focus();
+    editor.commands.setNodeSelection(pos);
+  };
+
+  // Dragging a full-size image hides the drop target under the ghost. Chrome
+  // draws a bare <img> at natural size, so the ghost is a sized div. A real drag
+  // starts on Tiptap's outer node element (the wrapper's parent), and Tiptap
+  // sets its own ghost from React's root listener — override from the document.
   const wrapperRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -33,8 +63,6 @@ function ImageNodeView({ node, selected, editor, updateAttributes, deleteNode }:
       const ghost = ghostRef.current;
       const wrapper = wrapperRef.current;
       const target = e.target as Node | null;
-      // A real drag starts on Tiptap's outer node element (the wrapper's parent),
-      // so accept the event from either side of the wrapper.
       if (!ghost || !wrapper || !target || !e.dataTransfer) return;
       if (!wrapper.contains(target) && !target.contains(wrapper)) return;
       e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
@@ -57,10 +85,9 @@ function ImageNodeView({ node, selected, editor, updateAttributes, deleteNode }:
         src={src}
         alt={alt}
         draggable={false}
+        onClick={select}
         className={cn("relative z-10 max-w-full rounded-md", active && "ring-ring/50 ring-2 ring-offset-2")}
       />
-      {/* Drag ghost: setDragImage needs a rendered, in-viewport element, so it sits under the
-          image. A wrapping div, not the img itself — Chrome draws a bare <img> at natural size. */}
       <div
         ref={ghostRef}
         aria-hidden
