@@ -2,7 +2,7 @@ import { Extension, type Editor, type Range } from "@tiptap/core";
 import Suggestion, { type SuggestionOptions } from "@tiptap/suggestion";
 import { ReactRenderer } from "@tiptap/react";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ComponentType } from "react";
-import { Heading2, Heading3, List, ListOrdered, Quote, Blocks, Link2, type LucideProps } from "lucide-react";
+import { Heading2, Heading3, List, ListOrdered, Quote, Blocks, Link2, ImageIcon, type LucideProps } from "lucide-react";
 import { cn } from "../lib/utils";
 import { insertBlockNode, SHARED_BLOCK_TYPE } from "./content-block-spec";
 import { blankBlockFields, humanize, type BlockTypesMeta } from "./block-fields";
@@ -21,7 +21,12 @@ type SlashItem = {
   run: (editor: Editor, range: Range) => void;
 };
 
-const buildItems = (types: BlockTypesMeta, sharedSections: SharedSectionOption[], query: string): SlashItem[] => {
+const buildItems = (
+  types: BlockTypesMeta,
+  sharedSections: SharedSectionOption[],
+  onInsertImage: (() => void) | undefined,
+  query: string,
+): SlashItem[] => {
   const formatting: SlashItem[] = [
     {
       title: "Heading 2",
@@ -53,6 +58,19 @@ const buildItems = (types: BlockTypesMeta, sharedSections: SharedSectionOption[]
       icon: Quote,
       run: (e, r) => e.chain().focus().deleteRange(r).toggleBlockquote().run(),
     },
+    ...(onInsertImage
+      ? [
+          {
+            title: "Image",
+            subtitle: "From the asset library",
+            icon: ImageIcon,
+            run: (e: Editor, r: Range) => {
+              e.chain().focus().deleteRange(r).run();
+              onInsertImage();
+            },
+          },
+        ]
+      : []),
   ];
 
   const blocks: SlashItem[] = Object.keys(types).map((typeName) => ({
@@ -155,13 +173,18 @@ SlashMenu.displayName = "SlashMenu";
 // Extension
 // -----------------------------------------------
 
-type SlashCommandOptions = { types: BlockTypesMeta; sharedSections: SharedSectionOption[] };
+type SlashCommandOptions = {
+  types: BlockTypesMeta;
+  sharedSections: SharedSectionOption[];
+  /** Opens the host's asset browser; the "Image" item is listed only when provided. */
+  onInsertImage?: () => void;
+};
 
 export const SlashCommand = Extension.create<SlashCommandOptions>({
   name: "slashCommand",
 
   addOptions() {
-    return { types: {}, sharedSections: [] };
+    return { types: {}, sharedSections: [], onInsertImage: undefined };
   },
 
   addProseMirrorPlugins() {
@@ -170,7 +193,8 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
       startOfLine: false,
       allowSpaces: false,
       command: ({ editor, range, props }) => props.run(editor, range),
-      items: ({ query }) => buildItems(this.options.types, this.options.sharedSections, query),
+      items: ({ query }) =>
+        buildItems(this.options.types, this.options.sharedSections, this.options.onInsertImage, query),
       render: () => {
         let component: ReactRenderer<SlashMenuRef, SlashMenuProps> | null = null;
 

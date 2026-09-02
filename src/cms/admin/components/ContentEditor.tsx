@@ -2,7 +2,8 @@ import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer, type 
 import { BubbleMenu } from "@tiptap/react/menus";
 import { Node } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
-import Image from "@tiptap/extension-image";
+import { EditorImage } from "./EditorImage";
+import ImageBrowseDialog from "./ImageBrowseDialog";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -405,6 +406,7 @@ export default function ContentEditor({
   );
   const previewChannelRef = useRef<BroadcastChannel | null>(null);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [imageBrowseOpen, setImageBrowseOpen] = useState(false);
   const [linkType, setLinkType] = useState<"internal" | "external">("internal");
   const [linkUrl, setLinkUrl] = useState("");
   const [linkGroups, setLinkGroups] = useState<LinkGroup[]>([]);
@@ -455,7 +457,7 @@ export default function ContentEditor({
     extensions: [
       // StarterKit bundles its own Link; disabled so the configured one below is the only registration.
       StarterKit.configure({ link: false }),
-      Image,
+      EditorImage,
       Link.configure({
         openOnClick: false,
         autolink: false,
@@ -468,7 +470,7 @@ export default function ContentEditor({
         placeholder: ({ node }) => (node.type.name === "paragraph" ? "Type / for commands…" : ""),
       }),
       BlockNode.configure({ types, linkOptions, fieldName: name }),
-      SlashCommand.configure({ types, sharedSections }),
+      SlashCommand.configure({ types, sharedSections, onInsertImage: () => setImageBrowseOpen(true) }),
     ],
     content: contentToTiptap(parsedInitial),
     onUpdate: ({ editor }) => {
@@ -641,7 +643,9 @@ export default function ContentEditor({
             <BubbleMenu
               editor={editor}
               options={{ placement: "top" }}
-              shouldShow={({ editor: ed, from, to }) => from !== to && !ed.isActive(BLOCK_NODE_NAME)}
+              shouldShow={({ editor: ed, from, to }) =>
+                from !== to && !ed.isActive(BLOCK_NODE_NAME) && !ed.isActive("image")
+              }
               className="bg-popover flex items-center gap-0.5 rounded-md border p-1 shadow-md"
             >
               <ToolbarButton
@@ -685,6 +689,14 @@ export default function ContentEditor({
       ) : (
         <div className="prose prose-sm max-w-none" style={{ minHeight, padding: "0.625rem 0.75rem" }} />
       )}
+
+      <ImageBrowseDialog
+        open={imageBrowseOpen}
+        onOpenChange={setImageBrowseOpen}
+        onSelect={(asset) => {
+          editor?.chain().focus().setImage({ src: asset.url, alt: asset.filename }).run();
+        }}
+      />
 
       <LinkDialog
         open={linkDialogOpen}

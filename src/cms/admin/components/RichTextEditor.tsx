@@ -1,6 +1,6 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Image from "@tiptap/extension-image";
+import { EditorImage } from "./EditorImage";
 import Link from "@tiptap/extension-link";
 import { Markdown } from "@tiptap/markdown";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -447,7 +447,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
     extensions: [
       // StarterKit bundles its own Link; disabled so the configured one below is the only registration.
       StarterKit.configure({ link: false }),
-      Image,
+      EditorImage,
       Markdown,
       Link.configure({
         openOnClick: false,
