@@ -79,7 +79,7 @@ export default function DocumentCombobox({
       key={hit.docId}
       value={`${hit.collection}:${hit.docId}`}
       onSelect={() => pick(hit)}
-      className={cn(dimUnselected && !isSelected(hit) && "opacity-40")}
+      className={cn("px-1", dimUnselected && !isSelected(hit) && "opacity-40")}
     >
       <Check className={cn("size-4", isSelected(hit) ? "opacity-100" : "opacity-0")} />
       <span className="flex-1 truncate">{hit.title}</span>
