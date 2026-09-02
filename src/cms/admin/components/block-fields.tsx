@@ -194,7 +194,7 @@ function RelationControl({
 }) {
   const selected = parseSelected(meta, value);
   const collectionSlug = meta.collection ?? "";
-  const { getLabel, remember } = useRelationLabels(collectionSlug, selected);
+  const { getLabel, getPinned, remember } = useRelationLabels(collectionSlug, selected);
   const toggle = (id: string) => {
     if (meta.hasMany) {
       const next = selected.includes(id) ? selected.filter((v) => v !== id) : [...selected, id];
@@ -226,6 +226,7 @@ function RelationControl({
       )}
       <DocumentCombobox
         collections={[collectionSlug]}
+        pinned={getPinned(selected)}
         placeholder={`Search ${meta.label?.toLowerCase() ?? "documents"}...`}
         display={meta.hasMany ? "" : selected[0] ? (getLabel(selected[0]) ?? "…") : ""}
         isSelected={(hit) => selected.includes(hit.docId)}

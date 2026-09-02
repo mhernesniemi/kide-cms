@@ -109,7 +109,7 @@ export default function RelationField({
     }
     return initialValue ? [initialValue] : [];
   });
-  const { getLabel: findLabel, remember } = useRelationLabels(collectionSlug, selected, initialOptions);
+  const { getLabel: findLabel, getPinned, remember } = useRelationLabels(collectionSlug, selected, initialOptions);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const hiddenRef = useRef<HTMLInputElement>(null);
@@ -207,6 +207,7 @@ export default function RelationField({
 
       <DocumentCombobox
         collections={[collectionSlug]}
+        pinned={getPinned(selected)}
         placeholder={`Search ${collectionLabel.toLowerCase()}...`}
         display={displayLabel}
         isSelected={(hit) => selected.includes(hit.docId)}

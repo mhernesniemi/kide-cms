@@ -15,9 +15,13 @@ import { MIN_QUERY_LENGTH, fetchDocuments, useDocumentSearch, type DocumentHit }
  * blocks, internal-link pickers) renders this and differs only in how it
  * stores the pick.
  */
+/** A selected document known only by id + label (see `useRelationLabels`). */
+export type PinnedDoc = { docId: string; title: string; status?: string | null };
+
 export default function DocumentCombobox({
   collections,
   groups,
+  pinned = [],
   placeholder,
   display,
   isSelected,
@@ -33,6 +37,11 @@ export default function DocumentCombobox({
   collections: string[];
   /** When set, results render grouped by collection under these labels. */
   groups?: Array<{ collection: string; label: string }>;
+  /**
+   * Current selection, shown first while the query is empty so it is always
+   * visible (and deselectable) even when it falls outside the recent `limit`.
+   */
+  pinned?: PinnedDoc[];
   placeholder: string;
   /** Trigger text; empty renders the placeholder muted. */
   display: string;
@@ -64,6 +73,24 @@ export default function DocumentCombobox({
     onPick(hit);
     if (closeOnPick) handleOpenChange(false);
   };
+
+  // Empty query: selection first, then recent documents minus the selection.
+  const showPinned = !groups && query.trim().length === 0 && pinned.length > 0;
+  const pinnedHits: DocumentHit[] = showPinned
+    ? pinned.map((doc) => ({
+        collection: collections[0],
+        collectionLabel: "",
+        docId: doc.docId,
+        title: doc.title,
+        editUrl: "",
+        href: null,
+        status: doc.status ?? null,
+      }))
+    : [];
+  const rows = showPinned
+    ? [...pinnedHits, ...results.filter((hit) => !pinned.some((doc) => doc.docId === hit.docId))]
+    : results;
+  const recentCount = rows.length - pinnedHits.length;
 
   const grouped = React.useMemo(() => {
     if (!groups) return null;
@@ -115,22 +142,22 @@ export default function DocumentCombobox({
                 Type at least {MIN_QUERY_LENGTH} characters to search.
               </div>
             )}
-            {loading && results.length === 0 && (
+            {loading && rows.length === 0 && (
               <div className="text-muted-foreground py-6 text-center text-sm">Searching…</div>
             )}
-            {!loading && !tooShort && results.length === 0 && <CommandEmpty>No documents found.</CommandEmpty>}
+            {!loading && !tooShort && rows.length === 0 && <CommandEmpty>No documents found.</CommandEmpty>}
             {grouped
               ? grouped.map((group) => (
                   <CommandGroup key={group.collection} heading={group.label}>
                     {group.items.map(renderHit)}
                   </CommandGroup>
                 ))
-              : results.map(renderHit)}
-            {hasMore && results.length > 0 && (
+              : rows.map(renderHit)}
+            {hasMore && recentCount > 0 && (
               <div className="text-muted-foreground bg-popover sticky bottom-0 border-t px-3 py-1.5 text-xs">
                 {query.trim()
-                  ? `Showing the first ${results.length} matches. Refine your search to see others.`
-                  : `Showing the ${results.length} most recent. Type to search all.`}
+                  ? `Showing the first ${recentCount} matches. Refine your search to see others.`
+                  : `Showing the ${recentCount} most recent. Type to search all.`}
               </div>
             )}
           </CommandList>
@@ -151,13 +178,16 @@ export function useRelationLabels(
   initialSelected: string[],
   seed: Array<{ value: string; label: string }> = [],
 ) {
-  const [labels, setLabels] = React.useState<Record<string, string>>(() =>
-    Object.fromEntries(seed.map((option) => [option.value, option.label])),
+  const [labels, setLabels] = React.useState<Record<string, PinnedDoc>>(() =>
+    Object.fromEntries(seed.map((option) => [option.value, { docId: option.value, title: option.label }])),
   );
 
-  const remember = React.useCallback((hits: Array<{ docId: string; title: string }>) => {
+  const remember = React.useCallback((hits: PinnedDoc[]) => {
     if (hits.length === 0) return;
-    setLabels((prev) => ({ ...prev, ...Object.fromEntries(hits.map((hit) => [hit.docId, hit.title])) }));
+    setLabels((prev) => ({
+      ...prev,
+      ...Object.fromEntries(hits.map((hit) => [hit.docId, { docId: hit.docId, title: hit.title, status: hit.status }])),
+    }));
   }, []);
 
   // Only the initial selection needs resolving; later picks arrive with their label.
@@ -172,7 +202,12 @@ export function useRelationLabels(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const getLabel = React.useCallback((id: string): string | undefined => labels[id], [labels]);
+  const getLabel = React.useCallback((id: string): string | undefined => labels[id]?.title, [labels]);
+  /** Pinned-row shape for ids in the selection; unresolved ids render as "…" until the lookup lands. */
+  const getPinned = React.useCallback(
+    (ids: string[]): PinnedDoc[] => ids.map((id) => labels[id] ?? { docId: id, title: "…" }),
+    [labels],
+  );
 
-  return { getLabel, remember };
+  return { getLabel, getPinned, remember };
 }
