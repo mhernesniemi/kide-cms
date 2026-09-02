@@ -7,6 +7,42 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.26.0] - 2026-09-02
+
+### Added
+
+- **Per-document content language.** Collections with translatable fields get a `_sourceLocale`
+  column: the language the base row is written in (default `locales.default`). A document exists
+  in its source locale plus every locale it has a translation for, and `_availableLocales` now lists
+  exactly that (source first). Mixed-language sites can finally store Finnish-only content as
+  `_sourceLocale: "fi"` instead of Finnish text under the default locale. The admin edits the
+  document on its source-locale tab, offers the translation form on the others (dashed when no
+  translation exists yet), and has a "Content language" select in the sidebar. `upsertTranslation`
+  refuses the source locale; switching the content language to a locale that already has a
+  translation is refused. Migration dry runs validate `_sourceLocale` and reject an overlay for it.
+- `find`/`findOne`/`count` accept `availability: "exact"` with `locale` to return only documents
+  that exist in that locale (`"fallback"`, the default, keeps today's behaviour). Also exposed on
+  the MCP `kide_list_documents` / `kide_count_documents` tools.
+
+### Changed
+
+- **Schema change** — run `pnpm cms:generate && pnpm cms:push` after upgrading. The column is
+  additive with a default, so existing rows keep today's behaviour until a document sets it.
+- Image nodes in `content`/`richText` fields are editable: `/image` in the slash menu inserts from
+  the Media Library; selecting an image reveals alt text, Replace and Remove; dragging shows a
+  thumbnail ghost. Bold is disabled inside headings (and stripped when a paragraph becomes one);
+  `htmlToRichText` drops bold marks inside headings.
+- Relation pickers: selected documents are pinned to the top of the list, a footer says when the
+  list is cut at 20, and rows align with the taxonomy picker; a vertical divider separates the
+  locale switcher from the action buttons; editor toolbars show the active format more clearly in
+  the light theme; off-palette colours render as a "Custom" swatch.
+
+### Fixed
+
+- Clicking into a body field no longer marks the document as changed — the editor now compares
+  content semantically instead of by serialised string, so a no-op transaction doesn't trip the
+  unsaved-changes guard.
+
 ## [0.25.1] - 2026-09-02
 
 ### Fixed

@@ -62,13 +62,22 @@ const generateColumnDef = (fieldName: string, field: FieldConfig, options: { bar
   return `  ${fieldName}: ${col},`;
 };
 
-const generateMainTable = (collection: CollectionConfig): string => {
+const generateMainTable = (config: CMSConfig, collection: CollectionConfig): string => {
   const tableName = `cms_${snakeCase(collection.slug)}`;
   const varName = `cms${pascalCase(collection.slug)}`;
   const columns: string[] = [`  _id: text("_id").primaryKey(),`];
 
   for (const [fieldName, field] of Object.entries(collection.fields)) {
     columns.push(generateColumnDef(fieldName, field));
+  }
+
+  // The language the base row is written in. A document exists in this locale
+  // plus every locale it has a translation row for; the default keeps existing
+  // rows on today's "base row = default locale" behaviour.
+  if (config.locales && getTranslatableFieldNames(collection).length > 0) {
+    columns.push(
+      `  _sourceLocale: text("_source_locale").notNull().default(${JSON.stringify(config.locales.default)}),`,
+    );
   }
 
   if (collection.drafts) {
@@ -151,7 +160,7 @@ const generateSchemaFile = (config: CMSConfig): string => {
   ];
 
   for (const collection of config.collections) {
-    parts.push(generateMainTable(collection));
+    parts.push(generateMainTable(config, collection));
     const translationsTable = generateTranslationsTable(config, collection);
     if (translationsTable) parts.push("", translationsTable);
     const versionsTable = generateVersionsTable(collection);
@@ -456,6 +465,7 @@ const generateTypesFile = (config: CMSConfig, coreImportPath: string): string =>
   _createdAt: string;
   _updatedAt: string;
   _locale?: string | null;
+  _sourceLocale?: string;
   _availableLocales?: string[];
 };`);
     parts.push("");

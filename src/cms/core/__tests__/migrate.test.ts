@@ -127,6 +127,19 @@ describe("validateTranslations", () => {
     expect(r.errors.map((e) => e.field)).toEqual(["translations.en", "translations.sv"]);
   });
 
+  it("treats the item's _sourceLocale as the base and the default locale as a translation", () => {
+    const fiBase = validateTranslations(i18nConfig, offices, { en: { name: "Office" } }, "fi");
+    expect(fiBase.ok).toBe(true);
+    const dup = validateTranslations(i18nConfig, offices, { fi: { name: "Toimisto" } }, "fi");
+    expect(dup.errors[0].message).toContain("content language");
+  });
+
+  it("validates _sourceLocale against locales.supported", () => {
+    expect(validateDocument(offices, { name: "x", _sourceLocale: "fi" }, i18nConfig).ok).toBe(true);
+    expect(validateDocument(offices, { name: "x", _sourceLocale: "sv" }, i18nConfig).ok).toBe(false);
+    expect(validateDocument(offices, { name: "x", _sourceLocale: "fi" }, config).ok).toBe(false);
+  });
+
   it("warns about fields upsertTranslation would drop, errors when it would drop all of them", () => {
     const partial = validateTranslations(i18nConfig, offices, { fi: { name: "Hei", city: "Oulu" } });
     expect(partial.ok).toBe(true);

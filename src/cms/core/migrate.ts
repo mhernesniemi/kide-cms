@@ -187,11 +187,23 @@ const validateContent = (
 };
 
 /** Validate a document's fields against its collection schema. */
-export const validateDocument = (collection: CollectionConfig, data: Record<string, unknown>): ValidationResult => {
+export const validateDocument = (
+  collection: CollectionConfig,
+  data: Record<string, unknown>,
+  config?: CMSConfig,
+): ValidationResult => {
   const errors: ValidationIssue[] = [];
   const warnings: ValidationIssue[] = [];
   for (const [name, field] of Object.entries(collection.fields)) {
     validateField(name, field, data[name], errors, warnings);
+  }
+  if (data._sourceLocale !== undefined && data._sourceLocale !== null && data._sourceLocale !== "") {
+    const locale = String(data._sourceLocale);
+    if (!config?.locales) errors.push({ field: "_sourceLocale", message: "no locales configured" });
+    else if (!config.locales.supported.includes(locale))
+      errors.push({ field: "_sourceLocale", message: `'${locale}' is not in locales.supported` });
+    else if (getTranslatableFieldNames(collection).length === 0)
+      warnings.push({ field: "_sourceLocale", message: "collection has no translatable fields (ignored)" });
   }
   for (const key of Object.keys(data)) {
     if (key.startsWith("_")) continue;
@@ -209,6 +221,7 @@ export const validateTranslations = (
   config: CMSConfig,
   collection: CollectionConfig,
   translations: Record<string, Record<string, unknown>> | undefined,
+  sourceLocale?: unknown,
 ): ValidationResult => {
   const errors: ValidationIssue[] = [];
   const warnings: ValidationIssue[] = [];
@@ -226,10 +239,11 @@ export const validateTranslations = (
     return { ok: false, errors, warnings };
   }
 
+  const base = sourceLocale ? String(sourceLocale) : config.locales.default;
   for (const locale of locales) {
     const prefix = `translations.${locale}`;
-    if (locale === config.locales.default) {
-      errors.push({ field: prefix, message: `'${locale}' is the default locale — put it in \`data\`` });
+    if (locale === base) {
+      errors.push({ field: prefix, message: `'${locale}' is the document's content language — put it in \`data\`` });
       continue;
     }
     if (!config.locales.supported.includes(locale)) {
@@ -328,8 +342,8 @@ export const importDocuments = async (
       report.failed++;
       continue;
     }
-    const doc = validateDocument(collection, item.data);
-    const i18n = validateTranslations(config, collection, item.translations);
+    const doc = validateDocument(collection, item.data, config);
+    const i18n = validateTranslations(config, collection, item.translations, item.data._sourceLocale);
     const warnings = [...doc.warnings, ...i18n.warnings];
     const errors = [...doc.errors, ...i18n.errors];
     if (warnings.length) report.warnings.push({ collection: item.collection, id, warnings });
@@ -396,6 +410,11 @@ export const renderModelMarkdown = (config: CMSConfig): string => {
   out.push("> The **i18n** column is `yes` only for fields declared `translatable: true`. Only those");
   out.push("> fields accept per-locale values (`translations` in an import item, `upsertTranslation`);");
   out.push("> everything else is base-locale only. A collection with no `yes` has no translation table.");
+  out.push(`> Every document has \`_sourceLocale\` — the language its base row is written in (default`);
+  out.push(`> \`${model.locales.default}\`). A document exists in its source locale plus every locale it has a`);
+  out.push(
+    "> translation for; content that only exists in one language is a base doc in that language with no overlay.",
+  );
   out.push("");
 
   out.push("## Field types");

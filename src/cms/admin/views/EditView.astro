@@ -9,6 +9,7 @@ import DocumentLock from "../components/DocumentLock";
 import LiveHeading from "../components/LiveHeading";
 import UnsavedGuard from "../components/UnsavedGuard";
 import FieldControl from "../components/FieldControl.astro";
+import SelectField from "../components/SelectField";
 import { StatusBadge } from "../components/ui/badge";
 import { buttonVariants } from "../components/ui/button";
 import config from "virtual:kide/config";
@@ -72,7 +73,7 @@ const runtimeContext = user ? { user } : {};
 const cmsRuntime = cms as Record<string, any> & { meta: typeof cms.meta };
 const locales = config.locales?.supported ?? [];
 const defaultLocale = config.locales?.default ?? "en";
-const requestedLocale = Astro.url.searchParams.get("locale") ?? defaultLocale;
+const requestedLocale = Astro.url.searchParams.get("locale");
 const aiEnabled = isAiEnabled();
 const collectionApi = cmsRuntime[collection.slug];
 const isSingleton = collection.singleton === true;
@@ -84,12 +85,18 @@ const isFieldReadOnly = (fieldName: string) => isFieldReadOnlyFn(collection, use
 let doc: Record<string, unknown> | null = null;
 let baseDoc: Record<string, unknown> | null = null;
 let versions: Array<{ version: number; createdAt: string }> = [];
+// The locale the base row is written in (`_sourceLocale`); its tab edits the
+// document itself, every other tab edits a translation overlay.
+let baseLocale = defaultLocale;
+let selectedLocale = requestedLocale ?? defaultLocale;
 if (mode === "edit" && documentId) {
   try {
     const loaded = await loadDocument(collectionApi, documentId, requestedLocale, defaultLocale, runtimeContext);
     if (!loaded.doc) return Astro.redirect(`/admin/${collection.slug}`);
     doc = loaded.doc;
     baseDoc = loaded.baseDoc;
+    baseLocale = loaded.baseLocale;
+    selectedLocale = loaded.locale;
     versions = loaded.versions;
   } catch {
     return Astro.redirect(`/admin/${collection.slug}?_toast=error&_msg=Access+denied`);
@@ -145,11 +152,15 @@ const formatSubmissionValue = (value: unknown): string => {
 };
 
 // --- Layout / derived state ---
-const selectedLocale = mode === "new" ? defaultLocale : requestedLocale;
 const translatableFields = Object.entries(collection.fields)
   .filter(([, field]: [string, any]) => field.translatable)
   .map(([fieldName]) => fieldName);
-const translationMode = mode === "edit" && selectedLocale !== defaultLocale && translatableFields.length > 0;
+const hasLocales = locales.length > 1 && translatableFields.length > 0;
+const translationMode = mode === "edit" && hasLocales && selectedLocale !== baseLocale;
+// Locales the document exists in: its content language plus every saved translation.
+const availableLocales = new Set(
+  Array.isArray(baseDoc?._availableLocales) ? (baseDoc!._availableLocales as string[]) : [baseLocale],
+);
 const fieldSets = getFieldSets(collection);
 const primaryFieldSets = fieldSets.filter((set: { position?: string }) => set.position !== "sidebar");
 const sidebarFieldSets = fieldSets.filter((set: { position?: string }) => set.position === "sidebar");
@@ -163,9 +174,11 @@ const hasDocMeta = Boolean(mode === "edit" && doc && collection.drafts);
 
 // Editable fields that live in the sidebar (slug, category, etc.). The meta
 // group (Referenced by / Info) only draws a top divider when these exist above it.
-const hasSidebarFields = effectiveSidebarFieldSets.some((set) =>
-  set.fields.some((fieldName) => collection.fields[fieldName] && !isFieldHidden(fieldName)),
-);
+const hasSidebarFields =
+  effectiveSidebarFieldSets.some((set) =>
+    set.fields.some((fieldName) => collection.fields[fieldName] && !isFieldHidden(fieldName)),
+  ) ||
+  (hasLocales && !translationMode);
 const hasSidebarMeta = reverseRefs.length > 0 || hasDocMeta;
 
 // Whether to render the right-hand sidebar column at all (avoids a stray sticky
@@ -261,16 +274,25 @@ const publishBlocked =
                 <div class="bg-border mx-1 h-6 w-px" />
               </>
             )}
-            {locales.length > 1 && mode === "edit" && translatableFields.length > 0 && (
+            {hasLocales && mode === "edit" && (
               <>
                 {locales.map((locale) => (
                   <a
                     href={`/admin/${collection.slug}/${documentId}?locale=${locale}`}
+                    title={
+                      locale === baseLocale
+                        ? "Content language"
+                        : availableLocales.has(locale)
+                          ? undefined
+                          : "Not translated yet"
+                    }
                     class:list={[
                       buttonVariants({ variant: "outline", size: "sm" }),
                       selectedLocale === locale
                         ? "border-primary/50 bg-background ring-ring/30 font-medium ring-2"
-                        : "text-muted-foreground",
+                        : availableLocales.has(locale)
+                          ? "text-muted-foreground"
+                          : "text-muted-foreground/50 border-dashed",
                     ]}
                   >
                     {locale.toUpperCase()}
@@ -588,6 +610,21 @@ const publishBlocked =
                         );
                         return variant === "record" ? <AdminCard title="Settings">{fields}</AdminCard> : fields;
                       })}
+                      {hasLocales && !translationMode && !isSubmissionView && (
+                        <div class="grid gap-1.5">
+                          <label for="_sourceLocale" class="text-foreground/80 text-sm leading-none font-medium">
+                            Content language
+                          </label>
+                          <SelectField
+                            client:load
+                            name="_sourceLocale"
+                            value={baseLocale}
+                            placeholder="Select a language"
+                            items={locales.map((locale) => ({ value: locale, label: locale.toUpperCase() }))}
+                          />
+                          <p class="text-muted-foreground text-xs">The language this document is written in.</p>
+                        </div>
+                      )}
                       {hasSidebarMeta && (
                         <div
                           class:list={[
@@ -691,13 +728,13 @@ const publishBlocked =
                                     endpoint="/api/cms/ai/translate"
                                     payload={{
                                       text: sourceText,
-                                      sourceLocale: defaultLocale,
+                                      sourceLocale: baseLocale,
                                       targetLocale: selectedLocale,
                                       fieldName,
                                       fieldType,
                                     }}
                                     targetField={fieldName}
-                                    label={`Translate from ${defaultLocale.toUpperCase()}`}
+                                    label={`Translate from ${baseLocale.toUpperCase()}`}
                                   />
                                 </div>
                               )}

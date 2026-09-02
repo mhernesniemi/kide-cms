@@ -90,7 +90,7 @@ const extractDataFromForm = async (request: Request) => {
     data: Object.fromEntries(
       entries.filter(
         ([key]) =>
-          (!key.startsWith("_") || key === "_publishAt" || key === "_unpublishAt") &&
+          (!key.startsWith("_") || key === "_publishAt" || key === "_unpublishAt" || key === "_sourceLocale") &&
           key !== "redirectTo" &&
           key !== "locale" &&
           key !== "version",

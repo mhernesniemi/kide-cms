@@ -199,7 +199,7 @@ server.registerTool(
   {
     title: "List documents",
     description:
-      "List documents in a collection with optional filters, search, sort, locale, status, limit, and offset.",
+      "List documents in a collection with optional filters, search, sort, locale, status, limit, and offset. With locale, availability 'exact' lists only documents that exist in that locale (their _sourceLocale or a translation); the default 'fallback' lists every document.",
     inputSchema: {
       collection: z.string().min(1),
       where: jsonObjectSchema.optional(),
@@ -209,6 +209,7 @@ server.registerTool(
       offset: z.number().int().min(0).default(0),
       status: statusSchema.optional(),
       locale: z.string().min(1).optional(),
+      availability: z.enum(["fallback", "exact"]).optional(),
     },
   },
   async (args) => toResult(await workerCall("listDocuments", args)),
@@ -225,6 +226,7 @@ server.registerTool(
       search: z.string().optional(),
       status: statusSchema.optional(),
       locale: z.string().min(1).optional(),
+      availability: z.enum(["fallback", "exact"]).optional(),
     },
   },
   async (args) => toResult(await workerCall("countDocuments", args)),

@@ -103,6 +103,17 @@ describe("generate", () => {
       expect(writersTable.split("export")[0]).not.toContain("_created_at");
     });
 
+    it("adds _source_locale (defaulting to the default locale) only alongside a translations table", () => {
+      const tables = schema.split("export const ");
+      const withTranslations = tables.filter((t) => t.includes("_source_locale"));
+      expect(withTranslations.length).toBeGreaterThan(0);
+      for (const table of withTranslations) {
+        expect(table).toContain('text("_source_locale").notNull().default("en")');
+        const name = table.slice(0, table.indexOf(" "));
+        expect(schema).toContain(`${name}Translations`);
+      }
+    });
+
     it("creates a translations table only when translatable fields exist", () => {
       expect(schema).toContain("cms_articles_translations");
       expect(schema).not.toContain("cms_writers_translations");

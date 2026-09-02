@@ -76,6 +76,7 @@ export const cmsArticles = sqliteTable("cms_articles", {
   meta: text("meta"),
   article: text("article"),
   sections: text("sections"),
+  _sourceLocale: text("_source_locale").notNull().default("en"),
   _status: text("_status").notNull().default("draft"),
   _publishedAt: text("_published_at"),
   _publishAt: text("_publish_at"),
@@ -287,6 +288,7 @@ export type ArticlesDocument = ArticlesInput & {
   _createdAt: string;
   _updatedAt: string;
   _locale?: string | null;
+  _sourceLocale?: string;
   _availableLocales?: string[];
 };
 
@@ -308,6 +310,7 @@ export type WritersDocument = WritersInput & {
   _createdAt: string;
   _updatedAt: string;
   _locale?: string | null;
+  _sourceLocale?: string;
   _availableLocales?: string[];
 };
 

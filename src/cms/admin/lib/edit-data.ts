@@ -14,6 +14,10 @@ type CollectionLike = { slug: string; fields: Record<string, any> };
 type LoadedDocument = {
   doc: Record<string, unknown> | null;
   baseDoc: Record<string, unknown> | null;
+  /** Locale the base row is written in — the tab that edits the document itself. */
+  baseLocale: string;
+  /** The locale actually shown: the request's, else the base locale. */
+  locale: string;
   versions: Array<{ version: number; createdAt: string }>;
 };
 
@@ -21,18 +25,18 @@ type LoadedDocument = {
 export async function loadDocument(
   collectionApi: any,
   documentId: string,
-  requestedLocale: string,
+  requestedLocale: string | null,
   defaultLocale: string,
   runtimeContext: RuntimeContext,
 ): Promise<LoadedDocument> {
-  const doc = await collectionApi.findById(documentId, { status: "any", locale: requestedLocale }, runtimeContext);
-  if (!doc) return { doc: null, baseDoc: null, versions: [] };
-  const baseDoc =
-    requestedLocale === defaultLocale
-      ? doc
-      : await collectionApi.findById(documentId, { status: "any", locale: defaultLocale }, runtimeContext);
+  const base = await collectionApi.findById(documentId, { status: "any" }, runtimeContext);
+  if (!base) return { doc: null, baseDoc: null, baseLocale: defaultLocale, locale: defaultLocale, versions: [] };
+  const baseLocale = String(base._sourceLocale ?? defaultLocale);
+  const locale = requestedLocale ?? baseLocale;
+  const doc =
+    locale === baseLocale ? base : await collectionApi.findById(documentId, { status: "any", locale }, runtimeContext);
   const versions = await collectionApi.versions(documentId, runtimeContext);
-  return { doc, baseDoc, versions };
+  return { doc, baseDoc: base, baseLocale, locale, versions };
 }
 
 export type RelationMeta = {

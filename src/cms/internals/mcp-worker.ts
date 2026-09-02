@@ -77,19 +77,19 @@ const ops: Record<string, (args: OpArgs) => unknown> = {
 
   describeCollection: ({ collection }) => collectionModel(collection),
 
-  listDocuments: async ({ collection, where, search, sort, limit, offset, status, locale }) => {
+  listDocuments: async ({ collection, where, search, sort, limit, offset, status, locale, availability }) => {
     const collectionApi = getCollectionApi(collection);
-    const options = { where, search, sort, limit, offset, status, locale };
+    const options = { where, search, sort, limit, offset, status, locale, availability };
     const [docs, totalDocs] = await Promise.all([
       collectionApi.find(options, runtimeContext()),
-      collectionApi.count({ where, search, status, locale }, runtimeContext()),
+      collectionApi.count({ where, search, status, locale, availability }, runtimeContext()),
     ]);
     return { docs, totalDocs, limit, offset };
   },
 
-  countDocuments: async ({ collection, where, search, status, locale }) => {
+  countDocuments: async ({ collection, where, search, status, locale, availability }) => {
     const collectionApi = getCollectionApi(collection);
-    const totalDocs = await collectionApi.count({ where, search, status, locale }, runtimeContext());
+    const totalDocs = await collectionApi.count({ where, search, status, locale, availability }, runtimeContext());
     return { totalDocs };
   },
 

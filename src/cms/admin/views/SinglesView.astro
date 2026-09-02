@@ -36,12 +36,9 @@ const singletonsData = await Promise.all(
       label: sc.labels.singular,
       status: singleDoc && sc.drafts ? String(singleDoc._status ?? "draft") : "",
       locales: singleDoc
-        ? [
-            defaultLocale,
-            ...(Array.isArray(singleDoc._availableLocales)
-              ? singleDoc._availableLocales.filter((l: string) => l !== defaultLocale)
-              : []),
-          ]
+        ? Array.isArray(singleDoc._availableLocales)
+          ? singleDoc._availableLocales.map((l: string) => String(l))
+          : [defaultLocale]
         : [],
       updatedAt: singleDoc ? formatDate(singleDoc._updatedAt) : "—",
       editHref: `/admin/${sc.slug}`,

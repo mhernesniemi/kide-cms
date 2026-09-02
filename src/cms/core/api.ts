@@ -24,6 +24,13 @@ export type FindOptions = {
   offset?: number;
   status?: "draft" | "published" | "scheduled" | "any";
   locale?: string;
+  /**
+   * With `locale`: `"fallback"` (default) returns every document, overlaying the
+   * translation when one exists; `"exact"` returns only documents that exist in
+   * that locale — their source locale, or a translation row. Use `"exact"` for
+   * listings and `"fallback"` for single-document routes.
+   */
+  availability?: "fallback" | "exact";
   search?: string;
 };
 
@@ -454,6 +461,23 @@ export const createCms = (config: CMSConfig) => {
   const createCollectionApi = (slug: string) => {
     const collection = ensureCollection(config, slug);
 
+    const supportedLocales = config.locales?.supported ?? [];
+    /** Locale the base row is written in; undefined when the project has no locales. */
+    const sourceLocaleOf = (doc: Record<string, unknown>): string | undefined =>
+      config.locales ? String(doc._sourceLocale ?? config.locales.default) : undefined;
+    const resolveSourceLocale = (value: unknown): string => {
+      if (value === undefined || value === null || value === "") return config.locales!.default;
+      const locale = String(value);
+      if (!supportedLocales.includes(locale)) throw new Error(`Locale "${locale}" is not in locales.supported.`);
+      return locale;
+    };
+    /** `availability: "exact"` — the document must exist in the requested locale. */
+    const availabilityCondition = (tables: any, options: { locale?: string; availability?: string }) => {
+      if (!options.locale || options.availability !== "exact" || !tables.translations || !config.locales) return null;
+      const tr = tables.translations;
+      return sql`(${tables.main._sourceLocale} = ${options.locale} OR EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale}))`;
+    };
+
     const overlayLocale = (
       doc: Record<string, unknown>,
       translations: Array<Record<string, unknown>>,
@@ -461,7 +485,13 @@ export const createCms = (config: CMSConfig) => {
     ) => {
       const baseDoc = { ...doc };
       const translatableFields = getTranslatableFieldNames(collection);
-      const availableLocales = [...new Set(translations.map((translation) => String(translation._languageCode)))];
+      const sourceLocale = sourceLocaleOf(doc);
+      const availableLocales = [
+        ...new Set([
+          ...(sourceLocale ? [sourceLocale] : []),
+          ...translations.map((translation) => String(translation._languageCode)),
+        ]),
+      ];
 
       if (locale) {
         const translation = translations.find((entry) => entry._languageCode === locale);
@@ -563,6 +593,8 @@ export const createCms = (config: CMSConfig) => {
             }
           }
         }
+        const availability = availabilityCondition(tables, options);
+        if (availability) conditions.push(availability);
 
         if (options.search?.trim()) {
           const searchTerm = `%${options.search.trim().toLowerCase()}%`;
@@ -648,13 +680,18 @@ export const createCms = (config: CMSConfig) => {
       },
 
       async findOne(
-        filter: Record<string, unknown> & { locale?: string; status?: FindOptions["status"] },
+        filter: Record<string, unknown> & {
+          locale?: string;
+          availability?: FindOptions["availability"];
+          status?: FindOptions["status"];
+        },
         context: RuntimeContext = {},
       ) {
         const docs = await this.find(
           {
-            where: pick(filter, Object.keys(collection.fields).concat(["_id", "_status", "slug"])),
+            where: pick(filter, Object.keys(collection.fields).concat(["_id", "_status", "slug", "_sourceLocale"])),
             locale: filter.locale,
+            availability: filter.availability,
             status: filter.status,
             limit: 1,
           },
@@ -746,6 +783,7 @@ export const createCms = (config: CMSConfig) => {
           docValues._status = status;
           if (status === "published") docValues._publishedAt = createdAt;
         }
+        if (tables.translations) docValues._sourceLocale = resolveSourceLocale(data._sourceLocale);
         if (collection.timestamps !== false) {
           docValues._createdAt = createdAt;
           docValues._updatedAt = createdAt;
@@ -758,7 +796,11 @@ export const createCms = (config: CMSConfig) => {
             _id: nanoid(),
             _docId: docId,
             _version: 1,
-            _snapshot: JSON.stringify({ ...transformedInput, _status: docValues._status }),
+            _snapshot: JSON.stringify({
+              ...transformedInput,
+              _status: docValues._status,
+              ...(tables.translations ? { _sourceLocale: docValues._sourceLocale } : {}),
+            }),
             _createdAt: createdAt,
           });
         }
@@ -843,6 +885,22 @@ export const createCms = (config: CMSConfig) => {
         };
         if (collection.timestamps !== false) {
           updateValues._updatedAt = now();
+        }
+        if (tables.translations && data._sourceLocale !== undefined) {
+          const nextSource = resolveSourceLocale(data._sourceLocale);
+          if (nextSource !== sourceLocaleOf(existing)) {
+            // The base row would then claim a language that a translation row
+            // already holds — two texts for one locale. Make the editor pick.
+            const clash = await db
+              .select({ _id: tables.translations._id })
+              .from(tables.translations)
+              .where(and(eq(tables.translations._entityId, id), eq(tables.translations._languageCode, nextSource)))
+              .limit(1);
+            if (clash.length > 0) {
+              throw new Error(`Delete the "${nextSource}" translation before making it the content language.`);
+            }
+            updateValues._sourceLocale = nextSource;
+          }
         }
 
         // Guarded live via WHERE, not the stale `existing.role` — a role promoted after this
@@ -1183,6 +1241,8 @@ export const createCms = (config: CMSConfig) => {
             }
           }
         }
+        const availability = availabilityCondition(tables, filter);
+        if (availability) conditions.push(availability);
         if (filter.search?.trim()) {
           const searchTerm = `%${filter.search.trim().toLowerCase()}%`;
           const searchableTypes = new Set(["text", "slug", "email", "select"]);
@@ -1286,6 +1346,9 @@ export const createCms = (config: CMSConfig) => {
         const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
         const allowed = await canAccess(collection, "update", context, existing);
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
+        if (locale === sourceLocaleOf(existing)) {
+          throw new Error(`"${locale}" is this document's content language — edit the document itself.`);
+        }
 
         const translatableFields = getTranslatableFieldNames(collection);
         const translatedValues = prepareIncomingData(collection, data, locale, existing);

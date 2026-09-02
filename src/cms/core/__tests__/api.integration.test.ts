@@ -210,6 +210,57 @@ describe("translations", () => {
     expect(crossLocale).toBeNull();
   });
 
+  it("defaults _sourceLocale to the default locale and lists it first in _availableLocales", async () => {
+    const author = await (cms as any).authors.create({ name: "Default source" });
+    expect(author._sourceLocale).toBe("en");
+    expect(author._availableLocales).toEqual(["en"]);
+    await (cms as any).authors.upsertTranslation(author._id, "fi", { description: "Suomeksi" });
+    const reread = await (cms as any).authors.findById(author._id);
+    expect(reread._availableLocales).toEqual(["en", "fi"]);
+  });
+
+  it("stores single-language content in its own locale and filters by availability", async () => {
+    const fiOnly = await (cms as any).authors.create({ name: "Vain suomeksi", _sourceLocale: "fi" });
+    expect(fiOnly._sourceLocale).toBe("fi");
+    expect(fiOnly._availableLocales).toEqual(["fi"]);
+
+    const inEnFallback = await (cms as any).authors.find({ locale: "en" });
+    expect(inEnFallback.some((d: any) => d._id === fiOnly._id)).toBe(true);
+    const inEnExact = await (cms as any).authors.find({ locale: "en", availability: "exact" });
+    expect(inEnExact.some((d: any) => d._id === fiOnly._id)).toBe(false);
+    const inFiExact = await (cms as any).authors.find({ locale: "fi", availability: "exact" });
+    expect(inFiExact.some((d: any) => d._id === fiOnly._id)).toBe(true);
+    expect(await (cms as any).authors.count({ locale: "en", availability: "exact", where: { _id: fiOnly._id } })).toBe(
+      0,
+    );
+
+    // A translation makes it exist in that locale too.
+    await (cms as any).authors.upsertTranslation(fiOnly._id, "en", { description: "In English" });
+    const afterOverlay = await (cms as any).authors.find({ locale: "en", availability: "exact" });
+    expect(afterOverlay.some((d: any) => d._id === fiOnly._id)).toBe(true);
+    expect((await (cms as any).authors.findById(fiOnly._id))._availableLocales).toEqual(["fi", "en"]);
+  });
+
+  it("refuses a translation in the content language and an unsupported source locale", async () => {
+    const author = await (cms as any).authors.create({ name: "Guarded", _sourceLocale: "fi" });
+    await expect((cms as any).authors.upsertTranslation(author._id, "fi", { description: "x" })).rejects.toThrow(
+      /content language/,
+    );
+    await expect((cms as any).authors.create({ name: "Nope", _sourceLocale: "sv" })).rejects.toThrow(
+      /locales.supported/,
+    );
+  });
+
+  it("changes the content language only when no translation holds that locale", async () => {
+    const author = await (cms as any).authors.create({ name: "Switch", _sourceLocale: "en" });
+    await (cms as any).authors.upsertTranslation(author._id, "fi", { description: "Suomeksi" });
+    await expect((cms as any).authors.update(author._id, { _sourceLocale: "fi" })).rejects.toThrow(
+      /Delete the "fi" translation/,
+    );
+    const moved = await (cms as any).authors.update(author._id, { _sourceLocale: "en" });
+    expect(moved._sourceLocale).toBe("en");
+  });
+
   it("filters on a translatable boolean field under a locale", async () => {
     const post = await (cms as any).posts.create({ title: "Boolean filter", slug: "boolean-filter", listed: true });
 

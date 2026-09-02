@@ -244,12 +244,11 @@ export default function DocumentsDataTable({
             id: String(entry._id),
             editHref: `/admin/${collectionSlug}/${entry._id}`,
             status: getVisualStatus(entry),
-            locales: [
-              ...(defaultLocale ? [defaultLocale] : []),
-              ...(Array.isArray(entry._availableLocales)
-                ? (entry._availableLocales as string[]).filter((l) => l !== defaultLocale)
-                : []),
-            ],
+            locales: Array.isArray(entry._availableLocales)
+              ? (entry._availableLocales as string[])
+              : defaultLocale
+                ? [defaultLocale]
+                : [],
             searchText: String(entry[labelField] ?? entry.slug ?? entry._id ?? ""),
             pageHref: entry._pageHref as string | undefined,
             values: Object.fromEntries(columns.map((column) => [column.key, formatRowValue(column.key, entry)])),

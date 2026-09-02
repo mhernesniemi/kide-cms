@@ -133,7 +133,7 @@ const pages = defineCollection({
 export default defineConfig({
   locales: {
     default: "en",
-    supported: ["en"],
+    supported: ["en", "fi"],
   },
   collections: [users, authors, posts, pages],
 });

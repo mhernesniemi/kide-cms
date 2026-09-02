@@ -171,12 +171,7 @@ const tableRows = docs.map((entry: Record<string, unknown>) => {
     id: String(entry._id),
     editHref: `/admin/${collection.slug}/${entry._id}`,
     status: getVisualStatus(entry),
-    locales: [
-      defaultLocale,
-      ...(Array.isArray(entry._availableLocales)
-        ? entry._availableLocales.map((l) => String(l)).filter((l) => l !== defaultLocale)
-        : []),
-    ],
+    locales: Array.isArray(entry._availableLocales) ? entry._availableLocales.map((l) => String(l)) : [defaultLocale],
     searchText: String(entry[getLabelField(collection)] ?? entry.slug ?? entry._id ?? ""),
     pageHref: pagePath ? getPageHref(pagePath, !collection.drafts || entry._status === "published") : undefined,
     values: Object.fromEntries(displayColumns.map((column) => [column, formatColumnValue(column, entry, pagePath)])),

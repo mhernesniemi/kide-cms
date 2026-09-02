@@ -66,12 +66,7 @@ const recentRows = allEntries.map(({ doc, collection: cc }) => {
     editHref: `/admin/${cc.slug}/${doc._id}`,
     status,
     singleton: cc.singleton,
-    locales: [
-      defaultLocale,
-      ...(Array.isArray(doc._availableLocales)
-        ? doc._availableLocales.map((l) => String(l)).filter((l) => l !== defaultLocale)
-        : []),
-    ],
+    locales: Array.isArray(doc._availableLocales) ? doc._availableLocales.map((l) => String(l)) : [defaultLocale],
     searchText: displayTitle,
     values: {
       title: displayTitle,
