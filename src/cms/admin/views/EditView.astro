@@ -261,22 +261,24 @@ const publishBlocked =
                 <div class="bg-border mx-1 h-6 w-px" />
               </>
             )}
-            {locales.length > 1 &&
-              mode === "edit" &&
-              translatableFields.length > 0 &&
-              locales.map((locale) => (
-                <a
-                  href={`/admin/${collection.slug}/${documentId}?locale=${locale}`}
-                  class:list={[
-                    buttonVariants({ variant: "outline", size: "sm" }),
-                    selectedLocale === locale
-                      ? "border-primary/50 bg-background ring-ring/30 font-medium ring-2"
-                      : "text-muted-foreground",
-                  ]}
-                >
-                  {locale.toUpperCase()}
-                </a>
-              ))}
+            {locales.length > 1 && mode === "edit" && translatableFields.length > 0 && (
+              <>
+                {locales.map((locale) => (
+                  <a
+                    href={`/admin/${collection.slug}/${documentId}?locale=${locale}`}
+                    class:list={[
+                      buttonVariants({ variant: "outline", size: "sm" }),
+                      selectedLocale === locale
+                        ? "border-primary/50 bg-background ring-ring/30 font-medium ring-2"
+                        : "text-muted-foreground",
+                    ]}
+                  >
+                    {locale.toUpperCase()}
+                  </a>
+                ))}
+                <div class="bg-border mx-1 h-6 w-px" />
+              </>
+            )}
             {translationMode ? (
               <button
                 class={buttonVariants({ variant: "outline" })}

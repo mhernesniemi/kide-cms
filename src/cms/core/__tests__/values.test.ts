@@ -5,6 +5,7 @@ import {
   cloneValue,
   createRichTextFromPlainText,
   escapeHtml,
+  htmlToRichText,
   renderRichText,
   richTextToPlainText,
   serializeFieldValue,
@@ -219,5 +220,25 @@ describe("serializeFieldValue", () => {
   it("returns empty string for null/undefined", () => {
     expect(serializeFieldValue(fields.text(), null)).toBe("");
     expect(serializeFieldValue(fields.text(), undefined)).toBe("");
+  });
+});
+
+describe("htmlToRichText", () => {
+  it("drops bold marks inside headings but keeps italic and links", () => {
+    const doc = htmlToRichText(
+      "<h2><strong>Title</strong> <em>note</em> <a href='/x'><b>link</b></a></h2><p><b>bold</b></p>",
+    );
+    expect(doc.children[0]).toEqual({
+      type: "heading",
+      level: 2,
+      children: [
+        { type: "text", value: "Title" },
+        { type: "text", value: " " },
+        { type: "text", value: "note", italic: true },
+        { type: "text", value: " " },
+        { type: "text", value: "link", href: "/x" },
+      ],
+    });
+    expect(doc.children[1].children?.[0]).toMatchObject({ value: "bold", bold: true });
   });
 });

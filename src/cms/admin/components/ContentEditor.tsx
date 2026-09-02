@@ -646,6 +646,7 @@ export default function ContentEditor({
               <ToolbarButton
                 onClick={() => editor.chain().focus().toggleBold().run()}
                 active={editor.isActive("bold")}
+                disabled={editor.isActive("heading")}
                 title="Bold"
               >
                 <Bold className="size-4" />

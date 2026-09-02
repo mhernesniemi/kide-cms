@@ -211,7 +211,9 @@ const walkBlocks = (el: HtmlEl, out: RichTextNode[]): void => {
       const leaves = inlineChildren(child.children);
       if (meaningful(leaves)) out.push({ type: "paragraph", children: leaves });
     } else if (/^h[1-6]$/.test(tag)) {
-      const leaves = inlineChildren(child.children);
+      // Headings render bold already; a <strong> inside one (WordPress does this)
+      // would only leave the editor's Bold toggle lit for no visible reason.
+      const leaves = inlineChildren(child.children).map(({ bold: _bold, ...leaf }) => leaf);
       if (meaningful(leaves)) out.push({ type: "heading", level: Number(tag[1]), children: leaves });
     } else if (tag === "ul" || tag === "ol") {
       const items = child.children
