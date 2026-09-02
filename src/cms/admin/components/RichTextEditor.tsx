@@ -422,14 +422,22 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
     }
   })();
 
+  // The form value only moves when the content really differs from the editor's
+  // own serialisation of the initial document. A no-op transaction (a click,
+  // TrailingNode appending its paragraph) re-serialises with normalised keys,
+  // which would otherwise read as an unsaved change.
+  const [initialJson] = useState(cmsJson);
+  const [baseline, setBaseline] = useState<string | null>(null);
+  const formValue = cmsJson === baseline ? initialJson : cmsJson;
+
   // Notify the form of value changes so UnsavedGuard detects them
-  const prevCmsJsonRef = useRef(cmsJson);
+  const prevFormValueRef = useRef(formValue);
   useEffect(() => {
-    if (prevCmsJsonRef.current !== cmsJson) {
-      prevCmsJsonRef.current = cmsJson;
+    if (prevFormValueRef.current !== formValue) {
+      prevFormValueRef.current = formValue;
       hiddenRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
     }
-  }, [cmsJson]);
+  }, [formValue]);
 
   // Replay the current value when a preview tab opened after edits announces itself
   useEffect(() => {
@@ -444,6 +452,9 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
 
   const editor = useEditor({
     immediatelyRender: false,
+    onCreate: ({ editor }) => {
+      setBaseline(JSON.stringify(tiptapToCms(editor.getJSON())));
+    },
     extensions: [
       // StarterKit bundles its own Link; disabled so the configured one below is the only registration.
       StarterKit.configure({ link: false }),
@@ -521,7 +532,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
       data-slot="editor"
       className="border-input hover:border-foreground/20 overflow-hidden rounded-lg border transition-colors"
     >
-      <input ref={hiddenRef} type="hidden" name={name} value={cmsJson} />
+      <input ref={hiddenRef} type="hidden" name={name} value={formValue} />
 
       {/* Toolbar */}
       <div className="bg-field flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5">

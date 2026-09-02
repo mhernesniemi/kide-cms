@@ -432,14 +432,22 @@ export default function ContentEditor({
     }
   })();
 
+  // The form value only moves when the content really differs from the editor's
+  // own serialisation of the initial document. A no-op transaction (a click,
+  // TrailingNode appending its paragraph) re-serialises with normalised keys,
+  // which would otherwise read as an unsaved change.
+  const [initialJson] = useState(cmsJson);
+  const [baseline, setBaseline] = useState<string | null>(null);
+  const formValue = cmsJson === baseline ? initialJson : cmsJson;
+
   // Notify the form of value changes so UnsavedGuard detects them
-  const prevCmsJsonRef = useRef(cmsJson);
+  const prevFormValueRef = useRef(formValue);
   useEffect(() => {
-    if (prevCmsJsonRef.current !== cmsJson) {
-      prevCmsJsonRef.current = cmsJson;
+    if (prevFormValueRef.current !== formValue) {
+      prevFormValueRef.current = formValue;
       hiddenRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
     }
-  }, [cmsJson]);
+  }, [formValue]);
 
   // Replay the current value when a preview tab opened after edits announces itself
   useEffect(() => {
@@ -454,6 +462,9 @@ export default function ContentEditor({
 
   const editor = useEditor({
     immediatelyRender: false,
+    onCreate: ({ editor }) => {
+      setBaseline(JSON.stringify(tiptapToContent(editor.getJSON())));
+    },
     extensions: [
       // StarterKit bundles its own Link; disabled so the configured one below is the only registration.
       StarterKit.configure({ link: false }),
@@ -598,7 +609,7 @@ export default function ContentEditor({
           : "border-input hover:border-foreground/20 bg-field relative overflow-hidden rounded-lg border transition-colors",
       )}
     >
-      <input ref={hiddenRef} type="hidden" name={name} value={cmsJson} />
+      <input ref={hiddenRef} type="hidden" name={name} value={formValue} />
 
       {/* Fullscreen header — keeps the field title and an exit affordance in view */}
       {isFullscreen && (
