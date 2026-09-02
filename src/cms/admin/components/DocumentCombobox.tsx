@@ -48,7 +48,7 @@ export default function DocumentCombobox({
   triggerClassName?: string;
 }) {
   const [open, setOpen] = React.useState(false);
-  const { query, setQuery, results, loading, tooShort, reset } = useDocumentSearch({
+  const { query, setQuery, results, hasMore, loading, tooShort, reset } = useDocumentSearch({
     collections,
     limit,
     recentWhenEmpty: true,
@@ -126,6 +126,13 @@ export default function DocumentCombobox({
                   </CommandGroup>
                 ))
               : results.map(renderHit)}
+            {hasMore && results.length > 0 && (
+              <div className="text-muted-foreground bg-popover sticky bottom-0 border-t px-3 py-1.5 text-xs">
+                {query.trim()
+                  ? `Showing the first ${results.length} matches. Refine your search to see others.`
+                  : `Showing the ${results.length} most recent. Type to search all.`}
+              </div>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>

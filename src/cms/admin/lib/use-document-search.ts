@@ -30,11 +30,17 @@ const searchUrl = ({ q, collections, ids, limit }: Params) => {
   return `/api/cms/admin/search?${params.toString()}`;
 };
 
-export async function fetchDocuments(params: Params, signal?: AbortSignal): Promise<DocumentHit[]> {
+export type DocumentPage = { hits: DocumentHit[]; hasMore: boolean };
+
+export async function fetchDocumentPage(params: Params, signal?: AbortSignal): Promise<DocumentPage> {
   const res = await fetch(searchUrl(params), { signal, credentials: "same-origin" });
-  if (!res.ok) return [];
-  const data = (await res.json()) as { results?: DocumentHit[] };
-  return Array.isArray(data.results) ? data.results : [];
+  if (!res.ok) return { hits: [], hasMore: false };
+  const data = (await res.json()) as { results?: DocumentHit[]; hasMore?: boolean };
+  return { hits: Array.isArray(data.results) ? data.results : [], hasMore: data.hasMore === true };
+}
+
+export async function fetchDocuments(params: Params, signal?: AbortSignal): Promise<DocumentHit[]> {
+  return (await fetchDocumentPage(params, signal)).hits;
 }
 
 type Options = {
@@ -51,7 +57,7 @@ export function useDocumentSearch({ collections, limit, recentWhenEmpty = false,
   const [query, setQueryState] = React.useState("");
   // Last completed fetch, tagged with the request it answers — `loading` is
   // derived from the tag mismatch so it's true from the first keystroke.
-  const [fetched, setFetched] = React.useState<{ key: string; hits: DocumentHit[] } | null>(null);
+  const [fetched, setFetched] = React.useState<({ key: string } & DocumentPage) | null>(null);
 
   const trimmed = query.trim();
   const tooShort = trimmed.length > 0 && trimmed.length < MIN_QUERY_LENGTH;
@@ -75,10 +81,11 @@ export function useDocumentSearch({ collections, limit, recentWhenEmpty = false,
     const timer = setTimeout(
       async () => {
         try {
-          const hits = await fetchDocuments({ q: trimmed, collections, limit }, controller.signal);
-          setFetched({ key: fetchKey, hits });
+          const page = await fetchDocumentPage({ q: trimmed, collections, limit }, controller.signal);
+          setFetched({ key: fetchKey, ...page });
         } catch (err) {
-          if ((err as { name?: string })?.name !== "AbortError") setFetched({ key: fetchKey, hits: [] });
+          if ((err as { name?: string })?.name !== "AbortError")
+            setFetched({ key: fetchKey, hits: [], hasMore: false });
         }
       },
       trimmed ? DEBOUNCE_MS : 0,
@@ -100,6 +107,8 @@ export function useDocumentSearch({ collections, limit, recentWhenEmpty = false,
     query,
     setQuery,
     results: fetched?.hits ?? [],
+    /** The server cut the list at `limit` — more documents match than are shown. */
+    hasMore: fetched?.hasMore ?? false,
     loading: shouldFetch && fetched?.key !== fetchKey,
     tooShort,
     reset,

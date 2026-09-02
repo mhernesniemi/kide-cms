@@ -74,6 +74,9 @@ export const GET: APIRoute = async ({ url, locals }) => {
       (c) => requested.includes(c.slug) && !HIDDEN_FROM_SEARCH.has(c.slug),
     );
     const results: SearchResult[] = [];
+    // Pickers say so when the list is cut off, so 20 rows don't read as "all
+    // there is" — one extra row tells us without a count query.
+    let hasMore = false;
 
     for (const collection of collections) {
       const api = cmsAny[collection.slug];
@@ -92,15 +95,20 @@ export const GET: APIRoute = async ({ url, locals }) => {
         // Recently-updated first in both modes — without a sort, LIMIT keeps an
         // arbitrary subset of the matches.
         const sort = { field: "_updatedAt", direction: "desc" } as const;
-        if (q.length >= MIN_QUERY_LENGTH) return api.find({ search: q, status: "any", sort, limit }, context);
-        return api.find({ status: "any", sort, limit }, context);
+        const probe = limit + 1;
+        const found =
+          q.length >= MIN_QUERY_LENGTH
+            ? await api.find({ search: q, status: "any", sort, limit: probe }, context)
+            : await api.find({ status: "any", sort, limit: probe }, context);
+        if (found.length > limit) hasMore = true;
+        return found.slice(0, limit);
       })().catch(() => null);
 
       if (!docs) continue;
       for (const doc of docs) results.push(toResult(collection, doc));
     }
 
-    return Response.json({ results });
+    return Response.json({ results, hasMore });
   }
 
   // Palette mode: everything, a few hits per collection.
