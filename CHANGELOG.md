@@ -7,10 +7,15 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
-## [Unreleased]
+## [0.26.1] - 2026-09-13
 
 ### Fixed
 
+- **Content editor no longer spins the CPU on a new page.** The selection toolbar's `BubbleMenu`
+  received fresh `options`/`shouldShow` props on every render, and Tiptap 3.22 dispatches an
+  editor transaction whenever those change. That transaction re-rendered the editor, which produced
+  new props, which dispatched again — "Maximum update depth exceeded" in the console and a pegged
+  core. Both props are now stable references.
 - **Live preview of rich text and blocks in production.** `/api/cms/preview/render` was only
   registered in dev because it rendered through Astro's Container API, which doesn't bundle for
   production (Cloudflare Workers in particular). Deployed sites therefore updated plain text fields
