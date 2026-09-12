@@ -7,6 +7,16 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+### Fixed
+
+- **Admin thumbnails on Cloudflare are real thumbnails.** `/api/cms/img` couldn't resize on
+  Workers (no sharp, no filesystem) and streamed the full-size original, so the Media Library
+  and every image picker loaded multi-hundred-KB files per tile. The route now resizes through
+  the Cloudflare Images binding (`env.IMAGES`, which `@astrojs/cloudflare` declares on every
+  build) and only falls back to the original when the binding is unavailable.
+
 ## [0.26.1] - 2026-09-13
 
 ### Fixed

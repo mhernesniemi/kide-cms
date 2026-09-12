@@ -22,21 +22,34 @@ export const GET: APIRoute = async ({ params, url }) => {
   const src = `/${params.path}`;
   const num = (key: string) => (url.searchParams.get(key) ? Number(url.searchParams.get(key)) : undefined);
 
-  // On-the-fly resizing needs sharp + a real filesystem (public/). On the
-  // Cloudflare target sharp is removed and the dev runtime is workerd (no fs),
-  // and uploads live in object storage rather than public/ — so transformImage
-  // can't run. Attempt it, but fall back to streaming the untransformed original
-  // from storage so images still load. (In production on Cloudflare this route
-  // is bypassed entirely: cmsImageUrl() emits /cdn-cgi/image URLs there.)
+  const options = {
+    width: num("w"),
+    height: num("h"),
+    format: url.searchParams.get("f") || "webp",
+    quality: num("q"),
+    focalX: num("fx") ?? null,
+    focalY: num("fy") ?? null,
+  };
+
+  // On Workers there's no sharp and no filesystem, so resize with the Cloudflare
+  // Images binding instead (public pages use /cdn-cgi/image URLs and never get
+  // here; admin thumbnails do). Any failure — binding absent, local dev without
+  // Images support — falls through to the original below.
+  if (typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers") {
+    try {
+      const { resizeWithImagesBinding } = await import("../../../platform/cloudflare/images");
+      const response = await resizeWithImagesBinding(src, options);
+      if (response) return response;
+    } catch {
+      // fall through
+    }
+  }
+
+  // Node: on-the-fly resizing with sharp against the public/ filesystem. If that
+  // can't run (sharp missing), fall back to streaming the untransformed original
+  // from storage so images still load.
   try {
-    const result = await transformImage(src, {
-      width: num("w"),
-      height: num("h"),
-      format: url.searchParams.get("f") || "webp",
-      quality: num("q"),
-      focalX: num("fx") ?? null,
-      focalY: num("fy") ?? null,
-    });
+    const result = await transformImage(src, options);
     if (result) {
       return new Response(new Uint8Array(result.buffer), {
         headers: {
@@ -46,7 +59,7 @@ export const GET: APIRoute = async ({ params, url }) => {
       });
     }
   } catch {
-    // sharp unavailable / no filesystem in this runtime — serve the original.
+    // sharp unavailable — serve the original.
   }
 
   const data = await getStorage().getFile(src);

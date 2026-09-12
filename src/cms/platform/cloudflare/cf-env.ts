@@ -15,7 +15,12 @@
 
 // The bindings Kide's own Cloudflare profile reads — kept in sync with wrangler.toml's
 // [[d1_databases]] and [[r2_buckets]]. Catches a binding-name typo at typecheck time.
-export type CfEnv = { CMS_DB?: D1Database; CMS_ASSETS?: R2Bucket } & Record<string, unknown>;
+// IMAGES isn't in wrangler.toml: @astrojs/cloudflare adds it to every build (its
+// `imagesBindingName` option), so it's optional here and images.ts copes without it.
+export type CfEnv = { CMS_DB?: D1Database; CMS_ASSETS?: R2Bucket; IMAGES?: ImagesBinding } & Record<
+  string,
+  unknown
+>;
 
 type CfProxy = { env: CfEnv; dispose: () => Promise<void> };
 
