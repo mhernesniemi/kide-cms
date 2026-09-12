@@ -383,6 +383,12 @@ type Props = {
   fullscreen?: boolean;
 };
 
+// Stable identities: BubbleMenu dispatches an "updateOptions" transaction whenever
+// these props change, and that transaction would trigger forceTick and a new render.
+const BUBBLE_MENU_OPTIONS = { placement: "top" as const };
+const shouldShowBubbleMenu: React.ComponentProps<typeof BubbleMenu>["shouldShow"] = ({ editor, from, to }) =>
+  from !== to && !editor.isActive(BLOCK_NODE_NAME) && !editor.isActive("image");
+
 export default function ContentEditor({
   name,
   label,
@@ -653,10 +659,8 @@ export default function ContentEditor({
             {/* Selection toolbar — appears when text is highlighted */}
             <BubbleMenu
               editor={editor}
-              options={{ placement: "top" }}
-              shouldShow={({ editor: ed, from, to }) =>
-                from !== to && !ed.isActive(BLOCK_NODE_NAME) && !ed.isActive("image")
-              }
+              options={BUBBLE_MENU_OPTIONS}
+              shouldShow={shouldShowBubbleMenu}
               className="bg-popover flex items-center gap-0.5 rounded-md border p-1 shadow-md"
             >
               <ToolbarButton
