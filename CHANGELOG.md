@@ -7,6 +7,16 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+### Fixed
+
+- **Live preview of rich text and blocks in production.** `/api/cms/preview/render` was only
+  registered in dev because it rendered through Astro's Container API, which doesn't bundle for
+  production (Cloudflare Workers in particular). Deployed sites therefore updated plain text fields
+  live but left rich text, content and block fields at their last saved state. The endpoint is now
+  an Astro page partial — an ordinary on-demand route — so it ships with every build and adapter.
+
 ## [0.26.0] - 2026-09-02
 
 ### Added

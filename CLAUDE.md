@@ -252,4 +252,4 @@ BroadcastChannel `"cms-preview"` connects admin form → preview tab. The client
 | `BlockEditor`                  | `{ field, value, render: "blocks" }`   | POSTs to `/api/cms/preview/render`, sets `innerHTML`  |
 | `[...path].astro` (after save) | `{ type: "reload" }`                   | `location.reload()`                                   |
 
-Public pages opt into preview by adding `data-cms="{fieldName}"` attributes to elements. The render endpoint is dev-only (uses Astro Container API).
+Public pages opt into preview by adding `data-cms="{fieldName}"` attributes to elements. The render endpoint (`routes/api/preview/render.astro`) is an Astro page partial, not a Container-API endpoint, so it works in production builds on every adapter — including Cloudflare Workers.

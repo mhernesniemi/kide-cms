@@ -1,0 +1,51 @@
+---
+// Live-preview render endpoint: the preview tab POSTs unsaved rich text /
+// blocks / content JSON and swaps the returned HTML into `[data-cms]` slots.
+//
+// A page partial rather than an API route on purpose: rendering Astro
+// components from an endpoint needs the Container API, which leans on Vite
+// internals and doesn't bundle for production (Cloudflare Workers in
+// particular). A partial is an ordinary on-demand page — no doctype, no
+// layout, just the component's HTML — so it works identically in dev and in
+// every adapter's production build.
+import BlockRenderer from "virtual:kide/block-renderer";
+import ContentRenderer from "virtual:kide/content-renderer";
+import { parseBlocks, renderRichText } from "../../../core";
+
+export const prerender = false;
+export const partial = true;
+
+if (Astro.request.method !== "POST") {
+  return new Response(null, { status: 405, headers: { Allow: "POST" } });
+}
+
+let type: unknown;
+let data: unknown;
+try {
+  ({ type, data } = await Astro.request.json());
+} catch {
+  return new Response("Invalid JSON body", { status: 400 });
+}
+
+// Editors send rich text / content documents either as objects or as the
+// serialized form-field string; blocks arrive serialized and parseBlocks
+// handles both.
+let parsed: unknown = data;
+if ((type === "content" || type === "richText") && typeof data === "string") {
+  try {
+    parsed = JSON.parse(data);
+  } catch {
+    return new Response("Invalid document JSON", { status: 400 });
+  }
+}
+
+if (type !== "blocks" && type !== "content" && type !== "richText") {
+  return new Response("Unknown preview type", { status: 400 });
+}
+
+Astro.response.headers.set("Cache-Control", "no-store");
+---
+
+{type === "blocks" && <BlockRenderer blocks={parseBlocks(data)} status="any" />}
+{type === "content" && <ContentRenderer content={parsed as any} status="any" />}
+{type === "richText" && <Fragment set:html={renderRichText(parsed as any) ?? ""} />}

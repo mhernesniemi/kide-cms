@@ -23,7 +23,7 @@ if (new URLSearchParams(location.search).has("preview")) {
       })
         .then((r) => (r.ok ? r.text() : null))
         .then((html) => {
-          // Endpoint may not exist in production builds (only dev) — silently skip
+          // Drop stale responses that finish after a newer edit's request.
           if (html != null && id === pending) els.forEach((el) => (el.innerHTML = html));
         })
         .catch(() => {});
