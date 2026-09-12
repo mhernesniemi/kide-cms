@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, like, lte, ne, or, sql } from "drizzle-orm";
+import { setCloudflareImageMode } from "./image";
 import { nanoid } from "nanoid";
 
 import { setUsageConfig } from "./asset-usage";
@@ -444,6 +445,7 @@ export const createCms = (config: CMSConfig) => {
   // Lets assets.delete() check whether a file is still referenced without every
   // caller having to thread the config in.
   setUsageConfig(config);
+  setCloudflareImageMode(config.images?.cloudflare);
 
   // Webhook `name` routes deliveries — must be unique and non-empty.
   const webhookNames = (config.admin?.webhooks ?? []).map((webhook) => webhook.name.trim());

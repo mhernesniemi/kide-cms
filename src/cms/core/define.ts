@@ -401,6 +401,17 @@ export type ImagePreset = {
 export type ImagesConfig = {
   /** Named renditions, merged over the built-in defaults in core/image.ts. */
   presets?: Record<string, ImagePreset>;
+  /**
+   * How public-page renditions are produced on the Cloudflare target.
+   *
+   * - `"worker"` (default): `/api/cms/img` URLs, resized in the Worker with the
+   *   Images binding and cached at the edge. No setup — works in `astro dev`, on
+   *   `*.workers.dev` and on custom domains alike.
+   * - `"cdn-cgi"`: `/cdn-cgi/image` URLs handled entirely by Cloudflare's edge,
+   *   never invoking the Worker. Requires a custom domain with Image
+   *   Transformations enabled for the zone; `astro dev` still uses the Worker route.
+   */
+  cloudflare?: "worker" | "cdn-cgi";
 };
 
 // A collection opts into collaboration by appearing in `collections` — either as a

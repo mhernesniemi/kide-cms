@@ -2,9 +2,17 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync 
 import { tmpdir } from "node:os";
 import path from "node:path";
 import sharp from "sharp";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { cmsImageUrl, cmsSrcset, DEFAULT_PRESETS, resolveImagePreset, transformImage } from "../image";
+import {
+  cdnCgiImageUrl,
+  cmsImageUrl,
+  cmsSrcset,
+  DEFAULT_PRESETS,
+  resolveImagePreset,
+  setCloudflareImageMode,
+  transformImage,
+} from "../image";
 
 describe("cmsImageUrl", () => {
   it("returns empty string for empty src", () => {
@@ -54,6 +62,56 @@ describe("cmsImageUrl", () => {
   it("ignores malformed aspect ratios", () => {
     expect(cmsImageUrl("/uploads/a.jpg", 1280, "webp", { aspect: "wide" })).not.toContain("h=");
     expect(cmsImageUrl("/uploads/a.jpg", 1280, "webp", { aspect: "16/0" })).not.toContain("h=");
+  });
+});
+
+describe("cmsImageUrl on Cloudflare Workers", () => {
+  const realNavigator = globalThis.navigator;
+  const pretendWorkers = () =>
+    Object.defineProperty(globalThis, "navigator", {
+      value: { userAgent: "Cloudflare-Workers" },
+      configurable: true,
+    });
+
+  afterEach(() => {
+    Object.defineProperty(globalThis, "navigator", { value: realNavigator, configurable: true });
+    setCloudflareImageMode(undefined);
+  });
+
+  it("uses the Worker route by default", () => {
+    pretendWorkers();
+    expect(cmsImageUrl("/uploads/a.jpg", 768, "avif", { aspect: "16/9", focalX: 30, focalY: 70 })).toBe(
+      "/api/cms/img/uploads/a.jpg?w=768&h=432&fx=30&fy=70&f=avif",
+    );
+  });
+
+  // import.meta.env.DEV is replaced at transform time, so the production branch of
+  // the opt-in can't be reached from here; the URL it emits is covered below.
+  it("keeps the Worker route in dev even when opted in — there is no edge locally", () => {
+    pretendWorkers();
+    setCloudflareImageMode("cdn-cgi");
+    expect(cmsImageUrl("/uploads/a.jpg", 480)).toBe("/api/cms/img/uploads/a.jpg?w=480");
+  });
+
+  it("ignores the opt-in outside Workers", () => {
+    setCloudflareImageMode("cdn-cgi");
+    expect(cmsImageUrl("/uploads/a.jpg", 480)).toBe("/api/cms/img/uploads/a.jpg?w=480");
+  });
+});
+
+describe("cdnCgiImageUrl", () => {
+  it("resizes without cropping when only a width is given", () => {
+    expect(cdnCgiImageUrl("/uploads/a.jpg", 480)).toBe("/cdn-cgi/image/width=480,format=webp,quality=80/uploads/a.jpg");
+  });
+
+  it("cover-crops on the focal point when width, height and focal are given", () => {
+    expect(cdnCgiImageUrl("/uploads/a.jpg", 768, 432, "avif", { focalX: 30, focalY: 70 })).toBe(
+      "/cdn-cgi/image/width=768,height=432,fit=cover,gravity=0.30x0.70,format=avif,quality=80/uploads/a.jpg",
+    );
+  });
+
+  it("falls back to attention framing for crops without a focal point", () => {
+    expect(cdnCgiImageUrl("/uploads/a.jpg", 768, 432)).toContain("gravity=auto");
   });
 });
 

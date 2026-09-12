@@ -70,6 +70,25 @@ function isCloudflare(): boolean {
   return typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
 }
 
+export type CloudflareImageMode = "worker" | "cdn-cgi";
+
+// Set by createCms() from `images.cloudflare` in cms.config.ts. Module state rather
+// than a parameter so cmsImageUrl()/cmsSrcset() keep their string-in, string-out
+// signature and <CmsImage> needs no plumbing.
+let cloudflareImageMode: CloudflareImageMode = "worker";
+
+export function setCloudflareImageMode(mode?: CloudflareImageMode): void {
+  cloudflareImageMode = mode ?? "worker";
+}
+
+// /cdn-cgi/image is served by Cloudflare's edge, which only exists for a deployed
+// custom domain — never in astro dev (workerd, but no edge) — so the opt-in is
+// ignored there and dev renders through the Worker route like everything else.
+function cdnCgiEnabled(): boolean {
+  if (cloudflareImageMode !== "cdn-cgi" || !isCloudflare()) return false;
+  return !(import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV;
+}
+
 /**
  * Builds a URL for one rendition. This is the low-level primitive — it cannot
  * read the asset record, so it knows nothing about the stored focal point or the
@@ -78,6 +97,10 @@ function isCloudflare(): boolean {
  * To render an image, use `<CmsImage>`, which does all three. Reach for this only
  * when you need a string rather than an element: og:image, CSS background-image,
  * JSON-LD, email HTML.
+ *
+ * URLs point at `/api/cms/img` on every platform (sharp on Node, the Cloudflare
+ * Images binding on Workers). With `images: { cloudflare: "cdn-cgi" }` a deployed
+ * Worker emits `/cdn-cgi/image` URLs instead, handled entirely by Cloudflare's edge.
  */
 export function cmsImageUrl(src: string, width?: number, format: Format = "webp", crop?: CropOptions): string {
   if (!src) return "";
@@ -87,18 +110,7 @@ export function cmsImageUrl(src: string, width?: number, format: Format = "webp"
   const height = clamped && ratio ? Math.round(clamped / ratio) : undefined;
   const hasFocal = crop?.focalX != null && crop?.focalY != null;
 
-  if (isCloudflare()) {
-    const parts: string[] = [];
-    if (clamped) parts.push(`width=${clamped}`);
-    if (height) parts.push(`height=${height}`, "fit=cover");
-    if (height)
-      parts.push(
-        hasFocal ? `gravity=${(crop!.focalX! / 100).toFixed(2)}x${(crop!.focalY! / 100).toFixed(2)}` : "gravity=auto",
-      );
-    parts.push(`format=${format}`);
-    parts.push("quality=80");
-    return `/cdn-cgi/image/${parts.join(",")}${src}`;
-  }
+  if (cdnCgiEnabled()) return cdnCgiImageUrl(src, clamped, height, format, hasFocal ? crop : undefined);
 
   const params = new URLSearchParams();
   if (clamped) params.set("w", String(clamped));
@@ -110,6 +122,28 @@ export function cmsImageUrl(src: string, width?: number, format: Format = "webp"
   if (format !== "webp") params.set("f", format);
   const qs = params.toString();
   return `/api/cms/img${src}${qs ? `?${qs}` : ""}`;
+}
+
+/** The `/cdn-cgi/image` form of a rendition URL (the `images.cloudflare: "cdn-cgi"` opt-in). */
+export function cdnCgiImageUrl(
+  src: string,
+  width?: number,
+  height?: number,
+  format: Format = "webp",
+  focal?: { focalX?: number | null; focalY?: number | null },
+): string {
+  const parts: string[] = [];
+  if (width) parts.push(`width=${width}`);
+  if (height) {
+    parts.push(`height=${height}`, "fit=cover");
+    parts.push(
+      focal?.focalX != null && focal?.focalY != null
+        ? `gravity=${(focal.focalX / 100).toFixed(2)}x${(focal.focalY / 100).toFixed(2)}`
+        : "gravity=auto",
+    );
+  }
+  parts.push(`format=${format}`, "quality=80");
+  return `/cdn-cgi/image/${parts.join(",")}${src}`;
 }
 
 export function cmsSrcset(

@@ -18,7 +18,7 @@ const INLINE_SAFE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "imag
 const originalContentType = (src: string) =>
   MIME_TYPES[src.slice(src.lastIndexOf(".")).toLowerCase()] ?? "application/octet-stream";
 
-export const GET: APIRoute = async ({ params, url }) => {
+export const GET: APIRoute = async ({ params, request, url }) => {
   const src = `/${params.path}`;
   const num = (key: string) => (url.searchParams.get(key) ? Number(url.searchParams.get(key)) : undefined);
 
@@ -32,13 +32,12 @@ export const GET: APIRoute = async ({ params, url }) => {
   };
 
   // On Workers there's no sharp and no filesystem, so resize with the Cloudflare
-  // Images binding instead (public pages use /cdn-cgi/image URLs and never get
-  // here; admin thumbnails do). Any failure — binding absent, local dev without
-  // Images support — falls through to the original below.
+  // Images binding instead, edge-cached per URL. Any failure — binding absent,
+  // local dev without Images support — falls through to the original below.
   if (typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers") {
     try {
       const { resizeWithImagesBinding } = await import("../../../platform/cloudflare/images");
-      const response = await resizeWithImagesBinding(src, options);
+      const response = await resizeWithImagesBinding(request, src, options);
       if (response) return response;
     } catch {
       // fall through

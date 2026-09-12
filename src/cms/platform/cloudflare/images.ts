@@ -1,3 +1,4 @@
+import { trackTask } from "../../core/request-scope";
 import { getCfEnv } from "./cf-env";
 
 // Mirrors core/image.ts's allowed output formats, keyed by the `f=` query value.
@@ -18,17 +19,26 @@ export type ImageResizeOptions = {
   focalY?: number | null;
 };
 
+// The Workers Cache API. Absent outside workerd; a no-op on *.workers.dev (only
+// custom domains have a functional edge cache), where the browser cache still
+// applies via the immutable headers below.
+const edgeCache = (): Cache | undefined =>
+  typeof caches !== "undefined" ? (caches as CacheStorage & { default?: Cache }).default : undefined;
+
 /**
  * Resizes an upload with the Cloudflare Images binding (`env.IMAGES`, which
  * `@astrojs/cloudflare` declares on every build) and streams the result.
  *
- * Public pages never come here — `cmsImageUrl()` emits `/cdn-cgi/image` URLs on
- * Workers — but the admin's thumbnails and any hand-written `/api/cms/img` URL
- * do, and without this they'd be served the full-size original: sharp isn't
- * available on Workers. Returns null when the binding or the object is missing
- * so the route can fall back to the original.
+ * This is how every `/api/cms/img` URL — public renditions from `<CmsImage>`,
+ * admin thumbnails, hand-written URLs — is served on Workers, where sharp isn't
+ * available. Renditions are stored in the edge cache keyed by URL, so a given
+ * size is transformed once per location rather than per page view.
+ *
+ * Returns null when the binding or the object is missing so the route can fall
+ * back to the original.
  */
 export async function resizeWithImagesBinding(
+  request: Request,
   storagePath: string,
   options: ImageResizeOptions,
 ): Promise<Response | null> {
@@ -36,6 +46,12 @@ export async function resizeWithImagesBinding(
   const images = env.IMAGES;
   const bucket = env.CMS_ASSETS;
   if (!images || !bucket) return null;
+
+  // Headers don't affect the rendition, so key on the URL alone.
+  const cache = edgeCache();
+  const cacheKey = new Request(request.url, { method: "GET" });
+  const cached = await cache?.match(cacheKey);
+  if (cached) return cached;
 
   const object = await bucket.get(storagePath.replace(/^\/+/, ""));
   if (!object) return null;
@@ -59,11 +75,14 @@ export async function resizeWithImagesBinding(
     .transform(transform)
     .output({ format: OUTPUT_FORMATS[options.format ?? "webp"] ?? "image/webp", quality: options.quality ?? 80 });
 
-  return new Response(result.image(), {
+  const response = new Response(result.image(), {
     headers: {
       "Content-Type": result.contentType(),
       "Cache-Control": "public, max-age=31536000, immutable",
       "X-Content-Type-Options": "nosniff",
     },
   });
+  // Write-through after the response starts streaming; waitUntil keeps it alive.
+  if (cache) trackTask(cache.put(cacheKey, response.clone()));
+  return response;
 }

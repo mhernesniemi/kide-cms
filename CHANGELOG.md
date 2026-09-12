@@ -9,13 +9,24 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 
 ## [Unreleased]
 
-### Fixed
+### Changed
 
-- **Admin thumbnails on Cloudflare are real thumbnails.** `/api/cms/img` couldn't resize on
-  Workers (no sharp, no filesystem) and streamed the full-size original, so the Media Library
-  and every image picker loaded multi-hundred-KB files per tile. The route now resizes through
-  the Cloudflare Images binding (`env.IMAGES`, which `@astrojs/cloudflare` declares on every
-  build) and only falls back to the original when the binding is unavailable.
+- **Images on Cloudflare work with no setup.** Public renditions (`<CmsImage>`, `cmsImageUrl`,
+  `cmsSrcset`) used to emit `/cdn-cgi/image` URLs on the Cloudflare target, which only resolve on
+  a custom domain with Image Transformations enabled for the zone — so every new project saw
+  broken images in `astro dev`, on `*.workers.dev` and on its first custom-domain deploy. They
+  now use `/api/cms/img` on every platform, and on Workers that route resizes through the
+  Cloudflare Images binding (`env.IMAGES`, declared by `@astrojs/cloudflare` on every build)
+  and stores renditions in the edge cache. Same Images pricing, no dashboard toggle.
+- **Admin thumbnails on Cloudflare are real thumbnails.** The same route used to stream the
+  full-size original on Workers (no sharp), so the Media Library and image pickers loaded
+  multi-hundred-KB files per tile.
+
+### Added
+
+- `images: { cloudflare: "cdn-cgi" }` restores the previous behaviour for sites that have
+  enabled zone Image Transformations and want renditions served by the edge without invoking
+  the Worker. `astro dev` keeps using the Worker route regardless.
 
 ## [0.26.1] - 2026-09-13
 
