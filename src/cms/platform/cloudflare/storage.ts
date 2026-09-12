@@ -1,5 +1,9 @@
 import { getCfEnv } from "./cf-env";
 
+// Reached by the /api/cms/img route via virtual:kide/storage, so only projects on
+// the Cloudflare profile bundle the Images-binding code (it imports cloudflare:workers).
+export { resizeWithImagesBinding as resizeImage } from "./images";
+
 async function getBucket(): Promise<R2Bucket> {
   const env = await getCfEnv();
   const bucket = env.CMS_ASSETS;

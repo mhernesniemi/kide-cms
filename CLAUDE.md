@@ -226,18 +226,19 @@ All fields share base options: `label`, `description`, `required`, `defaultValue
 
 Routes in `src/cms/routes/` import app-specific code via `virtual:kide/*` aliases (resolved by the integration). Never import user files by path from core routes — use these modules.
 
-| Module                          | Resolves to                            | Exports                                                                                   |
-| ------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `virtual:kide/config`           | `src/cms/cms.config`                   | Default `CMSConfig`                                                                       |
-| `virtual:kide/api`              | `src/cms/.generated/api`               | `{ cms }` — typed local API                                                               |
-| `virtual:kide/schema`           | `src/cms/.generated/schema`            | `{ cmsTables, cmsSessions, cmsPasswordResets, cmsRateLimits }` — Drizzle table map        |
-| `virtual:kide/runtime`          | `src/cms/runtime`                      | Session, auth, assets, AI, locks, `createCms`                                             |
-| `virtual:kide/db`               | `src/cms/adapters/db`                  | `{ getDb }` — Drizzle instance                                                            |
-| `virtual:kide/email`            | `src/cms/adapters/email`               | `{ sendInviteEmail, sendPasswordResetEmail, sendFormSubmissionEmail, isEmailConfigured }` |
-| `virtual:kide/content-renderer` | `src/components/ContentRenderer.astro` | Default Astro component                                                                   |
-| `virtual:kide/block-renderer`   | `src/components/BlockRenderer.astro`   | Default Astro component                                                                   |
-| `virtual:kide/admin-css`        | Generated `.kide/admin.css`            | Side-effect import (styles)                                                               |
-| `virtual:kide/custom-fields`    | Generated `.kide/custom-fields.ts`     | `{ customFields }` — custom admin field components                                        |
+| Module                          | Resolves to                            | Exports                                                                                                                         |
+| ------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `virtual:kide/config`           | `src/cms/cms.config`                   | Default `CMSConfig`                                                                                                             |
+| `virtual:kide/api`              | `src/cms/.generated/api`               | `{ cms }` — typed local API                                                                                                     |
+| `virtual:kide/schema`           | `src/cms/.generated/schema`            | `{ cmsTables, cmsSessions, cmsPasswordResets, cmsRateLimits }` — Drizzle table map                                              |
+| `virtual:kide/runtime`          | `src/cms/runtime`                      | Session, auth, assets, AI, locks, `createCms`                                                                                   |
+| `virtual:kide/db`               | `src/cms/adapters/db`                  | `{ getDb }` — Drizzle instance                                                                                                  |
+| `virtual:kide/email`            | `src/cms/adapters/email`               | `{ sendInviteEmail, sendPasswordResetEmail, sendFormSubmissionEmail, isEmailConfigured }`                                       |
+| `virtual:kide/storage`          | `src/cms/adapters/storage`             | `{ putFile, getFile, getFileStream, deleteFile, resizeImage? }` — `resizeImage` only on the Cloudflare profile (Images binding) |
+| `virtual:kide/content-renderer` | `src/components/ContentRenderer.astro` | Default Astro component                                                                                                         |
+| `virtual:kide/block-renderer`   | `src/components/BlockRenderer.astro`   | Default Astro component                                                                                                         |
+| `virtual:kide/admin-css`        | Generated `.kide/admin.css`            | Side-effect import (styles)                                                                                                     |
+| `virtual:kide/custom-fields`    | Generated `.kide/custom-fields.ts`     | `{ customFields }` — custom admin field components                                                                              |
 
 ## Live Preview Protocol
 

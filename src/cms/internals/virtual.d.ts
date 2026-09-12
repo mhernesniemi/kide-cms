@@ -87,6 +87,28 @@ declare module "virtual:kide/db" {
   export function getDb(): Promise<any>;
 }
 
+declare module "virtual:kide/storage" {
+  export function putFile(storagePath: string, data: ArrayBuffer | Uint8Array): Promise<void>;
+  export function getFile(storagePath: string): Promise<ArrayBuffer | null>;
+  export function getFileStream(storagePath: string): Promise<{ body: ReadableStream; size: number } | null>;
+  export function deleteFile(storagePath: string): Promise<void>;
+  /** Cloudflare profile only: resize an upload with the Images binding. Absent on Node. */
+  export const resizeImage:
+    | ((
+        request: Request,
+        storagePath: string,
+        options: {
+          width?: number;
+          height?: number;
+          format?: string;
+          quality?: number;
+          focalX?: number | null;
+          focalY?: number | null;
+        },
+      ) => Promise<Response | null>)
+    | undefined;
+}
+
 declare module "virtual:kide/email" {
   export function sendInviteEmail(to: string, inviteUrl: string): Promise<boolean>;
   export function sendPasswordResetEmail(to: string, resetUrl: string): Promise<boolean>;

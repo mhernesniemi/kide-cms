@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getStorage, transformImage } from "../../../core";
+import * as storage from "virtual:kide/storage";
 
 export const prerender = false;
 
@@ -31,13 +32,13 @@ export const GET: APIRoute = async ({ params, request, url }) => {
     focalY: num("fy") ?? null,
   };
 
-  // On Workers there's no sharp and no filesystem, so resize with the Cloudflare
-  // Images binding instead, edge-cached per URL. Any failure — binding absent,
-  // local dev without Images support — falls through to the original below.
-  if (typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers") {
+  // The Cloudflare profile's storage adapter resizes with the Images binding
+  // (no sharp, no filesystem on Workers), edge-cached per URL. Any failure —
+  // binding absent, local dev without Images support — falls through to the
+  // original below. The Node profile exports no resizeImage.
+  if (storage.resizeImage) {
     try {
-      const { resizeWithImagesBinding } = await import("../../../platform/cloudflare/images");
-      const response = await resizeWithImagesBinding(request, src, options);
+      const response = await storage.resizeImage(request, src, options);
       if (response) return response;
     } catch {
       // fall through

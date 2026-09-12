@@ -174,6 +174,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
                 "virtual:kide/runtime": path.resolve(root, runtimePath),
                 "virtual:kide/db": path.resolve(root, adaptersPath, "db"),
                 "virtual:kide/email": path.resolve(root, adaptersPath, "email"),
+                "virtual:kide/storage": path.resolve(root, adaptersPath, "storage"),
                 "virtual:kide/block-renderer": path.resolve(root, "src/components/BlockRenderer.astro"),
                 "virtual:kide/content-renderer": path.resolve(root, "src/components/ContentRenderer.astro"),
                 "virtual:kide/admin-css": wrapperCss,
