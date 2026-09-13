@@ -7,7 +7,7 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
-## [Unreleased]
+## [0.28.0] - 2026-09-13
 
 ### Changed
 
@@ -26,6 +26,10 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
   model and the security-relevant defaults are on the docs [Security](https://docs.kide.dev/security/) page.
 - `CMS_TRUSTED_ORIGIN` is now also used for the links in password-reset and invite emails and
   for the SSO `redirect_uri` (`publicOrigin()` in `core/http.ts`). Set it in production.
+- **Edit an image without leaving the document.** Clicking an image field's thumbnail, or
+  **Edit** on an inline image in rich text and content fields, opens the asset's edit view in a
+  side panel instead of a new tab. Saving closes the panel; deleting the asset there also clears
+  the field or removes the inline image.
 
 ### Fixed
 
@@ -44,6 +48,15 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 - Login no longer skips the password hash for unknown emails (timing-based user enumeration).
 - Invite redirects encode the caller-supplied token.
 - `?preview` responses carry `Cache-Control: no-store` for CDNs that cache HTML.
+- **Custom `admin.uploads.allowedTypes` were rejected at upload.** Every type without a
+  built-in signature check failed with "content does not match declared type", so the option
+  could only narrow the defaults. Types Kide has no signature for are now accepted; their stored
+  extension is still stripped of active-content extensions.
+- **Inline images rendered the filename as alt text.** Inserting an image copied its filename into
+  the node's `alt`, and the asset's own alt text was never used. Inline images now render the
+  asset's alt text (the node's alt is a fallback, ignored when it is just the filename), and
+  inserts no longer write the filename. Existing content is fixed without re-saving.
+- The image field thumbnail in the admin is a plain square crop instead of following the focal point.
 
 ## [0.27.2] - 2026-09-13
 
