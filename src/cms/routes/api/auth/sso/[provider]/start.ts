@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 
-import { getSsoProvider, resolveAdminAuth } from "../../../../../core";
+import { getSsoProvider, publicOrigin, resolveAdminAuth } from "../../../../../core";
 import config from "virtual:kide/config";
 
 export const prerender = false;
@@ -16,7 +16,8 @@ export const GET: APIRoute = async ({ params, request }) => {
     url.searchParams.set("provider", provider.id);
     url.searchParams.set(
       "redirect_uri",
-      provider.callbackUrl ?? new URL("/api/cms/auth/sso/callback", request.url).toString(),
+      // Anchored on the trusted origin, not the Host header — see publicOrigin.
+      provider.callbackUrl ?? new URL("/api/cms/auth/sso/callback", publicOrigin(request)).toString(),
     );
     return new Response(null, {
       status: 303,

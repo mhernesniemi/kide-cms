@@ -15,11 +15,11 @@ import {
   tokenReference,
 } from "virtual:kide/runtime";
 import { sendInviteEmail, isEmailConfigured } from "virtual:kide/email";
-import { MIN_PASSWORD_LENGTH } from "../../../core";
+import { MIN_PASSWORD_LENGTH, publicOrigin } from "../../../core";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, url, clientAddress }) => {
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   const formData = await request.formData();
   const action = String(formData.get("_action") ?? "create");
 
@@ -27,10 +27,10 @@ export const POST: APIRoute = async ({ request, url, clientAddress }) => {
     return handleAccept(formData, request, clientAddress);
   }
 
-  return handleCreate(formData, url, request);
+  return handleCreate(formData, request);
 };
 
-async function handleCreate(formData: FormData, url: URL, request: Request) {
+async function handleCreate(formData: FormData, request: Request) {
   const user = await getSessionUser(request);
   if (!user || user.role !== "admin") {
     return new Response(null, {
@@ -84,7 +84,8 @@ async function handleCreate(formData: FormData, url: URL, request: Request) {
   });
 
   const invite = await createInvite(id);
-  const inviteUrl = `${url.origin}/admin/invite?token=${invite.token}`;
+  // Anchored on the trusted origin, not the Host header — see publicOrigin.
+  const inviteUrl = `${publicOrigin(request)}/admin/invite?token=${encodeURIComponent(invite.token)}`;
 
   let emailSent = false;
   if (isEmailConfigured()) {
@@ -124,24 +125,28 @@ async function handleAccept(formData: FormData, request: Request, clientAddress:
     return new Response(null, { status: 303, headers: { Location: "/admin/invite?error=invalid" } });
   }
 
+  // The token is caller-supplied form input: encode it so it can't smuggle extra
+  // query params or header-breaking characters into the redirect.
+  const encodedToken = encodeURIComponent(token);
+
   if (!name || !password) {
     return new Response(null, {
       status: 303,
-      headers: { Location: `/admin/invite?token=${token}&error=missing` },
+      headers: { Location: `/admin/invite?token=${encodedToken}&error=missing` },
     });
   }
 
   if (password !== confirmPassword) {
     return new Response(null, {
       status: 303,
-      headers: { Location: `/admin/invite?token=${token}&error=password` },
+      headers: { Location: `/admin/invite?token=${encodedToken}&error=password` },
     });
   }
 
   if (password.length < MIN_PASSWORD_LENGTH) {
     return new Response(null, {
       status: 303,
-      headers: { Location: `/admin/invite?token=${token}&error=short` },
+      headers: { Location: `/admin/invite?token=${encodedToken}&error=short` },
     });
   }
 

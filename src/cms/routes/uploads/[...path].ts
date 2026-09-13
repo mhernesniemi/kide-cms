@@ -51,11 +51,17 @@ export const GET: APIRoute = async ({ params }) => {
   const ext = storagePath.substring(storagePath.lastIndexOf(".")).toLowerCase();
   const contentType = MIME_TYPES[ext] || "application/octet-stream";
 
-  return new Response(body, {
-    headers: {
-      "Content-Type": contentType,
-      "Content-Length": String(size),
-      "Cache-Control": "public, max-age=31536000, immutable",
-    },
-  });
+  const headers: Record<string, string> = {
+    "Content-Type": contentType,
+    "Content-Length": String(size),
+    "Cache-Control": "public, max-age=31536000, immutable",
+    // Uploaded bytes are untrusted: never let the browser sniff them into HTML.
+    "X-Content-Type-Options": "nosniff",
+  };
+  // SVG is off by default (see api/assets/upload.ts). When a project opts in, the file
+  // still renders through <img> as usual, but a direct navigation gets a sandboxed,
+  // opaque-origin document — no script execution, no same-origin access to the site.
+  if (contentType === "image/svg+xml") headers["Content-Security-Policy"] = "sandbox";
+
+  return new Response(body, { headers });
 };

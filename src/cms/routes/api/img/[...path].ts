@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getStorage, transformImage } from "../../../core";
+import { getStorage, isPublicUploadPath, transformImage } from "../../../core";
 import * as storage from "virtual:kide/storage";
 
 export const prerender = false;
@@ -21,6 +21,9 @@ const originalContentType = (src: string) =>
 
 export const GET: APIRoute = async ({ params, request, url }) => {
   const src = `/${params.path}`;
+  // Public route: only ever serve what assets.upload() wrote. The storage adapters
+  // are handed this path as-is, and an object store would happily return any key.
+  if (!isPublicUploadPath(src)) return new Response("Not found", { status: 404 });
   const num = (key: string) => (url.searchParams.get(key) ? Number(url.searchParams.get(key)) : undefined);
 
   const options = {
@@ -62,7 +65,12 @@ export const GET: APIRoute = async ({ params, request, url }) => {
     // sharp unavailable — serve the original.
   }
 
-  const data = await getStorage().getFile(src);
+  let data: ArrayBuffer | null;
+  try {
+    data = await getStorage().getFile(src);
+  } catch {
+    data = null; // adapter rejected the path — same 404 as a missing file
+  }
   if (!data) return new Response("Not found", { status: 404 });
 
   // Untransformed, so the type comes from the stored extension. Only rasters render inline.

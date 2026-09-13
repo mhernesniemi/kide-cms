@@ -10,7 +10,7 @@ import {
   logAudit,
   tokenReference,
 } from "virtual:kide/runtime";
-import { resolveAdminAuth } from "../../../core";
+import { publicOrigin, resolveAdminAuth } from "../../../core";
 import config from "virtual:kide/config";
 
 export const prerender = false;
@@ -55,7 +55,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   const user = rows[0] as Record<string, unknown>;
   const reset = await createPasswordReset(String(user._id));
-  const resetUrl = new URL("/admin/reset-password", request.url);
+  // Anchored on the trusted origin, not the Host header — see publicOrigin.
+  const resetUrl = new URL("/admin/reset-password", publicOrigin(request));
   resetUrl.searchParams.set("token", reset.token);
 
   const emailAdapter = getEmail();

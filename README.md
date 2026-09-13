@@ -7,6 +7,8 @@
 
 A code-first CMS for Astro. Define collections in TypeScript and get a generated admin UI and typed content API.
 
+Kide is in **beta**: the config and collection API, the local API and the project-owned files are stable, and breaking changes to them land only in minor releases with a changelog note. See [Stability](https://docs.kide.dev/stability/).
+
 ![Kide admin UI](.github/admin-screenshot.png)
 
 - [Live demo](https://demo.kide.dev/admin)

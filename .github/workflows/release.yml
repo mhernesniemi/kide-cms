@@ -18,6 +18,8 @@ jobs:
       id-token: write # npm provenance
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # verify:upgrade needs the previous v* tag reachable from HEAD
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -44,6 +46,7 @@ jobs:
       - run: pnpm verify:package
       - run: pnpm verify:cloudflare
       - run: pnpm verify:starters
+      - run: pnpm verify:upgrade
 
       - name: Publish @kidecms/core
         run: pnpm --filter @kidecms/core publish --no-git-checks --provenance

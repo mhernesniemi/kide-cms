@@ -1,6 +1,6 @@
 import { defineMiddleware } from "astro:middleware";
 import type { APIContext, MiddlewareNext } from "astro";
-import { readEnv, resolveAdminAuth, runWithRequestScope } from "../core";
+import { publicOrigin, resolveAdminAuth, runWithRequestScope } from "../core";
 import type { RequestScope, SessionUser } from "../core";
 import { eq } from "drizzle-orm";
 
@@ -38,8 +38,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
   return runWithRequestScope(scope, async () => {
     const response = await handle(context, next);
     // Draft responses must never enter the shared cache. Runs after the page
-    // rendered because a page-level cache.set() would re-enable caching.
-    if (context.url.searchParams.has("preview")) context.cache?.set(false);
+    // rendered because a page-level cache.set() would re-enable caching. The
+    // explicit header covers CDNs/proxies that cache HTML on their own terms.
+    if (context.url.searchParams.has("preview")) {
+      context.cache?.set(false);
+      try {
+        response.headers.set("Cache-Control", "no-store");
+      } catch {
+        // Immutable response (e.g. a static asset) — nothing draft-bearing in it.
+      }
+    }
     return response;
   });
 });
@@ -113,7 +121,7 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
   if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && !isMachineEndpoint) {
     // Compare against an explicitly configured origin when set (robust behind a proxy that
     // may rewrite Host); otherwise fall back to the request's own origin.
-    const host = readEnv("CMS_TRUSTED_ORIGIN") ?? context.url.origin;
+    const host = publicOrigin(context.request);
     const origin = context.request.headers.get("origin");
     const referer = context.request.headers.get("referer");
     const secFetchSite = context.request.headers.get("sec-fetch-site");

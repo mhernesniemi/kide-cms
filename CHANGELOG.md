@@ -7,6 +7,44 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+### Changed
+
+- **Kide is now in beta.** The config, collection and field API, the local API, and the
+  project-owned files are stable; breaking changes to them land only in minor releases with a
+  **Breaking** changelog entry. What that covers, what may still change, and the criteria for
+  1.0 are on the docs [Stability](https://docs.kide.dev/stability/) page.
+
+### Added
+
+- `pnpm verify:upgrade` (`scripts/verify-upgrade.mjs`), run in CI and before every publish:
+  scaffolds a project from the previous release tag in both modes and upgrades it to HEAD.
+  Package mode must end with only `package.json` and the lockfile changed; embedded mode runs
+  `kide upgrade` and must produce a `careful-review.patch` that is a dependency bump only.
+- `SECURITY.md` — how to report (GitHub private advisories) and the release policy. The threat
+  model and the security-relevant defaults are on the docs [Security](https://docs.kide.dev/security/) page.
+- `CMS_TRUSTED_ORIGIN` is now also used for the links in password-reset and invite emails and
+  for the SSO `redirect_uri` (`publicOrigin()` in `core/http.ts`). Set it in production.
+
+### Fixed
+
+- **Password-reset and invite links trusted the `Host` header.** On the Node adapter
+  `request.url` is built from the incoming `Host` unless Astro's `security.allowedDomains` is
+  set, so a forged `Host` could put an attacker's domain in a victim's reset email. Links now
+  use `CMS_TRUSTED_ORIGIN` when set.
+- **`/api/cms/img` could read any object from a shared R2 bucket.** The public image route
+  passed the path straight to the storage adapter; object stores accept any key. It now only
+  serves `/uploads/<segments>` paths (no empty or dot segments) and returns 404 otherwise. The
+  same guard applies to the admin alt-text endpoint.
+- **Inbound webhook bodies were unbounded** before the signature was verified. Capped at 1 MB
+  on the stream; 413 on overflow.
+- Uploads are served with `X-Content-Type-Options: nosniff`, and SVGs (when a project allows
+  them) with `Content-Security-Policy: sandbox`.
+- Login no longer skips the password hash for unknown emails (timing-based user enumeration).
+- Invite redirects encode the caller-supplied token.
+- `?preview` responses carry `Cache-Control: no-store` for CDNs that cache HTML.
+
 ## [0.27.2] - 2026-09-13
 
 ### Fixed

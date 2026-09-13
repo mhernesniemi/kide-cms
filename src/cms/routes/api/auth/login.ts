@@ -5,6 +5,7 @@ import { getDb } from "virtual:kide/db";
 import {
   auditRequestMeta,
   createSession,
+  hashPassword,
   logAudit,
   setSessionCookie,
   tokenReference,
@@ -87,6 +88,10 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   const requestMeta = auditRequestMeta(request);
 
   if (rows.length === 0) {
+    // Burn the same PBKDF2 cost as a real verification so an unknown email can't be
+    // told apart from a wrong password by response time (the failure response and
+    // the limiter bookkeeping are already identical).
+    await hashPassword(password).catch(() => {});
     await recordFailure();
     logAudit({
       action: "auth.login_failed",
