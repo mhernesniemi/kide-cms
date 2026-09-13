@@ -1,6 +1,13 @@
 # Kide CMS
 
+[![npm](https://img.shields.io/npm/v/@kidecms/core)](https://www.npmjs.com/package/@kidecms/core)
+[![CI](https://github.com/mhernesniemi/kide-cms/actions/workflows/ci.yml/badge.svg)](https://github.com/mhernesniemi/kide-cms/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Built with Astro](https://astro.badg.es/v2/built-with-astro/tiny.svg)](https://astro.build)
+
 A code-first CMS for Astro. Define collections in TypeScript and get a generated admin UI and typed content API.
+
+![Kide admin UI](.github/admin-screenshot.png)
 
 - [Live demo](https://demo.kide.dev/admin)
 - [Docs](https://docs.kide.dev/)
