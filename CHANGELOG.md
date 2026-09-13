@@ -7,6 +7,16 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.27.2] - 2026-09-13
+
+### Fixed
+
+- **Replace / Remove / alt text on an inline editor image work again in Chrome.** The image
+  toolbar in rich text and content fields only renders while the editor is focused, and Chrome
+  moves focus to a button on mousedown, before the click fires. That blur unmounted the toolbar
+  under the pointer, so the click never landed and the selection just closed. The node view now
+  ignores a blur whose focus lands inside its own toolbar.
+
 ## [0.27.1] - 2026-09-13
 
 ### Fixed
