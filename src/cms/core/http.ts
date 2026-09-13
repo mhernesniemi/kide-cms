@@ -105,3 +105,33 @@ export const readLimitedFormData = async (request: Request, maxBytes: number): P
   });
   return limitedRequest.formData();
 };
+
+const startsWith = (header: Uint8Array, bytes: number[], offset = 0) =>
+  bytes.every((byte, i) => header[offset + i] === byte);
+
+const ascii = (header: Uint8Array, from: number, to: number) => String.fromCharCode(...header.slice(from, to));
+
+const HEADER_CHECKS: Record<string, (header: Uint8Array) => boolean> = {
+  "image/jpeg": (h) => startsWith(h, [0xff, 0xd8, 0xff]),
+  "image/png": (h) => startsWith(h, [0x89, 0x50, 0x4e, 0x47]),
+  "image/gif": (h) => startsWith(h, [0x47, 0x49, 0x46, 0x38]),
+  "image/webp": (h) => startsWith(h, [0x52, 0x49, 0x46, 0x46]),
+  "image/avif": (h) => ascii(h, 4, 8) === "ftyp" && ascii(h, 8, 12).includes("avif"),
+  "application/pdf": (h) => startsWith(h, [0x25, 0x50, 0x44, 0x46]),
+  "video/mp4": (h) => startsWith(h, [0x66, 0x74, 0x79, 0x70], 4),
+  "video/webm": (h) => startsWith(h, [0x1a, 0x45, 0xdf, 0xa3]),
+  "image/svg+xml": (h) => {
+    const text = new TextDecoder().decode(h);
+    return text.includes("<svg") || text.trimStart().startsWith("<?xml");
+  },
+};
+
+/**
+ * Whether an upload's first bytes match its declared MIME type. Types without a known
+ * signature (added through `admin.uploads.allowedTypes`) pass; their stored extension is
+ * sanitised separately so they can't be served as active content.
+ */
+export const headerMatchesType = (header: ArrayBuffer, declaredType: string): boolean => {
+  const check = HEADER_CHECKS[declaredType];
+  return check ? check(new Uint8Array(header)) : true;
+};

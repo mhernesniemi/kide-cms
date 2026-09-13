@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { PayloadTooLargeError, isPublicUploadPath, publicOrigin, readLimitedFormData, readLimitedText } from "../http";
+import {
+  PayloadTooLargeError,
+  headerMatchesType,
+  isPublicUploadPath,
+  publicOrigin,
+  readLimitedFormData,
+  readLimitedText,
+} from "../http";
 import { configureCmsRuntime, resetCmsRuntime } from "../runtime";
 
 /** A Request whose body streams (no Content-Length) — the case a header-only check misses. */
@@ -112,5 +119,25 @@ describe("isPublicUploadPath", () => {
     expect(isPublicUploadPath("/uploads/./file.png")).toBe(false);
     expect(isPublicUploadPath("/uploads//file.png")).toBe(false);
     expect(isPublicUploadPath("/uploads/a/../../etc/passwd")).toBe(false);
+  });
+});
+
+describe("headerMatchesType", () => {
+  const bytes = (...values: number[]) => new Uint8Array(values).buffer;
+
+  it("verifies known types by their signature", () => {
+    expect(headerMatchesType(bytes(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a), "image/png")).toBe(true);
+    expect(headerMatchesType(bytes(0xff, 0xd8, 0xff, 0xe0), "image/jpeg")).toBe(true);
+    expect(headerMatchesType(new TextEncoder().encode("<svg xmlns=...>").buffer, "image/svg+xml")).toBe(true);
+  });
+
+  it("rejects a known type whose bytes don't match", () => {
+    expect(headerMatchesType(bytes(0x3c, 0x68, 0x74, 0x6d, 0x6c), "image/png")).toBe(false);
+    expect(headerMatchesType(new TextEncoder().encode("<html>").buffer, "image/svg+xml")).toBe(false);
+  });
+
+  it("lets types without a known signature through", () => {
+    expect(headerMatchesType(bytes(0x50, 0x4b, 0x03, 0x04), "application/zip")).toBe(true);
+    expect(headerMatchesType(new TextEncoder().encode("a,b\n1,2").buffer, "text/csv")).toBe(true);
   });
 });

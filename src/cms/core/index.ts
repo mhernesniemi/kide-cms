@@ -192,7 +192,14 @@ export type { AdminRoute } from "./admin";
 
 export { acquireLock, releaseLock } from "./locks";
 
-export { readLimitedFormData, readLimitedText, publicOrigin, isPublicUploadPath, PayloadTooLargeError } from "./http";
+export {
+  readLimitedFormData,
+  readLimitedText,
+  publicOrigin,
+  isPublicUploadPath,
+  headerMatchesType,
+  PayloadTooLargeError,
+} from "./http";
 
 export { recordAudit, logAudit, pruneAuditLog, auditRequestMeta, tokenReference } from "./audit";
 export type { AuditEvent, AuditActor } from "./audit";
