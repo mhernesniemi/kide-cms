@@ -2,9 +2,9 @@ name: Scaffold + deploy to Cloudflare
 
 # Weekly end-to-end check of the path a new Cloudflare user takes: the published
 # create-kide-app scaffolds the latest release, provisions D1 + R2, deploys, and the
-# live site is exercised. Everything created is deleted afterwards, pass or fail.
+# live site is exercised. Everything created (Worker, D1, R2, session KV) is deleted afterwards, pass or fail.
 # Requires the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets
-# (token permissions: Workers Scripts, D1, Workers R2 Storage — edit).
+# (token permissions: Workers Scripts, D1, Workers R2 Storage, Workers KV Storage — edit).
 
 on:
   schedule:
@@ -58,4 +58,8 @@ jobs:
           pnpm exec wrangler delete --name "$PROJECT" --force
           pnpm exec wrangler r2 bucket delete "$PROJECT-assets"
           pnpm exec wrangler d1 delete "$PROJECT-db" -y
+          # The first deploy provisions the Astro session KV namespace automatically.
+          KV_ID=$(pnpm exec wrangler kv namespace list 2>/dev/null \
+            | python3 -c 'import sys,json; print(next((n["id"] for n in json.load(sys.stdin) if n["title"] == sys.argv[1]), ""))' "$PROJECT-session")
+          [ -n "$KV_ID" ] && pnpm exec wrangler kv namespace delete --namespace-id "$KV_ID" --skip-confirmation
           exit 0
