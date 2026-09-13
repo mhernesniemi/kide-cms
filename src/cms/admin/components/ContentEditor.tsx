@@ -711,7 +711,11 @@ export default function ContentEditor({
         open={imageBrowseOpen}
         onOpenChange={setImageBrowseOpen}
         onSelect={(asset) => {
-          editor?.chain().focus().setImage({ src: asset.url, alt: asset.filename }).run();
+          editor
+            ?.chain()
+            .focus()
+            .setImage({ src: asset.url, alt: asset.alt ?? "" })
+            .run();
         }}
       />
 

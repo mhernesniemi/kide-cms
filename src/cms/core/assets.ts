@@ -382,47 +382,64 @@ const collectLocalImageSrcs = (node: unknown, into: Set<string>): void => {
   if (Array.isArray(candidate.children)) collectLocalImageSrcs(candidate.children, into);
 };
 
-const withoutMissingImages = <T>(node: T, missing: Set<string>): T => {
+/** Rebuilds a document with missing images dropped and alt text taken from the asset record. */
+const resolveImages = <T>(node: T, found: Map<string, AssetRecord | null>, changed: { value: boolean }): T => {
   if (Array.isArray(node)) {
-    return node
-      .filter((child) => {
-        const candidate = child as RichTextLikeNode | null;
-        return !(
-          candidate &&
-          typeof candidate === "object" &&
-          candidate.type === "image" &&
-          typeof candidate.src === "string" &&
-          missing.has(candidate.src)
-        );
-      })
-      .map((child) => withoutMissingImages(child, missing)) as unknown as T;
+    const next: unknown[] = [];
+    for (const child of node) {
+      const candidate = child as RichTextLikeNode | null;
+      const src = candidate && typeof candidate === "object" && candidate.type === "image" ? candidate.src : undefined;
+      if (typeof src === "string" && found.has(src)) {
+        const asset = found.get(src);
+        if (!asset) {
+          changed.value = true;
+          continue;
+        }
+        const alt = imageAlt(asset, (candidate as { alt?: unknown }).alt);
+        if (alt !== (candidate as { alt?: unknown }).alt) {
+          changed.value = true;
+          next.push({ ...candidate, alt });
+          continue;
+        }
+      }
+      next.push(resolveImages(child, found, changed));
+    }
+    return next as unknown as T;
   }
   if (!node || typeof node !== "object") return node;
 
   const candidate = node as RichTextLikeNode;
   if (!Array.isArray(candidate.children)) return node;
-  return { ...candidate, children: withoutMissingImages(candidate.children, missing) } as unknown as T;
+  return { ...candidate, children: resolveImages(candidate.children, found, changed) } as unknown as T;
 };
 
 /**
- * Drops `image` nodes whose upload no longer exists from a rich-text / content
- * document. The renderers are synchronous string builders, so this is the async
- * pass that keeps a deleted asset from emitting a <picture> of 404s.
+ * The asset's alt text wins. The node's own alt is only a fallback, and not when it is just
+ * the filename the editor used to fill in on insert.
+ */
+const imageAlt = (asset: AssetRecord, nodeAlt: unknown): string => {
+  if (asset.alt) return asset.alt;
+  const own = typeof nodeAlt === "string" ? nodeAlt : "";
+  return own === asset.filename ? "" : own;
+};
+
+/**
+ * Resolves inline `image` nodes in a rich-text / content document against the asset
+ * records: images whose upload no longer exists are dropped (so a deleted asset doesn't
+ * emit a <picture> of 404s), and alt text comes from the asset. The renderers are
+ * synchronous string builders, so this is their async pass.
  *
- * Returns the document unchanged when nothing is missing (the common case).
+ * Returns the document unchanged when nothing needs resolving.
  */
 export const stripMissingAssetImages = async <T>(document: T): Promise<T> => {
   const srcs = new Set<string>();
   collectLocalImageSrcs(document, srcs);
   if (srcs.size === 0) return document;
 
-  const missing = new Set<string>();
-  await Promise.all(
-    [...srcs].map(async (src) => {
-      if (!(await assets.findByUrl(src))) missing.add(src);
-    }),
-  );
-  if (missing.size === 0) return document;
+  const found = new Map<string, AssetRecord | null>();
+  await Promise.all([...srcs].map(async (src) => found.set(src, await assets.findByUrl(src))));
 
-  return withoutMissingImages(document, missing);
+  const changed = { value: false };
+  const resolved = resolveImages(document, found, changed);
+  return changed.value ? resolved : document;
 };

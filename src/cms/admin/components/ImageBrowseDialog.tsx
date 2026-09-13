@@ -8,6 +8,7 @@ type AssetRecord = {
   filename: string;
   mimeType: string;
   url: string;
+  alt?: string | null;
   focalX?: number | null;
   focalY?: number | null;
   _createdAt: string;

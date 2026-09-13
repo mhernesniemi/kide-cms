@@ -4,9 +4,9 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import type { Editor } from "@tiptap/core";
 import Image from "@tiptap/extension-image";
 import { NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
-import { ImageIcon, Trash2 } from "lucide-react";
+import { ImageIcon, Pencil, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
+import AssetEditSheet from "./AssetEditSheet";
 import ImageBrowseDialog from "./ImageBrowseDialog";
 import { cn, thumbnail } from "../lib/utils";
 
@@ -37,17 +37,27 @@ function useEditorFocus(editor: Editor, within: RefObject<HTMLElement | null>) {
 }
 
 /**
- * Inline image in rich text / content fields. Selecting it reveals alt text,
- * replace (asset browser) and remove, so an image is editable rather than a
- * fixed blob that can only be deleted.
+ * Inline image in rich text / content fields. Selecting it reveals edit (the asset's
+ * own edit view, where alt text and focal point live), replace, and remove.
  */
 function ImageNodeView({ node, selected, editor, getPos, updateAttributes, deleteNode }: NodeViewProps) {
   const [browseOpen, setBrowseOpen] = useState(false);
+  const [editAssetId, setEditAssetId] = useState<string | null>(null);
   const [focusWithin, setFocusWithin] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const focused = useEditorFocus(editor, wrapperRef);
   const src = String(node.attrs.src ?? "");
   const alt = String(node.attrs.alt ?? "");
+  const isUpload = src.startsWith("/uploads/");
+
+  const openEdit = () => {
+    fetch(`/api/cms/assets?url=${encodeURIComponent(src)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((asset) => {
+        if (asset?._id) setEditAssetId(asset._id);
+      })
+      .catch(() => {});
+  };
 
   // On load the initial selection sits on the first block, so `selected` alone
   // would show the controls before anyone clicked — require editor focus too.
@@ -108,15 +118,14 @@ function ImageNodeView({ node, selected, editor, getPos, updateAttributes, delet
       {active && (
         <div
           contentEditable={false}
-          className="bg-popover mt-2 flex flex-wrap items-center gap-2 rounded-md border p-1.5 shadow-xs"
+          className="bg-popover mt-2 flex flex-wrap items-center justify-end gap-2 rounded-md border p-1.5 shadow-xs"
         >
-          <Input
-            value={alt}
-            onChange={(e) => updateAttributes({ alt: e.target.value })}
-            placeholder="Alt text"
-            aria-label="Alt text"
-            className="h-8 min-w-40 flex-1"
-          />
+          {isUpload && (
+            <Button type="button" variant="outline" size="sm" onClick={openEdit}>
+              <Pencil className="size-3.5" />
+              Edit
+            </Button>
+          )}
           <Button type="button" variant="outline" size="sm" onClick={() => setBrowseOpen(true)}>
             <ImageIcon className="size-3.5" />
             Replace
@@ -130,7 +139,15 @@ function ImageNodeView({ node, selected, editor, getPos, updateAttributes, delet
       <ImageBrowseDialog
         open={browseOpen}
         onOpenChange={setBrowseOpen}
-        onSelect={(asset) => updateAttributes({ src: asset.url, alt: alt || asset.filename })}
+        onSelect={(asset) => updateAttributes({ src: asset.url, alt: asset.alt ?? "" })}
+      />
+      <AssetEditSheet
+        assetId={editAssetId}
+        open={editAssetId !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditAssetId(null);
+        }}
+        onDeleted={deleteNode}
       />
     </NodeViewWrapper>
   );

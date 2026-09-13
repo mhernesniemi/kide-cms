@@ -299,6 +299,32 @@ describe("stripMissingAssetImages", () => {
     expect(await stripMissingAssetImages(document)).toBe(document);
   });
 
+  it("takes alt text from the asset record", async () => {
+    const asset = await upload("described.png");
+    await assets.update(asset._id, { alt: "A described image" });
+    const document = {
+      type: "root",
+      children: [{ type: "image", src: asset.storagePath, alt: "old per-image alt" }],
+    };
+
+    const resolved = await stripMissingAssetImages(document);
+    expect((resolved.children[0] as any).alt).toBe("A described image");
+  });
+
+  it("falls back to the node's alt, but not to a filename left by the editor", async () => {
+    const asset = await upload("photo.png");
+    const document = {
+      type: "root",
+      children: [
+        { type: "image", src: asset.storagePath, alt: "Imported alt" },
+        { type: "image", src: asset.storagePath, alt: asset.filename },
+      ],
+    };
+
+    const resolved = await stripMissingAssetImages(document);
+    expect(resolved.children.map((child: any) => child.alt)).toEqual(["Imported alt", ""]);
+  });
+
   it("leaves external images alone", async () => {
     const document = {
       type: "root",

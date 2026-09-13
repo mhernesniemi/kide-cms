@@ -711,7 +711,11 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
         open={imageBrowseOpen}
         onOpenChange={setImageBrowseOpen}
         onSelect={(asset) => {
-          editor?.chain().focus().setImage({ src: asset.url, alt: asset.filename }).run();
+          editor
+            ?.chain()
+            .focus()
+            .setImage({ src: asset.url, alt: asset.alt ?? "" })
+            .run();
         }}
       />
 

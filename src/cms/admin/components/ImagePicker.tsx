@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { ImagePlus, Loader2, Upload, X } from "lucide-react";
-import { cn, focalPointStyle, thumbnail } from "../lib/utils";
+import { cn, thumbnail } from "../lib/utils";
 import { Button } from "./ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
+import AssetEditSheet from "./AssetEditSheet";
 import ImageBrowseDialog from "./ImageBrowseDialog";
 
 type Props = {
@@ -15,13 +15,11 @@ type Props = {
 export default function ImagePicker({ name, value: initialValue, onChange: onChangeProp }: Props) {
   const [value, setValue] = useState(initialValue ?? "");
   const [assetId, setAssetId] = useState<string | null>(null);
-  const [focal, setFocal] = useState<{ focalX: number | null; focalY: number | null } | null>(null);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const editFrameRef = useRef<HTMLIFrameElement>(null);
   const hiddenRef = useRef<HTMLInputElement>(null);
 
   // Resolve asset ID from URL on mount
@@ -32,7 +30,6 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
       .then((asset) => {
         if (asset?._id) {
           setAssetId(asset._id);
-          setFocal({ focalX: asset.focalX ?? null, focalY: asset.focalY ?? null });
         }
       })
       .catch(() => {});
@@ -60,7 +57,6 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
         const asset = await res.json();
         setValue(asset.url);
         setAssetId(asset._id);
-        setFocal({ focalX: asset.focalX ?? null, focalY: asset.focalY ?? null });
         onChangeProp?.(asset.url);
       } catch (e) {
         console.error("Upload failed:", e);
@@ -79,29 +75,6 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
     },
     [handleUpload],
   );
-
-  // The side panel hosts the asset's own edit page. Its form posts redirect inside the
-  // iframe, so a successful save or delete shows up as a same-origin navigation.
-  const handleEditFrameLoad = () => {
-    const location = editFrameRef.current?.contentWindow?.location;
-    if (!location || !assetId) return;
-    if (new URLSearchParams(location.search).get("_toast") !== "success") return;
-
-    if (location.pathname === `/admin/assets/${assetId}`) {
-      fetch(`/api/cms/assets/${assetId}`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((asset) => {
-          if (asset) setFocal({ focalX: asset.focalX ?? null, focalY: asset.focalY ?? null });
-        })
-        .catch(() => {});
-      setEditOpen(false);
-    } else if (location.pathname === "/admin/assets") {
-      setValue("");
-      setAssetId(null);
-      onChangeProp?.("");
-      setEditOpen(false);
-    }
-  };
 
   const imgSrc = localPreview ?? thumbnail(value);
   const isImage =
@@ -124,12 +97,7 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
                 assetId && "hover:border-foreground/50 cursor-pointer",
               )}
             >
-              <img
-                src={imgSrc}
-                alt=""
-                className="size-full object-cover"
-                style={localPreview ? undefined : focal ? focalPointStyle(focal) : undefined}
-              />
+              <img src={imgSrc} alt="" className="size-full object-cover" />
             </button>
           ) : (
             <div className="bg-field flex size-40 items-center justify-center rounded-lg border">
@@ -171,27 +139,16 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
         </Button>
       </div>
 
-      <Sheet open={editOpen} onOpenChange={setEditOpen}>
-        <SheetContent
-          side="right"
-          className="data-[side=right]:w-[90vw] data-[side=right]:sm:max-w-[90vw] data-[side=right]:lg:w-[50vw] data-[side=right]:lg:max-w-[50vw]"
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Edit image</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-hidden">
-            {editOpen && assetId && (
-              <iframe
-                ref={editFrameRef}
-                src={`/admin/assets/${assetId}?_embed=1`}
-                title="Edit image"
-                className="size-full"
-                onLoad={handleEditFrameLoad}
-              />
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      <AssetEditSheet
+        assetId={assetId}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onDeleted={() => {
+          setValue("");
+          setAssetId(null);
+          onChangeProp?.("");
+        }}
+      />
 
       <ImageBrowseDialog
         open={open}
@@ -201,7 +158,6 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
           setLocalPreview(null);
           setValue(asset.url);
           setAssetId(asset._id);
-          setFocal({ focalX: asset.focalX ?? null, focalY: asset.focalY ?? null });
           onChangeProp?.(asset.url);
         }}
       />
