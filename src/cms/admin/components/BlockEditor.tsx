@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ArrowUpRight, GripVertical, ChevronRight, Link2, Plus, Save, Trash2, Unlink } from "lucide-react";
 import { cn } from "../lib/utils";
+import { openPreviewChannel } from "../lib/preview-channel";
 import {
   DndContext,
   closestCenter,
@@ -300,8 +301,9 @@ export default function BlockEditor({
   // Live preview: broadcast block data for server-side rendering. Also replay the
   // current value when a preview tab opened after edits announces itself.
   useEffect(() => {
-    if (!previewChannelRef.current) previewChannelRef.current = new BroadcastChannel("cms-preview");
+    if (!previewChannelRef.current) previewChannelRef.current = openPreviewChannel();
     const channel = previewChannelRef.current;
+    if (!channel) return;
     const broadcast = () => channel.postMessage({ field: name, value: serializeBlocks(blocks), render: "blocks" });
     broadcast();
     channel.onmessage = (e: MessageEvent) => {

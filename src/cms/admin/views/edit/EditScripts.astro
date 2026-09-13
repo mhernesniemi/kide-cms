@@ -200,7 +200,9 @@
           }
           if (u.searchParams.get("_toast") === "success") {
             try {
-              new BroadcastChannel("cms-preview").postMessage({ type: "reload" });
+              var previewEl = document.querySelector("[data-preview-channel]");
+              var previewKey = previewEl && previewEl.getAttribute("data-preview-channel");
+              if (previewKey) new BroadcastChannel("cms-preview:" + previewKey).postMessage({ type: "reload" });
             } catch (e) {}
           }
           if (window.parent !== window && u.searchParams.get("_toast") === "success") {

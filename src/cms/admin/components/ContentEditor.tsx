@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "./ui/input";
 import { cn } from "../lib/utils";
 import { toggleHeading } from "../lib/editor-commands";
+import { openPreviewChannel } from "../lib/preview-channel";
 import {
   LinkDialog,
   fetchLinkGroups,
@@ -457,8 +458,9 @@ export default function ContentEditor({
 
   // Replay the current value when a preview tab opened after edits announces itself
   useEffect(() => {
-    if (!previewChannelRef.current) previewChannelRef.current = new BroadcastChannel("cms-preview");
+    if (!previewChannelRef.current) previewChannelRef.current = openPreviewChannel();
     const channel = previewChannelRef.current;
+    if (!channel) return;
     channel.onmessage = (e: MessageEvent) => {
       if (e.data?.type === "preview-ready") {
         channel.postMessage({ field: name, value: cmsJson, render: "content" });
@@ -495,8 +497,8 @@ export default function ContentEditor({
       const json = JSON.stringify(cmsDoc);
       setCmsJson(json);
       // Live preview: broadcast for server-side rendering
-      if (!previewChannelRef.current) previewChannelRef.current = new BroadcastChannel("cms-preview");
-      previewChannelRef.current.postMessage({ field: name, value: json, render: "content" });
+      if (!previewChannelRef.current) previewChannelRef.current = openPreviewChannel();
+      previewChannelRef.current?.postMessage({ field: name, value: json, render: "content" });
     },
     onSelectionUpdate: forceTick,
     onTransaction: forceTick,

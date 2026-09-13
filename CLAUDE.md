@@ -242,7 +242,7 @@ Routes in `src/cms/routes/` import app-specific code via `virtual:kide/*` aliase
 
 ## Live Preview Protocol
 
-BroadcastChannel `"cms-preview"` connects admin form → preview tab. The client script (`src/cms/client/preview.ts`) is auto-injected by the integration on every page; activates only when `?preview` is in the URL.
+A per-document BroadcastChannel `"cms-preview:<collection>:<id>"` connects admin form → preview tab. The edit view stamps the key as `data-preview-channel` (read by `admin/lib/preview-channel.ts`) and links the preview as `?preview=<collection>:<id>`, so an editor only drives its own document's preview. The client script (`src/cms/client/preview.ts`) is auto-injected by the integration on every page; live updates activate only for a keyed `?preview=` (a bare `?preview` / `?preview=true` just shows drafts).
 
 **Message shapes (admin → preview):**
 

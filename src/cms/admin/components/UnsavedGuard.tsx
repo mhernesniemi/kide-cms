@@ -11,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog";
+import { openPreviewChannel } from "../lib/preview-channel";
 import { Button } from "./ui/button";
 
 /**
@@ -68,26 +69,27 @@ export default function UnsavedGuard({
     };
 
     // Live preview: broadcast field changes to any open preview tab
-    const previewChannel = new BroadcastChannel("cms-preview");
+    const previewChannel = openPreviewChannel();
     const broadcastField = (e: Event) => {
       const target = e.target as HTMLInputElement;
       if (!target.name || target.name.startsWith("_") || target.name === "redirectTo") return;
       // Skip hidden inputs — complex fields (rich text, blocks) handle their own broadcasting
       if (target.type === "hidden") return;
-      previewChannel.postMessage({ field: target.name, value: target.value });
+      previewChannel?.postMessage({ field: target.name, value: target.value });
     };
 
     // A preview tab opened after edits were made announces itself; replay the
     // current value of every simple field so it doesn't miss unsaved changes.
-    previewChannel.onmessage = (e: MessageEvent) => {
-      if (e.data?.type !== "preview-ready") return;
-      for (const el of Array.from(form.elements)) {
-        const input = el as HTMLInputElement;
-        if (!input.name || input.name.startsWith("_") || input.name === "redirectTo") continue;
-        if (input.type === "hidden" || input.type === "submit" || input.type === "button") continue;
-        previewChannel.postMessage({ field: input.name, value: input.value });
-      }
-    };
+    if (previewChannel)
+      previewChannel.onmessage = (e: MessageEvent) => {
+        if (e.data?.type !== "preview-ready") return;
+        for (const el of Array.from(form.elements)) {
+          const input = el as HTMLInputElement;
+          if (!input.name || input.name.startsWith("_") || input.name === "redirectTo") continue;
+          if (input.type === "hidden" || input.type === "submit" || input.type === "button") continue;
+          previewChannel?.postMessage({ field: input.name, value: input.value });
+        }
+      };
 
     form.addEventListener("input", checkDirty);
     form.addEventListener("input", broadcastField);
@@ -101,7 +103,7 @@ export default function UnsavedGuard({
       form.removeEventListener("change", checkDirty);
       form.removeEventListener("change", broadcastField);
       form.removeEventListener("submit", handleSubmit);
-      previewChannel.close();
+      previewChannel?.close();
     };
   }, [formId, isNew, isDraft]);
 

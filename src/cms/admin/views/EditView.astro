@@ -186,11 +186,12 @@ const hasSidebarMeta = reverseRefs.length > 0 || hasDocMeta;
 const hasSidebarColumn = !isSubmissionView && (hasSidebarFields || hasSidebarMeta);
 
 const hasPreview = !!(mode === "edit" && (collection.preview || (collection.pathPrefix && doc?.slug)));
-const previewUrl = hasPreview
-  ? typeof collection.preview === "string"
-    ? `${collection.preview}?preview=true`
-    : `${cms.meta.getRouteForDocument(collection.slug, doc)}?preview=true`
-  : null;
+// Live-preview channel key: the preview tab only listens to this document's editor.
+const previewKey = hasPreview && documentId ? `${collection.slug}:${documentId}` : null;
+const previewUrl =
+  hasPreview && previewKey
+    ? `${typeof collection.preview === "string" ? collection.preview : cms.meta.getRouteForDocument(collection.slug, doc)}?preview=${encodeURIComponent(previewKey)}`
+    : null;
 
 const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
 const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
@@ -437,7 +438,7 @@ const publishBlocked =
               (doc?._status === "draft" || doc?._status === "scheduled" || (doc && getVisualStatus(doc) === "changed")),
             )}
           />
-          <div id="document-edit-area">
+          <div id="document-edit-area" data-preview-channel={!translationMode ? previewKey : undefined}>
             {collection.slug === "users" && mode === "edit" && Astro.url.searchParams.get("inviteToken") && (
               <AdminCard title={Astro.url.searchParams.get("emailSent") === "true" ? "Invitation sent" : "Invite link"}>
                 {Astro.url.searchParams.get("emailSent") === "true" ? (

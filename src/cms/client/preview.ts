@@ -1,5 +1,8 @@
-if (new URLSearchParams(location.search).has("preview")) {
-  const ch = new BroadcastChannel("cms-preview");
+// `?preview=<collection>:<id>` (as linked from the edit view) scopes live updates to
+// that document's editor. A bare `?preview` / `?preview=true` only shows drafts.
+const previewKey = new URLSearchParams(location.search).get("preview");
+if (previewKey && previewKey !== "true") {
+  const ch = new BroadcastChannel(`cms-preview:${previewKey}`);
   let pending = 0;
 
   ch.onmessage = (e: MessageEvent) => {
