@@ -7,6 +7,18 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.27.1] - 2026-09-13
+
+### Fixed
+
+- **Live preview no longer shows another document's content.** Every admin edit tab and every
+  preview tab shared one `cms-preview` BroadcastChannel, and a preview tab that opened asked all
+  editors to replay their unsaved values — so with a blog post open in the admin, `/about?preview`
+  could have its body replaced by the post's body until a refresh. The channel is now scoped per
+  document: the edit view links the preview as `?preview=<collection>:<id>` and editors only
+  broadcast on that document's channel. A bare `?preview` / `?preview=true` still shows drafts but
+  no longer receives live updates — reopen preview tabs from the edit view after upgrading.
+
 ## [0.27.0] - 2026-09-13
 
 ### Changed
