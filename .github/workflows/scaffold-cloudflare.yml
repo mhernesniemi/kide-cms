@@ -1,0 +1,61 @@
+name: Scaffold + deploy to Cloudflare
+
+# Weekly end-to-end check of the path a new Cloudflare user takes: the published
+# create-kide-app scaffolds the latest release, provisions D1 + R2, deploys, and the
+# live site is exercised. Everything created is deleted afterwards, pass or fail.
+# Requires the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets
+# (token permissions: Workers Scripts, D1, Workers R2 Storage — edit).
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: scaffold-cloudflare
+  cancel-in-progress: false
+
+jobs:
+  scaffold-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROJECT: kide-ci-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Scaffold and deploy
+        working-directory: ${{ runner.temp }}
+        run: |
+          pnpm dlx create-kide-app@latest "$PROJECT" --starter=blank --mode=package \
+            --target=cloudflare --cloudflare-setup --deploy --no-github | tee scaffold.log
+          grep -q "Your Kide CMS is live" scaffold.log
+
+      - name: Verify the live site
+        working-directory: ${{ runner.temp }}/${{ env.PROJECT }}
+        run: |
+          SUBDOMAIN=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" \
+            | python3 -c 'import sys,json; print(json.load(sys.stdin)["result"]["subdomain"])')
+          bash "$GITHUB_WORKSPACE/.github/workflows/scripts/verify-deployed-site.sh" "https://$PROJECT.$SUBDOMAIN.workers.dev"
+
+      - name: Delete Cloudflare resources
+        if: always()
+        working-directory: ${{ runner.temp }}/${{ env.PROJECT }}
+        run: |
+          set +e
+          # R2 buckets must be empty before deletion; the uploaded keys are in D1.
+          KEYS=$(pnpm exec wrangler d1 execute "$PROJECT-db" --remote --json \
+            --command "select storage_path from cms_assets" 2>/dev/null \
+            | python3 -c 'import sys,json; print("\n".join(r["storage_path"].lstrip("/") for r in json.load(sys.stdin)[0]["results"]))' 2>/dev/null)
+          for key in $KEYS; do pnpm exec wrangler r2 object delete "$PROJECT-assets/$key" --remote; done
+          pnpm exec wrangler delete --name "$PROJECT" --force
+          pnpm exec wrangler r2 bucket delete "$PROJECT-assets"
+          pnpm exec wrangler d1 delete "$PROJECT-db" -y
+          exit 0

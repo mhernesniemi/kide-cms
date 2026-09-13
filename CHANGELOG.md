@@ -7,6 +7,20 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.28.1] - 2026-09-13
+
+### Fixed
+
+- **`pnpm test` failed out of the box in embedded projects.** A Cloudflare binding test read
+  `adapters/cloudflare/wrangler.toml`, which only exists in this repo. It now checks the
+  project's own `wrangler.toml` and skips on the Node target.
+
+### Added
+
+- CI runs each scaffolded starter's own `pnpm test`, and a weekly workflow scaffolds a project with
+  the published `create-kide-app`, deploys it to Cloudflare, exercises the live site, and deletes
+  everything it created (needs the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets).
+
 ## [0.28.0] - 2026-09-13
 
 ### Changed

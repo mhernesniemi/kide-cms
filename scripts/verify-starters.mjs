@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Assembles a project from HEAD for each starter in starters/ (barebone base +
-// overlay, embedded shape), then checks, pushes a temp schema, seeds with
+// overlay, embedded shape), then checks, tests, pushes a temp schema, seeds with
 // row-count verification, and builds. Also rejects overlay files outside the
 // allowlist in starters/README.md. Run: pnpm verify:starters
 import { execSync } from "node:child_process";
@@ -106,6 +106,7 @@ for (const starter of starters) {
     run("pnpm install --prefer-offline --no-frozen-lockfile");
     run("pnpm cms:generate");
     run("pnpm check"); // starter sources are excluded from the root check — typed and linted here
+    run("pnpm test"); // the scaffold's own suite, run on the pruned tree users get
     run("pnpm cms:push");
     run("pnpm exec kide seed");
     if (existsSync(path.join(project, "src/cms/seed.ts"))) {
