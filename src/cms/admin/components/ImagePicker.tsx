@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { ImagePlus, Loader2, Upload, X } from "lucide-react";
 import { cn, focalPointStyle, thumbnail } from "../lib/utils";
 import { Button } from "./ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 import ImageBrowseDialog from "./ImageBrowseDialog";
 
 type Props = {
@@ -18,7 +19,9 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFrameRef = useRef<HTMLIFrameElement>(null);
   const hiddenRef = useRef<HTMLInputElement>(null);
 
   // Resolve asset ID from URL on mount
@@ -77,6 +80,29 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
     [handleUpload],
   );
 
+  // The side panel hosts the asset's own edit page. Its form posts redirect inside the
+  // iframe, so a successful save or delete shows up as a same-origin navigation.
+  const handleEditFrameLoad = () => {
+    const location = editFrameRef.current?.contentWindow?.location;
+    if (!location || !assetId) return;
+    if (new URLSearchParams(location.search).get("_toast") !== "success") return;
+
+    if (location.pathname === `/admin/assets/${assetId}`) {
+      fetch(`/api/cms/assets/${assetId}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((asset) => {
+          if (asset) setFocal({ focalX: asset.focalX ?? null, focalY: asset.focalY ?? null });
+        })
+        .catch(() => {});
+      setEditOpen(false);
+    } else if (location.pathname === "/admin/assets") {
+      setValue("");
+      setAssetId(null);
+      onChangeProp?.("");
+      setEditOpen(false);
+    }
+  };
+
   const imgSrc = localPreview ?? thumbnail(value);
   const isImage =
     value && (value.match(/\.(jpg|jpeg|png|gif|webp|avif|svg)$/i) || value.startsWith("http") || localPreview);
@@ -88,9 +114,11 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
       {value && (
         <div className="group relative inline-block">
           {isImage ? (
-            <a
-              href={assetId ? `/admin/assets/${assetId}` : undefined}
-              target="_blank"
+            <button
+              type="button"
+              title={assetId ? "Edit image" : undefined}
+              disabled={!assetId}
+              onClick={() => setEditOpen(true)}
               className={cn(
                 "block size-40 overflow-hidden rounded-lg border",
                 assetId && "hover:border-foreground/50 cursor-pointer",
@@ -102,7 +130,7 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
                 className="size-full object-cover"
                 style={localPreview ? undefined : focal ? focalPointStyle(focal) : undefined}
               />
-            </a>
+            </button>
           ) : (
             <div className="bg-field flex size-40 items-center justify-center rounded-lg border">
               <span className="text-muted-foreground truncate px-4 text-sm">{value}</span>
@@ -142,6 +170,28 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
           Browse
         </Button>
       </div>
+
+      <Sheet open={editOpen} onOpenChange={setEditOpen}>
+        <SheetContent
+          side="right"
+          className="data-[side=right]:w-[90vw] data-[side=right]:sm:max-w-[90vw] data-[side=right]:lg:w-[50vw] data-[side=right]:lg:max-w-[50vw]"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>Edit image</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-hidden">
+            {editOpen && assetId && (
+              <iframe
+                ref={editFrameRef}
+                src={`/admin/assets/${assetId}?_embed=1`}
+                title="Edit image"
+                className="size-full"
+                onLoad={handleEditFrameLoad}
+              />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <ImageBrowseDialog
         open={open}

@@ -32,6 +32,7 @@ if (!id) return Astro.redirect("/admin/assets");
 const asset = await assets.findById(id);
 if (!asset) return Astro.redirect("/admin/assets");
 
+const isEmbed = Astro.url.searchParams.get("_embed") === "1";
 const aiEnabled = isAiEnabled();
 const isImage = asset.mimeType.startsWith("image/");
 
@@ -69,17 +70,22 @@ const folderItems = flattenByParent(
   collections={accessibleCollections}
   activeCollection="assets"
   customNav={config.admin?.nav}
+  embed={isEmbed}
 >
   <section class="space-y-6 px-4 py-6 lg:py-8 lg:pr-8 lg:pl-12">
     <div class="flex items-start justify-between gap-4">
       <div>
-        <a
-          href={asset.folder ? `/admin/assets?folder=${asset.folder}` : "/admin/assets"}
-          class="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm transition-colors"
-        >
-          <ArrowLeft className="size-3.5" />
-          {currentFolder ? currentFolder.name : "Assets"}
-        </a>
+        {
+          !isEmbed && (
+            <a
+              href={asset.folder ? `/admin/assets?folder=${asset.folder}` : "/admin/assets"}
+              class="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm transition-colors"
+            >
+              <ArrowLeft className="size-3.5" />
+              {currentFolder ? currentFolder.name : "Assets"}
+            </a>
+          )
+        }
         <h1 class="text-2xl font-semibold tracking-tight">{asset.filename}</h1>
       </div>
     </div>
@@ -101,6 +107,7 @@ const folderItems = flattenByParent(
     <UnsavedGuard client:load formId="asset-form" isNew={false} isDraft={false} />
     <form id="asset-form" method="post" action={`/api/cms/assets/${asset._id}`}>
       <input type="hidden" name="_action" value="update" />
+      {isEmbed && <input type="hidden" name="_embed" value="1" />}
       <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,460px)]">
         <div class="space-y-6">
           {

@@ -19,7 +19,7 @@
 // The previous tag is the highest v* tag reachable from HEAD that does not
 // point at HEAD itself (so a release-tag push compares against the release
 // before it). CI needs the full history + tags (`fetch-depth: 0`).
-// Override with PREV_TAG=v0.x.y. Run: pnpm verify:upgrade
+// Override with PREV_TAG=v0.x.y. Run: node scripts/verify-upgrade.mjs
 import { execFileSync, execSync, spawn } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -166,7 +166,6 @@ async function verifyPackageMode(prevTree, prevTarball, headTarball) {
     "verify:package",
     "verify:cloudflare",
     "verify:starters",
-    "verify:upgrade",
     "dev:preview",
     "cms:upgrade",
     "cms:restore",

@@ -18,7 +18,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 
 ### Added
 
-- `pnpm verify:upgrade` (`scripts/verify-upgrade.mjs`), run in CI and before every publish:
+- `scripts/verify-upgrade.mjs`, run in CI and before every publish:
   scaffolds a project from the previous release tag in both modes and upgrades it to HEAD.
   Package mode must end with only `package.json` and the lockfile changed; embedded mode runs
   `kide upgrade` and must produce a `careful-review.patch` that is a dependency bump only.

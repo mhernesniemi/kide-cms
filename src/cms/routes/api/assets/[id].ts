@@ -69,6 +69,8 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
   const method = formData.get("_method");
   const action = formData.get("_action");
   const actor = getActor(locals);
+  // Keep the side-panel (iframe) layout across the redirect.
+  const embed = formData.get("_embed") === "1" ? "&_embed=1" : "";
 
   if (method === "DELETE" || action === "delete") {
     try {
@@ -77,14 +79,14 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
       if (error instanceof AssetInUseError) {
         return new Response(null, {
           status: 303,
-          headers: { Location: `/admin/assets/${id}?_toast=error&_msg=${encodeURIComponent(error.message)}` },
+          headers: { Location: `/admin/assets/${id}?_toast=error&_msg=${encodeURIComponent(error.message)}${embed}` },
         });
       }
       throw error;
     }
     return new Response(null, {
       status: 303,
-      headers: { Location: "/admin/assets?_toast=success&_msg=Asset+deleted" },
+      headers: { Location: `/admin/assets?_toast=success&_msg=Asset+deleted${embed}` },
     });
   }
 
@@ -105,7 +107,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     );
     return new Response(null, {
       status: 303,
-      headers: { Location: `/admin/assets/${id}?_toast=success&_msg=Asset+updated` },
+      headers: { Location: `/admin/assets/${id}?_toast=success&_msg=Asset+updated${embed}` },
     });
   }
 
