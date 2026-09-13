@@ -47,19 +47,22 @@ jobs:
 
       - name: Delete Cloudflare resources
         if: always()
-        working-directory: ${{ runner.temp }}/${{ env.PROJECT }}
+        working-directory: ${{ runner.temp }}
         run: |
           set +e
+          # Runs even when scaffolding failed early, so don't rely on the project's own wrangler.
+          mkdir -p "$PROJECT" && cd "$PROJECT"
+          wrangler() { pnpm --reporter=silent dlx wrangler@4 "$@"; }
           # R2 buckets must be empty before deletion; the uploaded keys are in D1.
-          KEYS=$(pnpm exec wrangler d1 execute "$PROJECT-db" --remote --json \
+          KEYS=$(wrangler d1 execute "$PROJECT-db" --remote --json \
             --command "select storage_path from cms_assets" 2>/dev/null \
             | python3 -c 'import sys,json; print("\n".join(r["storage_path"].lstrip("/") for r in json.load(sys.stdin)[0]["results"]))' 2>/dev/null)
-          for key in $KEYS; do pnpm exec wrangler r2 object delete "$PROJECT-assets/$key" --remote; done
-          pnpm exec wrangler delete --name "$PROJECT" --force
-          pnpm exec wrangler r2 bucket delete "$PROJECT-assets"
-          pnpm exec wrangler d1 delete "$PROJECT-db" -y
+          for key in $KEYS; do wrangler r2 object delete "$PROJECT-assets/$key" --remote; done
+          wrangler delete --name "$PROJECT" --force
+          wrangler r2 bucket delete "$PROJECT-assets"
+          wrangler d1 delete "$PROJECT-db" -y
           # The first deploy provisions the Astro session KV namespace automatically.
-          KV_ID=$(pnpm exec wrangler kv namespace list 2>/dev/null \
+          KV_ID=$(wrangler kv namespace list 2>/dev/null \
             | python3 -c 'import sys,json; print(next((n["id"] for n in json.load(sys.stdin) if n["title"] == sys.argv[1]), ""))' "$PROJECT-session")
-          [ -n "$KV_ID" ] && pnpm exec wrangler kv namespace delete --namespace-id "$KV_ID" --skip-confirmation
+          [ -n "$KV_ID" ] && wrangler kv namespace delete --namespace-id "$KV_ID" --skip-confirmation
           exit 0
