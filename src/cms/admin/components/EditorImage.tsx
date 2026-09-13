@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import type { Editor } from "@tiptap/core";
 import Image from "@tiptap/extension-image";
 import { NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
@@ -10,19 +10,29 @@ import { Input } from "./ui/input";
 import ImageBrowseDialog from "./ImageBrowseDialog";
 import { cn, thumbnail } from "../lib/utils";
 
-/** Node views only re-render on node/selection changes, so track editor focus ourselves. */
-function useEditorFocus(editor: Editor) {
+/**
+ * Node views only re-render on node/selection changes, so track editor focus
+ * ourselves. A blur whose focus lands inside `within` (the node's own toolbar)
+ * is ignored: in Chrome a mousedown on a button moves focus there before the
+ * click fires, and dropping `focused` at that point would unmount the toolbar
+ * under the pointer, so the click never happens.
+ */
+function useEditorFocus(editor: Editor, within: RefObject<HTMLElement | null>) {
   const [focused, setFocused] = useState(editor.isFocused);
   useEffect(() => {
     const on = () => setFocused(true);
-    const off = () => setFocused(false);
+    const off = ({ event }: { event: FocusEvent }) => {
+      const next = event.relatedTarget as Node | null;
+      if (next && within.current?.contains(next)) return;
+      setFocused(false);
+    };
     editor.on("focus", on);
     editor.on("blur", off);
     return () => {
       editor.off("focus", on);
       editor.off("blur", off);
     };
-  }, [editor]);
+  }, [editor, within]);
   return focused;
 }
 
@@ -34,7 +44,8 @@ function useEditorFocus(editor: Editor) {
 function ImageNodeView({ node, selected, editor, getPos, updateAttributes, deleteNode }: NodeViewProps) {
   const [browseOpen, setBrowseOpen] = useState(false);
   const [focusWithin, setFocusWithin] = useState(false);
-  const focused = useEditorFocus(editor);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const focused = useEditorFocus(editor, wrapperRef);
   const src = String(node.attrs.src ?? "");
   const alt = String(node.attrs.alt ?? "");
 
@@ -56,7 +67,6 @@ function ImageNodeView({ node, selected, editor, getPos, updateAttributes, delet
   // draws a bare <img> at natural size, so the ghost is a sized div. A real drag
   // starts on Tiptap's outer node element (the wrapper's parent), and Tiptap
   // sets its own ghost from React's root listener — override from the document.
-  const wrapperRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onDragStart = (e: DragEvent) => {
