@@ -1,10 +1,5 @@
 # Kide CMS
 
-[![npm](https://img.shields.io/npm/v/@kidecms/core)](https://www.npmjs.com/package/@kidecms/core)
-[![CI](https://github.com/mhernesniemi/kide-cms/actions/workflows/ci.yml/badge.svg)](https://github.com/mhernesniemi/kide-cms/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Built with Astro](https://astro.badg.es/v2/built-with-astro/tiny.svg)](https://astro.build)
-
 A code-first CMS for Astro. Define collections in TypeScript and get a generated admin UI and typed content API.
 
 ![Kide admin UI](.github/admin-screenshot.png)
@@ -90,3 +85,8 @@ Astro 7, React 19, Drizzle ORM, SQLite/D1, Zod, Tiptap, shadcn/ui, Tailwind CSS
 ## Note
 
 Kide is in **beta**: the config and collection API, the local API and the project-owned files are stable, and breaking changes to them land only in minor releases with a changelog note. See [Stability](https://docs.kide.dev/stability/).
+
+[![npm](https://img.shields.io/npm/v/@kidecms/core)](https://www.npmjs.com/package/@kidecms/core)
+[![CI](https://github.com/mhernesniemi/kide-cms/actions/workflows/ci.yml/badge.svg)](https://github.com/mhernesniemi/kide-cms/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Built with Astro](https://astro.badg.es/v2/built-with-astro/tiny.svg)](https://astro.build)
