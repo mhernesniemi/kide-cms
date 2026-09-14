@@ -11,13 +11,15 @@ ok() { echo "  ✓ $1"; }
 bad() { echo "  ✗ $1"; fail=1; }
 code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
 
-# A just-deployed Worker can take a moment to serve the new version.
-for _ in $(seq 1 20); do
+# A just-deployed Worker propagates unevenly across the edge; one good response isn't enough.
+streak=0
+for _ in $(seq 1 40); do
   loc=$(curl -s -o /dev/null -D - "$BASE/admin" | grep -i '^location:' | tr -d '\r' | awk '{print $2}')
-  [[ "$loc" == */admin/setup ]] && break
-  sleep 3
+  [[ "$loc" == */admin/setup ]] && streak=$((streak + 1)) || streak=0
+  [[ $streak -ge 5 ]] && break
+  sleep 2
 done
-[[ "$loc" == */admin/setup ]] && ok "/admin redirects to setup" || { bad "/admin redirected to '$loc'"; exit 1; }
+[[ $streak -ge 5 ]] && ok "/admin redirects to setup" || { bad "/admin redirected to '$loc'"; exit 1; }
 
 s=$(curl -s -o /dev/null -D - -X POST -H "Origin: $BASE" \
   --data-urlencode "name=CI Admin" --data-urlencode "email=$EMAIL" \
@@ -31,8 +33,9 @@ COOKIE=$(echo "$hdr" | grep -i '^set-cookie: cms_session=' | head -1 | sed 's/^[
 [[ -n "$COOKIE" ]] && ok "login sets a session cookie" || { bad "login failed"; exit 1; }
 
 for path in /admin/recent /admin/pages /admin/pages/new /admin/assets /admin/users; do
-  c=$(code -H "Cookie: $COOKIE" "$BASE$path")
-  [[ "$c" == 200 ]] && ok "GET $path" || bad "GET $path returned $c"
+  body=$(curl -s -w '\n%{http_code}' -H "Cookie: $COOKIE" "$BASE$path")
+  c="${body##*$'\n'}"
+  [[ "$c" == 200 ]] && ok "GET $path" || bad "GET $path returned $c: $(echo "${body%$'\n'*}" | head -c 200)"
 done
 
 SLUG="ci-$(date +%s)"

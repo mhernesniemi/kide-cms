@@ -7,12 +7,25 @@
 
 A code-first CMS for Astro. Define collections in TypeScript and get a generated admin UI and typed content API.
 
-Kide is in **beta**: the config and collection API, the local API and the project-owned files are stable, and breaking changes to them land only in minor releases with a changelog note. See [Stability](https://docs.kide.dev/stability/).
-
 ![Kide admin UI](.github/admin-screenshot.png)
 
 - [Live demo](https://demo.kide.dev/admin)
 - [Docs](https://docs.kide.dev/)
+
+## Why Kide
+
+**An Astro integration, not a headless service.** Kide lives in your repo: collections in TypeScript, content read through an import, the admin served by your own app, pages cached by Astro's route cache with tag invalidation.
+
+**No plugin API.** You extend Kide the way you extend any code you own. Small needs are lifecycle hooks. Need more? `pnpm exec kide eject` moves the runtime, routes, and admin into `src/cms/` to read, change, and audit. Package mode when you want a dependency, embedded when you want the source.
+
+**A complete admin for editors.** Your schema stays in TypeScript, and editors get:
+
+- 16 field types, including Tiptap rich text, blocks, and relations
+- Assets with folders, focal points, and on-demand optimization
+- Live preview: edit in the admin, see the page
+- Drafts, publishing, scheduling, and version restore
+- Field-level i18n: translate only what needs it
+- Role-based access control, review, and an audit trail
 
 ## Quick Start
 
@@ -70,17 +83,10 @@ posts: {
 }
 ```
 
-## Features
-
-- 16 field types, including blocks and relations
-- Drafts, publishing, scheduling, versioning
-- Per-field i18n
-- Asset management with focal points and on-demand optimization
-- Tiptap rich text, block editor, live preview
-- Role-based access control
-
-See the full feature list at [docs.kide.dev](https://docs.kide.dev/).
-
 ## Stack
 
 Astro 7, React 19, Drizzle ORM, SQLite/D1, Zod, Tiptap, shadcn/ui, Tailwind CSS
+
+## Notes
+
+Kide is in **beta**: the config and collection API, the local API and the project-owned files are stable, and breaking changes to them land only in minor releases with a changelog note. See [Stability](https://docs.kide.dev/stability/).
