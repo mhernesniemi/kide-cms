@@ -87,6 +87,6 @@ posts: {
 
 Astro 7, React 19, Drizzle ORM, SQLite/D1, Zod, Tiptap, shadcn/ui, Tailwind CSS
 
-## Notes
+## Note
 
 Kide is in **beta**: the config and collection API, the local API and the project-owned files are stable, and breaking changes to them land only in minor releases with a changelog note. See [Stability](https://docs.kide.dev/stability/).
