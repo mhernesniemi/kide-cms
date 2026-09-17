@@ -460,8 +460,8 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
           />
           <Select
             items={[
-              { value: "reference", label: "Document" },
-              { value: "custom", label: "URL" },
+              { value: "reference", label: "Choose page" },
+              { value: "custom", label: "Type URL" },
             ]}
             value={editing.linkType}
             onValueChange={(v) => {
@@ -474,8 +474,8 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="reference">Document</SelectItem>
-                <SelectItem value="custom">URL</SelectItem>
+                <SelectItem value="reference">Choose page</SelectItem>
+                <SelectItem value="custom">Type URL</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>

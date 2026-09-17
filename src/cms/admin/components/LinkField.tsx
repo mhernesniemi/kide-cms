@@ -97,19 +97,19 @@ export default function LinkField({ name, value: initial, onChange, linkOptions 
             <div className="flex min-w-0 items-center gap-2">
               <Select
                 items={[
-                  { value: "reference", label: "Document" },
-                  { value: "custom", label: "URL" },
+                  { value: "reference", label: "Choose page" },
+                  { value: "custom", label: "Type URL" },
                 ]}
                 value={mode}
                 onValueChange={(v) => changeMode((v as LinkMode) ?? "reference")}
               >
-                <SelectTrigger className="w-28 shrink-0 text-sm">
+                <SelectTrigger className="w-36 shrink-0 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="reference">Document</SelectItem>
-                    <SelectItem value="custom">URL</SelectItem>
+                    <SelectItem value="reference">Choose page</SelectItem>
+                    <SelectItem value="custom">Type URL</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
