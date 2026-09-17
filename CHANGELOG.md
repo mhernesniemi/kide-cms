@@ -7,6 +7,39 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.29.0] - 2026-09-17
+
+### Added
+
+- **`linkable` collection option.** Collections that have a `slug` but no public page of their own —
+  a `forms` collection, say — set `linkable: false` to stay out of the internal-link pickers.
+  Previously the only exclusions were a hardcoded core denylist, so a project collection could not
+  opt out and showed up as a link target that resolves to nothing.
+- **Shared sections in the marketing starter.** It now registers a `shared-sections` collection and
+  seeds a "Contact CTA" that the About page inserts by reference, so the starter demonstrates
+  editing a section once and having it update everywhere.
+
+### Changed
+
+- **Link fields store the mode they were authored in.** `fields.link()` and menu items offer
+  **Choose page** (a document picker, storing `docId` + `collection`) and **Type URL** (a
+  hand-written site path or absolute URL), stored as `type: "reference" | "custom"`. The mode used
+  to be re-guessed from a leading `/`, so a hand-typed `/contact` came back as a document reference
+  with no document behind it. Existing values are read by inference — one carrying a document is a
+  reference, anything else is a custom URL — so no content needs migrating.
+- The marketing starter's `cta` block takes a `button` link field instead of free-text
+  `buttonLabel` + `buttonHref`.
+
+### Fixed
+
+- **Duplicate taxonomy term slugs.** A term's slug is what documents store, so two terms sharing one
+  were indistinguishable: posts filed under the second showed as the first, and filtering returned
+  both. The term editor now keeps slugs unique within the tree (`news`, `news-2`) and flags a typed
+  collision before it is saved.
+- **"Save as shared section" in projects with no `shared-sections` collection.** The action was
+  offered on every block field and failed on POST. It is now hidden unless the collection is
+  registered and the editor may write to it; Detach stays available on existing references.
+
 ## [0.28.1] - 2026-09-13
 
 ### Fixed
