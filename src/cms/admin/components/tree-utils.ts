@@ -109,3 +109,25 @@ export function canAddChild(items: TreeItem[], id: string, maxDepth?: number): b
   if (maxDepth === undefined) return true;
   return findItemDepth(items, id) < maxDepth;
 }
+
+/** Slugs used elsewhere in the tree. A term slug is what documents store
+ * (`taxonomy-select`), so two terms sharing one are indistinguishable. */
+export function collectSlugs(items: TreeItem[], excludeId?: string): Set<string> {
+  const slugs = new Set<string>();
+  const walk = (list: TreeItem[]) => {
+    for (const item of list) {
+      if (item.id !== excludeId && typeof item.slug === "string" && item.slug) slugs.add(item.slug);
+      walk(item.children);
+    }
+  };
+  walk(items);
+  return slugs;
+}
+
+/** `base`, or the first free `base-2`, `base-3`, … */
+export function uniqueSlug(base: string, taken: Set<string>): string {
+  if (!base || !taken.has(base)) return base;
+  let suffix = 2;
+  while (taken.has(`${base}-${suffix}`)) suffix += 1;
+  return `${base}-${suffix}`;
+}

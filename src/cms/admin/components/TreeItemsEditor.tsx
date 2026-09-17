@@ -46,6 +46,8 @@ import {
   canIndent,
   canOutdent,
   canAddChild,
+  collectSlugs,
+  uniqueSlug,
   MENU_MAX_DEPTH,
 } from "./tree-utils";
 
@@ -72,6 +74,12 @@ type Props = {
 
 function blankEdit(id: string): EditState {
   return { id, label: "", href: "", target: "", linkType: "internal", name: "", slug: "", autoSlug: true };
+}
+
+/** The slug a pending edit will be saved with: slugified, and made unique
+ * against the rest of the tree. */
+function commitSlug(state: EditState, taken: Set<string>): string {
+  return uniqueSlug(slugify(state.slug || state.name), taken);
 }
 
 function flattenForSelect(list: TreeItem[], depth = 0): Array<{ id: string; label: string }> {
@@ -127,6 +135,11 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
 
   const updateEditing = (patch: Partial<EditState>) => setEditing((prev) => (prev ? { ...prev, ...patch } : prev));
 
+  // Term slugs identify the term in document data, so they must stay unique
+  // across the whole tree — a collision is resolved with a `-2` suffix.
+  const takenSlugs = React.useMemo(() => collectSlugs(items, editing?.id), [items, editing?.id]);
+  const slugCollides = !!editing && !editing.autoSlug && takenSlugs.has(slugify(editing.slug));
+
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(() => {
     const ids = new Set<string>();
     const collectIds = (list: TreeItem[]) => {
@@ -152,7 +165,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
             item.target = editing.target || undefined;
           } else {
             item.name = editing.name;
-            item.slug = editing.slug || slugify(editing.name);
+            item.slug = commitSlug(editing, takenSlugs);
           }
           return;
         }
@@ -161,7 +174,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
     };
     apply(merged);
     return JSON.stringify(merged);
-  }, [items, editing, variant]);
+  }, [items, editing, variant, takenSlugs]);
 
   // Notify form of changes so UnsavedGuard can detect them
   React.useEffect(() => {
@@ -228,7 +241,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
               item.target = editing.target || undefined;
             } else {
               item.name = editing.name;
-              item.slug = editing.slug || slugify(editing.name);
+              item.slug = commitSlug(editing, takenSlugs);
             }
             return;
           }
@@ -487,7 +500,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
           value={editing.name}
           onChange={(e) => {
             const name = e.target.value;
-            updateEditing({ name, ...(editing.autoSlug ? { slug: slugify(name) } : {}) });
+            updateEditing({ name, ...(editing.autoSlug ? { slug: uniqueSlug(slugify(name), takenSlugs) } : {}) });
           }}
           placeholder="Name"
           className="bg-background h-7 flex-1 text-sm"
@@ -498,7 +511,12 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
           value={editing.slug}
           onChange={(e) => updateEditing({ slug: e.target.value, autoSlug: false })}
           placeholder="slug"
-          className="bg-background h-7 w-36 text-sm"
+          title={
+            slugCollides
+              ? `Slug already used — this term will be saved as "${commitSlug(editing, takenSlugs)}".`
+              : undefined
+          }
+          className={cn("bg-background h-7 w-36 text-sm", slugCollides && "border-destructive text-destructive")}
           onKeyDown={editKeyHandler}
         />
       </>
@@ -650,12 +668,12 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
       .filter(Boolean);
     if (names.length === 0) return;
 
-    const newItems = names.map((n) => ({
-      id: generateId(),
-      name: n,
-      slug: slugify(n),
-      children: [] as TreeItem[],
-    }));
+    const taken = collectSlugs(items);
+    const newItems = names.map((n) => {
+      const slug = uniqueSlug(slugify(n), taken);
+      taken.add(slug);
+      return { id: generateId(), name: n, slug, children: [] as TreeItem[] };
+    });
 
     setItems((prev) => {
       const next = cloneItems(prev);
