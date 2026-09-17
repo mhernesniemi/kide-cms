@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { ArrowUpRight, GripVertical, ChevronRight, Link2, Plus, Save, Trash2, Unlink } from "lucide-react";
+import { GripVertical, ChevronRight, Link2, Pencil, Plus, Save, Trash2, Unlink } from "lucide-react";
 import { cn } from "../lib/utils";
 import { openPreviewChannel } from "../lib/preview-channel";
 import {
@@ -29,6 +29,7 @@ import {
 } from "./block-fields";
 import type { LinkableCollection } from "./InternalLinkPicker";
 import SharedSectionEditSheet from "./SharedSectionEditSheet";
+import { useSharedSection } from "../lib/use-shared-section";
 
 type Block = {
   _key: string;
@@ -130,6 +131,9 @@ function SortableBlock({
   };
 
   const shared = isSharedBlock(block);
+  const sharedRef = shared ? String(block.ref) : null;
+  const sharedState = useSharedSection(sharedRef, !!sharedSection);
+  const sharedMissing = sharedState === "missing";
   const preview = shared
     ? String(sharedSection?.title ?? block.title ?? "Shared section")
     : getPreviewText(block, fieldsMeta);
@@ -183,7 +187,7 @@ function SortableBlock({
         )}
 
         <div className="ml-auto flex shrink-0 items-center">
-          {(shared || sharedEnabled) && (
+          {(shared ? !sharedMissing : sharedEnabled) && (
             <Button
               type="button"
               variant="ghost"
@@ -223,18 +227,29 @@ function SortableBlock({
               <div>
                 <p className="font-medium">{preview}</p>
                 <p className="text-muted-foreground text-sm">
-                  Editing the source updates every page that uses this shared section.
+                  {sharedMissing
+                    ? "This shared section has been deleted. There is nothing left to detach — remove the block to clear the reference."
+                    : "Editing the source updates every page that uses this shared section."}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => setSourceOpen(true)}>
-                  <ArrowUpRight className="size-3.5" />
-                  Edit source
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={onDetach}>
-                  <Unlink className="size-3.5" />
-                  Detach
-                </Button>
+                {sharedMissing ? (
+                  <Button type="button" variant="outline" size="sm" onClick={onRemove}>
+                    <Trash2 className="size-3.5" />
+                    Remove block
+                  </Button>
+                ) : (
+                  <>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setSourceOpen(true)}>
+                      <Pencil className="size-3.5" />
+                      Edit source
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={onDetach}>
+                      <Unlink className="size-3.5" />
+                      Detach
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           ) : (

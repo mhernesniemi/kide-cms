@@ -8,7 +8,6 @@ import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
-  ArrowUpRight,
   Bold,
   ChevronRight,
   GripVertical,
@@ -18,6 +17,7 @@ import {
   Link as LinkIcon,
   Maximize2,
   Minimize2,
+  Pencil,
   Save,
   Trash2,
   Unlink,
@@ -29,6 +29,7 @@ import { cn } from "../lib/utils";
 import { toggleHeading } from "../lib/editor-commands";
 import { openPreviewChannel } from "../lib/preview-channel";
 import SharedSectionEditSheet from "./SharedSectionEditSheet";
+import { useSharedSection } from "../lib/use-shared-section";
 import {
   LinkDialog,
   fetchLinkGroups,
@@ -122,6 +123,8 @@ function BlockNodeView(props: NodeViewProps) {
   const sharedTitle = String(fields.title ?? "Shared section");
   const sharedRef = String(fields.ref ?? "");
   const sharedType = String(fields.blockType ?? "");
+  // A node view has no section list to consult, so every reference resolves once.
+  const sharedMissing = useSharedSection(isShared && sharedRef ? sharedRef : null, false) === "missing";
 
   // Save this block as a reusable shared section, then turn it into a reference.
   const openSaveDialog = () => {
@@ -224,7 +227,7 @@ function BlockNodeView(props: NodeViewProps) {
         )}
 
         <div className="ml-auto flex shrink-0 items-center">
-          {(isShared || options.sharedEnabled) && (
+          {(isShared ? !sharedMissing : options.sharedEnabled) && (
             <Button
               type="button"
               variant="ghost"
@@ -263,15 +266,23 @@ function BlockNodeView(props: NodeViewProps) {
               <div>
                 <p className="font-medium">{sharedTitle}</p>
                 <p className="text-muted-foreground text-sm">
-                  Editing the source updates every place that uses this shared section.
+                  {sharedMissing
+                    ? "This shared section has been deleted. There is nothing left to detach — remove the block to clear the reference."
+                    : "Editing the source updates every place that uses this shared section."}
                 </p>
               </div>
-              {sharedRef && (
-                <Button type="button" variant="outline" size="sm" onClick={() => setSourceOpen(true)}>
-                  <ArrowUpRight className="size-3.5" />
-                  Edit source
-                </Button>
-              )}
+              {sharedRef &&
+                (sharedMissing ? (
+                  <Button type="button" variant="outline" size="sm" onClick={deleteNode}>
+                    <Trash2 className="size-3.5" />
+                    Remove block
+                  </Button>
+                ) : (
+                  <Button type="button" variant="outline" size="sm" onClick={() => setSourceOpen(true)}>
+                    <Pencil className="size-3.5" />
+                    Edit source
+                  </Button>
+                ))}
             </div>
           ) : (
             <>
