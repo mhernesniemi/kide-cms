@@ -599,6 +599,10 @@ export default function ContentEditor({
     document.documentElement.classList.remove("cms-fullscreen-restoring");
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // Entering fullscreen is an explicit "I want to write" gesture — put the caret in the
+    // editor rather than making it a second click. Deferred a frame so the overlay has laid
+    // out before the browser scrolls to the selection.
+    const focusFrame = requestAnimationFrame(() => editor?.commands.focus());
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setIsFullscreen(false);
     };
@@ -611,11 +615,12 @@ export default function ContentEditor({
     };
     form?.addEventListener("submit", onSubmit);
     return () => {
+      cancelAnimationFrame(focusFrame);
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", onKeyDown);
       form?.removeEventListener("submit", onSubmit);
     };
-  }, [isFullscreen, restoreKey]);
+  }, [isFullscreen, restoreKey, editor]);
 
   const openLinkDialog = () => {
     if (!editor) return;

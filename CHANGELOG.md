@@ -7,6 +7,15 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.29.3] - 2026-09-18
+
+### Fixed
+
+- **Sidebar meta stays readable when the sidebar is not a column.** Below `lg` the sidebar stacks
+  full width, and the `Info` rows and `Referenced by` entries pushed their label and value to
+  opposite edges of the whole form — most visible in an embedded edit sheet. The pair now sits
+  together when stacked; the two-column view is unchanged.
+
 ## [0.29.2] - 2026-09-18
 
 ### Changed
