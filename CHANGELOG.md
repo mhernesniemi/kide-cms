@@ -7,6 +7,30 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.29.2] - 2026-09-18
+
+### Changed
+
+- **Editing a shared section happens in a side panel.** "Edit source" on a shared block opened the
+  section's admin page in a new tab, dropping the editor's thread mid-edit with unsaved changes in
+  the parent form. It now opens the same page in a right-side sheet (the pattern asset editing and
+  relation "create new" already use), closes on save, and refreshes the title the referencing block
+  caches. The button's icon changed from an external-link arrow to a pencil to match.
+- **Document pickers size to their contents.** The search popover was pinned to the trigger width,
+  so in a cramped trigger — a menu item row, say — every result truncated after a few words. The
+  trigger width is now a floor: the popover grows to fit titles up to 28rem and clamps to the
+  viewport.
+
+### Fixed
+
+- **Truncated titles are readable on hover.** Document search results, the picker trigger, and
+  menu/taxonomy tree rows carry the full text as a tooltip on the whole row rather than nothing at
+  all.
+- **A deleted shared section no longer strands the blocks that reference it.** Detaching fetched the
+  source, got a 404, and dead-ended in an alert, leaving a block that could be neither detached nor
+  understood. The block now resolves its reference, says the section has been deleted, and offers
+  removing itself — detach is hidden, since there is no source left to copy from.
+
 ## [0.29.1] - 2026-09-18
 
 ### Changed
