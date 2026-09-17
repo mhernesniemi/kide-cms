@@ -135,7 +135,10 @@ export default function DocumentCombobox({
           <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+      <PopoverContent
+        className="w-auto min-w-(--radix-popover-trigger-width) max-w-[min(28rem,var(--radix-popover-content-available-width))] p-0"
+        align="start"
+      >
         <Command shouldFilter={false}>
           <CommandInput value={query} onValueChange={setQuery} placeholder={placeholder} />
           <CommandList>
