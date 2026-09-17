@@ -469,7 +469,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
               updateEditing({ linkType: newType, ...(newType === "reference" ? { href: "" } : {}) });
             }}
           >
-            <SelectTrigger className="bg-background h-7! min-w-0 flex-2 text-sm">
+            <SelectTrigger className="bg-background h-7! w-36 shrink-0 text-sm">
               <SelectValue placeholder="Link type" />
             </SelectTrigger>
             <SelectContent>
@@ -584,7 +584,12 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
                   </div>
                 ) : (
                   <>
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div
+                      className="flex min-w-0 flex-1 items-center gap-3"
+                      title={[getItemLabel(item, variant), variant === "menu" && getItemSublabel(item, variant)]
+                        .filter(Boolean)
+                        .join("  ")}
+                    >
                       <span className="truncate font-medium">{getItemLabel(item, variant)}</span>
                       {variant === "menu" && (
                         <span className="text-muted-foreground truncate text-xs">{getItemSublabel(item, variant)}</span>

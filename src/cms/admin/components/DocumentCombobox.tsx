@@ -106,6 +106,7 @@ export default function DocumentCombobox({
       key={hit.docId}
       value={`${hit.collection}:${hit.docId}`}
       onSelect={() => pick(hit)}
+      title={hit.title}
       className={cn("px-1", dimUnselected && !isSelected(hit) && "opacity-40")}
     >
       <Check className={cn("size-4", isSelected(hit) ? "opacity-100" : "opacity-0")} />
@@ -127,6 +128,7 @@ export default function DocumentCombobox({
           role="combobox"
           aria-expanded={open}
           size={size}
+          title={display || undefined}
           className={cn("w-full justify-between text-sm font-normal", triggerClassName)}
         >
           <span className={cn("truncate", !display && "text-muted-foreground")}>{display || placeholder}</span>
