@@ -4,7 +4,7 @@ import {
   getLabelField,
   type SharedSectionOption,
 } from "../../core";
-import { canRead } from "./access";
+import { canRead, canWrite } from "./access";
 
 type User = { id: string; role?: string; email?: string } | null | undefined;
 type CmsRuntime = Record<string, any> & { meta: { getRouteForDocument: (slug: string, doc: any) => string } };
@@ -135,6 +135,14 @@ export const loadRelationOptionList = async (
     label: String(item[labelField] ?? item.slug ?? item._id),
   }));
 };
+
+/** Whether the save-as-shared-section action should be offered at all: the
+ * project has to register a `shared-sections` collection, and the editor has to
+ * be allowed to write to it. Without this the action is a button that 404s. */
+export function canUseSharedSections(config: any, user: User): boolean {
+  if (!config.collections.some((c: any) => c.slug === SHARED_SECTIONS_COLLECTION)) return false;
+  return canWrite(config, user, SHARED_SECTIONS_COLLECTION);
+}
 
 export async function loadSharedSectionOptions(
   config: any,

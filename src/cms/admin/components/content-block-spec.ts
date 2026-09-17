@@ -26,6 +26,9 @@ export type BlockNodeOptions = {
   linkOptions?: LinkableCollection[];
   /** Name of the `content` field this editor belongs to — namespaces sub-field DOM ids. */
   fieldName: string;
+  /** False when the project registers no `shared-sections` collection — the
+   * save-as-shared action is hidden rather than failing on POST. */
+  sharedEnabled?: boolean;
 };
 
 export const blockNodeSpec = {

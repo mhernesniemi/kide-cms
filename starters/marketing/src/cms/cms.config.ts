@@ -2,6 +2,7 @@ import { defineConfig } from "@kidecms/core";
 import users from "./collections/users";
 import frontPage from "./collections/front-page";
 import pages from "./collections/pages";
+import sharedSections from "./collections/shared-sections";
 import posts from "./collections/posts";
 import taxonomies from "./collections/taxonomies";
 import menus from "./collections/menus";
@@ -13,5 +14,5 @@ export default defineConfig({
     default: "en",
     supported: ["en"],
   },
-  collections: [users, frontPage, pages, posts, taxonomies, menus, forms, formSubmissions],
+  collections: [users, frontPage, pages, posts, taxonomies, menus, sharedSections, forms, formSubmissions],
 });

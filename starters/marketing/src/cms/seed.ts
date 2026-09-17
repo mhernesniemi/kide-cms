@@ -13,8 +13,25 @@ const block = (blockType: string, blockFields: Record<string, unknown>) => ({
   blockType,
   fields: blockFields,
 });
+// A reference to a shared section: the block content lives in the shared-sections
+// collection, so editing it there updates every page that inserts it.
+const sharedBlock = (ref: string, title: string, blockType: string) => block("__shared", { ref, title, blockType });
 
 const seeds: Record<string, SeedDocument[]> = {
+  "shared-sections": [
+    {
+      _id: "shared-contact-cta",
+      title: "Contact CTA",
+      blockType: "cta",
+      block: {
+        type: "cta",
+        heading: "Want to know more?",
+        body: "We are happy to answer questions about the product, the team, or the roadmap.",
+        button: { type: "custom", url: "/contact", label: "Contact us" },
+      },
+      _status: "published",
+    },
+  ],
   "front-page": [
     {
       seoDescription: "Acme helps small teams launch faster with less overhead.",
@@ -91,11 +108,7 @@ const seeds: Record<string, SeedDocument[]> = {
           "Your data belongs to you, exportable at any moment",
           "Support is a feature, not a cost center",
         ),
-        block("cta", {
-          heading: "Want to know more?",
-          body: "We are happy to answer questions about the product, the team, or the roadmap.",
-          button: { type: "custom", url: "/contact", label: "Contact us" },
-        }),
+        sharedBlock("shared-contact-cta", "Contact CTA", "cta"),
       ),
       _status: "published",
     },

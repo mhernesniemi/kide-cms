@@ -222,20 +222,22 @@ function BlockNodeView(props: NodeViewProps) {
         )}
 
         <div className="ml-auto flex shrink-0 items-center">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            title={isShared ? "Detach shared section" : "Save as shared section"}
-            className="text-muted-foreground hover:text-foreground size-7"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isShared) detach();
-              else openSaveDialog();
-            }}
-          >
-            {isShared ? <Unlink className="size-3.5" /> : <Save className="size-3.5" />}
-          </Button>
+          {(isShared || options.sharedEnabled) && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title={isShared ? "Detach shared section" : "Save as shared section"}
+              className="text-muted-foreground hover:text-foreground size-7"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isShared) detach();
+                else openSaveDialog();
+              }}
+            >
+              {isShared ? <Unlink className="size-3.5" /> : <Save className="size-3.5" />}
+            </Button>
+          )}
           <Button
             type="button"
             variant="ghost"
@@ -380,6 +382,8 @@ type Props = {
   linkOptions?: LinkableCollection[];
   /** Shared sections offered by the `/` menu. */
   sharedSections?: SharedSectionOption[];
+  /** Whether shared sections exist as a collection at all (see FieldControl). */
+  sharedEnabled?: boolean;
   /** When true, show a button that expands the editor into a fullscreen overlay. */
   fullscreen?: boolean;
 };
@@ -398,6 +402,7 @@ export default function ContentEditor({
   types,
   linkOptions = [],
   sharedSections = [],
+  sharedEnabled = false,
   fullscreen = false,
 }: Props) {
   const hiddenRef = useRef<HTMLInputElement>(null);
@@ -488,7 +493,7 @@ export default function ContentEditor({
         showOnlyCurrent: true,
         placeholder: ({ node }) => (node.type.name === "paragraph" ? "Type / for commands…" : ""),
       }),
-      BlockNode.configure({ types, linkOptions, fieldName: name }),
+      BlockNode.configure({ types, linkOptions, fieldName: name, sharedEnabled }),
       SlashCommand.configure({ types, sharedSections, onInsertImage: () => setImageBrowseOpen(true) }),
     ],
     content: contentToTiptap(parsedInitial),
