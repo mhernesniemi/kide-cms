@@ -16,7 +16,6 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "./ui/button";
-import { buttonVariants } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "./ui/command";
 import {
@@ -29,6 +28,7 @@ import {
   type SubFieldMeta,
 } from "./block-fields";
 import type { LinkableCollection } from "./InternalLinkPicker";
+import SharedSectionEditSheet from "./SharedSectionEditSheet";
 
 type Block = {
   _key: string;
@@ -109,6 +109,7 @@ function SortableBlock({
   sharedSection?: SharedSectionOption;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const [sourceOpen, setSourceOpen] = useState(false);
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: block._key,
   });
@@ -226,14 +227,10 @@ function SortableBlock({
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <a
-                  href={`/admin/shared-sections/${block.ref}`}
-                  target="_blank"
-                  className={buttonVariants({ variant: "outline", size: "sm" })}
-                >
+                <Button type="button" variant="outline" size="sm" onClick={() => setSourceOpen(true)}>
                   <ArrowUpRight className="size-3.5" />
                   Edit source
-                </a>
+                </Button>
                 <Button type="button" variant="outline" size="sm" onClick={onDetach}>
                   <Unlink className="size-3.5" />
                   Detach
@@ -256,6 +253,13 @@ function SortableBlock({
           )}
         </div>
       )}
+
+      <SharedSectionEditSheet
+        sectionId={shared ? String(block.ref) : null}
+        open={sourceOpen}
+        onOpenChange={setSourceOpen}
+        onSaved={(section) => onUpdateField("title", String(section.title ?? ""))}
+      />
     </div>
   );
 }

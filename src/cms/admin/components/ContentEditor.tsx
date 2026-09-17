@@ -22,12 +22,13 @@ import {
   Trash2,
   Unlink,
 } from "lucide-react";
-import { Button, buttonVariants } from "./ui/button";
+import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { cn } from "../lib/utils";
 import { toggleHeading } from "../lib/editor-commands";
 import { openPreviewChannel } from "../lib/preview-channel";
+import SharedSectionEditSheet from "./SharedSectionEditSheet";
 import {
   LinkDialog,
   fetchLinkGroups,
@@ -107,6 +108,7 @@ function BlockNodeView(props: NodeViewProps) {
   // would otherwise wrongly start the block collapsed.
   const [expanded, setExpanded] = useState(() => Object.values(fields).every(isBlankFieldValue));
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [sourceOpen, setSourceOpen] = useState(false);
   const [sharedName, setSharedName] = useState("");
   // Stable per-node id so sub-field DOM ids/names stay unique across repeated blocks of
   // the same type (two FAQ blocks must not share input ids/labels).
@@ -265,14 +267,10 @@ function BlockNodeView(props: NodeViewProps) {
                 </p>
               </div>
               {sharedRef && (
-                <a
-                  href={`/admin/shared-sections/${sharedRef}`}
-                  target="_blank"
-                  className={buttonVariants({ variant: "outline", size: "sm" })}
-                >
+                <Button type="button" variant="outline" size="sm" onClick={() => setSourceOpen(true)}>
                   <ArrowUpRight className="size-3.5" />
                   Edit source
-                </a>
+                </Button>
               )}
             </div>
           ) : (
@@ -326,6 +324,13 @@ function BlockNodeView(props: NodeViewProps) {
           </form>
         </DialogContent>
       </Dialog>
+
+      <SharedSectionEditSheet
+        sectionId={sharedRef || null}
+        open={sourceOpen}
+        onOpenChange={setSourceOpen}
+        onSaved={(section) => updateAttributes({ fields: { ...fields, title: String(section.title ?? sharedTitle) } })}
+      />
     </NodeViewWrapper>
   );
 }
