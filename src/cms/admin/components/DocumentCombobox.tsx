@@ -136,7 +136,7 @@ export default function DocumentCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-auto min-w-(--radix-popover-trigger-width) max-w-[min(28rem,var(--radix-popover-content-available-width))] p-0"
+        className="w-auto max-w-[min(28rem,var(--radix-popover-content-available-width))] min-w-(--radix-popover-trigger-width) p-0"
         align="start"
       >
         <Command shouldFilter={false}>
