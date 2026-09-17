@@ -707,7 +707,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
 
   // --- Render ---
 
-  const emptyLabel = variant === "menu" ? "No menu items." : "No terms.";
+  const emptyLabel = variant === "menu" ? "No menu items." : "No terms yet — add one above.";
   const addLabel = variant === "menu" ? "Add menu item" : "Add term";
 
   return (
@@ -739,26 +739,32 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
         </div>
       )}
 
+      {/* The only way to add a term: a plus-prefixed input that names the action in
+          its placeholder, so it never reads as the filter box its position suggests. */}
       {variant === "taxonomy" && (
         <div className="flex items-center gap-2">
-          <Input
-            value={bulkInput}
-            onChange={(e) => setBulkInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleBulkAdd();
-              }
-            }}
-            placeholder="e.g., Electronics, Clothing, Books"
-            className="min-w-0 flex-1 text-sm"
-          />
+          <div className="relative min-w-0 flex-1">
+            <Plus className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <Input
+              value={bulkInput}
+              onChange={(e) => setBulkInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleBulkAdd();
+                }
+              }}
+              placeholder="e.g., Electronics, Clothing, Books"
+              className="w-full pl-9 text-sm"
+            />
+          </div>
           <Select
             items={parentOptions.map((opt) => ({ value: opt.id, label: opt.label }))}
             value={bulkParent}
             onValueChange={(v) => setBulkParent(v ?? "")}
           >
-            <SelectTrigger className="w-32 shrink-0 text-sm">
+            <SelectTrigger className="w-40 shrink-0 text-sm">
+              <span className="text-muted-foreground">Under</span>
               <SelectValue placeholder="Root" />
             </SelectTrigger>
             <SelectContent>
@@ -815,10 +821,12 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
           )}
         </DragOverlay>
       </DndContext>
-      <Button type="button" variant="outline" size="sm" onClick={addRootItem}>
-        <Plus className="size-4" />
-        {addLabel}
-      </Button>
+      {variant === "menu" && (
+        <Button type="button" variant="outline" size="sm" onClick={addRootItem}>
+          <Plus className="size-4" />
+          {addLabel}
+        </Button>
+      )}
     </div>
   );
 }
