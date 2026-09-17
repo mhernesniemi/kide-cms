@@ -254,6 +254,7 @@ export function loadLinkableCollections(config: any, user: User): LinkableCollec
   return config.collections
     .filter(
       (c: any) =>
+        c.linkable !== false &&
         !c.singleton &&
         !["users", "menus", "taxonomies", "authors"].includes(c.slug) &&
         c.fields.slug &&

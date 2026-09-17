@@ -4,6 +4,7 @@ export default defineCollection({
   slug: "forms",
   labels: { singular: "Form", plural: "Forms" },
   labelField: "title",
+  linkable: false,
   timestamps: true,
   views: {
     list: { columns: ["title", "slug", "_updatedAt"] },

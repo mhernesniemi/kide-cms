@@ -200,6 +200,10 @@ export type CollectionConfig = {
   labelField?: string;
   pathPrefix?: string;
   preview?: boolean | string;
+  /** Whether documents may be picked as internal link targets in the admin.
+   * Defaults to true for non-singleton collections with a `slug` field; set
+   * false for slugged collections that have no public page of their own. */
+  linkable?: boolean;
   timestamps?: boolean;
   drafts?: boolean;
   versions?: { max: number };
