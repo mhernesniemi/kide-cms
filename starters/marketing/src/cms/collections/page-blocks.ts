@@ -24,8 +24,7 @@ export const pageBlockTypes = {
   cta: {
     heading: fields.text(),
     body: fields.text({ admin: { rows: 2 } }),
-    buttonLabel: fields.text(),
-    buttonHref: fields.text({ admin: { placeholder: "/contact" } }),
+    button: fields.link({ label: "Button" }),
   },
   form: {
     heading: fields.text(),
