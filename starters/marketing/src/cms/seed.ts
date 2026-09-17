@@ -23,7 +23,7 @@ const seeds: Record<string, SeedDocument[]> = {
           type: "hero",
           heading: "Launch faster, grow smarter",
           body: "Everything your team needs to plan, build, and ship — in one place, without the busywork.",
-          cta: { type: "internal", url: "/contact", label: "Get in touch" },
+          cta: { type: "custom", url: "/contact", label: "Get in touch" },
         },
         {
           type: "features",
@@ -65,7 +65,7 @@ const seeds: Record<string, SeedDocument[]> = {
           type: "cta",
           heading: "Ready to get started?",
           body: "Tell us about your project and we will get back to you within one business day.",
-          button: { type: "internal", url: "/contact", label: "Contact us" },
+          button: { type: "custom", url: "/contact", label: "Contact us" },
         },
       ],
       _status: "published",
@@ -94,7 +94,7 @@ const seeds: Record<string, SeedDocument[]> = {
         block("cta", {
           heading: "Want to know more?",
           body: "We are happy to answer questions about the product, the team, or the roadmap.",
-          button: { type: "internal", url: "/contact", label: "Contact us" },
+          button: { type: "custom", url: "/contact", label: "Contact us" },
         }),
       ),
       _status: "published",

@@ -8,12 +8,14 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import InternalLinkPicker, { type LinkableCollection } from "./InternalLinkPicker";
 
 // A structured link control: URL + label + open-in-new-tab, stored as
-// { type, url, label, title, newTab, docId, collection }. A leading "/" is
-// treated as an internal link. When linkable collections are provided, internal
-// links are chosen with a document picker; the pick stores the document
-// reference (docId + collection) so renderers can resolve the current route via
-// resolveLinkUrl(), with `url` kept as a cached fallback. `title` is the picked
-// document's title — renderers use it as the link text when `label` is left empty.
+// { type, url, label, title, newTab, docId, collection }. `type` is the editor
+// mode the value was authored in and is stored, never re-guessed from the URL:
+// "reference" is a document picked from a linkable collection (docId +
+// collection, so renderers resolve the current route via resolveLinkUrl() and
+// the link survives slug edits, with `url` kept as a cached fallback), "custom"
+// is a hand-written URL — a site path or an absolute URL, both fine. `title` is
+// the picked document's title — renderers use it as the link text when `label`
+// is left empty.
 type LinkValue = {
   type?: string;
   url?: string;
@@ -23,6 +25,17 @@ type LinkValue = {
   docId?: string;
   collection?: string;
 };
+
+type LinkMode = "reference" | "custom";
+
+/** Legacy values (and seeds) predate the stored mode: a document reference is
+ * one that actually carries a document, everything else is a custom URL. */
+function modeOf(value: LinkValue, hasPicker: boolean): LinkMode {
+  if (value.type === "reference" || value.type === "custom") return value.type;
+  if (value.docId && value.collection) return "reference";
+  if (value.url) return "custom";
+  return hasPicker ? "reference" : "custom";
+}
 
 type Props = {
   name?: string;
@@ -46,12 +59,9 @@ function parse(v: unknown): LinkValue {
 }
 
 export default function LinkField({ name, value: initial, onChange, linkOptions = [] }: Props) {
+  const hasPicker = linkOptions.length > 0;
   const [value, setValue] = useState<LinkValue>(parse(initial));
-  const [linkType, setLinkType] = useState<"internal" | "external">(() => {
-    const url = parse(initial).url ?? "";
-    if (url) return url.startsWith("/") ? "internal" : "external";
-    return linkOptions.length > 0 ? "internal" : "external";
-  });
+  const [mode, setMode] = useState<LinkMode>(() => modeOf(parse(initial), hasPicker));
   const hiddenRef = useRef<HTMLInputElement>(null);
   const isInitial = useRef(true);
 
@@ -63,14 +73,19 @@ export default function LinkField({ name, value: initial, onChange, linkOptions 
     hiddenRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
   }, [value]);
 
-  const set = (patch: Partial<LinkValue>) => {
-    const next: LinkValue = { ...value, ...patch };
-    if (next.url) next.type = next.url.startsWith("/") ? "internal" : "external";
+  const set = (patch: Partial<LinkValue>, nextMode: LinkMode = mode) => {
+    const next: LinkValue = { ...value, ...patch, type: nextMode };
     setValue(next);
     onChange?.(next);
   };
 
-  const hasPicker = linkOptions.length > 0;
+  // Switching modes drops what the other mode owns: a custom URL keeps its text
+  // as a starting point, a document pick starts from an empty picker.
+  const changeMode = (next: LinkMode) => {
+    setMode(next);
+    if (next === "custom") set({ title: undefined, docId: undefined, collection: undefined }, next);
+    else set({ url: "", title: undefined, docId: undefined, collection: undefined }, next);
+  };
 
   return (
     <div className="space-y-2 rounded-md border p-3">
@@ -82,23 +97,23 @@ export default function LinkField({ name, value: initial, onChange, linkOptions 
             <div className="flex min-w-0 items-center gap-2">
               <Select
                 items={[
-                  { value: "internal", label: "Internal" },
-                  { value: "external", label: "External" },
+                  { value: "reference", label: "Document" },
+                  { value: "custom", label: "URL" },
                 ]}
-                value={linkType}
-                onValueChange={(v) => setLinkType((v as "internal" | "external") ?? "internal")}
+                value={mode}
+                onValueChange={(v) => changeMode((v as LinkMode) ?? "reference")}
               >
                 <SelectTrigger className="w-28 shrink-0 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="internal">Internal</SelectItem>
-                    <SelectItem value="external">External</SelectItem>
+                    <SelectItem value="reference">Document</SelectItem>
+                    <SelectItem value="custom">URL</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              {linkType === "internal" ? (
+              {mode === "reference" ? (
                 <InternalLinkPicker
                   editHref={value.url ?? ""}
                   editTitle={value.title}
@@ -110,7 +125,7 @@ export default function LinkField({ name, value: initial, onChange, linkOptions 
               ) : (
                 <Input
                   value={value.url ?? ""}
-                  placeholder="https://example.com"
+                  placeholder="https://example.com  or  /contact"
                   onChange={(e) =>
                     set({ url: e.target.value, title: undefined, docId: undefined, collection: undefined })
                   }
@@ -120,7 +135,7 @@ export default function LinkField({ name, value: initial, onChange, linkOptions 
           ) : (
             <Input
               value={value.url ?? ""}
-              placeholder="https://example.com  or  /about"
+              placeholder="https://example.com  or  /contact"
               onChange={(e) => set({ url: e.target.value, title: undefined, docId: undefined, collection: undefined })}
             />
           )}

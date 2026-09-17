@@ -53,12 +53,16 @@ import {
 
 // --- Types ---
 
+/** How a menu item's href was authored — stored on the item so a hand-written
+ * path is never mistaken for a document that was picked. */
+type LinkMode = "reference" | "custom";
+
 type EditState = {
   id: string;
   label: string;
   href: string;
   target: string;
-  linkType: "external" | "internal";
+  linkType: LinkMode;
   name: string;
   slug: string;
   autoSlug: boolean;
@@ -73,7 +77,7 @@ type Props = {
 };
 
 function blankEdit(id: string): EditState {
-  return { id, label: "", href: "", target: "", linkType: "internal", name: "", slug: "", autoSlug: true };
+  return { id, label: "", href: "", target: "", linkType: "reference", name: "", slug: "", autoSlug: true };
 }
 
 /** The slug a pending edit will be saved with: slugified, and made unique
@@ -163,6 +167,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
             item.label = editing.label;
             item.href = editing.href;
             item.target = editing.target || undefined;
+            item.linkType = editing.linkType;
           } else {
             item.name = editing.name;
             item.slug = commitSlug(editing, takenSlugs);
@@ -239,6 +244,7 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
               item.label = editing.label;
               item.href = editing.href;
               item.target = editing.target || undefined;
+              item.linkType = editing.linkType;
             } else {
               item.name = editing.name;
               item.slug = commitSlug(editing, takenSlugs);
@@ -311,13 +317,14 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
 
   const startEdit = (item: TreeItem) => {
     if (variant === "menu") {
-      const isInternal = String(item.href ?? "").startsWith("/");
       setEditing({
         ...blankEdit(item.id),
         label: String(item.label ?? ""),
         href: String(item.href ?? ""),
         target: String(item.target ?? ""),
-        linkType: isInternal ? "internal" : "external",
+        // Items saved before the mode was stored carry only an href, which is
+        // exactly what a custom URL is.
+        linkType: item.linkType === "reference" ? "reference" : "custom",
       });
     } else {
       setEditing({
@@ -453,13 +460,13 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
           />
           <Select
             items={[
-              { value: "external", label: "External link" },
-              { value: "internal", label: "Internal link" },
+              { value: "reference", label: "Document" },
+              { value: "custom", label: "URL" },
             ]}
             value={editing.linkType}
             onValueChange={(v) => {
-              const newType = (v as "external" | "internal") ?? "external";
-              updateEditing({ linkType: newType, ...(newType === "internal" ? { href: "" } : {}) });
+              const newType = (v as LinkMode) ?? "reference";
+              updateEditing({ linkType: newType, ...(newType === "reference" ? { href: "" } : {}) });
             }}
           >
             <SelectTrigger className="bg-background h-7! min-w-0 flex-2 text-sm">
@@ -467,16 +474,16 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="external">External link</SelectItem>
-                <SelectItem value="internal">Internal link</SelectItem>
+                <SelectItem value="reference">Document</SelectItem>
+                <SelectItem value="custom">URL</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
-          {editing.linkType === "external" ? (
+          {editing.linkType === "custom" ? (
             <Input
               value={editing.href}
               onChange={(e) => updateEditing({ href: e.target.value })}
-              placeholder="https://..."
+              placeholder="https://example.com or /contact"
               className="bg-background h-7 min-w-0 flex-3 text-sm"
               onKeyDown={editKeyHandler}
             />
