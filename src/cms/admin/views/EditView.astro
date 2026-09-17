@@ -645,23 +645,23 @@ const publishBlocked =
                                 <dl class="text-muted-foreground grid gap-1 text-xs">
                                   {doc._status === "scheduled" && doc._publishAt && (
                                     <>
-                                      <div class="flex justify-between gap-2">
+                                      <div class="flex gap-2 lg:justify-between">
                                         <dt>Publishes</dt>
                                         <dd class="text-foreground/70">{formatDate(doc._publishAt)}</dd>
                                       </div>
                                       {doc._unpublishAt && (
-                                        <div class="flex justify-between gap-2">
+                                        <div class="flex gap-2 lg:justify-between">
                                           <dt>Unpublishes</dt>
                                           <dd class="text-foreground/70">{formatDate(doc._unpublishAt)}</dd>
                                         </div>
                                       )}
                                     </>
                                   )}
-                                  <div class="flex justify-between gap-2">
+                                  <div class="flex gap-2 lg:justify-between">
                                     <dt>Created</dt>
                                     <dd class="text-foreground/70">{formatDate(doc._createdAt)}</dd>
                                   </div>
-                                  <div class="flex justify-between gap-2">
+                                  <div class="flex gap-2 lg:justify-between">
                                     <dt>Updated</dt>
                                     <dd class="text-foreground/70">{formatDate(doc._updatedAt)}</dd>
                                   </div>
