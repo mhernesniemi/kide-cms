@@ -7,6 +7,15 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.29.1] - 2026-09-18
+
+### Changed
+
+- **Adding taxonomy terms reads as adding, not filtering.** The field above the term list sat where
+  a filter box normally sits and gave no sign it created terms, while a second `Add term` button
+  below competed with it. The row now carries a `+` icon and an `Under: <parent>` select, the
+  duplicate button is gone, and the empty state points at the row.
+
 ## [0.29.0] - 2026-09-17
 
 ### Added
