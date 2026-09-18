@@ -246,7 +246,7 @@ for (const c of navCollections) {
     href: `/admin/${c.slug}`,
     label: c.labels.plural,
     singularLabel: c.labels.singular,
-    Icon: c.admin?.icon ? (navIconMap[c.admin.icon] ?? LayoutGrid) : (pinnedIcons[c.slug] ?? Layers),
+    Icon: c.admin?.icon ? (navIconMap[c.admin.icon] ?? Layers) : (pinnedIcons[c.slug] ?? Layers),
     active: activeCollection === c.slug,
     // Submissions are created by end users filling out forms, not added manually.
     newHref: c.slug === "form-submissions" ? undefined : `/admin/${c.slug}/new`,
@@ -282,7 +282,7 @@ for (const item of customNav) {
   navItems.push({
     href: item.href,
     label: item.label,
-    Icon: navIconMap[item.icon ?? ""] ?? LayoutGrid,
+    Icon: navIconMap[item.icon ?? ""] ?? Layers,
     active: currentPath === item.href || currentPath.startsWith(item.href + "/"),
     weight: item.weight ?? 50,
     group: "Custom",
@@ -549,6 +549,46 @@ const navGroups = [...new Set(navItems.map((item) => item.group))]
     }
 
     {toastStatus && <Toast status={toastStatus} message={toastMessage} />}
+
+    {/* Shown when an editor island fails to hydrate, so a failed load never looks like empty content. */}
+    <div
+      id="admin-hydration-error"
+      role="alert"
+      hidden
+      class="border-destructive/40 bg-background text-foreground fixed inset-x-4 bottom-4 z-[100] mx-auto max-w-xl rounded-lg border px-4 py-3 text-sm shadow-lg"
+    >
+      <p class="font-medium">Some editors failed to load.</p>
+      <p class="text-muted-foreground mt-1">
+        Fields may look empty, but your content is safe — don't save this page. Reload to try again.
+        {
+          import.meta.env.DEV && (
+            <>
+              {" "}
+              If it keeps happening, stop the dev server and restart it with <code>pnpm dev:clean</code>, and check its
+              log for a <code>[kide-cms]</code> warning about duplicate packages.
+            </>
+          )
+        }
+      </p>
+    </div>
+    <script is:inline>
+      (function () {
+        // Astro removes `ssr` from an island once it hydrates; a client:load island
+        // still carrying it well after the page has loaded failed to import.
+        function check() {
+          var failed = document.querySelectorAll('astro-island[ssr][client="load"]');
+          if (failed.length === 0) return;
+          var banner = document.getElementById("admin-hydration-error");
+          if (banner) banner.hidden = false;
+          console.error("[kide] " + failed.length + " admin editor(s) failed to hydrate.", failed);
+        }
+        function schedule() {
+          setTimeout(check, 5000);
+        }
+        if (document.readyState === "complete") schedule();
+        else window.addEventListener("load", schedule, { once: true });
+      })();
+    </script>
 
     {/* Persist collapsible sidebar groups locally. Active groups always open. */}
     <script is:inline>

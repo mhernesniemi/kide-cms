@@ -13,11 +13,13 @@ const RATE_MAX = 10; // submissions per IP per window
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 
 type FormFieldConfig = {
-  type: "text" | "email" | "textarea" | "select" | "checkbox";
+  type: "text" | "email" | "tel" | "number" | "textarea" | "select" | "radio" | "checkbox";
   name: string;
   label: string;
   required?: boolean;
   maxLength?: number;
+  min?: number;
+  max?: number;
   options?: string[];
 };
 
@@ -89,9 +91,32 @@ export const POST: APIRoute = async ({ request, params, redirect, clientAddress 
       continue;
     }
 
-    if (field.type === "select" && value && Array.isArray(field.options) && !field.options.includes(String(value))) {
+    // A choice field only ever accepts one of its declared options — the browser
+    // constrains the visible control, the server is what makes it true.
+    if (
+      (field.type === "select" || field.type === "radio") &&
+      value &&
+      Array.isArray(field.options) &&
+      !field.options.includes(String(value))
+    ) {
       errors.push(`${field.label} has an invalid value`);
       continue;
+    }
+
+    if (field.type === "number" && value !== "") {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) {
+        errors.push(`${field.label} must be a number`);
+        continue;
+      }
+      if (field.min !== undefined && parsed < field.min) {
+        errors.push(`${field.label} must be ${field.min} or more`);
+        continue;
+      }
+      if (field.max !== undefined && parsed > field.max) {
+        errors.push(`${field.label} must be ${field.max} or less`);
+        continue;
+      }
     }
 
     data[field.name] = value;

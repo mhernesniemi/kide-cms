@@ -45,7 +45,27 @@ export default defineCollection({
           rows: fields.number({ defaultValue: 4 }),
           required: fields.boolean(),
         },
+        tel: {
+          name: fields.text({ required: true }),
+          label: fields.text({ required: true }),
+          placeholder: fields.text(),
+          required: fields.boolean(),
+        },
+        number: {
+          name: fields.text({ required: true }),
+          label: fields.text({ required: true }),
+          placeholder: fields.text(),
+          min: fields.number(),
+          max: fields.number(),
+          required: fields.boolean(),
+        },
         select: {
+          name: fields.text({ required: true }),
+          label: fields.text({ required: true }),
+          options: fields.array({ of: fields.text(), defaultValue: [] }),
+          required: fields.boolean(),
+        },
+        radio: {
           name: fields.text({ required: true }),
           label: fields.text({ required: true }),
           options: fields.array({ of: fields.text(), defaultValue: [] }),

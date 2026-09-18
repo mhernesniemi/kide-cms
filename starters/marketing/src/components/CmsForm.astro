@@ -2,12 +2,14 @@
 import { cms } from "@/cms/.generated/api";
 
 type FormFieldConfig = {
-  type: "text" | "email" | "textarea" | "select" | "checkbox";
+  type: "text" | "email" | "tel" | "number" | "textarea" | "select" | "radio" | "checkbox";
   name: string;
   label: string;
   placeholder?: string;
   required?: boolean;
   maxLength?: number;
+  min?: number;
+  max?: number;
   rows?: number;
   options?: string[];
 };
@@ -90,6 +92,31 @@ const inputClass =
           );
         }
 
+        // Radio groups are the one control that is not a single input: the group needs
+        // the label, so it gets a fieldset/legend instead of a wrapping <label>.
+        if (field.type === "radio") {
+          return (
+            <fieldset class="flex flex-col gap-1 text-sm">
+              <legend class="font-medium">
+                {field.label}
+                {field.required && <span aria-hidden="true"> *</span>}
+              </legend>
+              {(field.options ?? []).map((opt, index) => (
+                <label for={`${inputId}-${index}`} class="flex items-center gap-2">
+                  <input
+                    id={`${inputId}-${index}`}
+                    type="radio"
+                    name={field.name}
+                    value={opt}
+                    required={field.required}
+                  />
+                  <span>{opt}</span>
+                </label>
+              ))}
+            </fieldset>
+          );
+        }
+
         if (field.type === "checkbox") {
           return (
             <label for={inputId} class="flex items-center gap-2 text-sm">
@@ -102,7 +129,7 @@ const inputClass =
           );
         }
 
-        // text | email
+        // text | email | tel | number — the block type doubles as the input type
         return (
           <label for={inputId} class="flex flex-col gap-1 text-sm">
             <span class="font-medium">
@@ -116,6 +143,8 @@ const inputClass =
               placeholder={field.placeholder ?? ""}
               required={field.required}
               maxlength={field.maxLength}
+              min={field.min}
+              max={field.max}
               class={inputClass}
             />
           </label>

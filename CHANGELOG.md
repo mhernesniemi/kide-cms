@@ -7,6 +7,28 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+### Fixed
+
+- **Admin editors no longer fail to load when the project shares a UI library with the admin.** A
+  project that installed its own copy of `@base-ui/react`, `lucide-react` or another admin
+  dependency (typically by adding shadcn/ui components to the public site) ended up with two copies
+  under one specifier. Vite then re-bundled dependencies in a loop, answered with 504 "Outdated
+  Optimize Dep", and the content editor, link and select fields never hydrated — every body looked
+  empty although the data was intact. When the project's copy is inside the range the admin
+  declares, the integration now dedupes to it; when it isn't, dev start logs a warning naming each
+  package and the `pnpm add` that aligns it.
+- **A failed editor load is visible.** If an admin editor doesn't hydrate, the edit page shows a
+  notice that the fields may look empty but the content is safe, with the fix in dev
+  (`pnpm dev:clean`, check the duplicate-package warning), instead of silently rendering blank fields.
+
+### Changed
+
+- **Dependencies bumped**, including `lucide-react` 0.577 → 1.47 and `@base-ui/react` 1.3 → 1.8, so
+  the admin matches what current shadcn/ui installs into projects. Unrecognised `admin.icon` names
+  and nav-item icons now fall back to the default Layers icon instead of a grid.
+
 ## [0.29.3] - 2026-09-18
 
 ### Fixed

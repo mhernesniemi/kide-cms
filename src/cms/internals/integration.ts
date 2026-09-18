@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, watch, 
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { analyzeSharedDeps, formatConflicts } from "./shared-deps";
 
 // All runtime files resolve relative to this module, never the project root, so
 // the integration works identically embedded (workspace package in the project
@@ -113,8 +114,16 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
   return {
     name: "kide-cms",
     hooks: {
-      "astro:config:setup": ({ command, updateConfig, injectRoute, injectScript, addMiddleware }) => {
+      "astro:config:setup": ({ command, updateConfig, injectRoute, injectScript, addMiddleware, logger }) => {
         const root = process.cwd();
+
+        // One copy per library the admin shares with the project — see shared-deps.ts.
+        const sharedDeps = analyzeSharedDeps({
+          projectRoot: root,
+          packageFile: packagePath("package.json"),
+          dependencies: JSON.parse(readFileSync(packagePath("package.json"), "utf8")).dependencies ?? {},
+        });
+        if (sharedDeps.conflicts.length > 0) logger.warn(formatConflicts(sharedDeps.conflicts));
 
         // Generate a wrapper CSS: Tailwind sources + the core admin chrome +
         // the project's theme file. Chrome (layers, focus, editor styles,
@@ -180,8 +189,9 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
                 "virtual:kide/admin-css": wrapperCss,
                 "virtual:kide/custom-fields": customFieldsBarrel,
               },
-              // Two React copies (project + package) break hooks/context identity.
-              dedupe: ["react", "react-dom"],
+              // Two React copies (project + package) break hooks/context identity, and two
+              // copies of any admin UI library break Vite's pre-bundling (shared-deps.ts).
+              dedupe: ["react", "react-dom", ...sharedDeps.dedupe],
             },
             // The package ships TypeScript/Astro source — Vite must compile it
             // rather than treat it as an external Node dependency in SSR.
