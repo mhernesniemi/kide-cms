@@ -1,6 +1,7 @@
 ---
 // Client-side glue for the edit form: conditional field visibility, autofocus on new,
-// AJAX form submit (so validation errors surface as toasts without losing form state),
+// AJAX form submit (validation errors surface as toasts, and a successful save updates
+// the page in place instead of reloading it),
 // and collapsible field-group state persistence.
 ---
 
@@ -167,6 +168,68 @@
     return false;
   }
 
+  // Values a field shows after saving, as the server rendered them. JSON-backed fields
+  // (blocks, rich text, relations) are skipped — their serialization isn't stable
+  // across renders, and the server doesn't rewrite them.
+  function plainValues(form) {
+    var out = {};
+    new FormData(form).forEach(function (value, name) {
+      if (name.charAt(0) === "_" || name === "redirectTo" || typeof value !== "string") return;
+      var trimmed = value.trim();
+      if (trimmed.charAt(0) === "{" || trimmed.charAt(0) === "[") return;
+      out[name] = (out[name] ? out[name] + "\u0000" : "") + value;
+    });
+    return out;
+  }
+
+  // Replaces the [data-kide-refresh] regions (title + status, header actions, review
+  // bar, unsaved-changes guard, sidebar info) with the freshly rendered ones and shows
+  // the response's toast. Returns false — so the caller reloads instead — when the
+  // server changed a field value (e.g. a hook rewrote the slug) or the page structure.
+  function swapInPlace(form, html) {
+    var next = new DOMParser().parseFromString(html, "text/html");
+    var nextForm = next.getElementById("document-form");
+    if (!nextForm) return false;
+
+    var mine = plainValues(form);
+    var theirs = plainValues(nextForm);
+    for (var name in theirs) {
+      if (name in mine && mine[name] !== theirs[name]) return false;
+    }
+
+    var regions = document.querySelectorAll("[data-kide-refresh]");
+    var nextRegions = next.querySelectorAll("[data-kide-refresh]");
+    if (regions.length !== nextRegions.length) return false;
+    var byName = {};
+    nextRegions.forEach(function (el) {
+      byName[el.getAttribute("data-kide-refresh")] = el;
+    });
+    for (var i = 0; i < regions.length; i++) {
+      if (!byName[regions[i].getAttribute("data-kide-refresh")]) return false;
+    }
+
+    regions.forEach(function (el) {
+      // Unmount the React islands first so their listeners (e.g. the unsaved-changes
+      // guard) go away; the imported islands hydrate themselves when connected.
+      el.querySelectorAll("astro-island").forEach(function (island) {
+        island.dispatchEvent(new CustomEvent("astro:unmount"));
+      });
+      el.replaceWith(document.importNode(byName[el.getAttribute("data-kide-refresh")], true));
+    });
+
+    var toast = next.getElementById("admin-toast");
+    if (toast && toast.parentElement) {
+      var current = document.getElementById("admin-toast");
+      if (current && current.parentElement) current.parentElement.remove();
+      var wrapper = document.importNode(toast.parentElement, true);
+      document.body.appendChild(wrapper);
+      setTimeout(function () {
+        wrapper.remove();
+      }, 3200);
+    }
+    return true;
+  }
+
   (function () {
     var form = document.getElementById("document-form");
     if (!form) return;
@@ -212,7 +275,30 @@
               return;
             }
           }
-          window.location.assign(res.url);
+          // Saving an existing document keeps the page: only the parts a save can change are
+          // swapped in from the response, so open blocks, scroll, focus and undo survive.
+          var intent = sub && sub.name === "_intent" ? sub.value : "";
+          var inPlace =
+            u.searchParams.get("_toast") === "success" &&
+            u.pathname === location.pathname &&
+            f.querySelector('input[name="_action"]').value === "update" &&
+            (intent === "save" || intent === "publish");
+          if (!inPlace) {
+            window.location.assign(res.url);
+            return;
+          }
+          return res.text().then(function (html) {
+            var swapped = false;
+            try {
+              // The swapped-in unsaved-changes guard measures "dirty" against what was saved.
+              window.__kideSubmittedForm = fd;
+              swapped = swapInPlace(f, html);
+            } catch (err) {
+              // Never let a swap bug reach .catch below — that re-submits (saves twice).
+              console.error("[kide] in-place save update failed; reloading", err);
+            }
+            if (!swapped) window.location.assign(res.url);
+          });
         })
         .catch(function () {
           f.submit();

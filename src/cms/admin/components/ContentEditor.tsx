@@ -260,7 +260,7 @@ function BlockNodeView(props: NodeViewProps) {
       </div>
 
       {expanded && (
-        <div className="space-y-4 border-t px-4 py-4" contentEditable={false}>
+        <div className="space-y-6 border-t px-4 py-5" contentEditable={false}>
           {isShared ? (
             <div className="space-y-3">
               <div>

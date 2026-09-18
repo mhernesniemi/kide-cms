@@ -180,7 +180,7 @@ const hasSidebarFields =
   effectiveSidebarFieldSets.some((set) =>
     set.fields.some((fieldName) => collection.fields[fieldName] && !isFieldHidden(fieldName)),
   ) ||
-  (hasLocales && !translationMode);
+  (hasLocales && mode === "new");
 const hasSidebarMeta = reverseRefs.length > 0 || hasDocMeta;
 
 // Whether to render the right-hand sidebar column at all (avoids a stray sticky
@@ -236,7 +236,7 @@ const publishBlocked =
   >
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div class="min-w-0 flex-1">
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-2.5" data-kide-refresh="title">
           <h1 class="truncate text-lg font-semibold tracking-tight md:text-xl">
             {mode === "new" && <LiveHeading client:load initial={`New ${collection.labels.singular}`} />}
             {
@@ -267,7 +267,7 @@ const publishBlocked =
 
       {
         formTab !== "submissions" && (
-          <div class="flex flex-wrap items-center gap-2 sm:flex-shrink-0 sm:justify-end">
+          <div class="flex flex-wrap items-center gap-2 sm:flex-shrink-0 sm:justify-end" data-kide-refresh="actions">
             {hasPreview && previewUrl && !translationMode && (
               <>
                 <a href={previewUrl} target="_blank" class={buttonVariants({ variant: "outline" })}>
@@ -279,28 +279,32 @@ const publishBlocked =
             )}
             {hasLocales && mode === "edit" && (
               <>
-                {locales.map((locale) => (
-                  <a
-                    href={`/admin/${collection.slug}/${documentId}?locale=${locale}`}
-                    title={
-                      locale === baseLocale
-                        ? "Content language"
-                        : availableLocales.has(locale)
-                          ? undefined
-                          : "Not translated yet"
-                    }
-                    class:list={[
-                      buttonVariants({ variant: "outline", size: "sm" }),
-                      selectedLocale === locale
-                        ? "border-primary/50 bg-background ring-ring/30 font-medium ring-2"
-                        : availableLocales.has(locale)
-                          ? "text-muted-foreground"
-                          : "text-muted-foreground/50 border-dashed",
-                    ]}
-                  >
-                    {locale.toUpperCase()}
-                  </a>
-                ))}
+                {/* One segmented control: the language being edited is the raised segment. */}
+                <div class="bg-muted inline-flex h-8 items-center gap-0.5 rounded-lg border p-0.5">
+                  {locales.map((locale) => (
+                    <a
+                      href={`/admin/${collection.slug}/${documentId}?locale=${locale}`}
+                      title={
+                        locale === baseLocale
+                          ? "Original language"
+                          : availableLocales.has(locale)
+                            ? undefined
+                            : "Not translated yet"
+                      }
+                      aria-current={selectedLocale === locale ? "page" : undefined}
+                      class:list={[
+                        "inline-flex h-full min-w-9 items-center justify-center rounded-md px-2.5 text-xs font-medium transition-colors",
+                        selectedLocale === locale
+                          ? "bg-background text-foreground shadow-sm"
+                          : availableLocales.has(locale)
+                            ? "text-muted-foreground hover:text-foreground"
+                            : "text-muted-foreground/50 hover:text-muted-foreground",
+                      ]}
+                    >
+                      {locale.toUpperCase()}
+                    </a>
+                  ))}
+                </div>
                 <div class="bg-border mx-1 h-6 w-px" />
               </>
             )}
@@ -387,6 +391,14 @@ const publishBlocked =
                 currentPublishAt={doc?._publishAt ? String(doc._publishAt) : undefined}
                 currentUnpublishAt={doc?._unpublishAt ? String(doc._unpublishAt) : undefined}
                 versions={versions}
+                languages={
+                  // Only while the document exists in one language: a translation would
+                  // collide with the new original language, so the API refuses the change.
+                  hasLocales && availableLocales.size === 1
+                    ? locales.map((locale) => ({ value: locale, label: locale.toUpperCase() }))
+                    : undefined
+                }
+                contentLanguage={baseLocale}
                 restoreEndpoint={getFormAction(collection.slug, documentId)}
                 redirectTo={Astro.url.pathname + Astro.url.search}
               />
@@ -408,7 +420,7 @@ const publishBlocked =
     }
     {
       showCollab && collabData && documentId && (
-        <div class="-mt-6 mb-8 2xl:-mx-8">
+        <div class="-mt-6 mb-8 2xl:-mx-8" data-kide-refresh="collab">
           <CollaborationReviewBar
             client:load
             collection={collection.slug}
@@ -430,16 +442,20 @@ const publishBlocked =
           {mode === "edit" && documentId && (
             <DocumentLock client:load collection={collection.slug} documentId={documentId} />
           )}
-          <UnsavedGuard
-            client:load
-            formId={translationMode ? "translation-form" : "document-form"}
-            isNew={mode === "new"}
-            isDraft={Boolean(
-              !translationMode &&
-              collection.drafts &&
-              (doc?._status === "draft" || doc?._status === "scheduled" || (doc && getVisualStatus(doc) === "changed")),
-            )}
-          />
+          <div class="contents" data-kide-refresh="guard">
+            <UnsavedGuard
+              client:load
+              formId={translationMode ? "translation-form" : "document-form"}
+              isNew={mode === "new"}
+              isDraft={Boolean(
+                !translationMode &&
+                collection.drafts &&
+                (doc?._status === "draft" ||
+                  doc?._status === "scheduled" ||
+                  (doc && getVisualStatus(doc) === "changed")),
+              )}
+            />
+          </div>
           <div id="document-edit-area" data-preview-channel={!translationMode ? previewKey : undefined}>
             {collection.slug === "users" && mode === "edit" && Astro.url.searchParams.get("inviteToken") && (
               <AdminCard title={Astro.url.searchParams.get("emailSent") === "true" ? "Invitation sent" : "Invite link"}>
@@ -615,10 +631,13 @@ const publishBlocked =
                         );
                         return variant === "record" ? <AdminCard title="Settings">{fields}</AdminCard> : fields;
                       })}
-                      {hasLocales && !translationMode && !isSubmissionView && (
+                      {/* The language is chosen when the document is created; afterwards the
+                          top switcher is the one language control (changing it later lives
+                          in the ⋯ menu, offered only while no translation exists). */}
+                      {hasLocales && mode === "new" && !isSubmissionView && (
                         <div class="grid gap-1.5">
                           <label for="_sourceLocale" class="text-foreground/80 text-sm leading-none font-medium">
-                            Content language
+                            Language
                           </label>
                           <SelectField
                             client:load
@@ -627,11 +646,14 @@ const publishBlocked =
                             placeholder="Select a language"
                             items={locales.map((locale) => ({ value: locale, label: locale.toUpperCase() }))}
                           />
-                          <p class="text-muted-foreground text-xs">The language this document is written in.</p>
+                          <p class="text-muted-foreground text-xs">
+                            The language this document is written in. Translations can be added after saving.
+                          </p>
                         </div>
                       )}
                       {hasSidebarMeta && (
                         <div
+                          data-kide-refresh="meta"
                           class:list={[
                             variant === "record" ? "space-y-6" : "grid gap-6",
                             variant !== "record" && hasSidebarFields && "border-t pt-6",

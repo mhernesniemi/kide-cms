@@ -71,7 +71,7 @@ export default function SharedSectionBlockField({ name, value, types }: Props) {
       />
 
       {selectedType && Object.keys(fieldsMeta).length > 0 && (
-        <div className="space-y-4 rounded-lg border px-4 py-4">
+        <div className="space-y-6 rounded-lg border px-4 py-5">
           {Object.entries(fieldsMeta).map(([fieldName, meta]) => (
             <SubField
               key={fieldName}

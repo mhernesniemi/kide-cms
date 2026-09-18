@@ -43,8 +43,13 @@ export default function UnsavedGuard({
     const saveBtn = doc.querySelector<HTMLButtonElement>(`button[type="submit"][form="${formId}"][value="save"]`);
     const publishBtn = doc.querySelector<HTMLButtonElement>(`button[type="submit"][form="${formId}"][value="publish"]`);
 
-    const initialData = new FormData(form);
-    const initialSnapshot = serializeFormData(initialData);
+    // After an in-place save (EditScripts swaps this guard in without a reload), the
+    // clean baseline is exactly what was submitted — edits typed while the save was in
+    // flight stay dirty instead of being silently treated as saved.
+    const win = window as Window & { __kideSubmittedForm?: FormData };
+    const submitted = win.__kideSubmittedForm;
+    delete win.__kideSubmittedForm;
+    const initialSnapshot = serializeFormData(submitted ?? new FormData(form));
 
     const updateButtons = (dirty: boolean) => {
       if (isNew) return;
@@ -61,6 +66,8 @@ export default function UnsavedGuard({
       dirtyRef.current = currentSnapshot !== initialSnapshot;
       updateButtons(dirtyRef.current);
     };
+    // Edits made while an in-place save was in flight are already unsaved.
+    if (submitted) checkDirty();
 
     // Mark as clean when form is submitted
     const handleSubmit = () => {

@@ -46,23 +46,29 @@ type SharedSectionOption = {
 
 type Props = {
   name: string;
-  value?: string;
+  /** Serialized JSON from the form, or the array itself when nested inside another block. */
+  value?: string | unknown[];
   /** The field's label — names the items in the empty state ("No fields added yet"). */
   label?: string;
   types: BlockTypesMeta;
   linkOptions?: LinkableCollection[];
   sharedSections?: SharedSectionOption[];
   sharedEnabled?: boolean;
+  /**
+   * Controlled mode, for a `blocks` sub-field inside another block: the parent owns
+   * the value, form serialization and live preview, so no hidden input or broadcast.
+   */
+  onChange?: (blocks: unknown[]) => void;
 };
 
 const SHARED_BLOCK_TYPE = "__shared";
 
 const isSharedBlock = (block: Block) => block.type === SHARED_BLOCK_TYPE && typeof block.ref === "string";
 
-function parseBlocks(value: string | undefined, types: BlockTypesMeta): Block[] {
+function parseBlocks(value: string | unknown[] | undefined, types: BlockTypesMeta): Block[] {
   if (!value) return [];
   try {
-    const parsed = JSON.parse(value);
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
     if (!Array.isArray(parsed)) return [];
     return parsed.map((item: Record<string, unknown>) => ({
       ...item,
@@ -74,8 +80,10 @@ function parseBlocks(value: string | undefined, types: BlockTypesMeta): Block[] 
   }
 }
 
+const stripKeys = (blocks: Block[]) => blocks.map(({ _key, ...rest }) => rest);
+
 function serializeBlocks(blocks: Block[]): string {
-  return JSON.stringify(blocks.map(({ _key, ...rest }) => rest));
+  return JSON.stringify(stripKeys(blocks));
 }
 
 // -----------------------------------------------
@@ -223,7 +231,7 @@ function SortableBlock({
 
       {/* Content */}
       {isExpanded && (
-        <div ref={contentRef} className="space-y-4 border-t px-4 py-4">
+        <div ref={contentRef} className="space-y-6 border-t px-4 py-5">
           {shared ? (
             <div className="space-y-3">
               <div>
@@ -293,7 +301,9 @@ export default function BlockEditor({
   linkOptions = [],
   sharedSections = [],
   sharedEnabled = true,
+  onChange,
 }: Props) {
+  const controlled = Boolean(onChange);
   const [blocks, setBlocks] = useState<Block[]>(() => parseBlocks(value, types));
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
   const [newBlockKey, setNewBlockKey] = useState<string | null>(null);
@@ -323,6 +333,7 @@ export default function BlockEditor({
   // Live preview: broadcast block data for server-side rendering. Also replay the
   // current value when a preview tab opened after edits announces itself.
   useEffect(() => {
+    if (controlled) return;
     if (!previewChannelRef.current) previewChannelRef.current = openPreviewChannel();
     const channel = previewChannelRef.current;
     if (!channel) return;
@@ -331,17 +342,18 @@ export default function BlockEditor({
     channel.onmessage = (e: MessageEvent) => {
       if (e.data?.type === "preview-ready") broadcast();
     };
-  }, [blocks, name]);
+  }, [blocks, name, controlled]);
 
   const updateBlocks = useCallback(
     (updater: (prev: Block[]) => Block[]) => {
       setBlocks((prev) => {
         const next = updater(prev);
-        setTimeout(dispatchChange, 0);
+        // Deferred: never update a parent from inside this state updater.
+        setTimeout(() => (onChange ? onChange(stripKeys(next)) : dispatchChange()), 0);
         return next;
       });
     },
-    [dispatchChange],
+    [dispatchChange, onChange],
   );
 
   const handleDragStart = useCallback(() => {
@@ -498,48 +510,52 @@ export default function BlockEditor({
   const serialized = serializeBlocks(blocks);
 
   return (
-    <div className="space-y-3">
-      <input type="hidden" ref={hiddenRef} name={name} value={serialized} />
+    // Nested lists sit tighter: they're one group inside a block, not a page-level field.
+    <div className={controlled ? "space-y-2" : "space-y-3"}>
+      {!controlled && <input type="hidden" ref={hiddenRef} name={name} value={serialized} />}
 
-      {blocks.length === 0 && (
+      {blocks.length === 0 && !controlled && (
         <div className="bg-field-subtle flex h-20 items-center justify-center rounded-lg border border-dashed">
           <p className="text-muted-foreground text-sm">No {label ? label.toLowerCase() : "blocks"} added yet</p>
         </div>
       )}
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={blocks.map((b) => b._key)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-3">
-            {blocks.map((block) => {
-              const fieldsMeta = isSharedBlock(block) ? {} : (types[block.type] ?? {});
-              const sharedSection = isSharedBlock(block) ? sharedSectionsById.get(String(block.ref)) : undefined;
-              return (
-                <SortableBlock
-                  key={block._key}
-                  block={block}
-                  fieldsMeta={fieldsMeta}
-                  isExpanded={expandedKeys.has(block._key)}
-                  autoFocus={newBlockKey === block._key}
-                  onAutoFocused={() => setNewBlockKey(null)}
-                  onToggle={() => toggleExpanded(block._key)}
-                  onRemove={() => removeBlock(block._key)}
-                  onDetach={() => detachSharedBlock(block._key)}
-                  onSaveShared={() => saveAsShared(block._key)}
-                  sharedEnabled={sharedEnabled}
-                  onUpdateField={(fn, v) => updateField(block._key, fn, v)}
-                  linkOptions={linkOptions}
-                  sharedSection={sharedSection}
-                />
-              );
-            })}
-          </div>
-        </SortableContext>
-      </DndContext>
+      {/* An empty nested list renders nothing, so no stray gap sits above the add buttons. */}
+      {(blocks.length > 0 || !controlled) && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={blocks.map((b) => b._key)} strategy={verticalListSortingStrategy}>
+            <div className={controlled ? "space-y-2" : "space-y-3"}>
+              {blocks.map((block) => {
+                const fieldsMeta = isSharedBlock(block) ? {} : (types[block.type] ?? {});
+                const sharedSection = isSharedBlock(block) ? sharedSectionsById.get(String(block.ref)) : undefined;
+                return (
+                  <SortableBlock
+                    key={block._key}
+                    block={block}
+                    fieldsMeta={fieldsMeta}
+                    isExpanded={expandedKeys.has(block._key)}
+                    autoFocus={newBlockKey === block._key}
+                    onAutoFocused={() => setNewBlockKey(null)}
+                    onToggle={() => toggleExpanded(block._key)}
+                    onRemove={() => removeBlock(block._key)}
+                    onDetach={() => detachSharedBlock(block._key)}
+                    onSaveShared={() => saveAsShared(block._key)}
+                    sharedEnabled={sharedEnabled}
+                    onUpdateField={(fn, v) => updateField(block._key, fn, v)}
+                    linkOptions={linkOptions}
+                    sharedSection={sharedSection}
+                  />
+                );
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
 
       {/* Add block buttons */}
       <div className="flex flex-wrap gap-2">

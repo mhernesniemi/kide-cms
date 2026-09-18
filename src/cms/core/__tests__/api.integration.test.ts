@@ -233,11 +233,19 @@ describe("translations", () => {
     expect(await (cms as any).authors.count({ locale: "en", availability: "exact", where: { _id: fiOnly._id } })).toBe(
       0,
     );
+    // "missing" is the complement: not yet in English, so it's on the translation to-do list.
+    const missingEn = await (cms as any).authors.find({ locale: "en", availability: "missing" });
+    expect(missingEn.some((d: any) => d._id === fiOnly._id)).toBe(true);
+    expect(
+      await (cms as any).authors.count({ locale: "fi", availability: "missing", where: { _id: fiOnly._id } }),
+    ).toBe(0);
 
     // A translation makes it exist in that locale too.
     await (cms as any).authors.upsertTranslation(fiOnly._id, "en", { description: "In English" });
     const afterOverlay = await (cms as any).authors.find({ locale: "en", availability: "exact" });
     expect(afterOverlay.some((d: any) => d._id === fiOnly._id)).toBe(true);
+    const stillMissing = await (cms as any).authors.find({ locale: "en", availability: "missing" });
+    expect(stillMissing.some((d: any) => d._id === fiOnly._id)).toBe(false);
     expect((await (cms as any).authors.findById(fiOnly._id))._availableLocales).toEqual(["fi", "en"]);
   });
 

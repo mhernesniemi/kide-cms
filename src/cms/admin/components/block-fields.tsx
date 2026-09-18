@@ -27,6 +27,9 @@ import LinkField from "./LinkField";
 import type { LinkableCollection } from "./InternalLinkPicker";
 import DocumentCombobox, { useRelationLabels } from "./DocumentCombobox";
 import YoutubeField from "./YoutubeField";
+// Circular with BlockEditor (which renders SubField); both sides only use the
+// other at render time, so the cycle is safe.
+import BlockEditor from "./BlockEditor";
 
 // -----------------------------------------------
 // Shared types — describe a block sub-field. Used by both the standalone
@@ -49,6 +52,8 @@ export type SubFieldMeta = {
   condition?: { field: string; value: string | string[] | boolean };
   /** Typed repeater row schema (json + admin.component "repeater"). */
   itemFields?: Record<string, SubFieldMeta>;
+  /** Block types of a nested `blocks` sub-field. */
+  types?: Record<string, Record<string, SubFieldMeta>>;
 };
 
 /** Same semantics as the edit form's conditional-visibility script (EditScripts). */
@@ -76,28 +81,8 @@ export function humanize(value: string) {
     .replace(/^\w/, (char) => char.toUpperCase());
 }
 
-/** Build a blank value object for a freshly inserted block of the given type. */
-export function blankBlockFields(fieldsMeta: Record<string, SubFieldMeta>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [fieldName, meta] of Object.entries(fieldsMeta)) {
-    if (meta.defaultValue !== undefined) out[fieldName] = meta.defaultValue;
-    else if (meta.type === "boolean") out[fieldName] = false;
-    else if (meta.type === "array") out[fieldName] = [];
-    else out[fieldName] = "";
-  }
-  return out;
-}
-
-/** First text-ish field value, truncated — used for collapsed block previews. */
-export function getPreviewText(values: Record<string, unknown>, fieldsMeta: Record<string, SubFieldMeta>): string {
-  for (const [key, meta] of Object.entries(fieldsMeta)) {
-    if (meta.type === "text" && values[key]) {
-      const text = String(values[key]);
-      return text.length > 60 ? text.slice(0, 60) + "..." : text;
-    }
-  }
-  return "";
-}
+// Pure value helpers live in a React-free module so they can be unit-tested.
+export { blankBlockFields, getPreviewText } from "./block-values";
 
 // -----------------------------------------------
 // Sub-field label + control wrapper
@@ -125,6 +110,16 @@ export function SubField({
   const fieldId = `${blockKey}_${fieldName}`;
 
   if (meta.condition && !matchesCondition(meta.condition.value, siblings?.[meta.condition.field])) return null;
+
+  // A checkbox carries its own label beside the box; help sits below, under the label text.
+  if (meta.type === "boolean") {
+    return (
+      <div className="grid gap-1.5">
+        <SubFieldControl fieldId={fieldId} meta={meta} value={value} onChange={onChange} label={label} />
+        {meta.admin?.help && <p className="text-muted-foreground pl-7 text-xs leading-5">{meta.admin.help}</p>}
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-2">
@@ -283,12 +278,15 @@ export function SubFieldControl({
   value,
   onChange,
   linkOptions = [],
+  label,
 }: {
   fieldId: string;
   meta: SubFieldMeta;
   value: unknown;
   onChange: (value: unknown) => void;
   linkOptions?: LinkableCollection[];
+  /** Checkbox text (booleans render their label beside the box). */
+  label?: string;
 }) {
   const strValue = value == null ? "" : String(value);
 
@@ -337,14 +335,19 @@ export function SubFieldControl({
 
     case "boolean":
       return (
-        <label className="group inline-flex cursor-pointer items-center gap-3 text-sm">
+        <label className="group inline-flex w-fit cursor-pointer items-center gap-3 text-sm">
           <Checkbox
             id={fieldId}
             className="group-hover:border-primary/60"
             checked={Boolean(value)}
             onCheckedChange={(checked) => onChange(Boolean(checked))}
           />
-          <span className="text-muted-foreground select-none">{value ? "true" : "false"}</span>
+          {label && (
+            <span className="text-foreground/80 leading-none font-medium select-none">
+              {label}
+              {meta.required ? " *" : ""}
+            </span>
+          )}
         </label>
       );
 
@@ -390,6 +393,20 @@ export function SubFieldControl({
 
     case "array":
       return <ArrayControl fieldId={fieldId} meta={meta} value={value} onChange={onChange} />;
+
+    case "blocks":
+      // A nested block list: typed "+ Type" buttons, each item shows only its own fields.
+      return (
+        <BlockEditor
+          name={fieldId}
+          value={Array.isArray(value) ? value : []}
+          label={meta.label}
+          types={meta.types ?? {}}
+          linkOptions={linkOptions}
+          sharedEnabled={false}
+          onChange={onChange}
+        />
+      );
 
     case "json":
       if (meta.admin?.component === "repeater") {
@@ -533,7 +550,7 @@ function SortableRepeaterItem({
       </div>
 
       {isExpanded && (
-        <div ref={contentRef} className="space-y-3 border-t px-4 py-3">
+        <div ref={contentRef} className="space-y-5 border-t px-4 py-4">
           {itemFields
             ? fieldKeys.map((key) => (
                 <SubField

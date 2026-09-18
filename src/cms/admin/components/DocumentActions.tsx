@@ -59,6 +59,13 @@ type Props = {
   entityLabel?: string;
   /** Adds `_force=1` to the delete submit, telling the API the warning was shown and accepted. */
   forceOnConfirm?: boolean;
+  /**
+   * Offers "Change language…" — only passed while the document exists in one language
+   * (with a translation, the API refuses to move the original to that locale).
+   */
+  languages?: Array<{ value: string; label: string }>;
+  /** The language the document is currently written in. */
+  contentLanguage?: string;
 };
 
 export default function DocumentActions({
@@ -79,8 +86,12 @@ export default function DocumentActions({
   referencesEndpoint,
   entityLabel = "document",
   forceOnConfirm,
+  languages,
+  contentLanguage,
 }: Props) {
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const [language, setLanguage] = useState(contentLanguage ?? "");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [refWarning, setRefWarning] = useState<{ tone: "warn" | "muted"; message: string } | null>(null);
   const [publishAt, setPublishAt] = useState(currentPublishAt ? toLocalDatetime(currentPublishAt) : "");
@@ -94,6 +105,7 @@ export default function DocumentActions({
     showDelete ||
     showSchedule ||
     showCancelSchedule ||
+    Boolean(languages?.length) ||
     versions.length > 0;
   if (!hasActions) return null;
 
@@ -170,6 +182,21 @@ export default function DocumentActions({
     form.submit();
   };
 
+  // Saves the document with its new original language (and any pending edits).
+  const submitLanguage = () => {
+    const form = document.getElementById(formId) as HTMLFormElement | null;
+    if (!form || !language || language === contentLanguage) return;
+    let input = form.querySelector<HTMLInputElement>('input[name="_sourceLocale"]');
+    if (!input) {
+      input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "_sourceLocale";
+      form.appendChild(input);
+    }
+    input.value = language;
+    form.submit();
+  };
+
   const restoreVersion = (version: number) => {
     if (!restoreEndpoint) return;
     const form = document.createElement("form");
@@ -206,6 +233,9 @@ export default function DocumentActions({
         <DropdownMenuContent align="end" className="w-48">
           {canDuplicate && <DropdownMenuItem onClick={duplicate}>Duplicate</DropdownMenuItem>}
           {showSchedule && <DropdownMenuItem onClick={() => setScheduleOpen(true)}>Schedule publish</DropdownMenuItem>}
+          {languages && languages.length > 1 && (
+            <DropdownMenuItem onClick={() => setLanguageOpen(true)}>Change language…</DropdownMenuItem>
+          )}
           {showCancelSchedule && (
             <DropdownMenuItem onClick={() => submitAction("unpublish")}>Cancel schedule</DropdownMenuItem>
           )}
@@ -340,6 +370,45 @@ export default function DocumentActions({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {languages && languages.length > 1 && (
+        <Dialog open={languageOpen} onOpenChange={setLanguageOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change language</DialogTitle>
+              <DialogDescription>
+                Marks the language this document is written in. The content is not translated — use this when it was
+                saved under the wrong language.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-2 py-2">
+              <label htmlFor="document-language" className="text-sm font-medium">
+                Language
+              </label>
+              <select
+                id="document-language"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm"
+              >
+                {languages.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <DialogFooter>
+              <DialogClose>
+                <Button variant="outline">Cancel</Button>
+              </DialogClose>
+              <Button onClick={submitLanguage} disabled={!language || language === contentLanguage}>
+                Change language
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>

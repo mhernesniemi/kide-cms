@@ -117,6 +117,16 @@ const toSubFieldMeta = (subField: FieldConfig): SubFieldMeta => ({
     "itemFields" in subField && subField.itemFields
       ? Object.fromEntries(Object.entries(subField.itemFields).map(([name, f]) => [name, toSubFieldMeta(f)]))
       : undefined,
+  // A `blocks` sub-field inside a block renders its own nested block editor.
+  types:
+    subField.type === "blocks"
+      ? Object.fromEntries(
+          Object.entries(subField.types).map(([typeName, typeFields]) => [
+            typeName,
+            Object.fromEntries(Object.entries(typeFields).map(([name, f]) => [name, toSubFieldMeta(f)])),
+          ]),
+        )
+      : undefined,
 });
 
 const toBlockTypesMeta = (source: Record<string, Record<string, FieldConfig>> | null | undefined) =>
@@ -147,15 +157,23 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
     : {}}
 >
   {
-    !isTreeEditor && (
+    !isTreeEditor && field.type !== "boolean" && (
       <Label htmlFor={name}>
         {label}
         {field.required ? " *" : ""}
       </Label>
     )
   }
-  {field.description && <p class="text-muted-foreground -mt-1 text-xs leading-5">{field.description}</p>}
-  {field.admin?.help && <p class="text-muted-foreground -mt-1 -mb-0.5 text-xs leading-5">{field.admin.help}</p>}
+  {
+    field.type !== "boolean" && field.description && (
+      <p class="text-muted-foreground -mt-1 text-xs leading-5">{field.description}</p>
+    )
+  }
+  {
+    field.type !== "boolean" && field.admin?.help && (
+      <p class="text-muted-foreground -mt-1 -mb-0.5 text-xs leading-5">{field.admin.help}</p>
+    )
+  }
 
   {
     CustomComponent && (
@@ -255,7 +273,19 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
         )}
 
         {field.type === "boolean" && (
-          <CheckboxField client:load name={name} checked={Boolean(value)} disabled={readOnly} />
+          <div class="grid gap-1.5">
+            <CheckboxField
+              client:load
+              name={name}
+              checked={Boolean(value)}
+              disabled={readOnly}
+              label={label}
+              required={field.required}
+            />
+            {/* Indented to the label text: box (1rem) + gap (0.75rem). */}
+            {field.description && <p class="text-muted-foreground pl-7 text-xs leading-5">{field.description}</p>}
+            {field.admin?.help && <p class="text-muted-foreground pl-7 text-xs leading-5">{field.admin.help}</p>}
+          </div>
         )}
 
         {field.type === "select" && field.admin?.component !== "radio" && (

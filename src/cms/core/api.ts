@@ -29,9 +29,11 @@ export type FindOptions = {
    * With `locale`: `"fallback"` (default) returns every document, overlaying the
    * translation when one exists; `"exact"` returns only documents that exist in
    * that locale — their source locale, or a translation row. Use `"exact"` for
-   * listings and `"fallback"` for single-document routes.
+   * listings and `"fallback"` for single-document routes. `"missing"` is the
+   * complement of `"exact"`: documents that don't exist in that locale yet
+   * (e.g. a translation to-do list).
    */
-  availability?: "fallback" | "exact";
+  availability?: "fallback" | "exact" | "missing";
   search?: string;
 };
 
@@ -473,11 +475,17 @@ export const createCms = (config: CMSConfig) => {
       if (!supportedLocales.includes(locale)) throw new Error(`Locale "${locale}" is not in locales.supported.`);
       return locale;
     };
-    /** `availability: "exact"` — the document must exist in the requested locale. */
+    /**
+     * `availability: "exact"` — the document must exist in the requested locale;
+     * `"missing"` — it must not (neither its source locale nor a translation).
+     */
     const availabilityCondition = (tables: any, options: { locale?: string; availability?: string }) => {
-      if (!options.locale || options.availability !== "exact" || !tables.translations || !config.locales) return null;
+      const { availability } = options;
+      if (!options.locale || (availability !== "exact" && availability !== "missing")) return null;
+      if (!tables.translations || !config.locales) return null;
       const tr = tables.translations;
-      return sql`(${tables.main._sourceLocale} = ${options.locale} OR EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale}))`;
+      const exists = sql`(${tables.main._sourceLocale} = ${options.locale} OR EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale}))`;
+      return availability === "exact" ? exists : sql`NOT ${exists}`;
     };
 
     const overlayLocale = (

@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Check,
   Loader2,
   MoreHorizontal,
   Search,
@@ -96,6 +97,8 @@ type DocumentsDataTableProps = {
   serverPagination?: ServerPaginationConfig;
   /** Bulk status change: if provided, renders "Mark as <status>" entries in the selection menu. */
   statusOptions?: string[];
+  /** Language filter in the toolbar (multilingual collections only); each option is a server-side link. */
+  languageFilter?: { active: string; options: Array<{ value: string; label: string; href: string }> };
 };
 
 const formatDateClient = (value: unknown): string => {
@@ -163,6 +166,7 @@ export default function DocumentsDataTable({
   data,
   serverPagination,
   statusOptions,
+  languageFilter,
 }: DocumentsDataTableProps) {
   const isServerMode = !!serverPagination;
 
@@ -552,7 +556,7 @@ export default function DocumentsDataTable({
                   {row.original.locales.map((locale) => (
                     <a
                       key={locale}
-                      href={`${row.original.editHref}?locale=${locale}`}
+                      href={`${row.original.editHref.split("?")[0]}?locale=${locale}`}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <Badge
@@ -710,6 +714,29 @@ export default function DocumentsDataTable({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {languageFilter && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  {languageFilter.active
+                    ? (languageFilter.options.find((option) => option.value === languageFilter.active)?.label ??
+                      "All languages")
+                    : "All languages"}
+                  <ChevronDown className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                {languageFilter.options.map((option) => (
+                  <DropdownMenuItem key={option.value} onClick={() => window.location.assign(option.href)}>
+                    <Check
+                      className={cn("size-4", option.value === languageFilter.active ? "opacity-100" : "opacity-0")}
+                    />
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           {selectedRows.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

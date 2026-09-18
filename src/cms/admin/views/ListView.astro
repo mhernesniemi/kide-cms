@@ -42,6 +42,35 @@ const locales = config.locales?.supported ?? [];
 // and this collection actually has translatable fields to show per-locale.
 const showLocalesColumn = locales.length > 1 && getTranslatableFieldNames(collection).length > 0;
 
+// Language filter (?lang=en → documents that exist in English, shown in English;
+// ?lang=missing:en → documents not translated to English yet). Only offered when
+// the collection is actually multilingual.
+const langParam = showLocalesColumn ? (Astro.url.searchParams.get("lang") ?? "") : "";
+const missingLocale = langParam.startsWith("missing:") ? langParam.slice("missing:".length) : "";
+const langFilter = locales.includes(langParam)
+  ? { locale: langParam, availability: "exact" as const }
+  : locales.includes(missingLocale)
+    ? { locale: missingLocale, availability: "missing" as const }
+    : null;
+const langHref = (value: string) => {
+  const url = new URL(Astro.url);
+  if (value) url.searchParams.set("lang", value);
+  else url.searchParams.delete("lang");
+  url.searchParams.delete("page");
+  return url.pathname + url.search;
+};
+// "fi" → "Finnish" (the admin UI is English); unknown codes fall back to the code.
+const languageNames = new Intl.DisplayNames(["en"], { type: "language", fallback: "code" });
+const languageName = (locale: string) => languageNames.of(locale) ?? locale.toUpperCase();
+const langOptions = [
+  { value: "", label: "All languages" },
+  ...locales.map((locale) => ({ value: locale, label: `In ${languageName(locale)}` })),
+  ...locales
+    .filter((locale) => locale !== defaultLocale)
+    .map((locale) => ({ value: `missing:${locale}`, label: `Missing ${languageName(locale)}` })),
+].map((option) => ({ ...option, href: langHref(option.value) }));
+const activeLang = langFilter ? langParam : "";
+
 const viewConfig = collection.views ?? {};
 const defaultSort = viewConfig.list?.defaultSort ?? { field: "_updatedAt", direction: "desc" };
 const sortParam = Astro.url.searchParams.get("sort");
@@ -58,7 +87,8 @@ const [docs, totalDocs] = await Promise.all([
   collectionApi.find(
     {
       status: "any",
-      locale: defaultLocale,
+      locale: langFilter?.locale ?? defaultLocale,
+      availability: langFilter?.availability,
       sort: currentSort,
       limit: PAGE_SIZE,
       offset,
@@ -66,7 +96,15 @@ const [docs, totalDocs] = await Promise.all([
     },
     runtimeContext,
   ),
-  collectionApi.count({ status: "any", locale: defaultLocale, search: searchParam || undefined }, runtimeContext),
+  collectionApi.count(
+    {
+      status: "any",
+      locale: langFilter?.locale ?? defaultLocale,
+      availability: langFilter?.availability,
+      search: searchParam || undefined,
+    },
+    runtimeContext,
+  ),
 ]);
 const totalPages = Math.max(1, Math.ceil(totalDocs / PAGE_SIZE));
 
@@ -169,7 +207,8 @@ const tableRows = docs.map((entry: Record<string, unknown>) => {
   const pagePath = getPagePath(entry);
   return {
     id: String(entry._id),
-    editHref: `/admin/${collection.slug}/${entry._id}`,
+    // Filtered by a language: open that language's tab (for "Missing …", the translation form).
+    editHref: `/admin/${collection.slug}/${entry._id}${langFilter ? `?locale=${langFilter.locale}` : ""}`,
     status: getVisualStatus(entry),
     locales: Array.isArray(entry._availableLocales) ? entry._availableLocales.map((l) => String(l)) : [defaultLocale],
     searchText: String(entry[getLabelField(collection)] ?? entry.slug ?? entry._id ?? ""),
@@ -212,6 +251,7 @@ const tableRows = docs.map((entry: Record<string, unknown>) => {
     }))}
     data={tableRows}
     searchPlaceholder={`Filter ${collection.labels.plural.toLowerCase()}...`}
+    languageFilter={showLocalesColumn ? { active: activeLang, options: langOptions } : undefined}
     serverPagination={{
       totalDocs,
       totalPages,
