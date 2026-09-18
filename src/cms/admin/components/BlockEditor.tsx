@@ -47,6 +47,8 @@ type SharedSectionOption = {
 type Props = {
   name: string;
   value?: string;
+  /** The field's label — names the items in the empty state ("No fields added yet"). */
+  label?: string;
   types: BlockTypesMeta;
   linkOptions?: LinkableCollection[];
   sharedSections?: SharedSectionOption[];
@@ -286,6 +288,7 @@ function SortableBlock({
 export default function BlockEditor({
   name,
   value,
+  label,
   types,
   linkOptions = [],
   sharedSections = [],
@@ -500,7 +503,7 @@ export default function BlockEditor({
 
       {blocks.length === 0 && (
         <div className="bg-field-subtle flex h-20 items-center justify-center rounded-lg border border-dashed">
-          <p className="text-muted-foreground text-sm">No blocks added yet</p>
+          <p className="text-muted-foreground text-sm">No {label ? label.toLowerCase() : "blocks"} added yet</p>
         </div>
       )}
 
