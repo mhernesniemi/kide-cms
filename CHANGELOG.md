@@ -16,6 +16,11 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
   opposite edges of the whole form — most visible in an embedded edit sheet. The pair now sits
   together when stacked; the two-column view is unchanged.
 
+### Changed
+
+- **Expanding a content field into fullscreen puts the caret in the editor.** Entering fullscreen is
+  an explicit "I want to write" gesture; it took a second click to start typing.
+
 ## [0.29.2] - 2026-09-18
 
 ### Changed
