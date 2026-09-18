@@ -10,7 +10,18 @@
 //
 // Usage: pnpm dev:preview [starter] [--fresh] [--port=4326]
 import { execSync, spawn } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync, watch } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  watch,
+  writeFileSync,
+} from "node:fs";
+import net from "node:net";
 import path from "node:path";
 
 const root = process.cwd();
@@ -46,6 +57,49 @@ if (!availableStarters.includes(starter)) {
 const previewDir = path.join(previewRoot, starter);
 const overlayDir = path.join(startersDir, starter);
 const run = (cmd) => execSync(cmd, { cwd: previewDir, stdio: "inherit" });
+
+// A running preview keeps syncing into previewDir (and its server writes caches
+// there), so assembling or --fresh-deleting underneath it fails with ENOTEMPTY or
+// half-copied trees. Refuse up front, naming the process to stop.
+const pidFile = path.join(previewRoot, `${starter}.pid`);
+const isAlive = (pid) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === "EPERM";
+  }
+};
+const runningPid = existsSync(pidFile) ? Number(readFileSync(pidFile, "utf8")) : 0;
+if (runningPid && runningPid !== process.pid && isAlive(runningPid)) {
+  console.error(
+    `[dev-preview] a "${starter}" preview is already running (pid ${runningPid}). Stop it first — Ctrl+C in its terminal, or \`kill ${runningPid}\`.`,
+  );
+  process.exit(1);
+}
+const portInUse = await new Promise((resolve) => {
+  const socket = net.connect({ port: Number(port), host: "localhost" });
+  socket.once("connect", () => {
+    socket.destroy();
+    resolve(true);
+  });
+  socket.once("error", () => resolve(false));
+});
+if (portInUse) {
+  console.error(
+    `[dev-preview] port ${port} is already in use — likely an earlier preview. Stop it (\`lsof -ti:${port}\` shows the pid), or pass --port=<n>.`,
+  );
+  process.exit(1);
+}
+mkdirSync(previewRoot, { recursive: true });
+writeFileSync(pidFile, String(process.pid));
+process.on("exit", () => {
+  if (existsSync(pidFile) && readFileSync(pidFile, "utf8") === String(process.pid)) rmSync(pidFile, { force: true });
+});
+// Signals skip "exit" handlers by default; exit explicitly so the pid file goes too.
+// (Ctrl+C reaches the dev server directly — it shares the terminal's process group.)
+process.on("SIGINT", () => process.exit(130));
+process.on("SIGTERM", () => process.exit(143));
 
 if (fresh) rmSync(previewDir, { recursive: true, force: true });
 
