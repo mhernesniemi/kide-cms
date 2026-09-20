@@ -7,7 +7,27 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
-## [Unreleased]
+## [0.30.0] - 2026-09-20
+
+### Added
+
+- **A `blocks` field can sit inside a block.** Block sub-fields of type `blocks` render the block
+  editor itself — typed "+ Text / + Image / + Video" buttons, one set of fields per item — instead of
+  a raw JSON textarea. It replaces the pattern of a repeater row carrying every possible field at
+  once, where each row showed an image picker, a rich-text editor and a video field and the editor
+  had to know which ones mattered (a two-column layout block ended up four levels deep).
+- **Language filter in list views.** Multilingual collections get an "All languages / In Finnish /
+  Missing English" dropdown in the table toolbar. `In <language>` lists the documents that exist in
+  it and shows their titles in that language; `Missing <language>` is the translation to-do list, and
+  opens each row on that language's tab. The choice lives in the URL (`?lang=en`), so it survives
+  sorting, searching and paging. Single-language projects see nothing new.
+- **`availability: "missing"`** on `find`/`count` (and the MCP list/count tools): the complement of
+  `"exact"` — documents that don't exist in a locale yet.
+- **Form fields: `tel`, `number` and `radio`.** The submit route validates a number against its
+  `min`/`max` and a radio against its declared options, and the marketing starter's form collection
+  and renderer cover all three.
+- **"Change language…" in the document menu**, for the rare case of a document saved under the wrong
+  language. Offered only while no translation exists, which is the only case the API accepts.
 
 ### Fixed
 
@@ -22,12 +42,33 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 - **A failed editor load is visible.** If an admin editor doesn't hydrate, the edit page shows a
   notice that the fields may look empty but the content is safe, with the fix in dev
   (`pnpm dev:clean`, check the duplicate-package warning), instead of silently rendering blank fields.
+- **`dev:preview` refuses to run twice.** A second run for the same starter (or anything holding its
+  port) stopped with `ENOTEMPTY` while the first preview kept syncing files into the directory it was
+  deleting. It now names the process to stop, and cleans up its pid file on exit.
+- **Unrecognised `admin.icon` names** fall back to the default Layers icon instead of a grid, so a
+  typo looks like a missing icon rather than a different one. Same for custom nav items.
 
 ### Changed
 
+- **Saving no longer reloads the edit page.** A successful save or publish swaps in just the parts
+  that can change — title and status, header actions, review bar, unsaved-changes guard, sidebar info
+  — from the response the request already returned, and shows its toast. Expanded blocks, scroll
+  position, cursor and undo history all survive, and the server renders the page once per save
+  instead of twice. New documents, translations, other actions, a server-side value rewrite (an
+  auto-derived slug) or any unexpected error still fall back to a full reload.
+- **Checkboxes put their label next to the box** instead of a label above and the words "true" /
+  "false" beside it.
+- **Content language moved out of the sidebar.** The language a document is written in is no longer a
+  permanent select next to the slug: the top switcher is the one language control, its original
+  language is marked, and new documents choose a language until the first save. The language buttons
+  are now one segmented control rather than a ring on one button and a dashed border on another.
+- **More room inside blocks.** Fields in a block sit 24px apart (matching grouped panels on the main
+  form) and repeater rows 20px, instead of 16px and 12px. Collapsed blocks and rows preview their
+  rich text, or the image file name when there is no text, rather than showing only the type.
 - **Dependencies bumped**, including `lucide-react` 0.577 → 1.47 and `@base-ui/react` 1.3 → 1.8, so
-  the admin matches what current shadcn/ui installs into projects. Unrecognised `admin.icon` names
-  and nav-item icons now fall back to the default Layers icon instead of a grid.
+  the admin matches what current shadcn/ui installs into projects. Cloudflare projects now pin
+  `wrangler ^4.134.0`, the version `@cloudflare/vite-plugin` requires — the older pin failed the
+  build with a peer-dependency error.
 
 ## [0.29.3] - 2026-09-18
 

@@ -49,7 +49,7 @@ try {
     pkg.devDependencies["better-sqlite3"] = pkg.dependencies["better-sqlite3"];
     delete pkg.dependencies["better-sqlite3"];
   }
-  pkg.devDependencies["wrangler"] = "^4.121.0";
+  pkg.devDependencies["wrangler"] = "^4.134.0";
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
 
   console.log("[cf-verify] installing + building");
