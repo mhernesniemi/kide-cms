@@ -307,10 +307,13 @@ function assertCarefulPatch(patch) {
       .split("\n")
       .filter((line) => /^[+-](?![+-]{2} )/.test(line))
       .map((line) => line.slice(1).trim());
-    // `"version": "0.27.2",` / `"astro": "^7.3.2",` / `"packageManager": "pnpm@10.27.0",` —
-    // the value must be a version or range, so a changed script or config key is caught.
-    const allowed =
-      /^"(version|[@a-z0-9][\w./@-]*)":\s*"((?:\^|~|>=|<=|>|<|=)?\d+\.\d+\.\d+[\w.+-]*|pnpm@\d+\.\d+\.\d+)",?$/;
+    // `"version": "0.27.2",` / `"astro": "^7.3.2",` / `"packageManager": "pnpm@10.27.0",` /
+    // a pnpm override `"hono@<4.12.34": ">=4.12.34 <5.0.0",` — the value must be a version or
+    // range, so a changed script or config key is caught.
+    const comparator = String.raw`(?:\^|~|>=|<=|>|<|=)?\d+\.\d+\.\d+[\w.+-]*`;
+    const allowed = new RegExp(
+      String.raw`^"(version|[@a-z0-9][\w./@-]*(?:@[<>=~^\d.]+)?)":\s*"(${comparator}(?:\s+${comparator})*|pnpm@\d+\.\d+\.\d+)",?$`,
+    );
     for (const line of changedLines) {
       if (!allowed.test(line)) problems.push(`package.json: ${line}`);
     }
