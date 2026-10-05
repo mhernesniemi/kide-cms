@@ -251,6 +251,15 @@ const toGenericOAuth = (provider: AdminAuthSsoProviderConfig): GenericOAuthConfi
   } as GenericOAuthConfig;
 };
 
+/**
+ * How a password reset link reaches the user: by email when an adapter is configured, in the
+ * dev server's terminal during development, otherwise not at all (the flow is then hidden).
+ */
+export const passwordResetDelivery = (): "email" | "console" | null => {
+  if (getEmail().isEmailConfigured()) return "email";
+  return process.env.NODE_ENV === "development" ? "console" : null;
+};
+
 const DEV_SECRET = "kide-development-secret-do-not-use-in-production";
 let warnedDevSecret = false;
 
@@ -326,7 +335,13 @@ export const buildAdminAuthOptions = (config: CMSConfig, deps: AuthDeps = {}): B
       sendResetPassword: async ({ user, token }) => {
         const resetUrl = new URL("/admin/reset-password", baseURL);
         resetUrl.searchParams.set("token", token);
-        await getEmail().sendPasswordResetEmail?.(user.email, resetUrl.toString());
+        const delivery = passwordResetDelivery();
+        if (delivery === "email") {
+          const sent = await getEmail().sendPasswordResetEmail?.(user.email, resetUrl.toString());
+          if (!sent) console.error(`[kide] The password reset email to ${user.email} could not be sent.`);
+        } else if (delivery === "console") {
+          console.info(`[kide] Email isn't configured — password reset link for ${user.email}:\n  ${resetUrl}`);
+        }
       },
     },
     session: {

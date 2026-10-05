@@ -6,7 +6,7 @@ import { Input } from "../../admin/components/ui/input";
 import { Label } from "../../admin/components/ui/label";
 import { buttonVariants } from "../../admin/components/ui/button";
 import PasskeySignIn from "../../admin/components/PasskeySignIn";
-import { getSsoProvider, resolveAdminAuth } from "../../core";
+import { getSsoProvider, passwordResetDelivery, resolveAdminAuth } from "../../core";
 import config from "virtual:kide/config";
 
 export const prerender = false;
@@ -122,7 +122,7 @@ const hasSso = auth.ssoProviders.length > 0;
                     <div class="grid gap-2">
                       <div class="flex items-center justify-between gap-3">
                         <Label htmlFor="password">Password</Label>
-                        {auth.password.forgotPassword && (
+                        {auth.password.forgotPassword && passwordResetDelivery() && (
                           <a class="text-muted-foreground hover:text-foreground text-xs" href="/admin/forgot-password">
                             Forgot password?
                           </a>

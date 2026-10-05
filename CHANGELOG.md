@@ -7,6 +7,15 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+### Fixed
+
+- **Forgot password no longer claims a link was sent when email isn't set up.** Without an email
+  adapter, production hides the "Forgot password?" link and the page says reset by email isn't
+  available; in development the reset link is printed in the dev server's terminal and the page
+  says so.
+
 ## [0.31.0] - 2026-10-05
 
 ### Added

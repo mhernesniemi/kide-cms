@@ -9,6 +9,7 @@ import {
   getAdminAuth,
   listSignInMethods,
   loadAuthUser,
+  passwordResetDelivery,
   resolveAdminAuth,
 } from "../../../core";
 import config from "virtual:kide/config";
@@ -19,6 +20,10 @@ export const prerender = false;
 export const POST: APIRoute = async ({ request, clientAddress }) => {
   const auth = resolveAdminAuth(config);
   if (!auth.password.forgotPassword) return Response.json({ error: "Not found" }, { status: 404 });
+  // No way to deliver a link: the page explains that instead of pretending to send one.
+  if (!passwordResetDelivery()) {
+    return new Response(null, { status: 303, headers: { Location: "/admin/forgot-password" } });
+  }
 
   const formData = await request.formData();
   const email = String(formData.get("email") ?? "")

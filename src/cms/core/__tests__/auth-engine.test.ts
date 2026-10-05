@@ -21,6 +21,7 @@ import {
   extensionAuthEndpoints,
   getAdminAuth,
   getSsoDenial,
+  passwordResetDelivery,
   registerAuthConfig,
   resetAuthEngine,
   resolveAdminSession,
@@ -216,6 +217,26 @@ describe("password reset", () => {
       asResponse: true,
     });
     expect(reuse.ok).toBe(false);
+  });
+});
+
+describe("password reset delivery", () => {
+  it("is email when an adapter is configured, the terminal in development, otherwise off", async () => {
+    expect(passwordResetDelivery()).toBe("email");
+    const { getCmsRuntime } = await import("../runtime");
+    const runtime = getCmsRuntime();
+    const email = runtime.email!;
+    const nodeEnv = process.env.NODE_ENV;
+    try {
+      runtime.email = { ...email, isEmailConfigured: () => false };
+      process.env.NODE_ENV = "development";
+      expect(passwordResetDelivery()).toBe("console");
+      process.env.NODE_ENV = "production";
+      expect(passwordResetDelivery()).toBeNull();
+    } finally {
+      runtime.email = email;
+      process.env.NODE_ENV = nodeEnv;
+    }
   });
 });
 

@@ -160,6 +160,7 @@ export {
   loadAuthUser,
   markSsoVerified,
   migrateLegacyAuth,
+  passwordResetDelivery,
   registerAuthConfig,
   resetAuthEngine,
   resolveAdminSession,
