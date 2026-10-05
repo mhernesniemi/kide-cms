@@ -7,6 +7,18 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.30.1] - 2026-10-05
+
+0.30.0 was tagged but never published — its release checks failed. This is the same release
+plus the fix below.
+
+### Fixed
+
+- **Embedded upgrades now install the runtime's new dependencies.** `pnpm cms:upgrade` applies
+  `src/cms/package.json` (the `@kidecms/core` manifest) together with the rest of the managed
+  runtime. Before, a release that bumped a runtime dependency — 0.30.0's Tiptap update — left
+  upgraded embedded projects with mismatched packages that failed to build.
+
 ## [0.30.0] - 2026-09-20
 
 ### Added
