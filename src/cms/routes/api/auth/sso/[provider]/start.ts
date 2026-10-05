@@ -1,35 +1,43 @@
 import type { APIRoute } from "astro";
 
-import { getSsoProvider, publicOrigin, resolveAdminAuth } from "../../../../../core";
+import { hitRateLimit } from "virtual:kide/runtime";
 import config from "virtual:kide/config";
+import { getAdminAuth, getSsoProvider } from "../../../../../core";
+import { authResponse, readJson, redirectWithCookies } from "../../_better-auth";
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params, request }) => {
-  const providerId = params.provider ?? "";
-  const provider = getSsoProvider(config, providerId);
-  if (!provider) return Response.json({ error: "SSO provider not found." }, { status: 404 });
+const toLogin = (error: string) =>
+  new Response(null, { status: 303, headers: { Location: `/admin/login?error=${error}` } });
 
-  const auth = resolveAdminAuth(config);
-  if (provider.authorizationUrl) {
-    const url = new URL(provider.authorizationUrl);
-    url.searchParams.set("provider", provider.id);
-    url.searchParams.set(
-      "redirect_uri",
-      // Anchored on the trusted origin, not the Host header — see publicOrigin.
-      provider.callbackUrl ?? new URL("/api/cms/auth/sso/callback", publicOrigin(request)).toString(),
-    );
-    return new Response(null, {
-      status: 303,
-      headers: { Location: url.toString() },
-    });
-  }
+// Only same-site admin paths: a returnTo is attacker-controllable via a crafted link.
+const safeReturnTo = (value: string | null) =>
+  value && /^\/admin(?:[/?#]|$)/.test(value) && !value.startsWith("//") ? value : "/admin";
 
-  return Response.json(
-    {
-      error: `SSO provider "${provider.id}" is configured, but ${auth.provider} does not expose a start URL for it yet.`,
-      hint: "Set authorizationUrl for a broker/custom flow, or use the Better Auth/WorkOS adapter when it is installed.",
-    },
-    { status: 501 },
+export const GET: APIRoute = async ({ params, request, url, clientAddress }) => {
+  const provider = getSsoProvider(config, params.provider ?? "");
+  if (!provider) return toLogin("sso-unknown");
+
+  const limit = await hitRateLimit("sso:ip", clientAddress, { max: 30, windowMs: 15 * 60 * 1000 });
+  if (!limit.ok) return toLogin("rate-limited");
+
+  const auth = await getAdminAuth(request);
+  const response = await authResponse(() =>
+    auth.api.signInSocial({
+      body: {
+        provider: provider.id,
+        callbackURL: safeReturnTo(url.searchParams.get("returnTo")),
+        errorCallbackURL: "/admin/login",
+      },
+      headers: request.headers,
+      asResponse: true,
+    }),
   );
+  const body = await readJson(response);
+  if (!response.ok || typeof body?.url !== "string") {
+    console.error(`[kide] SSO provider "${provider.id}" could not start sign-in:`, body?.message ?? response.status);
+    return toLogin("sso-unavailable");
+  }
+  // Carries the OAuth state / PKCE cookies the callback checks.
+  return redirectWithCookies(body.url, response);
 };

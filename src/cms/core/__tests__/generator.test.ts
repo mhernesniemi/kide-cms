@@ -169,3 +169,53 @@ describe("generate", () => {
     });
   });
 });
+
+describe("admin auth tables", () => {
+  const users = defineCollection({
+    slug: "users",
+    labels: { singular: "User", plural: "Users" },
+    auth: true,
+    fields: {
+      name: fields.text({ required: true }),
+      email: fields.email({ required: true, unique: true }),
+      role: fields.select({ options: ["admin", "editor"], defaultValue: "editor" }),
+    },
+  });
+
+  const generateSchema = async (authConfig: Parameters<typeof defineConfig>[0]) => {
+    const dir = mkdtempSync(path.join(tmpdir(), "kide-generator-auth-"));
+    try {
+      await generate(defineConfig(authConfig), { outputDir: dir });
+      return readFileSync(path.join(dir, "schema.ts"), "utf-8");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it("adds Better Auth's user columns as _auth system columns and emits its tables", async () => {
+    const schema = await generateSchema({ collections: [users] });
+    // Nullable with a default: drizzle-kit would empty a populated users table to add a NOT NULL column.
+    expect(schema).toContain(
+      '_authEmailVerified: integer("_auth_email_verified", { mode: "boolean" }).default(false),',
+    );
+    for (const table of ["cms_auth_sessions", "cms_auth_accounts", "cms_auth_verifications"]) {
+      expect(schema).toContain(`"${table}"`);
+    }
+    expect(schema).not.toContain("cms_auth_two_factors");
+  });
+
+  it("adds plugin tables when MFA is enabled", async () => {
+    const schema = await generateSchema({
+      admin: { auth: { mfa: { totp: true, passkeys: true } } },
+      collections: [users],
+    });
+    expect(schema).toContain('"cms_auth_two_factors"');
+    expect(schema).toContain('"cms_auth_passkeys"');
+    expect(schema).toContain("_authTwoFactorEnabled");
+  });
+
+  it("rejects a collection that would share a table with auth", async () => {
+    const clash = defineCollection({ slug: "auth-sessions", labels: { singular: "S", plural: "S" }, fields: {} });
+    await expect(generateSchema({ collections: [users, clash] })).rejects.toThrow(/share the table cms_auth_sessions/);
+  });
+});

@@ -119,7 +119,13 @@ async function bootAndProbe(project) {
   const child = spawn("node", ["dist/server/entry.mjs"], {
     cwd: project,
     stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, PORT: String(port), HOST: "127.0.0.1" },
+    // Production builds refuse to sign admin sessions without a secret.
+    env: {
+      ...process.env,
+      PORT: String(port),
+      HOST: "127.0.0.1",
+      KIDE_AUTH_SECRET: "verify-only-secret-0123456789abcdef",
+    },
   });
   let output = "";
   child.stdout.on("data", (d) => (output += d));

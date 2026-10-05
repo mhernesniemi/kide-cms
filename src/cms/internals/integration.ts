@@ -234,6 +234,14 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         // Inject admin pages
         injectRoute({ pattern: "/admin/login", entrypoint: new URL("../routes/admin/login.astro", import.meta.url) });
         injectRoute({
+          pattern: "/admin/login/verify",
+          entrypoint: new URL("../routes/admin/login/verify.astro", import.meta.url),
+        });
+        injectRoute({
+          pattern: "/admin/account",
+          entrypoint: new URL("../routes/admin/account.astro", import.meta.url),
+        });
+        injectRoute({
           pattern: "/admin/forgot-password",
           entrypoint: new URL("../routes/admin/forgot-password.astro", import.meta.url),
         });
@@ -292,6 +300,19 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         injectRoute({
           pattern: "/api/cms/auth/invite",
           entrypoint: new URL("../routes/api/auth/invite.ts", import.meta.url),
+        });
+        injectRoute({
+          pattern: "/api/cms/auth/login/verify",
+          entrypoint: new URL("../routes/api/auth/login/verify.ts", import.meta.url),
+        });
+        injectRoute({
+          pattern: "/api/cms/auth/account",
+          entrypoint: new URL("../routes/api/auth/account.ts", import.meta.url),
+        });
+        // Better Auth's own endpoints (OAuth callbacks, two-factor, passkeys) — allowlisted inside.
+        injectRoute({
+          pattern: "/api/cms/auth/[...all]",
+          entrypoint: new URL("../routes/api/auth/[...all].ts", import.meta.url),
         });
         injectRoute({
           pattern: "/api/cms/assets/upload",

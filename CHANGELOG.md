@@ -7,6 +7,54 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+### Added
+
+- **Admin sign-in runs on Better Auth.** Kide keeps its users collection, roles, schema and
+  screens; Better Auth handles the sign-in methods. All configured in `admin.auth`:
+  - **Single sign-on** — `sso.providers` with `type: "microsoft"` (single-tenant Entra ID),
+    `"google"` or any `"oidc"` issuer (Okta, Keycloak, Auth0, Authentik, Idura, …). Invite-only by
+    default (SSO links to existing Kide users); `provisioning: "jit"` creates users from
+    `allowedDomains`, and `mapRole` sets the role from ID-token claims on every sign-in.
+  - **Authenticator apps** — `mfa.totp` adds TOTP with backup codes and "trust this device";
+    `mfa.require` (`true` or a list of roles) makes password users enroll before entering the admin.
+  - **Passkeys** — `mfa.passkeys`.
+  - `sessionDays`, and `betterAuth: (options) => options` to add anything Kide doesn't wrap —
+    endpoints of added plugins are served under `/api/cms/auth/`.
+- **SSO offboarding.** SSO users are re-checked with their identity provider every
+  `sso.verifyEveryMinutes` (default 60) through a background token refresh. When the provider
+  refuses (account disabled or deleted), every session of that user ends immediately; outages don't
+  sign anyone out. Users at a provider's `allowedDomains` must sign in through it (`enforce`,
+  default true): no password sign-in, reset or password invite for them. Roles from `mapRole` also
+  re-sync on each re-check.
+- **Account & security page** (`/admin/account`, from the user menu): change password, set up an
+  authenticator app, manage passkeys, see linked SSO accounts, sign out other devices.
+
+### Changed
+
+- **`KIDE_AUTH_SECRET` is required in production** — it signs session cookies (generate with
+  `openssl rand -base64 32`). Without it, admin sign-in fails with a message naming the variable.
+- **Everyone signs in again once after upgrading**: sessions moved to Better Auth.
+- On first use, existing password hashes move from `users.password` to credential accounts, user
+  emails are lowercased (sign-in matches lowercase), and existing users are marked email-verified so
+  SSO can link to them. No action needed; the old column is left empty.
+- A completed password reset now sends the user to the sign-in page instead of signing them in, so
+  a second factor still applies. SSO-only accounts get no reset link.
+- Changing a password through the users collection ends that user's sessions.
+- `admin.auth`: `provider` is `"local"` or a custom provider object; the stub values `"better-auth"`
+  and `"workos"`, and `workos`, `advanced`, `password.emailVerification` and `mfa.backupCodes` are
+  gone (they never did anything). SSO provider entries have new, typed shapes.
+
+### Upgrading
+
+- `pnpm add @kidecms/core@latest` (or `pnpm cms:upgrade <tag>`), then `pnpm cms:generate && pnpm cms:push`
+  on Node — the schema change is additive. On Cloudflare D1, generate and apply a migration.
+- Set `KIDE_AUTH_SECRET` in every deployed environment before deploying.
+- `createSession`, `validateSession`, `destroySession`, `setSessionCookie`, `clearSessionCookie`
+  and the password-reset helpers still export (so `runtime.ts` keeps compiling) but throw when
+  called; use `getSessionUser(request)` / `getAdminAuth(request).api`.
+
 ## [0.30.1] - 2026-10-05
 
 0.30.0 was tagged but never published — its release checks failed. This is the same release

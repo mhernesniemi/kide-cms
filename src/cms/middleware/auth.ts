@@ -1,11 +1,18 @@
 import { defineMiddleware } from "astro:middleware";
 import type { APIContext, MiddlewareNext } from "astro";
-import { publicOrigin, resolveAdminAuth, runWithRequestScope } from "../core";
+import {
+  getSsoDenial,
+  publicOrigin,
+  registerAuthConfig,
+  resolveAdminAuth,
+  resolveAdminSession,
+  runWithRequestScope,
+} from "../core";
 import type { RequestScope, SessionUser } from "../core";
 import { eq } from "drizzle-orm";
 
 import config from "virtual:kide/config";
-import { getSessionUser } from "virtual:kide/runtime";
+import "virtual:kide/runtime";
 import { getDb } from "virtual:kide/db";
 
 let hasUsers: boolean | null = null;
@@ -26,6 +33,7 @@ const normalizeCustomUser = (value: Record<string, unknown> | null): SessionUser
 };
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  registerAuthConfig(config);
   // Establish a per-request scope for EVERY request (including public pages and custom public
   // API routes) so deferred work (audit/search/webhook-enqueue) is kept alive only for THIS
   // request — never routed to the module-level script fallback, whose promises aren't attached
@@ -57,7 +65,7 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
 
   // `?preview` exposes draft content on public pages; require a session (unauth → strip it).
   if (context.url.searchParams.has("preview")) {
-    const previewUser = await getSessionUser(context.request);
+    const previewUser = (await resolveAdminSession(context.request))?.user ?? null;
     if (!previewUser) {
       const clean = new URL(context.url);
       clean.searchParams.delete("preview");
@@ -69,16 +77,15 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
   const isAdminRoute = pathname.startsWith("/admin");
   const isAdminApiRoute = pathname.startsWith("/api/cms");
   const isLoginPage = pathname === "/admin/login";
-  const isLoginApi = pathname === "/api/cms/auth/login";
   const isForgotPasswordPage = pathname === "/admin/forgot-password";
-  const isForgotPasswordApi = pathname === "/api/cms/auth/forgot-password";
   const isResetPasswordPage = pathname === "/admin/reset-password";
-  const isResetPasswordApi = pathname === "/api/cms/auth/reset-password";
-  const isSsoAuthApi = pathname.startsWith("/api/cms/auth/sso/");
+  // Every /api/cms/auth/* route guards itself: Kide's own (login, setup, invite, …)
+  // and Better Auth's (OAuth callbacks, two-factor, passkeys) through the catch-all.
+  const isAuthApi = pathname.startsWith("/api/cms/auth/");
+  const isTwoFactorPage = pathname === "/admin/login/verify";
   const isSetupPage = pathname === "/admin/setup";
   const isSetupApi = pathname === "/api/cms/auth/setup";
   const isInvitePage = pathname === "/admin/invite";
-  const isInviteApi = pathname === "/api/cms/auth/invite";
 
   // Public despite the /api/cms prefix: cmsImageUrl() puts these URLs on public pages.
   // Only reads files under public/, which are served unauthenticated anyway.
@@ -90,7 +97,8 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
 
   // Security headers for all admin routes
   const isAuthPath =
-    pathname.startsWith("/api/cms/auth/") ||
+    isAuthApi ||
+    isTwoFactorPage ||
     isLoginPage ||
     isSetupPage ||
     isInvitePage ||
@@ -191,24 +199,21 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
     return context.redirect("/admin/login");
   }
 
-  // Always allow login page, login API, and cron/webhook endpoints (they have
+  // Always allow the sign-in pages, auth API, and cron/webhook endpoints (they have
   // their own auth: bearer secret for cron, HMAC signature for webhooks)
   const isCronApi = pathname === "/api/cms/cron/publish" || pathname === "/api/cms/cron/tasks";
   const isWebhookApi = pathname.startsWith("/api/cms/webhooks/");
   const isFormSubmit = pathname.startsWith("/api/cms/forms/submit/");
   if (
     isLoginPage ||
-    isLoginApi ||
+    isTwoFactorPage ||
     isForgotPasswordPage ||
-    isForgotPasswordApi ||
     isResetPasswordPage ||
-    isResetPasswordApi ||
-    isSsoAuthApi ||
+    isAuthApi ||
     isSetupApi ||
     isCronApi ||
     isWebhookApi ||
     isInvitePage ||
-    isInviteApi ||
     isFormSubmit
   ) {
     return serve();
@@ -216,10 +221,19 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
 
   const auth = resolveAdminAuth(config);
   const customProvider = config.admin?.auth?.provider;
+  const session =
+    auth.provider === "custom" && typeof customProvider === "object"
+      ? null
+      : await resolveAdminSession(context.request);
   const user =
     auth.provider === "custom" && typeof customProvider === "object"
       ? normalizeCustomUser(await customProvider.getSession(context.request))
-      : await getSessionUser(context.request);
+      : (session?.user ?? null);
+  // A sliding-session refresh re-issues the cookie; pass it through.
+  const withSessionCookies = (response: Response) => {
+    for (const cookie of session?.setCookies ?? []) response.headers.append("Set-Cookie", cookie);
+    return response;
+  };
 
   // Non-httpOnly hint for the public-site edit bar: lets the injected client skip
   // the session check entirely for anonymous visitors. Carries no auth value — the
@@ -238,12 +252,30 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
   };
 
   if (!user) {
+    const denial = getSsoDenial(context.request);
     // API routes → 401
     if (isAdminApiRoute) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      const error = denial
+        ? denial.kind === "revoked"
+          ? "sso_access_revoked"
+          : "sso_reauthentication_required"
+        : null;
+      return new Response(JSON.stringify({ error: "Unauthorized", ...(error ? { code: error } : {}) }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
       });
+    }
+    // The provider refused the user: say so instead of a bare login page.
+    if (denial?.kind === "revoked") {
+      return withEditorHint(context.redirect("/admin/login?error=sso_access_revoked"), false);
+    }
+    // Back through the provider — usually a silent hop while its own session is alive.
+    if (denial?.kind === "reauth") {
+      const returnTo = `${pathname}${context.url.search}`;
+      return withEditorHint(
+        context.redirect(`/api/cms/auth/sso/${denial.providerId}/start?returnTo=${encodeURIComponent(returnTo)}`),
+        false,
+      );
     }
     // Admin pages → redirect to login
     return withEditorHint(context.redirect("/admin/login"), false);
@@ -252,5 +284,13 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
   // Attach user to locals for downstream use
   context.locals.user = user;
 
-  return withEditorHint(await serve(), true);
+  // `mfa.require`: password users enroll an authenticator before anything else.
+  if (session?.mfaEnrollmentRequired && pathname !== "/admin/account") {
+    if (isAdminApiRoute) {
+      return Response.json({ error: "Two-factor authentication must be set up first." }, { status: 403 });
+    }
+    return withSessionCookies(context.redirect("/admin/account?mfa=required"));
+  }
+
+  return withSessionCookies(withEditorHint(await serve(), true));
 };

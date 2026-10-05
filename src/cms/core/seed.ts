@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { hashPassword } from "./auth";
+import { AUTH_USERS_COLLECTION, setCredentialPassword } from "./auth-engine";
 import type { CMSConfig, CollectionConfig, FieldConfig, SeedDocument } from "./define";
 import { getDb } from "./runtime";
 import { getSchema } from "./schema";
@@ -65,8 +66,14 @@ export const seedDatabase = async (config: CMSConfig, seedData: Record<string, S
         }
       }
 
-      if (collection.auth && typeof fieldData.password === "string") {
-        fieldData.password = await hashPassword(fieldData.password);
+      const isAuthUsers = !!collection.auth && collection.slug === AUTH_USERS_COLLECTION;
+      let credentialHash: string | null = null;
+      if (isAuthUsers && typeof fieldData.email === "string") fieldData.email = fieldData.email.toLowerCase();
+      if (isAuthUsers && "password" in fieldData) {
+        if (typeof fieldData.password === "string" && fieldData.password) {
+          credentialHash = await hashPassword(fieldData.password);
+        }
+        delete fieldData.password;
       }
 
       const serialized = serializeForDb(collection, fieldData);
@@ -85,7 +92,10 @@ export const seedDatabase = async (config: CMSConfig, seedData: Record<string, S
         docValues._updatedAt = timestamp;
       }
 
+      if (isAuthUsers && tables.main._authEmailVerified) docValues._authEmailVerified = true;
+
       await db.insert(tables.main).values(docValues);
+      if (credentialHash) await setCredentialPassword(docId, credentialHash);
 
       if (collection.versions && tables.versions) {
         await db.insert(tables.versions).values({

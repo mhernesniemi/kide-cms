@@ -141,12 +141,6 @@ export const cmsAssetFolders = sqliteTable("cms_asset_folders", {
   _createdAt: text("_created_at").notNull(),
 });
 
-export const cmsSessions = sqliteTable("cms_sessions", {
-  _id: text("_id").primaryKey(),
-  userId: text("user_id").notNull(),
-  expiresAt: text("expires_at").notNull(),
-});
-
 export const cmsLocks = sqliteTable("cms_locks", {
   _id: text("_id").primaryKey(),
   collection: text("collection").notNull(),
@@ -158,7 +152,13 @@ export const cmsLocks = sqliteTable("cms_locks", {
   docIdx: index("locks_doc_idx").on(table.collection, table.documentId),
 }));
 
-export const cmsInvites = sqliteTable("cms_invites", {
+export const cmsSessions = sqliteTable("cms_sessions", {
+  _id: text("_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  expiresAt: text("expires_at").notNull(),
+});
+
+export const cmsPasswordResets = sqliteTable("cms_password_resets", {
   _id: text("_id").primaryKey(),
   userId: text("user_id").notNull(),
   token: text("token").notNull().unique(),
@@ -166,7 +166,7 @@ export const cmsInvites = sqliteTable("cms_invites", {
   usedAt: text("used_at"),
 });
 
-export const cmsPasswordResets = sqliteTable("cms_password_resets", {
+export const cmsInvites = sqliteTable("cms_invites", {
   _id: text("_id").primaryKey(),
   userId: text("user_id").notNull(),
   token: text("token").notNull().unique(),

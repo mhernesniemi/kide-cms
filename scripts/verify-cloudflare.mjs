@@ -66,6 +66,12 @@ try {
   // or migrations land in a different local D1 persistence path than the one served.
   run("pnpm exec wrangler d1 migrations apply cf-verify-db --local --config dist/server/wrangler.json");
 
+  // Production builds refuse to sign admin sessions without a secret; wrangler dev reads
+  // local secrets from .dev.vars next to the config it boots with.
+  const devVars = "KIDE_AUTH_SECRET=verify-only-secret-0123456789abcdef\n";
+  writeFileSync(path.join(dir, ".dev.vars"), devVars);
+  writeFileSync(path.join(dir, "dist/server/.dev.vars"), devVars);
+
   console.log("[cf-verify] booting the worker (wrangler dev, local) and driving real requests");
   await bootAndProbe(dir);
   console.log("\n[cf-verify] ✓ Cloudflare target builds AND serves requests without crashing");

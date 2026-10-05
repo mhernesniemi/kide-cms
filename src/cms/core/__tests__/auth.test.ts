@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clearSessionCookie, hashPassword, SESSION_COOKIE_NAME, setSessionCookie, verifyPassword } from "../auth";
+import { hashPassword, verifyPassword } from "../auth";
 
 describe("hashPassword / verifyPassword", () => {
   it("verifies a correct password", async () => {
@@ -53,23 +53,5 @@ describe("hashPassword / verifyPassword", () => {
   it("is case-sensitive", async () => {
     const hash = await hashPassword("Secret");
     expect(await verifyPassword(hash, "secret")).toBe(false);
-  });
-});
-
-describe("session cookies", () => {
-  it("sets an HttpOnly, SameSite=Strict cookie with expiry", () => {
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 60).toISOString();
-    const cookie = setSessionCookie("token123", expiresAt);
-    expect(cookie).toContain(`${SESSION_COOKIE_NAME}=token123`);
-    expect(cookie).toContain("HttpOnly");
-    expect(cookie).toContain("SameSite=Strict");
-    expect(cookie).toContain("Path=/");
-    expect(cookie).toContain("Expires=");
-  });
-
-  it("clears the cookie with Max-Age=0", () => {
-    const cookie = clearSessionCookie();
-    expect(cookie).toContain(`${SESSION_COOKIE_NAME}=;`);
-    expect(cookie).toContain("Max-Age=0");
   });
 });

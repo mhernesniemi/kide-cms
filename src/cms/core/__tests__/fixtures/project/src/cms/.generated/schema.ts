@@ -9,6 +9,9 @@ export const cmsUsers = sqliteTable(
     email: text("email").notNull().unique(),
     role: text("role").default("editor"),
     password: text("password"),
+    _authEmailVerified: integer("_auth_email_verified", { mode: "boolean" }).default(false),
+    _authImage: text("_auth_image"),
+    _authTwoFactorEnabled: integer("_auth_two_factor_enabled", { mode: "boolean" }).default(false),
     _createdAt: text("_created_at").notNull(),
     _updatedAt: text("_updated_at").notNull(),
   },
@@ -196,12 +199,6 @@ export const cmsAssetFolders = sqliteTable("cms_asset_folders", {
   _createdAt: text("_created_at").notNull(),
 });
 
-export const cmsSessions = sqliteTable("cms_sessions", {
-  _id: text("_id").primaryKey(),
-  userId: text("user_id").notNull(),
-  expiresAt: text("expires_at").notNull(),
-});
-
 export const cmsLocks = sqliteTable(
   "cms_locks",
   {
@@ -217,7 +214,13 @@ export const cmsLocks = sqliteTable(
   }),
 );
 
-export const cmsInvites = sqliteTable("cms_invites", {
+export const cmsSessions = sqliteTable("cms_sessions", {
+  _id: text("_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  expiresAt: text("expires_at").notNull(),
+});
+
+export const cmsPasswordResets = sqliteTable("cms_password_resets", {
   _id: text("_id").primaryKey(),
   userId: text("user_id").notNull(),
   token: text("token").notNull().unique(),
@@ -225,7 +228,7 @@ export const cmsInvites = sqliteTable("cms_invites", {
   usedAt: text("used_at"),
 });
 
-export const cmsPasswordResets = sqliteTable("cms_password_resets", {
+export const cmsInvites = sqliteTable("cms_invites", {
   _id: text("_id").primaryKey(),
   userId: text("user_id").notNull(),
   token: text("token").notNull().unique(),
@@ -321,6 +324,98 @@ export const cmsComments = sqliteTable(
   },
   (table) => ({
     docIdx: index("comments_doc_idx").on(table.collection, table.documentId),
+  }),
+);
+
+export const cmsAuthSessions = sqliteTable(
+  "cms_auth_sessions",
+  {
+    id: text("id").primaryKey(),
+    expiresAt: text("expires_at").notNull(),
+    token: text("token").notNull().unique(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id").notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("auth_sessions_user_id_idx").on(table.userId),
+  }),
+);
+
+export const cmsAuthAccounts = sqliteTable(
+  "cms_auth_accounts",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id").notNull(),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: text("access_token_expires_at"),
+    refreshTokenExpiresAt: text("refresh_token_expires_at"),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("auth_accounts_user_id_idx").on(table.userId),
+  }),
+);
+
+export const cmsAuthVerifications = sqliteTable(
+  "cms_auth_verifications",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => ({
+    identifierIdx: index("auth_verifications_identifier_idx").on(table.identifier),
+  }),
+);
+
+export const cmsAuthTwoFactors = sqliteTable(
+  "cms_auth_two_factors",
+  {
+    id: text("id").primaryKey(),
+    secret: text("secret").notNull(),
+    backupCodes: text("backup_codes").notNull(),
+    userId: text("user_id").notNull(),
+    verified: integer("verified", { mode: "boolean" }).default(true),
+    failedVerificationCount: integer("failed_verification_count").default(0),
+    lockedUntil: text("locked_until"),
+  },
+  (table) => ({
+    secretIdx: index("auth_two_factors_secret_idx").on(table.secret),
+    userIdIdx: index("auth_two_factors_user_id_idx").on(table.userId),
+  }),
+);
+
+export const cmsAuthPasskeys = sqliteTable(
+  "cms_auth_passkeys",
+  {
+    id: text("id").primaryKey(),
+    name: text("name"),
+    publicKey: text("public_key").notNull(),
+    userId: text("user_id").notNull(),
+    credentialID: text("credential_id").notNull(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type").notNull(),
+    backedUp: integer("backed_up", { mode: "boolean" }).notNull(),
+    transports: text("transports"),
+    createdAt: text("created_at"),
+    aaguid: text("aaguid"),
+  },
+  (table) => ({
+    userIdIdx: index("auth_passkeys_user_id_idx").on(table.userId),
+    credentialIDIdx: index("auth_passkeys_credential_id_idx").on(table.credentialID),
   }),
 );
 

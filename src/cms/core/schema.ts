@@ -2,7 +2,9 @@ type SchemaModule = {
   cmsTables: Record<string, { main: any; translations?: any; versions?: any }>;
   cmsAssets: any;
   cmsAssetFolders: any;
-  cmsSessions: any;
+  cmsAuthSessions: any;
+  cmsAuthAccounts: any;
+  cmsAuthVerifications: any;
   cmsLocks: any;
   cmsInvites: any;
   cmsRateLimits: any;

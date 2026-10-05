@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Input } from "../../admin/components/ui/input";
 import { Label } from "../../admin/components/ui/label";
 import { buttonVariants } from "../../admin/components/ui/button";
-import { resolveAdminAuth } from "../../core";
+import PasskeySignIn from "../../admin/components/PasskeySignIn";
+import { getSsoProvider, resolveAdminAuth } from "../../core";
 import config from "virtual:kide/config";
 
 export const prerender = false;
@@ -15,10 +16,33 @@ const ERROR_MESSAGES: Record<string, string> = {
   missing: "Email and password are required.",
   disabled: "Password login is disabled.",
   "rate-limited": "Too many attempts. Try again in a few minutes.",
+  "two-factor-expired": "The sign-in took too long. Start again.",
+  not_invited: "There's no Kide account for that user. Ask an admin to invite you.",
+  domain_not_allowed: "That account's email domain isn't allowed here.",
+  account_not_linked:
+    "An account with this email exists, but your identity provider didn't confirm the address. Ask an admin to check the SSO setup.",
+  signup_disabled: "There's no Kide account for that user. Ask an admin to invite you.",
+  "sso-unknown": "That sign-in option doesn't exist.",
+  "sso-unavailable": "Single sign-on isn't available right now. Try again later or contact an admin.",
+  access_denied: "Sign-in was cancelled.",
+  sso_access_revoked: "Your organization account no longer has access. Contact your administrator.",
 };
-const error = Astro.url.searchParams.get("error");
-const errorMessage = error ? (ERROR_MESSAGES[error] ?? "Sign-in failed. Try again.") : null;
+const STATUS_MESSAGES: Record<string, string> = {
+  "password-reset": "Your password was changed. Sign in with the new one.",
+};
+// Better Auth reports SSO refusals as upper-case codes (NOT_INVITED); Kide's own are kebab-case.
+const rawError = Astro.url.searchParams.get("error");
+const error = rawError && rawError === rawError.toUpperCase() ? rawError.toLowerCase() : rawError;
 const auth = resolveAdminAuth(config);
+const requiredSso = error === "sso-required" ? getSsoProvider(config, Astro.url.searchParams.get("sso") ?? "") : null;
+const errorMessage = requiredSso
+  ? `Your organization signs in with ${requiredSso.label}. Use the button above.`
+  : error
+    ? (ERROR_MESSAGES[error] ?? "Sign-in failed. Try again.")
+    : null;
+const status = Astro.url.searchParams.get("status");
+const statusMessage = status ? (STATUS_MESSAGES[status] ?? null) : null;
+const hasSso = auth.ssoProviders.length > 0;
 ---
 
 <!doctype html>
@@ -37,7 +61,9 @@ const auth = resolveAdminAuth(config);
         <Card>
           <CardHeader>
             <CardTitle>Sign in</CardTitle>
-            <CardDescription>Enter your credentials to continue</CardDescription>
+            <CardDescription>
+              {auth.password.enabled ? "Enter your credentials to continue" : "Continue with your organization account"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {
@@ -47,13 +73,51 @@ const auth = resolveAdminAuth(config);
                 </div>
               )
             }
-            <form method="post" action="/api/cms/auth/login" class="grid gap-4">
-              {
-                auth.password.enabled && (
-                  <>
+            {
+              statusMessage && (
+                <div class="border-border bg-muted mb-4 rounded-lg border px-3 py-2 text-sm">{statusMessage}</div>
+              )
+            }
+            {
+              hasSso && (
+                <div class="grid gap-3">
+                  {auth.ssoProviders.map((provider) => (
+                    <a
+                      class={buttonVariants({
+                        variant: auth.password.enabled ? "outline" : "default",
+                        size: "lg",
+                        className: "w-full",
+                      })}
+                      href={`/api/cms/auth/sso/${provider.id}/start`}
+                    >
+                      Continue with {provider.label}
+                    </a>
+                  ))}
+                </div>
+              )
+            }
+            {
+              auth.password.enabled && (
+                <>
+                  {hasSso && (
+                    <div class="text-muted-foreground my-4 flex items-center gap-3 text-xs">
+                      <div class="bg-border h-px flex-1" />
+                      <span>or</span>
+                      <div class="bg-border h-px flex-1" />
+                    </div>
+                  )}
+                  <form method="post" action="/api/cms/auth/login" class="grid gap-4">
                     <div class="grid gap-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" name="email" type="email" placeholder="admin@example.com" required autoFocus />
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="admin@example.com"
+                        autoComplete="username webauthn"
+                        required
+                        autoFocus={!hasSso}
+                      />
                     </div>
                     <div class="grid gap-2">
                       <div class="flex items-center justify-between gap-3">
@@ -64,36 +128,23 @@ const auth = resolveAdminAuth(config);
                           </a>
                         )}
                       </div>
-                      <Input id="password" name="password" type="password" placeholder="Enter password" required />
+                      <Input
+                        id="password"
+                        name="password"
+                        type="password"
+                        placeholder="Enter password"
+                        autoComplete="current-password"
+                        required
+                      />
                     </div>
                     <button class={buttonVariants({ size: "lg", className: "w-full" })} type="submit">
                       Sign in
                     </button>
-                  </>
-                )
-              }
-            </form>
-            {
-              auth.ssoProviders.length > 0 && (
-                <div class="mt-4 grid gap-3">
-                  {auth.password.enabled && (
-                    <div class="text-muted-foreground flex items-center gap-3 text-xs">
-                      <div class="bg-border h-px flex-1" />
-                      <span>or</span>
-                      <div class="bg-border h-px flex-1" />
-                    </div>
-                  )}
-                  {auth.ssoProviders.map((provider) => (
-                    <a
-                      class={buttonVariants({ variant: "outline", size: "lg", className: "w-full" })}
-                      href={`/api/cms/auth/sso/${provider.id}/start`}
-                    >
-                      Continue with {provider.label}
-                    </a>
-                  ))}
-                </div>
+                  </form>
+                </>
               )
             }
+            {auth.mfa.passkeys && <PasskeySignIn client:load />}
           </CardContent>
         </Card>
       </div>

@@ -2,16 +2,17 @@ import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "virtual:kide/db";
+import { auditRequestMeta, hitRateLimit, logAudit } from "virtual:kide/runtime";
 import {
-  auditRequestMeta,
-  hitRateLimit,
-  createPasswordReset,
-  getEmail,
-  logAudit,
-  tokenReference,
-} from "virtual:kide/runtime";
-import { publicOrigin, resolveAdminAuth } from "../../../core";
+  auditActor,
+  enforcedSsoProvider,
+  getAdminAuth,
+  listSignInMethods,
+  loadAuthUser,
+  resolveAdminAuth,
+} from "../../../core";
 import config from "virtual:kide/config";
+import { authResponse } from "./_better-auth";
 
 export const prerender = false;
 
@@ -20,7 +21,9 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   if (!auth.password.forgotPassword) return Response.json({ error: "Not found" }, { status: 404 });
 
   const formData = await request.formData();
-  const email = String(formData.get("email") ?? "").trim();
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
   const redirect = () =>
     new Response(null, {
       status: 303,
@@ -28,6 +31,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     });
 
   if (!email) return redirect();
+  // Domain-bound users have no password to recover; their provider is the way in.
+  if (enforcedSsoProvider(auth, email)) return redirect();
 
   // Throttle by IP, then email. On limit, return the same "sent" response (never reveal)
   // and skip the email send — fail-open so a DB hiccup can't block recovery. Check the IP
@@ -35,7 +40,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   // inserting new limiter rows by varying the email.
   const opts = { max: 5, windowMs: 15 * 60 * 1000, failClosed: false };
   if (!(await hitRateLimit("forgot:ip", clientAddress, opts)).ok) return redirect();
-  if (!(await hitRateLimit("forgot:email", email.toLowerCase(), opts)).ok) return redirect();
+  if (!(await hitRateLimit("forgot:email", email, opts)).ok) return redirect();
 
   const db = await getDb();
   const schema = await import("virtual:kide/schema");
@@ -43,36 +48,37 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   if (!tables.users) return redirect();
 
   const rows = await db.select().from(tables.users.main).where(eq(tables.users.main.email, email)).limit(1);
-  if (rows.length === 0) {
+  const user = rows.length > 0 ? await loadAuthUser(String((rows[0] as Record<string, unknown>)._id)) : null;
+  const audit = () =>
     logAudit({
       action: "auth.password_reset_requested",
       resourceType: "password_reset",
-      attemptedEmail: email,
+      ...(user ? { actor: auditActor(user) } : { attemptedEmail: email }),
       ...auditRequestMeta(request),
     });
+
+  if (!user) {
+    audit();
     return redirect();
   }
 
-  const user = rows[0] as Record<string, unknown>;
-  const reset = await createPasswordReset(String(user._id));
-  // Anchored on the trusted origin, not the Host header — see publicOrigin.
-  const resetUrl = new URL("/admin/reset-password", publicOrigin(request));
-  resetUrl.searchParams.set("token", reset.token);
+  // SSO-only accounts don't get a password through the back door: their identity
+  // provider (and its offboarding) stays the only way in. Invited users who haven't
+  // accepted yet have no accounts at all and may reset.
+  const methods = await listSignInMethods(user.id);
+  if (methods.length > 0 && !methods.includes("credential")) {
+    audit();
+    return redirect();
+  }
 
-  const emailAdapter = getEmail();
-  await emailAdapter.sendPasswordResetEmail?.(String(user.email), resetUrl.toString());
-
-  logAudit({
-    action: "auth.password_reset_requested",
-    resourceType: "password_reset",
-    resourceId: await tokenReference(reset.token),
-    actor: {
-      id: String(user._id),
-      email: String(user.email ?? ""),
-      role: String(user.role ?? ""),
-    },
-    ...auditRequestMeta(request),
-  });
-
+  const betterAuth = await getAdminAuth(request);
+  await authResponse(() =>
+    betterAuth.api.requestPasswordReset({
+      body: { email, redirectTo: "/admin/reset-password" },
+      headers: request.headers,
+      asResponse: true,
+    }),
+  );
+  audit();
   return redirect();
 };
