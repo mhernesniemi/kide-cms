@@ -68,9 +68,10 @@ const readUser = (id: string) => cms.users.findById(id, { status: "any" }, syste
 const adminCtx = () => ({ user: { id: adminId, role: "admin", email: "admin@example.com" } });
 
 /** Reads bypass the API because it strips `password` from every auth-collection result. */
+// Passwords live in the user's credential account (Better Auth), not on the users row.
 const readPasswordHash = async (id: string) => {
-  const rows = await db.select().from((generatedSchema as any).cmsTables.users.main);
-  return String((rows as any[]).find((row) => row._id === id)?.password ?? "");
+  const rows = await db.select().from((generatedSchema as any).cmsAuthAccounts);
+  return String((rows as any[]).find((row) => row.userId === id && row.providerId === "credential")?.password ?? "");
 };
 
 describe("auth collections deny by default", () => {

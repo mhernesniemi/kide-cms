@@ -2,6 +2,14 @@ import { mkdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
+import {
+  authColumnSource,
+  authTableSpecs,
+  authUserExtraColumns,
+  AUTH_USERS_COLLECTION,
+  buildAdminAuthOptions,
+} from "./auth-engine";
+import type { AuthTableSpec } from "./auth-engine";
 import type { CMSConfig, CollectionConfig, FieldConfig } from "./define";
 import { getTranslatableFieldNames } from "./define";
 
@@ -62,13 +70,50 @@ const generateColumnDef = (fieldName: string, field: FieldConfig, options: { bar
   return `  ${fieldName}: ${col},`;
 };
 
-const generateMainTable = (config: CMSConfig, collection: CollectionConfig): string => {
+const isAuthUsersCollection = (collection: CollectionConfig) =>
+  !!collection.auth && collection.slug === AUTH_USERS_COLLECTION;
+
+/** Better Auth's table layout for the admin audience, or null when there is no users collection. */
+const getAuthSpecs = (config: CMSConfig): AuthTableSpec[] | null => {
+  const users = config.collections.find(isAuthUsersCollection);
+  if (!users) return null;
+  for (const required of ["name", "email"]) {
+    if (!users.fields[required]) {
+      throw new Error(`[kide] The users collection needs a "${required}" field — admin sign-in relies on it.`);
+    }
+  }
+  if (users.timestamps === false) {
+    throw new Error("[kide] The users collection must keep timestamps — admin sign-in relies on them.");
+  }
+  const specs = authTableSpecs(buildAdminAuthOptions(config));
+  for (const spec of specs) {
+    const clash = !spec.isUser && config.collections.find((c) => `cms_${snakeCase(c.slug)}` === spec.table);
+    if (clash) {
+      throw new Error(
+        `[kide] Collection "${clash.slug}" would share the table ${spec.table} with admin auth. Rename it.`,
+      );
+    }
+  }
+  return specs;
+};
+
+const generateMainTable = (
+  config: CMSConfig,
+  collection: CollectionConfig,
+  authSpecs: AuthTableSpec[] | null,
+): string => {
   const tableName = `cms_${snakeCase(collection.slug)}`;
   const varName = `cms${pascalCase(collection.slug)}`;
   const columns: string[] = [`  _id: text("_id").primaryKey(),`];
 
   for (const [fieldName, field] of Object.entries(collection.fields)) {
     columns.push(generateColumnDef(fieldName, field));
+  }
+
+  if (authSpecs && isAuthUsersCollection(collection)) {
+    for (const column of authUserExtraColumns(authSpecs)) {
+      columns.push(`  ${column.schemaKey}: ${authColumnSource(column, { userTable: true })},`);
+    }
   }
 
   // The language the base row is written in. A document exists in this locale
@@ -159,8 +204,10 @@ const generateSchemaFile = (config: CMSConfig): string => {
     ``,
   ];
 
+  const authSpecs = getAuthSpecs(config);
+
   for (const collection of config.collections) {
-    parts.push(generateMainTable(config, collection));
+    parts.push(generateMainTable(config, collection, authSpecs));
     const translationsTable = generateTranslationsTable(config, collection);
     if (translationsTable) parts.push("", translationsTable);
     const versionsTable = generateVersionsTable(collection);
@@ -195,12 +242,6 @@ const generateSchemaFile = (config: CMSConfig): string => {
   _createdAt: text("_created_at").notNull(),
 });`);
   parts.push("");
-  parts.push(`export const cmsSessions = sqliteTable("cms_sessions", {
-  _id: text("_id").primaryKey(),
-  userId: text("user_id").notNull(),
-  expiresAt: text("expires_at").notNull(),
-});`);
-  parts.push("");
   parts.push(`export const cmsLocks = sqliteTable("cms_locks", {
   _id: text("_id").primaryKey(),
   collection: text("collection").notNull(),
@@ -212,7 +253,17 @@ const generateSchemaFile = (config: CMSConfig): string => {
   docIdx: index("locks_doc_idx").on(table.collection, table.documentId),
 }));`);
   parts.push("");
-  parts.push(`export const cmsInvites = sqliteTable("cms_invites", {
+  // Retired in 0.31 (sessions and resets moved to Better Auth) but still emitted: dropping
+  // them in the same diff that adds cms_auth_* makes drizzle-kit ask whether the new tables
+  // are renames — an interactive prompt that breaks `cms:push` and `drizzle-kit generate`.
+  // Nothing reads them anymore; drop them in the next major.
+  parts.push(`export const cmsSessions = sqliteTable("cms_sessions", {
+  _id: text("_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  expiresAt: text("expires_at").notNull(),
+});`);
+  parts.push("");
+  parts.push(`export const cmsPasswordResets = sqliteTable("cms_password_resets", {
   _id: text("_id").primaryKey(),
   userId: text("user_id").notNull(),
   token: text("token").notNull().unique(),
@@ -220,7 +271,7 @@ const generateSchemaFile = (config: CMSConfig): string => {
   usedAt: text("used_at"),
 });`);
   parts.push("");
-  parts.push(`export const cmsPasswordResets = sqliteTable("cms_password_resets", {
+  parts.push(`export const cmsInvites = sqliteTable("cms_invites", {
   _id: text("_id").primaryKey(),
   userId: text("user_id").notNull(),
   token: text("token").notNull().unique(),
@@ -299,6 +350,25 @@ const generateSchemaFile = (config: CMSConfig): string => {
   docIdx: index("comments_doc_idx").on(table.collection, table.documentId),
 }));`);
   parts.push("");
+
+  // Better Auth's tables (sessions, credential/SSO accounts, verification tokens, plus
+  // whatever enabled plugins add). Users live in the users collection's own table.
+  for (const spec of authSpecs ?? []) {
+    if (spec.isUser) continue;
+    const columns = spec.columns.map((column) => `  ${column.schemaKey}: ${authColumnSource(column)},`);
+    const indexed = spec.columns.filter((column) => column.index && !column.unique);
+    const indexes = indexed.map(
+      (column) =>
+        `  ${column.schemaKey}Idx: index("${spec.table.replace(/^cms_/, "")}_${column.column}_idx").on(table.${column.schemaKey}),`,
+    );
+    const body = `{\n${columns.join("\n")}\n}`;
+    parts.push(
+      indexes.length
+        ? `export const ${spec.exportName} = sqliteTable("${spec.table}", ${body}, (table) => ({\n${indexes.join("\n")}\n}));`
+        : `export const ${spec.exportName} = sqliteTable("${spec.table}", ${body});`,
+    );
+    parts.push("");
+  }
 
   const tableExports: string[] = [];
   for (const collection of config.collections) {

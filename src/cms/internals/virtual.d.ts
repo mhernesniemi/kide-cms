@@ -14,8 +14,9 @@ declare module "virtual:kide/api" {
 
 declare module "virtual:kide/schema" {
   const cmsTables: Record<string, { main: any; translations?: any }>;
-  export const cmsSessions: any;
-  export const cmsPasswordResets: any;
+  export const cmsAuthSessions: any;
+  export const cmsAuthAccounts: any;
+  export const cmsAuthVerifications: any;
   export const cmsRateLimits: any;
   export { cmsTables };
 }

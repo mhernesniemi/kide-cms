@@ -100,97 +100,7 @@ export const hashToken = async (token: string): Promise<string> => {
   return `sha256:${hex}`;
 };
 
-export const createSession = async (userId: string): Promise<{ token: string; expiresAt: string }> => {
-  const db = await getDb();
-  const schema = getSchema();
-  const token = nanoid(32);
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-  await db.insert(schema.cmsSessions).values({
-    _id: await hashToken(token),
-    userId,
-    expiresAt,
-  });
-
-  return { token, expiresAt };
-};
-
-export const validateSession = async (token: string): Promise<{ userId: string; expiresAt: string } | null> => {
-  const db = await getDb();
-  const schema = getSchema();
-  const tokenHash = await hashToken(token);
-  const rows = await db.select().from(schema.cmsSessions).where(eq(schema.cmsSessions._id, tokenHash)).limit(1);
-
-  if (rows.length === 0) return null;
-
-  const session = rows[0] as { _id: string; userId: string; expiresAt: string };
-  if (new Date(session.expiresAt) < new Date()) {
-    await db.delete(schema.cmsSessions).where(eq(schema.cmsSessions._id, tokenHash));
-    return null;
-  }
-
-  return { userId: session.userId, expiresAt: session.expiresAt };
-};
-
-export const destroySession = async (token: string) => {
-  const db = await getDb();
-  const schema = getSchema();
-  await db.delete(schema.cmsSessions).where(eq(schema.cmsSessions._id, await hashToken(token)));
-};
-
-export type SessionUser = {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  [key: string]: unknown;
-};
-
-const parseSessionValue = (value: unknown) => {
-  if (typeof value !== "string") return value;
-  const trimmed = value.trim();
-  if (!trimmed.startsWith("[") && !trimmed.startsWith("{")) return value;
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    return value;
-  }
-};
-
-export const getSessionUser = async (request: Request): Promise<SessionUser | null> => {
-  const cookieHeader = request.headers.get("cookie") ?? "";
-  const match = cookieHeader.match(/cms_session=([^;]+)/);
-  if (!match) return null;
-
-  const session = await validateSession(match[1]);
-  if (!session) return null;
-
-  const db = await getDb();
-  const schema = getSchema();
-  const tables = schema.cmsTables as Record<string, { main: any }>;
-
-  if (!tables.users) return null;
-
-  const userRows = await db.select().from(tables.users.main).where(eq(tables.users.main._id, session.userId)).limit(1);
-  if (userRows.length === 0) return null;
-
-  const user = userRows[0] as Record<string, unknown>;
-  const publicFields = Object.fromEntries(
-    Object.entries(user)
-      .filter(([key]) => key !== "_id" && key !== "password")
-      .map(([key, value]) => [key, parseSessionValue(value)]),
-  );
-  return {
-    ...publicFields,
-    id: String(user._id),
-    email: String(user.email),
-    name: String(user.name),
-    role: String(user.role),
-  };
-};
-
 const INVITE_EXPIRY_DAYS = 7;
-const PASSWORD_RESET_EXPIRY_HOURS = 1;
 
 export const createInvite = async (userId: string): Promise<{ token: string; expiresAt: string }> => {
   const db = await getDb();
@@ -250,65 +160,49 @@ export const consumeInvite = async (token: string): Promise<{ userId: string } |
   return rows.length > 0 ? { userId: rows[0].userId as string } : null;
 };
 
-export const createPasswordReset = async (userId: string): Promise<{ token: string; expiresAt: string }> => {
-  const db = await getDb();
-  const schema = getSchema();
-  const token = nanoid(40);
-  const expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRY_HOURS * 60 * 60 * 1000).toISOString();
-
-  await db.insert(schema.cmsPasswordResets).values({
-    _id: nanoid(),
-    userId,
-    token: await hashToken(token),
-    expiresAt,
-  });
-
-  return { token, expiresAt };
+const removed = (name: string, replacement: string) => () => {
+  throw new Error(`[kide] ${name}() was removed when admin auth moved to Better Auth. ${replacement}`);
 };
 
-/** Read-only check for rendering the reset page. Does NOT consume — see consumePasswordReset. */
-export const validatePasswordReset = async (token: string): Promise<{ userId: string; expiresAt: string } | null> => {
-  const db = await getDb();
-  const schema = getSchema();
-  const rows = await db
-    .select()
-    .from(schema.cmsPasswordResets)
-    .where(eq(schema.cmsPasswordResets.token, await hashToken(token)))
-    .limit(1);
-
-  if (rows.length === 0) return null;
-
-  const reset = rows[0] as { userId: string; expiresAt: string; usedAt: string | null };
-  if (reset.usedAt) return null;
-  if (new Date(reset.expiresAt) < new Date()) return null;
-
-  return { userId: reset.userId, expiresAt: reset.expiresAt };
-};
-
-/** Atomically claim a reset token; returns the userId only if it won the race. */
-export const consumePasswordReset = async (token: string): Promise<{ userId: string } | null> => {
-  const db = await getDb();
-  const schema = getSchema();
-  const now = new Date().toISOString();
-  const rows = await db
-    .update(schema.cmsPasswordResets)
-    .set({ usedAt: now })
-    .where(
-      and(
-        eq(schema.cmsPasswordResets.token, await hashToken(token)),
-        isNull(schema.cmsPasswordResets.usedAt),
-        gt(schema.cmsPasswordResets.expiresAt, now),
-      ),
-    )
-    .returning({ userId: schema.cmsPasswordResets.userId });
-  return rows.length > 0 ? { userId: rows[0].userId as string } : null;
-};
-
-export const SESSION_COOKIE_NAME = "cms_session";
-
-export const setSessionCookie = (token: string, expiresAt: string) => {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `${SESSION_COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Strict${secure}; Expires=${new Date(expiresAt).toUTCString()}`;
-};
-
-export const clearSessionCookie = () => `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`;
+/** @deprecated Sessions are issued by Better Auth — sign in through `getAdminAuth(request).api`. */
+export const createSession: (userId: string) => Promise<{ token: string; expiresAt: string }> = removed(
+  "createSession",
+  "Sign users in through getAdminAuth(request).api.",
+) as never;
+/** @deprecated Use `getSessionUser(request)`. */
+export const validateSession: (token: string) => Promise<{ userId: string; expiresAt: string } | null> = removed(
+  "validateSession",
+  "Use getSessionUser(request).",
+) as never;
+/** @deprecated Use `getAdminAuth(request).api.signOut`. */
+export const destroySession: (token: string) => Promise<void> = removed(
+  "destroySession",
+  "Use getAdminAuth(request).api.signOut.",
+) as never;
+/** @deprecated Password resets are Better Auth verification tokens. */
+export const createPasswordReset: (userId: string) => Promise<{ token: string; expiresAt: string }> = removed(
+  "createPasswordReset",
+  "Use getAdminAuth(request).api.requestPasswordReset.",
+) as never;
+/** @deprecated Password resets are Better Auth verification tokens. */
+export const validatePasswordReset: (token: string) => Promise<{ userId: string; expiresAt: string } | null> = removed(
+  "validatePasswordReset",
+  "Use getAdminAuth(request).api.resetPassword.",
+) as never;
+/** @deprecated Password resets are Better Auth verification tokens. */
+export const consumePasswordReset: (token: string) => Promise<{ userId: string } | null> = removed(
+  "consumePasswordReset",
+  "Use getAdminAuth(request).api.resetPassword.",
+) as never;
+/** @deprecated Better Auth names the cookie `kide.session_token`. */
+export const SESSION_COOKIE_NAME = "kide.session_token";
+/** @deprecated Better Auth sets session cookies. */
+export const setSessionCookie: (token: string, expiresAt: string) => string = removed(
+  "setSessionCookie",
+  "Better Auth sets session cookies.",
+) as never;
+/** @deprecated Better Auth clears session cookies on sign-out. */
+export const clearSessionCookie: () => string = removed(
+  "clearSessionCookie",
+  "Better Auth clears session cookies on sign-out.",
+) as never;

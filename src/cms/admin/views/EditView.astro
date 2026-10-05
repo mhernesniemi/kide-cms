@@ -457,6 +457,20 @@ const publishBlocked =
             />
           </div>
           <div id="document-edit-area" data-preview-channel={!translationMode ? previewKey : undefined}>
+            {collection.slug === "users" && mode === "edit" && Astro.url.searchParams.get("signInInvite") && (
+              <AdminCard
+                title={Astro.url.searchParams.get("emailSent") === "true" ? "Invitation sent" : "Sign-in link"}
+              >
+                <p class="text-muted-foreground text-sm">
+                  {Astro.url.searchParams.get("emailSent") === "true"
+                    ? "An invitation email has been sent. They sign in with single sign-on here:"
+                    : "Email is not configured. Share this link — they sign in with single sign-on:"}
+                </p>
+                <code class="bg-muted mt-2 block rounded-md px-3 py-2 text-sm break-all select-all">
+                  {Astro.url.origin}/admin/login
+                </code>
+              </AdminCard>
+            )}
             {collection.slug === "users" && mode === "edit" && Astro.url.searchParams.get("inviteToken") && (
               <AdminCard title={Astro.url.searchParams.get("emailSent") === "true" ? "Invitation sent" : "Invite link"}>
                 {Astro.url.searchParams.get("emailSent") === "true" ? (

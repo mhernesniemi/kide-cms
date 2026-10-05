@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronsUpDown, LogOut, Monitor, Moon, Sun } from "lucide-react";
+import { ChevronsUpDown, LogOut, Monitor, Moon, Sun, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "./ui/dropdown-menu";
@@ -18,10 +18,12 @@ export default function SidebarUserMenu({
   userName,
   userEmail,
   logoutAction,
+  accountHref = "/admin/account",
 }: {
   userName: string;
   userEmail: string;
   logoutAction: string;
+  accountHref?: string;
 }) {
   const [theme, setTheme] = useState<Theme>("system");
 
@@ -81,6 +83,10 @@ export default function SidebarUserMenu({
 
         <DropdownMenuSeparator />
 
+        <DropdownMenuItem onClick={() => window.location.assign(accountHref)}>
+          <UserRound className="text-muted-foreground size-3.5" />
+          Account &amp; security
+        </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => {
             const form = document.createElement("form");

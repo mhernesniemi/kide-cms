@@ -1,18 +1,18 @@
 import type { APIRoute } from "astro";
-import { eq } from "drizzle-orm";
 
-import { getDb } from "virtual:kide/db";
-import {
-  auditRequestMeta,
-  createSession,
-  hashPassword,
-  logAudit,
-  setSessionCookie,
-  tokenReference,
-  verifyPassword,
-} from "virtual:kide/runtime";
+import { auditRequestMeta, logAudit } from "virtual:kide/runtime";
 import config from "virtual:kide/config";
-import { clearRateLimit, peekRateLimit, recordRateLimit, resolveAdminAuth } from "../../../core";
+import {
+  auditActor,
+  clearRateLimit,
+  enforcedSsoProvider,
+  getAdminAuth,
+  loadAuthUser,
+  peekRateLimit,
+  recordRateLimit,
+  resolveAdminAuth,
+} from "../../../core";
+import { authResponse, readJson, redirectWithCookies } from "./_better-auth";
 
 export const prerender = false;
 
@@ -24,27 +24,15 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   const isJson = contentType.includes("application/json");
   const auth = resolveAdminAuth(config);
 
-  const rateLimited = (retryAfterMs: number) => {
-    if (isJson) {
-      return Response.json(
-        { error: "Too many login attempts. Try again later." },
-        {
-          status: 429,
-          headers: { "Retry-After": String(Math.ceil(retryAfterMs / 1000)) },
-        },
-      );
-    }
-    return new Response(null, { status: 303, headers: { Location: "/admin/login?error=rate-limited" } });
-  };
+  const fail = (error: string, status: number, message: string, headers?: HeadersInit) =>
+    isJson
+      ? Response.json({ error: message }, { status, headers })
+      : new Response(null, { status: 303, headers: { Location: `/admin/login?error=${error}` } });
 
-  if (!auth.password.enabled) {
-    if (isJson) return Response.json({ error: "Password login is disabled." }, { status: 404 });
-    return new Response(null, { status: 303, headers: { Location: "/admin/login?error=disabled" } });
-  }
+  if (!auth.password.enabled) return fail("disabled", 404, "Password login is disabled.");
 
   let email: string;
   let password: string;
-
   if (isJson) {
     const body = await request.json();
     email = String(body.email ?? "");
@@ -55,9 +43,18 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     password = String(formData.get("password") ?? "");
   }
 
-  if (!email || !password) {
-    if (isJson) return Response.json({ error: "Email and password are required." }, { status: 400 });
-    return new Response(null, { status: 303, headers: { Location: "/admin/login?error=missing" } });
+  if (!email || !password) return fail("missing", 400, "Email and password are required.");
+
+  // Domain-bound users sign in through their provider. Decided by domain alone, so it
+  // reveals nothing about which accounts exist.
+  const enforcing = enforcedSsoProvider(auth, email);
+  if (enforcing) {
+    return isJson
+      ? Response.json({ error: `Sign in with ${enforcing.label}.`, sso: enforcing.id }, { status: 403 })
+      : new Response(null, {
+          status: 303,
+          headers: { Location: `/admin/login?error=sso-required&sso=${enforcing.id}` },
+        });
   }
 
   // Rate limit FAILED logins only: peek (read-only) before verifying, record on failure,
@@ -66,107 +63,60 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   // can't reset the throttle and keep spraying other accounts.
   const emailKey = email.toLowerCase();
   const opts = { max: MAX_ATTEMPTS, windowMs: WINDOW_MS, failClosed: true };
-  const ipPeek = await peekRateLimit("login:ip", clientAddress, opts);
-  if (!ipPeek.ok) return rateLimited(ipPeek.retryAfterMs);
-  const emailPeek = await peekRateLimit("login:email", emailKey, opts);
-  if (!emailPeek.ok) return rateLimited(emailPeek.retryAfterMs);
-
-  const recordFailure = async () => {
-    await recordRateLimit("login:ip", clientAddress, opts);
-    await recordRateLimit("login:email", emailKey, opts);
-  };
-
-  const db = await getDb();
-  const schema = await import("virtual:kide/schema");
-  const tables = schema.cmsTables as Record<string, { main: any }>;
-
-  if (!tables.users) {
-    return Response.json({ error: "Users collection not configured." }, { status: 500 });
+  for (const [bucket, key] of [
+    ["login:ip", clientAddress],
+    ["login:email", emailKey],
+  ] as const) {
+    const peek = await peekRateLimit(bucket, key, opts);
+    if (!peek.ok) {
+      return fail("rate-limited", 429, "Too many login attempts. Try again later.", {
+        "Retry-After": String(Math.ceil(peek.retryAfterMs / 1000)),
+      });
+    }
   }
 
-  const rows = await db.select().from(tables.users.main).where(eq(tables.users.main.email, email)).limit(1);
+  const betterAuth = await getAdminAuth(request);
+  const response = await authResponse(() =>
+    betterAuth.api.signInEmail({
+      body: { email, password, rememberMe: true },
+      headers: request.headers,
+      asResponse: true,
+    }),
+  );
+  const body = await readJson(response);
   const requestMeta = auditRequestMeta(request);
 
-  if (rows.length === 0) {
-    // Burn the same PBKDF2 cost as a real verification so an unknown email can't be
-    // told apart from a wrong password by response time (the failure response and
-    // the limiter bookkeeping are already identical).
-    await hashPassword(password).catch(() => {});
-    await recordFailure();
-    logAudit({
-      action: "auth.login_failed",
-      resourceType: "session",
-      attemptedEmail: email,
-      ...requestMeta,
-    });
-    if (contentType.includes("application/json")) {
-      return Response.json({ error: "Invalid credentials." }, { status: 401 });
-    }
-    return new Response(null, {
-      status: 303,
-      headers: { Location: "/admin/login?error=invalid" },
-    });
+  if (!response.ok) {
+    await recordRateLimit("login:ip", clientAddress, opts);
+    await recordRateLimit("login:email", emailKey, opts);
+    logAudit({ action: "auth.login_failed", resourceType: "session", attemptedEmail: email, ...requestMeta });
+    return fail("invalid", 401, "Invalid credentials.");
   }
 
-  const user = rows[0] as Record<string, unknown>;
-  const storedHash = String(user.password ?? "");
-
-  let valid = false;
-  try {
-    valid = await verifyPassword(storedHash, password);
-  } catch {
-    // valid remains false
-  }
-
-  if (!valid) {
-    await recordFailure();
-    logAudit({
-      action: "auth.login_failed",
-      resourceType: "session",
-      attemptedEmail: email,
-      ...requestMeta,
-    });
-    if (contentType.includes("application/json")) {
-      return Response.json({ error: "Invalid credentials." }, { status: 401 });
-    }
-    return new Response(null, {
-      status: 303,
-      headers: { Location: "/admin/login?error=invalid" },
-    });
-  }
-
-  // Success — clear this account's failed-login budget (but not the IP bucket).
   await clearRateLimit("login:email", emailKey);
 
-  const session = await createSession(String(user._id));
+  // Password accepted, second factor pending: Better Auth set a short-lived two-factor cookie.
+  if (body?.twoFactorRedirect) {
+    if (isJson) {
+      const pending = Response.json({ twoFactorRequired: true });
+      for (const cookie of response.headers.getSetCookie()) pending.headers.append("Set-Cookie", cookie);
+      return pending;
+    }
+    return redirectWithCookies("/admin/login/verify", response);
+  }
 
+  const userId = (body?.user as { id?: string } | undefined)?.id;
   logAudit({
     action: "auth.login",
     resourceType: "session",
-    resourceId: await tokenReference(session.token),
-    actor: {
-      id: String(user._id),
-      email: String(user.email ?? ""),
-      role: String(user.role ?? ""),
-    },
+    actor: auditActor(userId ? await loadAuthUser(userId) : null),
     ...requestMeta,
   });
 
-  if (contentType.includes("application/json")) {
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Set-Cookie": setSessionCookie(session.token, session.expiresAt),
-      },
-    });
+  if (isJson) {
+    const ok = Response.json({ ok: true });
+    for (const cookie of response.headers.getSetCookie()) ok.headers.append("Set-Cookie", cookie);
+    return ok;
   }
-
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: "/admin",
-      "Set-Cookie": setSessionCookie(session.token, session.expiresAt),
-    },
-  });
+  return redirectWithCookies("/admin", response);
 };

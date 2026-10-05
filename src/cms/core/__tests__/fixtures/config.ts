@@ -135,5 +135,7 @@ export default defineConfig({
     default: "en",
     supported: ["en", "fi"],
   },
+  // Enables every auth plugin so the generated fixture schema carries all their tables.
+  admin: { auth: { mfa: { totp: true, passkeys: true } } },
   collections: [users, authors, posts, pages],
 });

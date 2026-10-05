@@ -4,7 +4,7 @@ import { pushSQLiteSchema } from "drizzle-kit/api";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import * as generatedSchema from "./fixtures/project/src/cms/.generated/schema";
-import { createPasswordReset, consumePasswordReset, hashToken } from "../auth";
+import { consumeInvite, createInvite, hashToken } from "../auth";
 import { clearRateLimit, hitRateLimit, peekRateLimit, recordRateLimit } from "../rate-limit";
 import { configureCmsRuntime, resetCmsRuntime } from "../runtime";
 import { initSchema, resetSchema } from "../schema";
@@ -76,30 +76,30 @@ describe("peek / record / clear (login failure budget)", () => {
 
 describe("atomic single-use token consumption", () => {
   it("lets exactly one of two concurrent consumers win", async () => {
-    const { token } = await createPasswordReset("user-x");
-    const [a, b] = await Promise.all([consumePasswordReset(token), consumePasswordReset(token)]);
+    const { token } = await createInvite("user-x");
+    const [a, b] = await Promise.all([consumeInvite(token), consumeInvite(token)]);
     const winners = [a, b].filter(Boolean);
     expect(winners).toHaveLength(1);
     expect(winners[0]!.userId).toBe("user-x");
   });
 
   it("returns null for an already-consumed token", async () => {
-    const { token } = await createPasswordReset("user-y");
-    expect((await consumePasswordReset(token))?.userId).toBe("user-y");
-    expect(await consumePasswordReset(token)).toBeNull();
+    const { token } = await createInvite("user-y");
+    expect((await consumeInvite(token))?.userId).toBe("user-y");
+    expect(await consumeInvite(token)).toBeNull();
   });
 
-  it("stores reset tokens hashed, not raw", async () => {
-    const { token } = await createPasswordReset("user-z");
-    const schema = generatedSchema as never as { cmsPasswordResets: any };
+  it("stores invite tokens hashed, not raw", async () => {
+    const { token } = await createInvite("user-z");
+    const schema = generatedSchema as never as { cmsInvites: any };
     const db = drizzle(sqlite);
     const { eq } = await import("drizzle-orm");
-    const raw = await db.select().from(schema.cmsPasswordResets).where(eq(schema.cmsPasswordResets.token, token));
+    const raw = await db.select().from(schema.cmsInvites).where(eq(schema.cmsInvites.token, token));
     expect(raw).toHaveLength(0);
     const hashed = await db
       .select()
-      .from(schema.cmsPasswordResets)
-      .where(eq(schema.cmsPasswordResets.token, await hashToken(token)));
+      .from(schema.cmsInvites)
+      .where(eq(schema.cmsInvites.token, await hashToken(token)));
     expect(hashed).toHaveLength(1);
   });
 });

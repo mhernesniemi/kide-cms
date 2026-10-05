@@ -1,0 +1,90 @@
+---
+import "virtual:kide/admin-css";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../admin/components/ui/card";
+import { Input } from "../../../admin/components/ui/input";
+import { Label } from "../../../admin/components/ui/label";
+import { buttonVariants } from "../../../admin/components/ui/button";
+
+export const prerender = false;
+
+// Reached only mid-sign-in: Better Auth's short-lived two-factor cookie must be present.
+if (!/(?:^|;\s*)(?:__Secure-)?kide\.two_factor=/.test(Astro.request.headers.get("cookie") ?? "")) {
+  return Astro.redirect("/admin/login?error=two-factor-expired");
+}
+
+const useBackupCode = Astro.url.searchParams.get("method") === "backup";
+const ERROR_MESSAGES: Record<string, string> = {
+  missing: "Enter the code.",
+  invalid: useBackupCode ? "That backup code isn't valid." : "That code isn't valid. Check the time on your device.",
+  "rate-limited": "Too many attempts. Try again in a few minutes.",
+};
+const error = Astro.url.searchParams.get("error");
+const errorMessage = error ? (ERROR_MESSAGES[error] ?? null) : null;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>Two-factor authentication | Kide CMS</title>
+  </head>
+  <body class="bg-background text-foreground min-h-screen antialiased">
+    <div class="flex min-h-screen items-center justify-center px-4">
+      <div class="w-full max-w-sm space-y-6">
+        <h1 class="text-center text-xl font-semibold tracking-tight">Kide CMS</h1>
+        <Card>
+          <CardHeader>
+            <CardTitle>Two-factor authentication</CardTitle>
+            <CardDescription>
+              {
+                useBackupCode
+                  ? "Enter one of the backup codes you saved when you set up two-factor authentication."
+                  : "Enter the 6-digit code from your authenticator app."
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {
+              errorMessage && (
+                <div class="border-destructive/50 bg-destructive/10 text-destructive mb-4 rounded-lg border px-3 py-2 text-sm">
+                  {errorMessage}
+                </div>
+              )
+            }
+            <form method="post" action="/api/cms/auth/login/verify" class="grid gap-4">
+              <input type="hidden" name="method" value={useBackupCode ? "backup" : "totp"} />
+              <div class="grid gap-2">
+                <Label htmlFor="code">{useBackupCode ? "Backup code" : "Code"}</Label>
+                <Input
+                  id="code"
+                  name="code"
+                  type="text"
+                  inputMode={useBackupCode ? "text" : "numeric"}
+                  autoComplete="one-time-code"
+                  pattern={useBackupCode ? undefined : "[0-9 ]*"}
+                  required
+                  autoFocus
+                />
+              </div>
+              <label class="text-muted-foreground flex items-center gap-2 text-sm">
+                <input type="checkbox" name="trustDevice" class="accent-primary size-4" />
+                Trust this device for 30 days
+              </label>
+              <button class={buttonVariants({ size: "lg", className: "w-full" })} type="submit">Verify</button>
+              <a
+                class="text-muted-foreground hover:text-foreground text-center text-sm"
+                href={useBackupCode ? "/admin/login/verify" : "/admin/login/verify?method=backup"}
+              >
+                {useBackupCode ? "Use your authenticator app instead" : "Use a backup code instead"}
+              </a>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  </body>
+</html>

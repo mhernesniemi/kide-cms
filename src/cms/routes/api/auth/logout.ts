@@ -1,42 +1,27 @@
 import type { APIRoute } from "astro";
 
-import { auditRequestMeta, clearSessionCookie, destroySession, logAudit, tokenReference } from "virtual:kide/runtime";
+import { auditRequestMeta, logAudit } from "virtual:kide/runtime";
+import { auditActor, getAdminAuth, resolveAdminSession } from "../../../core";
+import { authResponse } from "./_better-auth";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, locals }) => {
-  const cookieHeader = request.headers.get("cookie") ?? "";
-  const match = cookieHeader.match(/cms_session=([^;]+)/);
+export const POST: APIRoute = async ({ request }) => {
+  const session = await resolveAdminSession(request);
+  const auth = await getAdminAuth(request);
+  const response = await authResponse(() => auth.api.signOut({ headers: request.headers, asResponse: true }));
 
-  if (match) {
-    await destroySession(match[1]);
-  }
-
-  const user = locals.user;
   logAudit({
     action: "auth.logout",
     resourceType: "session",
-    resourceId: match ? await tokenReference(match[1]) : null,
-    actor: user ? { id: user.id, email: user.email, role: user.role } : null,
+    actor: auditActor(session?.user ?? null),
     ...auditRequestMeta(request),
   });
 
   const contentType = request.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) {
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Set-Cookie": clearSessionCookie(),
-      },
-    });
-  }
-
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: "/admin/login",
-      "Set-Cookie": clearSessionCookie(),
-    },
-  });
+  const result = contentType.includes("application/json")
+    ? Response.json({ ok: true })
+    : new Response(null, { status: 303, headers: { Location: "/admin/login" } });
+  for (const cookie of response.headers.getSetCookie()) result.headers.append("Set-Cookie", cookie);
+  return result;
 };

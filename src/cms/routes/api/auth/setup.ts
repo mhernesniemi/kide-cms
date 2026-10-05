@@ -3,15 +3,9 @@ import { eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { getDb } from "virtual:kide/db";
-import {
-  auditRequestMeta,
-  hitRateLimit,
-  createSession,
-  hashPassword,
-  logAudit,
-  setSessionCookie,
-} from "virtual:kide/runtime";
-import { MIN_PASSWORD_LENGTH } from "../../../core";
+import { auditRequestMeta, hitRateLimit, hashPassword, logAudit } from "virtual:kide/runtime";
+import { getAdminAuth, MIN_PASSWORD_LENGTH, setCredentialPassword } from "../../../core";
+import { authResponse, redirectWithCookies } from "./_better-auth";
 
 export const prerender = false;
 
@@ -27,7 +21,9 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   const formData = await request.formData();
   const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
@@ -79,8 +75,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   // the first admin only if none exists yet. Self-recovering — if anything fails there's no
   // marker to strand setup, and a retry just runs the same guarded insert.
   await db.run(sql`
-    INSERT INTO cms_users (_id, name, email, role, password, _created_at, _updated_at)
-    SELECT ${id}, ${name}, ${email}, 'admin', ${hashedPassword}, ${now}, ${now}
+    INSERT INTO cms_users (_id, name, email, role, _auth_email_verified, _created_at, _updated_at)
+    SELECT ${id}, ${name}, ${email}, 'admin', 1, ${now}, ${now}
     WHERE NOT EXISTS (SELECT 1 FROM cms_users WHERE role = 'admin')
   `);
 
@@ -91,7 +87,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     return new Response(null, { status: 303, headers: { Location: "/admin/login" } });
   }
 
-  const session = await createSession(id);
+  await setCredentialPassword(id, hashedPassword);
 
   logAudit({
     action: "auth.setup_completed",
@@ -102,11 +98,9 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     ...auditRequestMeta(request),
   });
 
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: "/admin",
-      "Set-Cookie": setSessionCookie(session.token, session.expiresAt),
-    },
-  });
+  const auth = await getAdminAuth(request);
+  const signIn = await authResponse(() =>
+    auth.api.signInEmail({ body: { email, password, rememberMe: true }, headers: request.headers, asResponse: true }),
+  );
+  return redirectWithCookies(signIn.ok ? "/admin" : "/admin/login", signIn);
 };

@@ -6,6 +6,13 @@ import { setUsageConfig } from "./asset-usage";
 import { removeCollaborationFor } from "./collaboration";
 import { recordAudit, type AuditActor } from "./audit";
 import { hashPassword, MIN_PASSWORD_LENGTH } from "./auth";
+import {
+  AUTH_USERS_COLLECTION,
+  deleteUserAuthData,
+  registerAuthConfig,
+  revokeUserSessions,
+  setCredentialPassword,
+} from "./auth-engine";
 import type { CMSConfig, CollectionConfig, FieldConfig, RichTextDocument } from "./define";
 import { getCollectionMap, getTranslatableFieldNames, isStructuralField } from "./define";
 import { getDb, trackTask } from "./runtime";
@@ -426,6 +433,22 @@ const getTableRefs = async (collectionSlug: string) => {
   return tables;
 };
 
+const isAdminAuthCollection = (collection: CollectionConfig) =>
+  !!collection.auth && collection.slug === AUTH_USERS_COLLECTION;
+
+/**
+ * Passwords live in Better Auth's credential accounts, never on the users row (or its
+ * versions); emails are stored lowercased because that's how sign-in looks them up.
+ */
+const takeCredentialHash = (collection: CollectionConfig, input: Record<string, unknown>) => {
+  if (!isAdminAuthCollection(collection)) return null;
+  if (typeof input.email === "string") input.email = input.email.trim().toLowerCase();
+  if (!("password" in input)) return null;
+  const value = input.password;
+  delete input.password;
+  return typeof value === "string" && value ? value : null;
+};
+
 /**
  * A validation failure that knows which field caused it, so the admin can point at
  * the offending input instead of showing a toast and leaving the editor to hunt.
@@ -442,6 +465,7 @@ export const createCms = (config: CMSConfig) => {
         '"my.task": () => import("@/lib/handler").then((mod) => mod.run()).',
     );
   }
+  registerAuthConfig(config);
   const collectionMap = getCollectionMap(config);
 
   // Lets assets.delete() check whether a file is still referenced without every
@@ -780,6 +804,7 @@ export const createCms = (config: CMSConfig) => {
         const transformedInput = collection.hooks?.beforeCreate
           ? await collection.hooks.beforeCreate(preparedInput, hookContext)
           : preparedInput;
+        const credentialHash = takeCredentialHash(collection, transformedInput);
 
         const createdAt = now();
         const docId = typeof data._id === "string" ? String(data._id) : nanoid();
@@ -787,6 +812,8 @@ export const createCms = (config: CMSConfig) => {
           _id: docId,
           ...serializeForDb(collection, transformedInput),
         };
+        // Admin-created accounts: an admin vouched for the address, so SSO may link to it.
+        if (isAdminAuthCollection(collection) && tables.main._authEmailVerified) docValues._authEmailVerified = true;
 
         if (collection.drafts) {
           const status = data._status === "published" ? "published" : getDefaultStatus(collection);
@@ -800,6 +827,7 @@ export const createCms = (config: CMSConfig) => {
         }
 
         await db.insert(tables.main).values(docValues);
+        if (credentialHash) await setCredentialPassword(docId, credentialHash);
 
         if (collection.versions && tables.versions) {
           await db.insert(tables.versions).values({
@@ -878,6 +906,7 @@ export const createCms = (config: CMSConfig) => {
         const transformedInput = collection.hooks?.beforeUpdate
           ? await collection.hooks.beforeUpdate(preparedInput, existing, hookContext)
           : preparedInput;
+        const credentialHash = takeCredentialHash(collection, transformedInput);
 
         if (collection.drafts && existing._status === "published" && !(existingRows[0] as any)._published) {
           const snapshot: Record<string, unknown> = {};
@@ -930,6 +959,10 @@ export const createCms = (config: CMSConfig) => {
           if (applied.length === 0) throw new Error("Cannot demote the last remaining admin.");
         } else {
           await db.update(tables.main).set(updateValues).where(eq(tables.main._id, id));
+        }
+        if (credentialHash) {
+          await setCredentialPassword(id, credentialHash);
+          await revokeUserSessions(id);
         }
 
         if (collection.versions && tables.versions) {
@@ -998,6 +1031,7 @@ export const createCms = (config: CMSConfig) => {
         }
         if (tables.translations) await db.delete(tables.translations).where(eq(tables.translations._entityId, id));
         if (tables.versions) await db.delete(tables.versions).where(eq(tables.versions._docId, id));
+        if (isAdminAuthCollection(collection)) await deleteUserAuthData(id);
         // Collaboration rows outlive their document otherwise, and an orphaned
         // review row still counts towards the "Needs you" badge.
         await removeCollaborationFor(slug, id);
@@ -1081,6 +1115,7 @@ export const createCms = (config: CMSConfig) => {
           for (const id of deletedIds) {
             if (tables.translations) await db.delete(tables.translations).where(eq(tables.translations._entityId, id));
             if (tables.versions) await db.delete(tables.versions).where(eq(tables.versions._docId, id));
+            if (isAdminAuthCollection(collection)) await deleteUserAuthData(id);
           }
         } else {
           const CHUNK = 200; // stay well under SQLite's bound-variable limit
@@ -1090,6 +1125,7 @@ export const createCms = (config: CMSConfig) => {
               await db.delete(tables.translations).where(inArray(tables.translations._entityId, chunk));
             if (tables.versions) await db.delete(tables.versions).where(inArray(tables.versions._docId, chunk));
             await db.delete(tables.main).where(inArray(tables.main._id, chunk));
+            if (isAdminAuthCollection(collection)) for (const id of chunk) await deleteUserAuthData(id);
           }
           deletedIds = ids;
         }

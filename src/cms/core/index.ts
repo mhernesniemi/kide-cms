@@ -43,7 +43,14 @@ export {
   resolveCollaboration,
   isApprover,
 } from "./define";
-export { customAuth, getSsoProvider, resolveAdminAuth } from "./auth-config";
+export {
+  customAuth,
+  enforcedSsoProvider,
+  enforcedSsoProviders,
+  getSsoProvider,
+  mfaRequiredFor,
+  resolveAdminAuth,
+} from "./auth-config";
 export type { ResolvedAdminAuthConfig } from "./auth-config";
 export type {
   CMSConfig,
@@ -127,7 +134,6 @@ export {
   createSession,
   validateSession,
   destroySession,
-  getSessionUser,
   createInvite,
   validateInvite,
   consumeInvite,
@@ -138,7 +144,29 @@ export {
   setSessionCookie,
   clearSessionCookie,
 } from "./auth";
-export type { SessionUser } from "./auth";
+export {
+  ADMIN_AUTH_BASE_PATH,
+  applySsoRoleMapping,
+  auditActor,
+  buildAdminAuthOptions,
+  deleteUserAuthData,
+  extensionAuthEndpoints,
+  getAccountSecurity,
+  getAdminAuth,
+  getSessionUser,
+  getSsoDenial,
+  hasCredentialPassword,
+  listSignInMethods,
+  loadAuthUser,
+  markSsoVerified,
+  migrateLegacyAuth,
+  registerAuthConfig,
+  resetAuthEngine,
+  resolveAdminSession,
+  revokeUserSessions,
+  setCredentialPassword,
+} from "./auth-engine";
+export type { AccountSecurity, AdminSession, AuthEndpointRule, SessionUser, SsoDenial } from "./auth-engine";
 
 export { assets, folders, stripMissingAssetImages } from "./assets";
 export type { AssetRecord, FolderRecord } from "./assets";

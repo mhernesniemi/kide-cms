@@ -291,44 +291,79 @@ export type AdminRateLimitConfig = {
 export type AdminAuthPasswordConfig = {
   /** Enable email/password sign-in. Default true. */
   enabled?: boolean;
-  /** Enable forgot-password reset flow. Default true for local/better-auth providers. */
+  /** Enable the forgot-password email flow. Default true. */
   forgotPassword?: boolean;
-  /** Require or expose email verification in auth providers that support it. Default false. */
-  emailVerification?: boolean;
 };
 
 export type AdminAuthMfaConfig = {
-  /** Enable authenticator-app TOTP where supported by the auth provider. */
+  /** Let password users enable an authenticator app (TOTP) with backup codes. Default false. */
   totp?: boolean;
-  /** Enable single-use recovery codes where supported by the auth provider. */
-  backupCodes?: boolean;
-  /** Enable passkey/WebAuthn sign-in where supported by the auth provider. */
+  /** Let users register passkeys and sign in with them. Default false. */
   passkeys?: boolean;
+  /**
+   * Require password users to enroll TOTP before using the admin: `true` for everyone,
+   * or a list of roles. SSO users are exempt — their identity provider enforces MFA.
+   */
+  require?: boolean | string[];
 };
 
-export type AdminAuthSsoProviderConfig = {
-  /** Stable provider id used in URLs, e.g. "azure" or "okta". */
+type AdminAuthSsoProviderBase = {
+  /** Stable id used in URLs (`/api/cms/auth/sso/<id>/start`). Letters, digits, dashes. */
   id: string;
-  /** Human label shown on the login screen. */
+  /** Button label on the login screen, e.g. "Microsoft". Rendered as "Continue with <label>". */
   label: string;
-  /** Protocol/backend used by the auth provider. */
-  type: "oidc" | "saml" | "oauth" | "workos" | "custom";
-  /** OIDC issuer/discovery URL, SAML entity ID, or broker-specific issuer. */
-  issuer?: string;
+  /** Defaults to env `KIDE_SSO_<ID>_CLIENT_ID` (id uppercased, dashes → underscores). */
   clientId?: string;
+  /** Defaults to env `KIDE_SSO_<ID>_CLIENT_SECRET`. Prefer the env var over a literal. */
   clientSecret?: string;
-  /** Optional explicit authorization URL for custom/broker flows. */
-  authorizationUrl?: string;
-  /** Optional callback URL override. Defaults to Kide's callback route. */
-  callbackUrl?: string;
   scopes?: string[];
-  /** Restrict JIT sign-in/provisioning to these email domains. */
+  /**
+   * Email domains this identity provider is authoritative for. Emails at these domains
+   * are trusted for linking to existing Kide users even when the provider omits
+   * `email_verified` (Entra does), and `"jit"` provisioning is limited to them.
+   */
   allowedDomains?: string[];
-  /** Default Kide role for newly provisioned users. */
+  /**
+   * "invite-only" (default): only users that already exist in Kide can sign in.
+   * "jit": create a Kide user on first sign-in (requires `allowedDomains`).
+   */
+  provisioning?: "invite-only" | "jit";
+  /** Role for users created by `"jit"` provisioning. Default "editor". */
   role?: string;
-  /** Provider-specific options passed through to the selected auth backend. */
-  options?: Record<string, unknown>;
+  /**
+   * Users with an email at `allowedDomains` must sign in through this provider: password
+   * sign-in and password reset are refused for them, and every session they hold lasts
+   * only while the provider keeps vouching for them. Default true (when `allowedDomains`
+   * is set). Keep a break-glass admin outside these domains (`pnpm cms:admin`).
+   */
+  enforce?: boolean;
+  /**
+   * Map ID-token claims to a Kide role, on every sign-in and every background re-check
+   * (e.g. Entra app roles or groups). Return a role to set it, or null/undefined to leave
+   * the current role unchanged.
+   */
+  mapRole?: (claims: Record<string, unknown>) => string | null | undefined;
 };
+
+export type AdminAuthSsoProviderConfig =
+  | (AdminAuthSsoProviderBase & {
+      /** Microsoft Entra ID, single tenant. */
+      type: "microsoft";
+      /** Directory (tenant) GUID. Multi-tenant endpoints are not supported. */
+      tenantId: string;
+    })
+  | (AdminAuthSsoProviderBase & {
+      /** Google Workspace / Google accounts. */
+      type: "google";
+      /** Restrict the Google account chooser to this Workspace domain (`hd`). */
+      hostedDomain?: string;
+    })
+  | (AdminAuthSsoProviderBase & {
+      /** Any OpenID Connect provider (Okta, Keycloak, Auth0, Authentik, Idura, …). */
+      type: "oidc";
+      /** Issuer URL; discovery is read from `<issuer>/.well-known/openid-configuration`. */
+      issuer: string;
+    });
 
 export type AdminCustomAuthProvider = {
   kind: "custom";
@@ -339,24 +374,29 @@ export type AdminCustomAuthProvider = {
 
 export type AdminAuthConfig = {
   /**
-   * Auth backend. "local" keeps Kide's built-in session/password flow.
-   * "better-auth" is the batteries-included backend for MFA, passkeys, OIDC/SAML,
-   * and forgot-password flows. "workos" and "custom" are escape hatches.
+   * "local" (default) is Kide's built-in auth, powered by Better Auth: password,
+   * forgot-password, SSO, TOTP and passkeys as configured below. A custom provider
+   * replaces it entirely — Kide then only reads the session through `getSession`.
    */
-  provider?: "local" | "better-auth" | "workos" | AdminCustomAuthProvider;
+  provider?: "local" | AdminCustomAuthProvider;
   password?: AdminAuthPasswordConfig;
   mfa?: AdminAuthMfaConfig;
   sso?: {
     providers?: AdminAuthSsoProviderConfig[];
+    /**
+     * How often an SSO user's standing is re-checked with their provider, in minutes
+     * (default 60). The check refreshes the provider's token in the background; a provider
+     * that refuses (user disabled or deleted) ends all of the user's sessions.
+     */
+    verifyEveryMinutes?: number;
   };
-  workos?: {
-    clientId?: string;
-    apiKey?: string;
-    organizationId?: string;
-    defaultRole?: string;
-  };
-  /** Escape hatch for provider-specific options, e.g. raw Better Auth config. */
-  advanced?: Record<string, unknown>;
+  /** Session lifetime in days. Default 30. */
+  sessionDays?: number;
+  /**
+   * Escape hatch: adjust the generated Better Auth options (add plugins, providers, …).
+   * Tables that added plugins need are picked up by `cms:generate` like any other.
+   */
+  betterAuth?: (options: Record<string, any>) => Record<string, any>;
 };
 
 /** A named colour offered by `fields.color()` pickers. */

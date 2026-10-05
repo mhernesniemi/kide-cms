@@ -90,6 +90,10 @@ Keep provider-specific code (API clients, sync logic, read models) in the app (`
 
 **Handlers that use the generated cms API must be registered with a dynamic import** — e.g. `"my.task": () => import("@/lib/handler").then((mod) => mod.run())`. A static import creates a module cycle (cms.config.ts → handler → generated api → cms.config.ts); `createCms` fails fast with a diagnosis when this happens.
 
+## Admin auth (Better Auth)
+
+`core/auth-engine.ts` turns `admin.auth` into Better Auth options (`buildAdminAuthOptions`) — the generator reads the table layout from the same function, so plugin tables land in `.generated/schema.ts` as `cms_auth_*` and Better Auth's user fields as `_auth*` columns on `cms_users`. At runtime Better Auth reads and writes through an in-memory drizzle view of those tables (`id` ↔ `_id`, ISO-text dates ↔ `Date`); instances are cached per public origin (`getAdminAuth(request)`). Kide's own routes (`routes/api/auth/*`) keep the UX, rate limits and audit and call `auth.api.*` server-side; `routes/api/auth/[...all].ts` forwards only an allowlist of Better Auth endpoints (OAuth callbacks, two-factor, passkeys). Passwords live in credential accounts, never on the users row — always write them through the users collection API or `setCredentialPassword`. Kide creates admin users itself; Better Auth may only create SSO users with `provisioning: "jit"` (enforced in `databaseHooks.user.create.before`). Production needs `KIDE_AUTH_SECRET`.
+
 ## Validation (IMPORTANT)
 
 After code changes, ALWAYS run:
@@ -192,7 +196,7 @@ await dispose(); // flush fire-and-forget tasks, then close the DB
 
 ## Stack
 
-Astro 7, React 19, Drizzle ORM (SQLite dev), Zod, Tiptap, shadcn/ui, Tailwind CSS v4, PBKDF2 auth, nanoid, Sharp (image optimization), pnpm, Node >=22.12.0
+Astro 7, React 19, Drizzle ORM (SQLite dev), Zod, Tiptap, shadcn/ui, Tailwind CSS v4, Better Auth (admin sign-in; PBKDF2 password hashes), nanoid, Sharp (image optimization), pnpm, Node >=22.12.0
 
 ## Field Types
 
@@ -231,7 +235,7 @@ Routes in `src/cms/routes/` import app-specific code via `virtual:kide/*` aliase
 | ------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `virtual:kide/config`           | `src/cms/cms.config`                   | Default `CMSConfig`                                                                                                             |
 | `virtual:kide/api`              | `src/cms/.generated/api`               | `{ cms }` — typed local API                                                                                                     |
-| `virtual:kide/schema`           | `src/cms/.generated/schema`            | `{ cmsTables, cmsSessions, cmsPasswordResets, cmsRateLimits }` — Drizzle table map                                              |
+| `virtual:kide/schema`           | `src/cms/.generated/schema`            | `{ cmsTables, cmsAuthSessions, cmsAuthAccounts, cmsRateLimits, … }` — Drizzle table map                                         |
 | `virtual:kide/runtime`          | `src/cms/runtime`                      | Session, auth, assets, AI, locks, `createCms`                                                                                   |
 | `virtual:kide/db`               | `src/cms/adapters/db`                  | `{ getDb }` — Drizzle instance                                                                                                  |
 | `virtual:kide/email`            | `src/cms/adapters/email`               | `{ sendInviteEmail, sendPasswordResetEmail, sendFormSubmissionEmail, isEmailConfigured }`                                       |
