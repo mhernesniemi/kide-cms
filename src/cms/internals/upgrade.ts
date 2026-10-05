@@ -271,6 +271,9 @@ const changedFilesJson = (repoDir: string, fromCommit: string, toCommit: string)
 const isManagedRuntimePath = (file: string, corePath: string) => {
   // Legacy seed-data file may carry user customizations — careful review, not auto-apply.
   if (file === `${corePath}/internals/seed.data.ts`) return false;
+  // The @kidecms/core manifest carries the managed runtime's own dependencies; without it
+  // an upgrade ships code that imports packages the project never installs.
+  if (file === `${corePath}/package.json`) return true;
 
   const managedPrefixes = [
     `${corePath}/admin`,
