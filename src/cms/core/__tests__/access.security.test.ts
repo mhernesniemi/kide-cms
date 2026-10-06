@@ -150,6 +150,19 @@ describe("field-level access rules", () => {
     expect(asAdmin.summary).toBe("CONFIDENTIAL");
   });
 
+  it("omits an unreadable field from the pending-draft snapshot too", async () => {
+    const page = await cms.pages.create({ title: "Snapshot Page", summary: "SNAPSHOT SECRET" }, system);
+    await cms.pages.publish(String(page._id), system);
+    await cms.pages.update(String(page._id), { title: "Snapshot Page edited" }, system);
+
+    const asViewer = await cms.pages.findById(String(page._id), { status: "any" }, nonAdminCtx);
+    expect(asViewer._published).toBeTruthy();
+    expect(asViewer._published).not.toContain("SNAPSHOT SECRET");
+
+    const asAdmin = await cms.pages.findById(String(page._id), { status: "any" }, adminCtx());
+    expect(asAdmin._published).toContain("SNAPSHOT SECRET");
+  });
+
   it("applies a field's update rule on create, not just on update", async () => {
     const created = await cms.pages.create({ title: "No SEO For You", seoDescription: "injected" }, nonAdminCtx);
     expect(created.seoDescription).toBeFalsy();

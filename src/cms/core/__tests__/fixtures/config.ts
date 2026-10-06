@@ -64,6 +64,7 @@ const posts = defineCollection({
     author: fields.relation({ collection: "authors" }),
     seoDescription: fields.text({ maxLength: 160, translatable: true }),
     listed: fields.boolean({ translatable: true, defaultValue: false }),
+    readingTime: fields.number(),
   },
   hooks: {
     beforeCreate(data) {

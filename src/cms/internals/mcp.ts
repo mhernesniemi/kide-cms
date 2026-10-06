@@ -199,7 +199,7 @@ server.registerTool(
   {
     title: "List documents",
     description:
-      "List documents in a collection with optional filters, search, sort, locale, status, limit, and offset. With locale, availability 'exact' lists only documents that exist in that locale (their _sourceLocale or a translation), 'missing' only those that don't; the default 'fallback' lists every document.",
+      "List documents in a collection with optional filters, search, sort, locale, status, limit, and offset. where: a plain value is equality; an object applies operators — scalar fields: ne, gt, gte, lt, lte, in, notIn (e.g. { startDate: { gte: '2026-01-01' } }); hasMany relation / array fields: contains, in (any of), notIn. With locale, availability 'exact' lists only documents that exist in that locale (their _sourceLocale or a translation), 'missing' only those that don't; the default 'fallback' lists every document.",
     inputSchema: {
       collection: z.string().min(1),
       where: jsonObjectSchema.optional(),
@@ -219,7 +219,8 @@ server.registerTool(
   "kide_count_documents",
   {
     title: "Count documents",
-    description: "Count documents in a collection with optional filters, search, locale, and status.",
+    description:
+      "Count documents in a collection with optional filters, search, locale, and status. where accepts the same operators as kide_list_documents.",
     inputSchema: {
       collection: z.string().min(1),
       where: jsonObjectSchema.optional(),

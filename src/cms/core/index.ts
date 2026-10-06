@@ -112,7 +112,7 @@ export type {
 } from "./define";
 
 export { createCms, FieldError } from "./api";
-export type { FindOptions } from "./api";
+export type { FindOptions, WhereOperators } from "./api";
 
 export { enqueueTask, drainTasks, tickSchedules, pruneTasks } from "./tasks";
 export { peekRateLimit, hitRateLimit, recordRateLimit, clearRateLimit, pruneRateLimits } from "./rate-limit";

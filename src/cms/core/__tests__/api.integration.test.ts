@@ -4,6 +4,7 @@
  * translations, versions — plus DB-backed invites. Sessions: auth-engine.test.ts.
  */
 import Database from "better-sqlite3";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { pushSQLiteSchema } from "drizzle-kit/api";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -122,6 +123,125 @@ describe("find / findOne / findById", () => {
   });
 });
 
+describe("where operators", () => {
+  const ids = (docs: Array<{ _id: string }>) => docs.map((doc) => doc._id).sort();
+  let early: any, middle: any, late: any;
+
+  beforeAll(async () => {
+    early = await (cms as any).posts.create({ title: "Ops early", category: "ops", listed: true });
+    middle = await (cms as any).posts.create({ title: "Ops middle", category: "ops-b", listed: false });
+    late = await (cms as any).posts.create({ title: "Ops late", category: "ops", listed: true });
+    const setPublishedAt = (id: string, date: string) =>
+      db.update(generatedSchema.cmsPosts).set({ _publishedAt: date }).where(eq(generatedSchema.cmsPosts._id, id)).run();
+    setPublishedAt(early._id, "2026-01-15T00:00:00.000Z");
+    setPublishedAt(middle._id, "2026-03-10T00:00:00.000Z");
+    setPublishedAt(late._id, "2026-05-01T00:00:00.000Z");
+  });
+
+  const findOps = (where: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
+    (cms as any).posts.find({
+      where: { title: { in: ["Ops early", "Ops middle", "Ops late"] }, ...where },
+      status: "any",
+      ...extra,
+    });
+
+  it("filters ranges with gte / lt, including Date values", async () => {
+    const march = await findOps({ _publishedAt: { gte: "2026-03-01", lt: new Date("2026-04-01T00:00:00.000Z") } });
+    expect(ids(march)).toEqual([middle._id]);
+    const fromMarch = await findOps({ _publishedAt: { gt: "2026-03-01" } });
+    expect(ids(fromMarch)).toEqual(ids([middle, late]));
+    const upToMarch = await findOps({ _publishedAt: { lte: "2026-03-10T00:00:00.000Z" } });
+    expect(ids(upToMarch)).toEqual(ids([early, middle]));
+  });
+
+  it("supports in / notIn / ne and keeps plain values as equality", async () => {
+    expect(ids(await findOps({ category: { in: ["ops", "nope"] } }))).toEqual(ids([early, late]));
+    expect(ids(await findOps({ category: { notIn: ["ops"] } }))).toEqual([middle._id]);
+    expect(ids(await findOps({ category: { ne: "ops" } }))).toEqual([middle._id]);
+    expect(ids(await findOps({ category: { in: [] } }))).toEqual([]);
+    expect(ids(await findOps({ listed: true }))).toEqual(ids([early, late]));
+    expect(ids(await findOps({ listed: { ne: true } }))).toEqual([middle._id]);
+  });
+
+  it("applies operators in count and deleteMany", async () => {
+    expect(
+      await (cms as any).posts.count({
+        where: { category: { in: ["ops", "ops-b"] }, title: { ne: "Ops late" } },
+        status: "any",
+      }),
+    ).toBe(2);
+    const doomed = await (cms as any).posts.create({ title: "Ops doomed", category: "ops-del" });
+    await (cms as any).posts.create({ title: "Ops kept", category: "ops-keep" });
+    expect(await (cms as any).posts.deleteMany({ category: { in: ["ops-del"] } }, { _system: true })).toBe(1);
+    expect(await (cms as any).posts.findById(doomed._id, { status: "any" })).toBeNull();
+  });
+
+  it("matches hasMany relations with contains / in / notIn", async () => {
+    const a = await (cms as any).pages.create({ title: "Rel A", relatedPosts: [early._id, middle._id] });
+    const b = await (cms as any).pages.create({ title: "Rel B", relatedPosts: [late._id] });
+    await (cms as any).pages.create({ title: "Rel C" });
+    const findRel = (relatedPosts: unknown) =>
+      (cms as any).pages.find({ where: { title: { in: ["Rel A", "Rel B", "Rel C"] }, relatedPosts }, status: "any" });
+
+    expect(ids(await findRel({ contains: middle._id }))).toEqual([a._id]);
+    expect(ids(await findRel({ in: [early._id, late._id] }))).toEqual(ids([a, b]));
+    expect((await findRel({ notIn: [early._id] })).map((page: any) => page.title).sort()).toEqual(["Rel B", "Rel C"]);
+  });
+
+  it("matches translated values for translatable fields under a locale", async () => {
+    const post = await (cms as any).posts.create({ title: "Ops translated", category: "ops-tr", slug: "ops-tr-en" });
+    await (cms as any).posts.upsertTranslation(post._id, "fi", { title: "Ops käännetty", slug: "ops-tr-fi" });
+    const where = { category: "ops-tr", title: { in: ["Ops käännetty"] } };
+    expect(ids(await (cms as any).posts.find({ where, locale: "fi", status: "any" }))).toEqual([post._id]);
+    expect(await (cms as any).posts.find({ where, locale: "en", status: "any" })).toEqual([]);
+  });
+
+  it("rejects unknown and mismatched operators", async () => {
+    await expect(findOps({ category: { like: "ops" } })).rejects.toThrow(/Unknown where operator/);
+    await expect(findOps({ category: { contains: "ops" } })).rejects.toThrow(/isn't supported/);
+    await expect(findOps({ category: { in: "ops" } })).rejects.toThrow(/expects an array/);
+    await expect((cms as any).pages.find({ where: { relatedPosts: { gt: "x" } }, status: "any" })).rejects.toThrow(
+      /isn't supported/,
+    );
+    await expect((cms as any).posts.find({ where: { body: { ne: null } }, status: "any" })).rejects.toThrow(
+      /doesn't support where operators/,
+    );
+  });
+
+  it("throws on empty operator objects instead of widening the filter", async () => {
+    await (cms as any).posts.create({ title: "Ops survivor", category: "ops-survivor" });
+    await expect(findOps({ category: {} })).rejects.toThrow(/Empty where operator/);
+    await expect((cms as any).posts.deleteMany({ category: { in: undefined } }, { _system: true })).rejects.toThrow(
+      /Empty where operator/,
+    );
+    expect(await (cms as any).posts.findOne({ category: "ops-survivor", status: "any" })).not.toBeNull();
+  });
+
+  it("rejects null inside in / notIn", async () => {
+    await expect(findOps({ category: { notIn: [null, "ops"] } })).rejects.toThrow(/can't list null/);
+  });
+
+  it("allows operators on public system columns only, unless _system", async () => {
+    const editor = { user: { id: "u-editor", role: "editor" } };
+    await expect((cms as any).posts.find({ where: { _published: { gt: "" } }, status: "any" }, editor)).rejects.toThrow(
+      /Cannot filter/,
+    );
+    await expect(
+      (cms as any).posts.find({ where: { _status: { in: ["draft"] } }, status: "any" }, editor),
+    ).resolves.toBeInstanceOf(Array);
+  });
+
+  it("refuses operators on read-restricted fields unless _system", async () => {
+    const editor = { user: { id: "u-editor", role: "editor" } };
+    await expect((cms as any).pages.find({ where: { summary: { gt: "a" } }, status: "any" }, editor)).rejects.toThrow(
+      /Cannot filter/,
+    );
+    await expect(
+      (cms as any).pages.find({ where: { summary: { gt: "a" } }, status: "any" }, { _system: true }),
+    ).resolves.toBeInstanceOf(Array);
+  });
+});
+
 describe("update / delete", () => {
   it("updates fields and bumps _updatedAt", async () => {
     const author = await (cms as any).authors.create({ name: "Update Me" });
@@ -161,6 +281,43 @@ describe("drafts and publishing", () => {
 
     const after = await (cms as any).posts.findOne({ slug: "publish-flow", status: "published" });
     expect(after?._id).toBe(post._id);
+  });
+
+  it("filters, searches, sorts and counts published reads by the published values, not pending edits", async () => {
+    const post = await (cms as any).posts.create({
+      title: "Pending live",
+      category: "pend-live",
+      listed: true,
+      readingTime: 3,
+    });
+    await (cms as any).posts.publish(post._id);
+    await (cms as any).posts.update(post._id, { title: "Pending zzdraft", category: "pend-draft", listed: false });
+
+    const published = (where: Record<string, unknown>) => (cms as any).posts.find({ where });
+    expect(await published({ category: "pend-draft" })).toEqual([]);
+    expect((await published({ category: "pend-live" })).map((doc: any) => doc.title)).toEqual(["Pending live"]);
+    expect(await published({ category: { in: ["pend-draft"] } })).toEqual([]);
+    expect(await published({ category: { in: ["pend-live"] }, listed: true })).toHaveLength(1);
+    expect(await (cms as any).posts.count({ where: { category: "pend-draft" } })).toBe(0);
+    expect(await (cms as any).posts.find({ search: "zzdraft" })).toEqual([]);
+    // Type coercion survives the snapshot expression: a URL-param string still matches a number.
+    expect(await published({ category: "pend-live", readingTime: "3" })).toHaveLength(1);
+    expect(await published({ category: "pend-live", readingTime: { gte: "3" } })).toHaveLength(1);
+
+    // Draft-side reads still see the pending edits.
+    expect(await (cms as any).posts.find({ where: { category: "pend-draft" }, status: "any" })).toHaveLength(1);
+
+    const other = await (cms as any).posts.create({ title: "Pending mid", category: "pend-live" });
+    await (cms as any).posts.publish(other._id);
+    const sorted = await (cms as any).posts.find({
+      where: { category: "pend-live" },
+      sort: { field: "title", direction: "desc" },
+    });
+    expect(sorted.map((doc: any) => doc.title)).toEqual(["Pending mid", "Pending live"]);
+
+    await (cms as any).posts.publish(post._id);
+    expect(await published({ category: "pend-live" })).toHaveLength(1);
+    expect((await published({ category: "pend-draft" }))[0]?.title).toBe("Pending zzdraft");
   });
 
   it("unpublishes back to draft", async () => {

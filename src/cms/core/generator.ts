@@ -146,6 +146,10 @@ const generateMainTable = (
   if (collection.drafts) {
     indexes.push(`  publishIdx: index("${idxPrefix}_publish_idx").on(table._status, table._publishAt),`);
     indexes.push(`  unpublishIdx: index("${idxPrefix}_unpublish_idx").on(table._status, table._unpublishAt),`);
+    // Published reads filter on the _published snapshot for documents with pending
+    // draft edits; this keeps that lookup to those few rows instead of a full scan.
+    // Plain, not partial: drizzle-kit can't round-trip a partial index.
+    indexes.push(`  pendingIdx: index("${idxPrefix}_pending_idx").on(table._published),`);
   }
   // The admin lists, the Recent view and most editorial listings sort by
   // _updatedAt; without an index each of them is a full scan plus a temp

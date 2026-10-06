@@ -66,6 +66,7 @@ export const cmsPosts = sqliteTable(
     author: text("author"),
     seoDescription: text("seo_description"),
     listed: integer("listed", { mode: "boolean" }).default(false),
+    readingTime: integer("reading_time"),
     _sourceLocale: text("_source_locale").notNull().default("en"),
     _status: text("_status").notNull().default("draft"),
     _publishedAt: text("_published_at"),
@@ -78,6 +79,7 @@ export const cmsPosts = sqliteTable(
   (table) => ({
     publishIdx: index("posts_publish_idx").on(table._status, table._publishAt),
     unpublishIdx: index("posts_unpublish_idx").on(table._status, table._unpublishAt),
+    pendingIdx: index("posts_pending_idx").on(table._published),
     updatedIdx: index("posts_updated_idx").on(table._updatedAt),
   }),
 );
@@ -135,6 +137,7 @@ export const cmsPages = sqliteTable(
   (table) => ({
     publishIdx: index("pages_publish_idx").on(table._status, table._publishAt),
     unpublishIdx: index("pages_unpublish_idx").on(table._status, table._unpublishAt),
+    pendingIdx: index("pages_pending_idx").on(table._published),
     updatedIdx: index("pages_updated_idx").on(table._updatedAt),
   }),
 );

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, like, lte, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, like, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import { setCloudflareImageMode } from "./image";
 import { nanoid } from "nanoid";
 
@@ -22,7 +22,24 @@ import { drainTasks, enqueueTask, pruneTasks, tickSchedules, type EnqueueTaskOpt
 import { cloneValue, createRichTextFromPlainText, slugify } from "./values";
 import { dispatchWebhooks } from "./webhooks";
 
+/**
+ * Operators for a `where` key. Scalar fields: `ne`, `gt`, `gte`, `lt`, `lte`, `in`,
+ * `notIn` (`ne: null` = "is set"). Array fields (`hasMany` relations, `array`):
+ * `contains` (has this item), `in` (has any of), `notIn` (has none of).
+ */
+export type WhereOperators = {
+  ne?: unknown;
+  gt?: unknown;
+  gte?: unknown;
+  lt?: unknown;
+  lte?: unknown;
+  in?: unknown[];
+  notIn?: unknown[];
+  contains?: unknown;
+};
+
 export type FindOptions = {
+  /** A plain value means equality; a `WhereOperators` object ANDs its operators. */
   where?: Record<string, unknown>;
   sort?: {
     field: string;
@@ -77,6 +94,184 @@ const isJsonField = (field: FieldConfig) =>
   field.type === "json" ||
   field.type === "blocks" ||
   (field.type === "relation" && field.hasMany);
+
+const isArrayValuedField = (field: FieldConfig | undefined) =>
+  !!field && (field.type === "array" || (field.type === "relation" && !!field.hasMany));
+
+const WHERE_OPERATORS = new Set(["ne", "gt", "gte", "lt", "lte", "in", "notIn", "contains"]);
+const SCALAR_OPERATORS = new Set(["ne", "gt", "gte", "lt", "lte", "in", "notIn"]);
+const ARRAY_OPERATORS = new Set(["contains", "in", "notIn"]);
+
+const isOperatorObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value) && !(value instanceof Date);
+
+// Raw SQL skips drizzle's column mapper, so booleans must be bound as 0/1 and dates as ISO text.
+const bindWhereValue = (value: unknown) => {
+  if (typeof value === "boolean") return value ? 1 : 0;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "object" && value !== null) return JSON.stringify(value);
+  return value;
+};
+
+/**
+ * A field's value as published reads see it: the `_published` snapshot holds the live
+ * values while a published document has pending draft edits in the main row.
+ */
+const publishedValue = (collection: CollectionConfig, tables: any, key: string): unknown => {
+  const field = collection.fields[key];
+  if (!tables.main._published || !field) return tables.main[key];
+  const path = `$.${key}`;
+  const value = sql`(CASE WHEN json_type(${tables.main._published}, ${path}) IS NOT NULL THEN json_extract(${tables.main._published}, ${path}) ELSE ${tables.main[key]} END)`;
+  // A CASE has no column affinity; the CAST restores it so "3" still matches a number field.
+  if (isJsonField(field)) return value;
+  return field.type === "number" || field.type === "boolean"
+    ? sql`CAST(${value} AS NUMERIC)`
+    : sql`CAST(${value} AS TEXT)`;
+};
+
+const operatorCondition = (column: unknown, op: string, value: unknown, arrayValued: boolean): SQL => {
+  const list = () =>
+    sql.join(
+      (value as unknown[]).map((item) => sql`${bindWhereValue(item)}`),
+      sql`, `,
+    );
+  if (arrayValued) {
+    const members = (match: SQL) => sql`EXISTS (SELECT 1 FROM json_each(${column}) WHERE json_each.value ${match})`;
+    if (op === "contains") return members(sql`= ${bindWhereValue(value)}`);
+    if (op === "in") return (value as unknown[]).length === 0 ? sql`0` : members(sql`IN (${list()})`);
+    return (value as unknown[]).length === 0 ? sql`1` : sql`NOT ${members(sql`IN (${list()})`)}`;
+  }
+  switch (op) {
+    case "ne":
+      return value === null
+        ? sql`${column} IS NOT NULL`
+        : sql`(${column} IS NULL OR ${column} <> ${bindWhereValue(value)})`;
+    case "gt":
+      return sql`${column} > ${bindWhereValue(value)}`;
+    case "gte":
+      return sql`${column} >= ${bindWhereValue(value)}`;
+    case "lt":
+      return sql`${column} < ${bindWhereValue(value)}`;
+    case "lte":
+      return sql`${column} <= ${bindWhereValue(value)}`;
+    case "in":
+      return (value as unknown[]).length === 0 ? sql`0` : sql`${column} IN (${list()})`;
+    default:
+      return (value as unknown[]).length === 0 ? sql`1` : sql`(${column} IS NULL OR ${column} NOT IN (${list()}))`;
+  }
+};
+
+const SYSTEM_FILTER_COLUMNS = new Set([
+  "_id",
+  "_status",
+  "_createdAt",
+  "_updatedAt",
+  "_publishedAt",
+  "_publishAt",
+  "_unpublishAt",
+  "_sourceLocale",
+]);
+
+/** Columns an untrusted caller must not range-probe: credentials, internals and fields behind a read rule. */
+const isHiddenFromFilters = (collection: CollectionConfig, key: string) => {
+  const field = collection.fields[key];
+  if (!field) return !SYSTEM_FILTER_COLUMNS.has(key);
+  return (!!collection.auth && key === "password") || !!field.access?.read;
+};
+
+/**
+ * Turn a `where` filter into SQL conditions. A plain value is equality (unchanged
+ * behavior); an object is a set of operators ANDed together. Keys that aren't
+ * columns are ignored. With `locale`, translatable fields match their effective
+ * (translation-overlaid) value; with `published`, fields match the published snapshot.
+ */
+const buildWhereConditions = (
+  collection: CollectionConfig,
+  tables: any,
+  where: Record<string, unknown> | undefined,
+  options: { locale?: string; system?: boolean; published?: boolean },
+): { conditions: SQL[]; byCandidates: boolean } => {
+  const conditions: SQL[] = [];
+  let byCandidates = false;
+  if (!where) return { conditions, byCandidates };
+  const translatableFields = new Set(getTranslatableFieldNames(collection));
+
+  for (const [key, value] of Object.entries(where)) {
+    if (!(key in tables.main)) continue;
+    const field = collection.fields[key];
+    const arrayValued = isArrayValuedField(field);
+
+    let match: (column: unknown) => SQL;
+    if (isOperatorObject(value)) {
+      const ops = Object.entries(value).filter(([, operand]) => operand !== undefined);
+      // Skipping it would widen the filter — and deleteMany would clear the collection.
+      if (ops.length === 0) throw new Error(`Empty where operator object on ${collection.slug}.${key}.`);
+      if (!options.system && isHiddenFromFilters(collection, key)) {
+        throw new Error(`Cannot filter ${collection.slug}.${key} with operators.`);
+      }
+      if (field && !arrayValued && isJsonField(field)) {
+        throw new Error(`Field ${collection.slug}.${key} (${field.type}) doesn't support where operators.`);
+      }
+      const allowed = arrayValued ? ARRAY_OPERATORS : SCALAR_OPERATORS;
+      for (const [op] of ops) {
+        if (!WHERE_OPERATORS.has(op)) throw new Error(`Unknown where operator "${op}" on ${collection.slug}.${key}.`);
+        if (!allowed.has(op)) {
+          throw new Error(
+            `where operator "${op}" isn't supported on ${arrayValued ? "array" : "scalar"} field ${collection.slug}.${key}.`,
+          );
+        }
+        const isList = op === "in" || op === "notIn";
+        if (isList !== Array.isArray(value[op])) {
+          throw new Error(
+            `where operator "${op}" on ${collection.slug}.${key} expects ${isList ? "an array" : "a single value"}.`,
+          );
+        }
+        if (isList && (value[op] as unknown[]).some((item) => item === null || item === undefined)) {
+          throw new Error(`where operator "${op}" on ${collection.slug}.${key} can't list null; use ne: null.`);
+        }
+      }
+      match = (column) => {
+        const parts = ops.map(([op, operand]) => operatorCondition(column, op, operand, arrayValued));
+        return parts.length === 1 ? parts[0] : and(...parts)!;
+      };
+    } else {
+      match = (column) => sql`${column} = ${bindWhereValue(value)}`;
+    }
+
+    const mainValue = options.published ? publishedValue(collection, tables, key) : tables.main[key];
+
+    if (options.locale && tables.translations && translatableFields.has(key)) {
+      // Translatable fields live in the translations table for non-default locales:
+      // match the translation when one exists for this locale, the main-table value
+      // otherwise. Without this, e.g. findOne({ slug, locale: "en" }) can never match
+      // a translated slug.
+      const tr = tables.translations;
+      conditions.push(
+        sql`(EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale} AND ${match(tr[key])}) OR (${match(mainValue)} AND NOT EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale} AND ${tr[key]} IS NOT NULL)))`,
+      );
+    } else if (mainValue !== tables.main[key]) {
+      // Candidates come from the column's own index plus the few documents with
+      // pending drafts (pending index; `> ''` keeps it a range seek); the
+      // snapshot-aware match then decides.
+      const main = tables.main;
+      byCandidates = true;
+      conditions.push(
+        sql`${main._id} IN (SELECT ${main._id} FROM ${main} WHERE ${match(main[key])} UNION ALL SELECT ${main._id} FROM ${main} WHERE ${main._published} > '')`,
+        match(mainValue),
+      );
+    } else if (isOperatorObject(value)) {
+      conditions.push(match(tables.main[key]));
+    } else {
+      conditions.push(eq(tables.main[key], value));
+    }
+  }
+  return { conditions, byCandidates };
+};
+
+// With snapshot candidates in play, the unary + keeps SQLite (no ANALYZE stats) from
+// picking the low-selectivity _status index over the candidate _id lookup.
+const statusCondition = (tables: any, status: string, byCandidates: boolean) =>
+  byCandidates ? sql`+${tables.main._status} = ${status}` : eq(tables.main._status, status);
 
 const ensureCollection = (config: CMSConfig, slug: string) => {
   const collection = getCollectionMap(config)[slug];
@@ -365,12 +560,21 @@ const stripUnreadableFields = async (
 ) => {
   if (context._system) return doc;
   const accessCtx = { user: context.user ?? null, doc, operation: "read", collection: collection.slug };
-  let result = doc;
+  const denied: string[] = [];
   for (const [fieldName, field] of Object.entries(collection.fields)) {
-    if (!field.access?.read || !(fieldName in result)) continue;
-    if (!(await field.access.read(accessCtx))) {
-      if (result === doc) result = { ...doc };
-      delete result[fieldName];
+    if (field.access?.read && !(await field.access.read(accessCtx))) denied.push(fieldName);
+  }
+  if (denied.length === 0) return doc;
+  const result = { ...doc };
+  for (const fieldName of denied) delete result[fieldName];
+  // The pending-draft snapshot carries the same fields; strip them there too.
+  if (typeof result._published === "string") {
+    try {
+      const snapshot = JSON.parse(result._published);
+      for (const fieldName of denied) delete snapshot[fieldName];
+      result._published = JSON.stringify(snapshot);
+    } catch {
+      delete result._published;
     }
   }
   return result;
@@ -601,31 +805,17 @@ export const createCms = (config: CMSConfig) => {
         const tables = await getTableRefs(slug);
         const status = options.status ?? (collection.drafts ? "published" : "any");
         const filterAfterReadAccess = hasReadRule(collection) && !context._system;
+        const published = status === "published" && !!collection.drafts;
+        const readValue = (key: string) => (published ? publishedValue(collection, tables, key) : tables.main[key]);
 
-        const conditions: any[] = [];
+        const where = buildWhereConditions(collection, tables, options.where, {
+          locale: options.locale,
+          system: context._system,
+          published,
+        });
+        const conditions: any[] = [...where.conditions];
         if (status !== "any" && collection.drafts) {
-          conditions.push(eq(tables.main._status, status));
-        }
-        if (options.where) {
-          const translatableFields = new Set(getTranslatableFieldNames(collection));
-          for (const [key, value] of Object.entries(options.where)) {
-            if (!(key in tables.main)) continue;
-            if (options.locale && tables.translations && translatableFields.has(key)) {
-              // Translatable fields live in the translations table for non-default
-              // locales: match the effective (overlaid) value — the translation when
-              // one exists for this locale, the main-table value otherwise. Without
-              // this, e.g. findOne({ slug, locale: "en" }) can never match a
-              // translated slug.
-              const tr = tables.translations;
-              // Raw SQL skips drizzle's column mapper, so booleans must be bound as 0/1.
-              const bound = typeof value === "boolean" ? (value ? 1 : 0) : value;
-              conditions.push(
-                sql`(EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale} AND ${tr[key]} = ${bound}) OR (${tables.main[key]} = ${bound} AND NOT EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale} AND ${tr[key]} IS NOT NULL)))`,
-              );
-            } else {
-              conditions.push(eq(tables.main[key], value));
-            }
-          }
+          conditions.unshift(statusCondition(tables, status, where.byCandidates));
         }
         const availability = availabilityCondition(tables, options);
         if (availability) conditions.push(availability);
@@ -636,7 +826,7 @@ export const createCms = (config: CMSConfig) => {
           const searchConditions = Object.entries(collection.fields)
             .filter(([, field]) => searchableTypes.has(field.type))
             .filter(([name]) => name in tables.main)
-            .map(([name]) => like(sql`lower(${tables.main[name]})`, searchTerm));
+            .map(([name]) => like(sql`lower(${readValue(name)})`, searchTerm));
           if (searchConditions.length > 0) {
             conditions.push(or(...searchConditions)!);
           }
@@ -648,8 +838,8 @@ export const createCms = (config: CMSConfig) => {
         }
 
         if (options.sort) {
-          const col = tables.main[options.sort.field];
-          if (col) {
+          if (tables.main[options.sort.field]) {
+            const col = readValue(options.sort.field) as any;
             query = query.orderBy(options.sort.direction === "desc" ? desc(col) : asc(col)) as any;
           }
         }
@@ -1045,7 +1235,7 @@ export const createCms = (config: CMSConfig) => {
       },
 
       /**
-       * Delete every document matching `filter` (equality on top-level columns;
+       * Delete every document matching `filter` (same shape as `find`'s `where`;
        * empty filter clears the whole collection), along with their translation,
        * version and search-index rows. Returns the number of documents removed.
        *
@@ -1062,10 +1252,7 @@ export const createCms = (config: CMSConfig) => {
         const db = await getDb();
         const tables = await getTableRefs(slug);
 
-        const conditions: any[] = [];
-        for (const [key, value] of Object.entries(filter)) {
-          if (key in tables.main) conditions.push(eq(tables.main[key], value));
-        }
+        const { conditions } = buildWhereConditions(collection, tables, filter, { system: context._system });
         let idQuery = db.select({ _id: tables.main._id }).from(tables.main);
         if (conditions.length > 0) {
           idQuery = idQuery.where(conditions.length === 1 ? conditions[0] : and(...conditions)) as any;
@@ -1275,17 +1462,17 @@ export const createCms = (config: CMSConfig) => {
         const db = await getDb();
         const tables = await getTableRefs(slug);
         const status = filter.status ?? (collection.drafts ? "published" : "any");
+        const published = status === "published" && !!collection.drafts;
+        const readValue = (key: string) => (published ? publishedValue(collection, tables, key) : tables.main[key]);
 
-        const conditions: any[] = [];
+        const where = buildWhereConditions(collection, tables, filter.where, {
+          locale: filter.locale,
+          system: context._system,
+          published,
+        });
+        const conditions: any[] = [...where.conditions];
         if (status !== "any" && collection.drafts) {
-          conditions.push(eq(tables.main._status, status));
-        }
-        if (filter.where) {
-          for (const [key, value] of Object.entries(filter.where)) {
-            if (key in tables.main) {
-              conditions.push(eq(tables.main[key], value));
-            }
-          }
+          conditions.unshift(statusCondition(tables, status, where.byCandidates));
         }
         const availability = availabilityCondition(tables, filter);
         if (availability) conditions.push(availability);
@@ -1295,7 +1482,7 @@ export const createCms = (config: CMSConfig) => {
           const searchConditions = Object.entries(collection.fields)
             .filter(([, field]) => searchableTypes.has(field.type))
             .filter(([name]) => name in tables.main)
-            .map(([name]) => like(sql`lower(${tables.main[name]})`, searchTerm));
+            .map(([name]) => like(sql`lower(${readValue(name)})`, searchTerm));
           if (searchConditions.length > 0) {
             conditions.push(or(...searchConditions)!);
           }
