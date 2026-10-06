@@ -25,8 +25,7 @@ export default defineCollection({
       if (!data.label) {
         const submitted = (data.data ?? {}) as Record<string, unknown>;
         const firstValue = Object.values(submitted).find((v) => typeof v === "string" && v.trim()) as
-          | string
-          | undefined;
+          string | undefined;
         data.label = firstValue ? firstValue.slice(0, 40) : "Submission";
       }
       return data;

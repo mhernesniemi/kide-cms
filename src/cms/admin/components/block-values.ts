@@ -27,7 +27,11 @@ const richTextPreview = (value: unknown): string => {
   }
   const collect = (node: PreviewNode): string =>
     typeof node.value === "string" ? node.value : (node.children ?? []).map(collect).join(" ");
-  return doc && typeof doc === "object" ? collect(doc as PreviewNode).replace(/\s+/g, " ").trim() : "";
+  return doc && typeof doc === "object"
+    ? collect(doc as PreviewNode)
+        .replace(/\s+/g, " ")
+        .trim()
+    : "";
 };
 
 /**
