@@ -7,6 +7,42 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.32.0] - 2026-10-06
+
+### Added
+
+- **`where` operators in `find`, `findOne`, `count` and `deleteMany`.** A plain value is still
+  equality; an object applies operators. Scalar fields take `ne`, `gt`, `gte`, `lt`, `lte`, `in`,
+  `notIn` (`{ startDate: { gte: today } }`, `{ category: { in: ["news", "guides"] } }`); `hasMany`
+  relations and `array` fields take `contains`, `in` (has any of) and `notIn` (has none of)
+  (`{ tags: { contains: tagId } }`). Translatable fields match their translated value under
+  `locale`. Operators on fields behind a field-level `read` rule, and on internal columns, require
+  `_system`. Mistakes throw instead of matching nothing — including an empty operator object, so a
+  `deleteMany({ ids: { in: undefined } })` can't widen into "delete everything". The same syntax
+  works in the REST `where` query param and the MCP list/count tools. On Cloudflare D1 keep
+  `in`/`notIn` lists under about 45 values (D1 caps a query at 100 bound values).
+
+### Fixed
+
+- **Published reads no longer filter on unpublished edits.** While a published document had pending
+  draft edits, `find`/`findOne`/`count` matched `where`, `search` and `sort` against the draft values
+  but returned the published ones — a post re-categorised in a draft showed up (with its old
+  content) under the new category on the live site. Published reads now filter, search and sort on
+  the published values.
+- **Reads no longer expose read-restricted fields through the draft snapshot.** The raw `_published`
+  snapshot returned with documents that have pending edits included fields the caller's field-level
+  `read` rule hides; those fields are now stripped from it as well.
+
+### Changed
+
+- **Schema: one new index per drafts-enabled collection** (`<slug>_pending_idx` on `_published`),
+  so published lookups like `findOne({ slug })` stay index-driven. Only documents with pending
+  edits have a non-null snapshot, so it stays small.
+  Node projects pick it up automatically on `pnpm dev` / `pnpm cms:push`; Cloudflare D1 projects
+  need a migration (`pnpm db:generate`, then apply it).
+- `count({ where, locale })` now matches translatable fields per locale the same way `find` does,
+  so list totals agree with the returned page.
+
 ## [0.31.1] - 2026-10-05
 
 ### Fixed
