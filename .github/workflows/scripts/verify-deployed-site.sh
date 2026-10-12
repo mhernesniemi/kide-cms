@@ -29,7 +29,7 @@ s=$(curl -s -o /dev/null -D - -X POST -H "Origin: $BASE" \
 
 hdr=$(curl -s -o /dev/null -D - -X POST -H "Origin: $BASE" \
   --data-urlencode "email=$EMAIL" --data-urlencode "password=$PW" "$BASE/api/cms/auth/login")
-COOKIE=$(echo "$hdr" | grep -i '^set-cookie: cms_session=' | head -1 | sed 's/^[Ss]et-[Cc]ookie: //' | cut -d';' -f1)
+COOKIE=$(echo "$hdr" | grep -i '^set-cookie: [^=]*kide\.session_token=' | head -1 | sed 's/^[Ss]et-[Cc]ookie: //' | cut -d';' -f1)
 [[ -n "$COOKIE" ]] && ok "login sets a session cookie" || { bad "login failed"; exit 1; }
 
 for path in /admin/recent /admin/pages /admin/pages/new /admin/assets /admin/users; do
