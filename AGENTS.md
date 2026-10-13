@@ -1,6 +1,6 @@
-# AGENTS.md — migrating content into Kide
+# AGENTS.md — building on and migrating content into Kide
 
-Kide is a code-first CMS inside Astro (collections in `src/cms/collections/`, local SQLite in dev). If you're an agent **importing content from another CMS** (WordPress, Payload, Contentful, …), read this first — it removes the guesswork that makes migrations fail on the first try.
+Kide is a code-first CMS inside Astro (collections in `src/cms/collections/`, local SQLite in dev). If you're an agent **importing content from another CMS** (WordPress, Payload, Contentful, …), read this first — it removes the guesswork that makes migrations fail on the first try. **Building app features on top of Kide** (member areas, synced data, background jobs)? Read [Building an app on Kide](#building-an-app-on-kide) first.
 
 > **Upgrading the vendored Kide core instead?** (Embedded/ejected projects only — package mode upgrades with `pnpm add @kidecms/core@latest`.) Run `pnpm cms:upgrade <target-tag>` first, then read `.kide/upgrade/<from>-to-<to>/agent-instructions.md`. The packet is agent-agnostic: use it with Codex, Claude, Cursor, or manually. Preserve project-specific collections, adapters, migrations, public pages, and custom components unless the packet shows an upstream change that clearly belongs in this client. To abandon an upgrade attempt, run `pnpm cms:restore` or preview with `pnpm cms:restore --dry-run`.
 
@@ -58,6 +58,19 @@ await dispose();
 - **Images:** `assets.upload(file, { alt, dedupe: true })` returns `{ storagePath }`; store that string in image fields. `dedupe` makes re-runs idempotent (content-hash), no external map needed.
 - **Translations:** base-locale row + `cms.<col>.upsertTranslation(id, locale, translatableFields)`. Declare locales in `cms.config.ts`.
 - **Published vs draft is the importer's call** — filter the source if you only want published content.
+
+## Building an app on Kide
+
+What the code won't tell you until it bites:
+
+- **All data lives in collections.** The schema is generated from `cms.config.ts`, and `cms:push` (which also runs on every `pnpm dev`) drops tables it doesn't know. Model app data (synced records, orders, logs) as collections; for data editors must not change, set `access: { create: () => false, update: () => false, delete: () => false }` and write it with `{ _system: true }`. The admin then shows it read-only, without Save/Delete/Duplicate.
+- **Kide auth is for the admin only.** The `users` collection, sessions, SSO and MFA cover staff. A members or customer area needs its own login: keep the members in a collection with a hidden password-hash field, and build on the exported `hashPassword`, `verifyPassword`, `hashToken` and `hitRateLimit` helpers plus your own `src/middleware.ts` (it runs after Kide's, which guards only `/admin` and `/api/cms`). `getSessionUser(request)` tells you when a staff member is signed in on a public route.
+- **Uploads are public.** Everything under `/uploads` (and `/api/cms/img`) is served to anyone with long-lived caching. Keep private files out of assets: store them elsewhere and stream them through your own route that checks access.
+- **Don't put tenancy in `access.read`.** With a read rule, `find`/`count` load every matching row and filter in JS before `limit`/`offset`. For per-customer data, query with `_system: true` and an explicit `where` on the owner instead.
+- **The local API has no joins, `OR` or projection.** Relations store ids (resolve with `where: { _id: { in: ids } }`); scope with equality `where`s and filter the rest in code when the set is small.
+- **Background work:** declare handlers in `integrations.tasks` and recurring runs in `integrations.schedules`; enqueue with `cms.tasks.enqueue(type, payload)`. On Node, call `/api/cms/cron/tasks` (and `/api/cms/cron/publish` for scheduled publishing) from cron with `Authorization: Bearer $CRON_SECRET`; nothing runs them otherwise.
+- **Never cache personalised pages:** keep them out of `routeRules` (or call `Astro.cache.set(false)`).
+- **Scripts get typed collections** with `createCmsContext<typeof import("@/cms/.generated/api").cms>()`. Stop the dev server first — SQLite has a single writer.
 
 ## Validation checklist (definition of done)
 
