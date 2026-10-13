@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blankBlockFields, getPreviewText } from "../block-values";
+import { blankBlockFields, getPreviewText, repeaterTable } from "../block-values";
 import type { SubFieldMeta } from "../block-fields";
 
 const meta = (type: string): SubFieldMeta => ({ type });
@@ -37,5 +37,39 @@ describe("blankBlockFields", () => {
       on: false,
       title: "",
     });
+  });
+});
+
+describe("repeaterTable", () => {
+  it("lays out rows by the declared item fields", () => {
+    const fields = {
+      lineNo: { type: "number" },
+      partNo: { type: "text", label: "Part" },
+      cancelled: { type: "boolean" },
+    };
+    const table = repeaterTable(
+      JSON.stringify([
+        { lineNo: 1, partNo: "TU1", cancelled: false, extra: "ignored" },
+        { lineNo: 2, cancelled: true },
+      ]),
+      fields,
+    );
+    expect(table.columns).toEqual([
+      { key: "lineNo", label: "Line No" },
+      { key: "partNo", label: "Part" },
+      { key: "cancelled", label: "Cancelled" },
+    ]);
+    expect(table.rows).toEqual([
+      ["1", "TU1", "No"],
+      ["2", "–", "Yes"],
+    ]);
+  });
+
+  it("falls back to the keys in the data and tolerates bad values", () => {
+    expect(repeaterTable([{ a: 1 }, { b: { c: 2 } }]).rows).toEqual([
+      ["1", "–"],
+      ["–", '{"c":2}'],
+    ]);
+    expect(repeaterTable("not json")).toEqual({ columns: [], rows: [] });
   });
 });

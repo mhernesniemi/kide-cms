@@ -17,6 +17,7 @@ import SharedSectionBlockField from "./SharedSectionBlockField";
 import ColorField from "./ColorField";
 import LinkField from "./LinkField";
 import RepeaterInput from "./RepeaterInput";
+import ReadOnlyRepeater from "./ReadOnlyRepeater.astro";
 import type { SubFieldMeta } from "./block-fields";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -141,6 +142,12 @@ const toBlockTypesMeta = (source: Record<string, Record<string, FieldConfig>> | 
       )
     : {};
 
+const repeaterItemFields =
+  "itemFields" in field && field.itemFields
+    ? Object.fromEntries(
+        Object.entries(field.itemFields).map(([subName, subField]) => [subName, toSubFieldMeta(subField)]),
+      )
+    : undefined;
 const blockTypesSource = field.type === "blocks" ? field.types : field.type === "content" ? field.blocks : null;
 const blockTypesMeta = toBlockTypesMeta(blockTypesSource);
 const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
@@ -412,21 +419,18 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
             client:load
             name={name}
             value={serializedValue}
-            itemFields={
-              "itemFields" in field && field.itemFields
-                ? Object.fromEntries(
-                    Object.entries(field.itemFields).map(([subName, subField]) => [subName, toSubFieldMeta(subField)]),
-                  )
-                : undefined
-            }
+            itemFields={repeaterItemFields}
             linkOptions={linkableCollections}
           />
+        )}
+
+        {field.type === "json" && field.admin?.component === "repeater" && readOnly && (
+          <ReadOnlyRepeater name={name} value={serializedValue} itemFields={repeaterItemFields} />
         )}
 
         {field.type === "json" &&
           (field.admin?.component === "menu-items" ||
             field.admin?.component === "taxonomy-terms" ||
-            field.admin?.component === "repeater" ||
             field.admin?.component === "shared-section-block") &&
           readOnly && (
             <Textarea

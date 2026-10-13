@@ -1,0 +1,41 @@
+---
+import { repeaterTable } from "./block-values";
+import type { SubFieldMeta } from "./block-fields";
+
+const { name, value, itemFields } = Astro.props as {
+  name: string;
+  value?: string;
+  itemFields?: Record<string, SubFieldMeta>;
+};
+const { columns, rows } = repeaterTable(value, itemFields);
+---
+
+<input type="hidden" name={name} value={value ?? "[]"} />
+{
+  rows.length === 0 ? (
+    <p class="text-muted-foreground text-sm">No items</p>
+  ) : (
+    <div class="bg-muted/40 overflow-x-auto rounded-md border">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b">
+            {columns.map((column) => (
+              <th scope="col" class="text-muted-foreground px-3 py-2 text-left font-medium whitespace-nowrap">
+                {column.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {rows.map((row) => (
+            <tr>
+              {row.map((cell) => (
+                <td class="text-muted-foreground px-3 py-2 align-top">{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}

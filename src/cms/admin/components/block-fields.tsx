@@ -71,18 +71,9 @@ export function generateKey() {
   return "blk_" + Math.random().toString(36).slice(2, 9);
 }
 
-export function humanize(value: string) {
-  return value
-    .replace(/^_+/, "")
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replace(/[-_]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/^\w/, (char) => char.toUpperCase());
-}
-
 // Pure value helpers live in a React-free module so they can be unit-tested.
-export { blankBlockFields, getPreviewText } from "./block-values";
+export { blankBlockFields, getPreviewText, humanize } from "./block-values";
+import { humanize } from "./block-values";
 
 // -----------------------------------------------
 // Sub-field label + control wrapper
