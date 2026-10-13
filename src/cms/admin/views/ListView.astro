@@ -18,7 +18,7 @@ import {
   humanize,
   resolveCollaboration,
 } from "../../core";
-import { canWrite, getVisualStatus } from "../lib/access";
+import { canDelete, canWrite, getVisualStatus } from "../lib/access";
 import { loadRelationOptionList, loadSharedSectionUsageCounts } from "../lib/edit-data";
 
 type CollectionLike = {
@@ -238,7 +238,8 @@ const tableRows = docs.map((entry: Record<string, unknown>) => {
     client:load
     collectionSlug={collection.slug}
     draftsEnabled={collection.drafts}
-    duplicateEnabled={!collection.auth}
+    duplicateEnabled={!collection.auth && canWrite(config, user, collection.slug)}
+    deleteEnabled={canDelete(config, user, collection.slug)}
     showLocalesColumn={showLocalesColumn}
     defaultLocale={locales.length > 1 ? defaultLocale : undefined}
     labelField={getLabelField(collection)}

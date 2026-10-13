@@ -26,6 +26,9 @@ import {
   resolveCollaboration,
 } from "../../core";
 import {
+  canDelete,
+  canUpdate,
+  canWrite,
   getFormAction,
   getVisualStatus,
   isFieldHidden as isFieldHiddenFn,
@@ -80,7 +83,8 @@ const collectionApi = cmsRuntime[collection.slug];
 const isSingleton = collection.singleton === true;
 
 const isFieldHidden = (fieldName: string) => isFieldHiddenFn(collection, user, fieldName);
-const isFieldReadOnly = (fieldName: string) => isFieldReadOnlyFn(collection, user, fieldName);
+// A document the collection rules won't let this user change renders every field read-only
+const isFieldReadOnly = (fieldName: string) => !docEditable || isFieldReadOnlyFn(collection, user, fieldName);
 
 // --- Data loading ---
 let doc: Record<string, unknown> | null = null;
@@ -103,6 +107,16 @@ if (mode === "edit" && documentId) {
     return Astro.redirect(`/admin/${collection.slug}?_toast=error&_msg=Access+denied`);
   }
 }
+
+// Hide actions the access rules would refuse anyway: a document nobody may
+// edit (an ERP mirror, say) gets no Save, and Delete/Duplicate follow their rules
+const docEditable =
+  mode === "new" ? canWrite(config, user, collection.slug) : canUpdate(config, user, collection.slug, doc);
+const canSave = Object.keys(collection.fields).some(
+  (fieldName) => !isFieldHidden(fieldName) && !isFieldReadOnly(fieldName),
+);
+const canDeleteDoc = canDelete(config, user, collection.slug, doc);
+const canDuplicate = canWrite(config, user, collection.slug);
 
 const relationMetaByField = loadRelationMeta(collection, config, user);
 // Seed labels for the ids this document already points at, so relation fields
@@ -330,20 +344,22 @@ const publishBlocked =
               </form>
             ) : (
               <>
-                <button
-                  class={buttonVariants({ variant: "outline" })}
-                  type="submit"
-                  form="document-form"
-                  name="_intent"
-                  value="save"
-                  disabled={mode === "edit"}
-                >
-                  {collection.slug === "users" && mode === "new"
-                    ? "Send invite"
-                    : collection.drafts
-                      ? "Save draft"
-                      : "Save"}
-                </button>
+                {canSave && (
+                  <button
+                    class={buttonVariants({ variant: "outline" })}
+                    type="submit"
+                    form="document-form"
+                    name="_intent"
+                    value="save"
+                    disabled={mode === "edit"}
+                  >
+                    {collection.slug === "users" && mode === "new"
+                      ? "Send invite"
+                      : collection.drafts
+                        ? "Save draft"
+                        : "Save"}
+                  </button>
+                )}
                 {collection.drafts &&
                   (publishBlocked ? (
                     <button
@@ -384,8 +400,8 @@ const publishBlocked =
                 documentId={documentId}
                 showUnpublish={collection.drafts && doc?._status === "published"}
                 showDiscardDraft={Boolean(collection.drafts && doc?._status === "published" && doc?._published)}
-                showDelete={!isSingleton}
-                showDuplicate={!isSingleton && !collection.auth}
+                showDelete={!isSingleton && canDeleteDoc}
+                showDuplicate={!isSingleton && !collection.auth && canDuplicate}
                 showSchedule={!!collection.drafts}
                 showCancelSchedule={collection.drafts && doc?._status === "scheduled"}
                 currentPublishAt={doc?._publishAt ? String(doc._publishAt) : undefined}

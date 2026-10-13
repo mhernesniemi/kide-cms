@@ -19,6 +19,22 @@ export function canWrite(config: CMSConfig, user: User, slug: string): boolean {
   return rule({ user: user ?? null, doc: null, operation: "create", collection: slug }) as boolean;
 }
 
+/** Whether the collection's update rule lets this user edit the document. */
+export function canUpdate(config: CMSConfig, user: User, slug: string, doc?: Record<string, unknown> | null): boolean {
+  const c = config.collections.find((col) => col.slug === slug);
+  const rule = c?.access?.update;
+  if (!rule) return c?.auth ? user?.role === "admin" || (!!doc && doc._id === user?.id) : true;
+  return rule({ user: user ?? null, doc: doc ?? null, operation: "update", collection: slug }) as boolean;
+}
+
+/** Whether the collection's delete rule lets this user delete (the document, when given). */
+export function canDelete(config: CMSConfig, user: User, slug: string, doc?: Record<string, unknown> | null): boolean {
+  const c = config.collections.find((col) => col.slug === slug);
+  const rule = c?.access?.delete;
+  if (!rule) return c?.auth ? user?.role === "admin" : true;
+  return rule({ user: user ?? null, doc: doc ?? null, operation: "delete", collection: slug }) as boolean;
+}
+
 export function isFieldHidden(
   collection: { slug: string; fields: Record<string, any> } | null,
   user: User,

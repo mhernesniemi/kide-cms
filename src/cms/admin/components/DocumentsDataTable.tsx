@@ -85,6 +85,8 @@ type DocumentsDataTableProps = {
   collectionSlug: string;
   draftsEnabled?: boolean;
   duplicateEnabled?: boolean;
+  /** Offer Delete on rows and selections; false when the collection's delete rule denies it. */
+  deleteEnabled?: boolean;
   /** Show the Locales column. Defaults to true for callers (e.g. Recent) that mix collections. */
   showLocalesColumn?: boolean;
   defaultLocale?: string;
@@ -156,6 +158,7 @@ export default function DocumentsDataTable({
   collectionSlug,
   draftsEnabled = false,
   duplicateEnabled = true,
+  deleteEnabled = true,
   showLocalesColumn = true,
   defaultLocale,
   labelField = "title",
@@ -627,21 +630,35 @@ export default function DocumentsDataTable({
                     </DropdownMenuItem>
                   </>
                 )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  disabled={isPending}
-                  onClick={() => setDeleteConfirm([row.original])}
-                >
-                  Delete
-                </DropdownMenuItem>
+                {deleteEnabled && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      disabled={isPending}
+                      onClick={() => setDeleteConfirm([row.original])}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         ),
       },
     ],
-    [columns, draftsEnabled, duplicateEnabled, showLocalesColumn, isPending, primaryColumnKey, isServerMode, runAction],
+    [
+      columns,
+      draftsEnabled,
+      duplicateEnabled,
+      deleteEnabled,
+      showLocalesColumn,
+      isPending,
+      primaryColumnKey,
+      isServerMode,
+      runAction,
+    ],
   );
 
   const table = useReactTable({
@@ -796,14 +813,18 @@ export default function DocumentsDataTable({
                     ))}
                   </>
                 )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  disabled={isPending}
-                  onClick={() => setDeleteConfirm(selectedRows)}
-                >
-                  Delete selected
-                </DropdownMenuItem>
+                {deleteEnabled && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      disabled={isPending}
+                      onClick={() => setDeleteConfirm(selectedRows)}
+                    >
+                      Delete selected
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
