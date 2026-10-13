@@ -1341,11 +1341,15 @@ export const createCms = (config: CMSConfig) => {
         }
 
         const timestamp = now();
+        // A pending end date survives publishing, whether the publish comes from
+        // the schedule cron or an editor publishing new edits
+        const unpublishAt =
+          typeof existing._unpublishAt === "string" && existing._unpublishAt > timestamp ? existing._unpublishAt : null;
         const updateValues: Record<string, unknown> = {
           _status: "published",
           _publishedAt: timestamp,
           _publishAt: null,
-          _unpublishAt: null,
+          _unpublishAt: unpublishAt,
           _published: null,
         };
         if (collection.timestamps !== false) updateValues._updatedAt = timestamp;

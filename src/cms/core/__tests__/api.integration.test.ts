@@ -334,6 +334,31 @@ describe("drafts and publishing", () => {
     expect(scheduled._status).toBe("scheduled");
     expect(scheduled._publishAt).toBe(future);
   });
+
+  it("keeps a scheduled end date through publishing", async () => {
+    const post = await (cms as any).posts.create({ title: "Campaign post" });
+    const start = new Date(Date.now() - 60_000).toISOString();
+    const end = new Date(Date.now() + 60_000).toISOString();
+    await (cms as any).posts.schedule(post._id, start, end);
+
+    await (cms as any).scheduled.processPublishing();
+    const live = await (cms as any).posts.findById(post._id, { status: "any" });
+    expect(live._status).toBe("published");
+    expect(live._unpublishAt).toBe(end);
+
+    // Publishing new edits keeps the end date too
+    const republished = await (cms as any).posts.publish(post._id);
+    expect(republished._unpublishAt).toBe(end);
+  });
+
+  it("drops an end date that has already passed when publishing", async () => {
+    const post = await (cms as any).posts.create({ title: "Expired campaign" });
+    const past = new Date(Date.now() - 60_000).toISOString();
+    await (cms as any).posts.schedule(post._id, past, past);
+
+    const published = await (cms as any).posts.publish(post._id);
+    expect(published._unpublishAt).toBeNull();
+  });
 });
 
 describe("translations", () => {
