@@ -7,6 +7,35 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.33.0] - 2026-10-13
+
+### Fixed
+
+- **Scheduled end dates survive publishing.** `publish()` cleared `_unpublishAt`, so a document
+  scheduled with both a start and an end date lost its end date when the publish cron published
+  it, and never unpublished. Publishing re-edits of a live document no longer drops a pending end
+  date either. An end date that has already passed is still cleared.
+
+### Changed
+
+- **The admin hides actions the access rules refuse.** A document the collection's `update` rule
+  denies renders read-only with no Save button; Delete and Duplicate (on the edit page and in list
+  row and bulk menus) follow the `delete` and `create` rules. Previously they showed and failed on
+  the server.
+- **Read-only repeaters render as a table.** A read-only `fields.json({ admin: { component:
+"repeater" } })` shows its rows with `itemFields` labels instead of raw JSON.
+- **Generated files import only what they use,** so `schema.ts` and `types.ts` no longer trip
+  `no-unused-vars` in projects that lint `.generated/`.
+
+### Added
+
+- **Fuller generated API types:** a `CmsContext` type (now including `cache` and `_skipSearch`),
+  `deleteMany(where)` on every collection, and `cms.tasks` (`enqueue`, `drain`, `tick`, `prune`).
+- **Typed scripts:** `createCmsContext<typeof import("@/cms/.generated/api").cms>()` returns typed
+  collection APIs instead of an untyped `cms`.
+- **AGENTS.md: "Building an app on Kide"** — collections-only data, admin-only auth, public
+  uploads, tenancy and `access.read`, background tasks and cron, and typed scripts.
+
 ## [0.32.0] - 2026-10-06
 
 ### Added
