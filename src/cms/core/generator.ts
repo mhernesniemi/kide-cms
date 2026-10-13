@@ -201,12 +201,10 @@ const generateVersionsTable = (collection: CollectionConfig): string | null => {
 });`;
 };
 
+const SCHEMA_IMPORT_PLACEHOLDER = "/* kide:schema-imports */";
+
 const generateSchemaFile = (config: CMSConfig): string => {
-  const parts: string[] = [
-    `// auto-generated — do not edit`,
-    `import { sqliteTable, text, integer, real, unique, index, primaryKey } from "drizzle-orm/sqlite-core";`,
-    ``,
-  ];
+  const parts: string[] = [`// auto-generated — do not edit`, SCHEMA_IMPORT_PLACEHOLDER, ``];
 
   const authSpecs = getAuthSpecs(config);
 
@@ -390,7 +388,12 @@ const generateSchemaFile = (config: CMSConfig): string => {
   }
   parts.push(`export const cmsTables = {\n${tableExports.join("\n")}\n};`);
 
-  return parts.join("\n");
+  // Import only the builders the schema calls, so generated code lints clean
+  const body = parts.join("\n");
+  const builders = ["sqliteTable", "text", "integer", "real", "unique", "index", "primaryKey"].filter((name) =>
+    new RegExp(`(?<![.\\w])${name}\\(`).test(body),
+  );
+  return body.replace(SCHEMA_IMPORT_PLACEHOLDER, `import { ${builders.join(", ")} } from "drizzle-orm/sqlite-core";`);
 };
 
 const zodTypeForField = (field: FieldConfig): string => {
@@ -498,10 +501,12 @@ const typeForField = (field: FieldConfig): string => {
   return "unknown";
 };
 
+const TYPES_IMPORT_PLACEHOLDER = "/* kide:types-imports */";
+
 const generateTypesFile = (config: CMSConfig, coreImportPath: string): string => {
   const parts: string[] = [
     `// auto-generated — do not edit`,
-    `import type { RichTextDocument, ContentDocument } from "${coreImportPath}";`,
+    TYPES_IMPORT_PLACEHOLDER,
     ``,
     `export type CMSCollectionSlug = ${config.collections.map((collection) => JSON.stringify(collection.slug)).join(" | ")};`,
     ``,
@@ -551,7 +556,11 @@ const generateTypesFile = (config: CMSConfig, coreImportPath: string): string =>
   snapshot: Record<string, unknown>;
 };`);
 
-  return parts.join("\n");
+  const body = parts.join("\n");
+  const used = ["RichTextDocument", "ContentDocument"].filter((name) => new RegExp(`\\b${name}\\b`).test(body));
+  return used.length > 0
+    ? body.replace(TYPES_IMPORT_PLACEHOLDER, `import type { ${used.join(", ")} } from "${coreImportPath}";`)
+    : body.replace(`${TYPES_IMPORT_PLACEHOLDER}\n`, "");
 };
 
 const generateApiFile = (
@@ -570,7 +579,7 @@ const generateApiFile = (
   const apiTypes = config.collections
     .map((collection) => {
       const baseName = pascalCase(collection.slug);
-      const ctx = `context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }`;
+      const ctx = `context?: CmsContext`;
       const apiKey = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(collection.slug) ? collection.slug : `"${collection.slug}"`;
       return `  ${apiKey}: {
     find(options?: import("${coreImportPath}").FindOptions, ${ctx}): Promise<${baseName}Document[]>;
@@ -581,6 +590,7 @@ const generateApiFile = (
     upsert(data: ${baseName}Input & { _id?: string }, ${ctx}): Promise<${baseName}Document>;
     update(id: string, data: Partial<${baseName}Input>, ${ctx}): Promise<${baseName}Document>;
     delete(id: string, ${ctx}): Promise<void>;
+    deleteMany(where?: import("${coreImportPath}").FindOptions["where"], ${ctx}): Promise<number>;
     count(filter?: Omit<import("${coreImportPath}").FindOptions, "limit" | "offset" | "sort">, ${ctx}): Promise<number>;
     versions(id: string, ${ctx}): Promise<import("./types").StoredVersion[]>;
     restore(id: string, versionNumber: number, ${ctx}): Promise<${baseName}Document>;
@@ -600,10 +610,20 @@ import type {
   ${imports.map((entry) => `${entry},`).join("\n  ")}
 } from "./types";
 
+export type CmsContext = {
+  user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null;
+  cache?: { invalidate: (opts: { tags: string[] }) => void | Promise<void> };
+  /** Bypass access rules (server-side / system operations). */
+  _system?: boolean;
+  /** Skip search indexing for bulk writes; reindex once afterwards. */
+  _skipSearch?: boolean;
+};
+
 export const cms = createCms(config) as {
 ${apiTypes}
   meta: ReturnType<typeof createCms>["meta"];
   scheduled: ReturnType<typeof createCms>["scheduled"];
+  tasks: ReturnType<typeof createCms>["tasks"];
 };
 `;
 };

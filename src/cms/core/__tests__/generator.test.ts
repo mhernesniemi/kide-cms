@@ -219,3 +219,27 @@ describe("admin auth tables", () => {
     await expect(generateSchema({ collections: [users, clash] })).rejects.toThrow(/share the table cms_auth_sessions/);
   });
 });
+
+describe("generated imports", () => {
+  it("imports only what a simple model uses, so generated files lint clean", async () => {
+    const notes = defineCollection({
+      slug: "notes",
+      labels: { singular: "Note", plural: "Notes" },
+      fields: { title: fields.text({ required: true }) },
+    });
+    const dir = mkdtempSync(path.join(tmpdir(), "kide-generator-imports-"));
+    try {
+      await generate(defineConfig({ collections: [notes] }), { outputDir: dir });
+      const schema = readFileSync(path.join(dir, "schema.ts"), "utf-8");
+      const types = readFileSync(path.join(dir, "types.ts"), "utf-8");
+      const imported = schema.match(/import \{ (.*) \} from "drizzle-orm\/sqlite-core"/)?.[1].split(", ") ?? [];
+      for (const name of imported) {
+        expect(schema, name).toMatch(new RegExp(`(?<![.\\w])${name}\\(`));
+      }
+      expect(imported).not.toContain("unique");
+      expect(types).not.toContain("import type");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

@@ -32,10 +32,15 @@ import {
 } from "../core";
 import { loadProjectConfig, loadProjectRuntime } from "./project";
 
-export const createCmsContext = async () => {
+/**
+ * Pass the generated API type to get typed collections in scripts:
+ *
+ *   const { cms } = await createCmsContext<typeof import("@/cms/.generated/api").cms>();
+ */
+export const createCmsContext = async <TCms = ReturnType<typeof createCms>>() => {
   await loadProjectRuntime(); // side effect: configureCmsRuntime()
   const config = await loadProjectConfig();
-  const cms = createCms(config);
+  const cms = createCms(config) as TCms;
   const db = await getDb();
   return {
     /** Typed local API: `cms.posts.create(...)`, `cms.pages.deleteMany(...)`, … */
@@ -51,7 +56,7 @@ export const createCmsContext = async () => {
     load: (
       items: ImportItem[],
       options?: { dryRun?: boolean; throwOnFailed?: boolean; context?: Record<string, unknown> },
-    ) => importDocuments(cms as Record<string, any>, config, items, options),
+    ) => importDocuments(cms as unknown as Record<string, any>, config, items, options),
     /** The machine-readable content model (same as `.kide/model.json`). */
     model: () => describeModel(config),
     /** Rebuild the search index for all searchable collections (uses this config's locales). */

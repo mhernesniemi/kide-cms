@@ -13,45 +13,57 @@ import type {
   WritersTranslationInput,
 } from "./types";
 
+export type CmsContext = {
+  user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null;
+  cache?: { invalidate: (opts: { tags: string[] }) => void | Promise<void> };
+  /** Bypass access rules (server-side / system operations). */
+  _system?: boolean;
+  /** Skip search indexing for bulk writes; reindex once afterwards. */
+  _skipSearch?: boolean;
+};
+
 export const cms = createCms(config) as {
   articles: {
-    find(options?: import("../core").FindOptions, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument[]>;
-    findOne(filter: Record<string, unknown> & { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument | null>;
-    findById(id: string, options?: { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument | null>;
-    create(data: ArticlesInput, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
-    createMany(items: ArticlesInput[], context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument[]>;
-    upsert(data: ArticlesInput & { _id?: string }, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
-    update(id: string, data: Partial<ArticlesInput>, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
-    delete(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<void>;
-    count(filter?: Omit<import("../core").FindOptions, "limit" | "offset" | "sort">, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<number>;
-    versions(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<import("./types").StoredVersion[]>;
-    restore(id: string, versionNumber: number, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
-    publish(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
-    unpublish(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
-    schedule(id: string, publishAt: string, unpublishAt?: string | null, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
-    getTranslations(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<Record<string, ArticlesTranslationInput>>;
-    upsertTranslation(id: string, locale: string, data: ArticlesTranslationInput, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<ArticlesDocument>;
+    find(options?: import("../core").FindOptions, context?: CmsContext): Promise<ArticlesDocument[]>;
+    findOne(filter: Record<string, unknown> & { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: CmsContext): Promise<ArticlesDocument | null>;
+    findById(id: string, options?: { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: CmsContext): Promise<ArticlesDocument | null>;
+    create(data: ArticlesInput, context?: CmsContext): Promise<ArticlesDocument>;
+    createMany(items: ArticlesInput[], context?: CmsContext): Promise<ArticlesDocument[]>;
+    upsert(data: ArticlesInput & { _id?: string }, context?: CmsContext): Promise<ArticlesDocument>;
+    update(id: string, data: Partial<ArticlesInput>, context?: CmsContext): Promise<ArticlesDocument>;
+    delete(id: string, context?: CmsContext): Promise<void>;
+    deleteMany(where?: import("../core").FindOptions["where"], context?: CmsContext): Promise<number>;
+    count(filter?: Omit<import("../core").FindOptions, "limit" | "offset" | "sort">, context?: CmsContext): Promise<number>;
+    versions(id: string, context?: CmsContext): Promise<import("./types").StoredVersion[]>;
+    restore(id: string, versionNumber: number, context?: CmsContext): Promise<ArticlesDocument>;
+    publish(id: string, context?: CmsContext): Promise<ArticlesDocument>;
+    unpublish(id: string, context?: CmsContext): Promise<ArticlesDocument>;
+    schedule(id: string, publishAt: string, unpublishAt?: string | null, context?: CmsContext): Promise<ArticlesDocument>;
+    getTranslations(id: string, context?: CmsContext): Promise<Record<string, ArticlesTranslationInput>>;
+    upsertTranslation(id: string, locale: string, data: ArticlesTranslationInput, context?: CmsContext): Promise<ArticlesDocument>;
   };
   writers: {
-    find(options?: import("../core").FindOptions, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument[]>;
-    findOne(filter: Record<string, unknown> & { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument | null>;
-    findById(id: string, options?: { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument | null>;
-    create(data: WritersInput, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
-    createMany(items: WritersInput[], context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument[]>;
-    upsert(data: WritersInput & { _id?: string }, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
-    update(id: string, data: Partial<WritersInput>, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
-    delete(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<void>;
-    count(filter?: Omit<import("../core").FindOptions, "limit" | "offset" | "sort">, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<number>;
-    versions(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<import("./types").StoredVersion[]>;
-    restore(id: string, versionNumber: number, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
-    publish(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
-    unpublish(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
-    schedule(id: string, publishAt: string, unpublishAt?: string | null, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
-    getTranslations(id: string, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<Record<string, WritersTranslationInput>>;
-    upsertTranslation(id: string, locale: string, data: WritersTranslationInput, context?: { user?: { id: string; role?: string; email?: string; [key: string]: unknown } | null; _system?: boolean }): Promise<WritersDocument>;
+    find(options?: import("../core").FindOptions, context?: CmsContext): Promise<WritersDocument[]>;
+    findOne(filter: Record<string, unknown> & { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: CmsContext): Promise<WritersDocument | null>;
+    findById(id: string, options?: { locale?: string; status?: "draft" | "published" | "scheduled" | "any" }, context?: CmsContext): Promise<WritersDocument | null>;
+    create(data: WritersInput, context?: CmsContext): Promise<WritersDocument>;
+    createMany(items: WritersInput[], context?: CmsContext): Promise<WritersDocument[]>;
+    upsert(data: WritersInput & { _id?: string }, context?: CmsContext): Promise<WritersDocument>;
+    update(id: string, data: Partial<WritersInput>, context?: CmsContext): Promise<WritersDocument>;
+    delete(id: string, context?: CmsContext): Promise<void>;
+    deleteMany(where?: import("../core").FindOptions["where"], context?: CmsContext): Promise<number>;
+    count(filter?: Omit<import("../core").FindOptions, "limit" | "offset" | "sort">, context?: CmsContext): Promise<number>;
+    versions(id: string, context?: CmsContext): Promise<import("./types").StoredVersion[]>;
+    restore(id: string, versionNumber: number, context?: CmsContext): Promise<WritersDocument>;
+    publish(id: string, context?: CmsContext): Promise<WritersDocument>;
+    unpublish(id: string, context?: CmsContext): Promise<WritersDocument>;
+    schedule(id: string, publishAt: string, unpublishAt?: string | null, context?: CmsContext): Promise<WritersDocument>;
+    getTranslations(id: string, context?: CmsContext): Promise<Record<string, WritersTranslationInput>>;
+    upsertTranslation(id: string, locale: string, data: WritersTranslationInput, context?: CmsContext): Promise<WritersDocument>;
   };
   meta: ReturnType<typeof createCms>["meta"];
   scheduled: ReturnType<typeof createCms>["scheduled"];
+  tasks: ReturnType<typeof createCms>["tasks"];
 };
 "
 `;
