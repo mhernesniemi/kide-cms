@@ -17,4 +17,12 @@ The CMS itself is unchanged — `src/cms/` is the same package in both hosts. Sv
 
 `@sveltejs/adapter-node` derives the request origin from the `Host` header and assumes `https` unless `paths.origin` is set. Behind a TLS proxy that's correct; for plain http, set `paths.origin` (in `sveltekit({ paths: { origin } })`), or same-origin form posts are rejected as cross-site. Production also needs `KIDE_AUTH_SECRET`, and the database schema pushed (`pnpm cms:push`) — dev pushes on start, production never does.
 
-Not covered yet: the Cloudflare target (the Astro build's `scheduled()` cron patch has no SvelteKit equivalent) and starters (their blocks are `.astro` components).
+## Cloudflare
+
+`cloudflare/` swaps in `@sveltejs/adapter-cloudflare` and a `wrangler.toml` (D1, R2, static assets, the publishing cron), alongside the same D1 `drizzle.config.ts` and platform-selector flip the Astro Cloudflare target uses. `kideSvelteKit({ platform: "cloudflare" })` builds the server for workerd (dependencies bundled, `process.env` kept for `nodejs_compat_populate_process_env` secrets) and, after the adapter runs, wraps its worker with the `scheduled()` handler that drives scheduled publishing. The `[alias]` entries stub Node-only modules Kide loads lazily (`sharp`, `wrangler`) so the Worker bundles.
+
+`node scripts/verify-sveltekit.mjs --target=cloudflare` builds it, applies migrations to local D1, and drives the Worker under `wrangler dev`, including the cron trigger.
+
+## Starters
+
+`starters/sveltekit/<name>/` holds the Svelte port of a starter's pages and blocks; `--starter=<name>` applies it with the starter's shared content model and seed.

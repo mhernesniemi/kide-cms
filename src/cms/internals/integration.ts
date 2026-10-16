@@ -2,7 +2,7 @@ import type { AstroIntegration } from "astro";
 import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { defaultGeneratorPath, runGenerator, startDevSchemaSync } from "./dev-tasks";
+import { defaultGeneratorPath, runGenerator, scheduledWorkerSource, startDevSchemaSync } from "./dev-tasks";
 import { kide } from "./vite-plugin";
 
 // All runtime files resolve relative to this module, never the project root, so
@@ -95,8 +95,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         let content = readFileSync(entryPath, "utf-8");
         content = content.replace(
           /export\s*\{\s*(\w+)\s+as\s+default\s*\}/,
-          (_, name) =>
-            `const _astroWorker = ${name};\nexport default {\n  fetch: (...args) => _astroWorker.fetch(...args),\n  async scheduled(event, env, ctx) {\n    const headers = env.CRON_SECRET ? { Authorization: "Bearer " + env.CRON_SECRET } : {};\n    for (const path of ["/api/cms/cron/publish", "/api/cms/cron/tasks"]) {\n      const res = await _astroWorker.fetch(new Request("https://dummy" + path, { headers }), env, ctx);\n      if (!res.ok) console.error("Cron " + path + " failed:", res.status, await res.text());\n      else console.log("Cron " + path + ":", await res.text());\n    }\n  }\n};`,
+          (_, name) => `const _astroWorker = ${name};\n${scheduledWorkerSource("_astroWorker")}`,
         );
         writeFileSync(entryPath, content);
       },

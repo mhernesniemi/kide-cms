@@ -1,0 +1,27 @@
+name = "{{PROJECT_NAME}}"
+main = ".svelte-kit/cloudflare/_worker.js"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat", "nodejs_compat_populate_process_env"]  # Kide reads secrets from process.env
+
+# Node-only modules Kide loads lazily outside Workers — stubbed so the Worker bundles.
+[alias]
+"sharp" = "./node_modules/@kidecms/core/platform/cloudflare/node-only.ts"
+"wrangler" = "./node_modules/@kidecms/core/platform/cloudflare/node-only.ts"
+
+[assets]
+binding = "ASSETS"
+directory = ".svelte-kit/cloudflare"
+
+[[d1_databases]]
+binding = "CMS_DB"
+database_name = "{{PROJECT_NAME}}-db"
+database_id = "" # Run: pnpm wrangler d1 create {{PROJECT_NAME}}-db, then paste the id here
+migrations_dir = "src/cms/migrations"
+
+[triggers]
+crons = ["* * * * *"]  # scheduled publishing — every minute
+
+[[r2_buckets]]
+binding = "CMS_ASSETS"
+bucket_name = "{{PROJECT_NAME}}-assets"
+# Run: pnpm wrangler r2 bucket create {{PROJECT_NAME}}-assets

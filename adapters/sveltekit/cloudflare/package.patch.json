@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "add": {
+      "@sveltejs/adapter-cloudflare": "^8.0.1",
+      "@opentelemetry/api": "^1.9.1"
+    },
+    "remove": ["@sveltejs/adapter-node", "sharp"]
+  },
+  "devDependencies": {
+    "add": {
+      "wrangler": "^4.149.0"
+    },
+    "moveFromDependencies": ["better-sqlite3"]
+  },
+  "scripts": {
+    "preview": "vite build && wrangler dev",
+    "deploy": "vite build && wrangler deploy"
+  }
+}

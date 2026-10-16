@@ -1,10 +1,12 @@
 import type { Plugin } from "vite";
-import { defaultGeneratorPath, runGenerator, startDevSchemaSync } from "../dev-tasks";
+import { addScheduledHandler, defaultGeneratorPath, runGenerator, startDevSchemaSync } from "../dev-tasks";
 import { kide, type KideViteOptions } from "../vite-plugin";
 
 export interface KideSvelteKitOptions extends KideViteOptions {
   /** Absolute path to the generator script (default: the package's own generator) */
   generatorPath?: string;
+  /** "cloudflare" when building with adapter-cloudflare: the server bundle targets workerd. */
+  platform?: "node" | "cloudflare";
 }
 
 /**
@@ -27,7 +29,29 @@ export function kideSvelteKit(options: KideSvelteKitOptions = {}): Plugin[] {
         runGenerator(root, generatorPath);
       }
       // The admin is React; a SvelteKit project has no React plugin to compile its JSX.
-      return { oxc: { jsx: { runtime: "automatic", importSource: "react" } } };
+      const jsx = { oxc: { jsx: { runtime: "automatic" as const, importSource: "react" } } };
+      if (options.platform !== "cloudflare") return jsx;
+      // Workers can't require() at runtime: bundle every dependency into the server
+      // output and resolve worker builds of them, as Astro's Cloudflare adapter does.
+      return {
+        ...jsx,
+        ssr: {
+          noExternal: true,
+          target: "webworker" as const,
+          resolve: { conditions: ["workerd", "worker", "module", "import", "default"] },
+        },
+        // Worker builds rewrite process.env to {} by default; Kide reads secrets from it at
+        // runtime (wrangler's nodejs_compat_populate_process_env fills it).
+        environments: { ssr: { keepProcessEnv: true } },
+      };
+    },
+    // SvelteKit runs its adapter in buildApp; "post" lands after adapter-cloudflare has
+    // written its worker (a no-op for other adapters).
+    buildApp: {
+      order: "post",
+      async handler() {
+        addScheduledHandler(root);
+      },
     },
     configureServer(server) {
       if (!syncing) {

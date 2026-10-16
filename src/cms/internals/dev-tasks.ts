@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, watch } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, watch, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -183,4 +183,46 @@ export function startDevSchemaSync(root: string, configPath: string, generatorPa
   } catch {
     /* no collections directory — the config watch still covers registrations */
   }
+}
+
+/**
+ * Source for a Worker default export that forwards `fetch` to `workerName` and adds the
+ * `scheduled()` handler Cloudflare cron triggers call: it hits Kide's cron routes
+ * through that same fetch, authorized by CRON_SECRET.
+ */
+export const scheduledWorkerSource = (workerName: string) =>
+  `export default {
+  fetch: (...args) => ${workerName}.fetch(...args),
+  async scheduled(event, env, ctx) {
+    const headers = env.CRON_SECRET ? { Authorization: "Bearer " + env.CRON_SECRET } : {};
+    for (const path of ["/api/cms/cron/publish", "/api/cms/cron/tasks"]) {
+      const res = await ${workerName}.fetch(new Request("https://dummy" + path, { headers }), env, ctx);
+      if (!res.ok) console.error("Cron " + path + " failed:", res.status, await res.text());
+      else console.log("Cron " + path + ":", await res.text());
+    }
+  }
+};`;
+
+/** Wraps a SvelteKit adapter-cloudflare worker (wrangler `main`) with the cron handler. */
+export function addScheduledHandler(root: string) {
+  let main = ".svelte-kit/cloudflare/_worker.js";
+  for (const file of ["wrangler.toml", "wrangler.json", "wrangler.jsonc"]) {
+    const configPath = path.join(root, file);
+    if (!existsSync(configPath)) continue;
+    const match = readFileSync(configPath, "utf-8").match(/^\s*"?main"?\s*[=:]\s*"([^"]+)"/m);
+    if (match) main = match[1];
+    break;
+  }
+  const workerPath = path.resolve(root, main);
+  if (!existsSync(workerPath)) return;
+  const source = readFileSync(workerPath, "utf-8");
+  if (source.includes("async scheduled(")) return;
+  if (!/^export default \{/m.test(source)) {
+    console.warn(`  [cms] ${main} has an unexpected shape; cron triggers will not run scheduled publishing.`);
+    return;
+  }
+  writeFileSync(
+    workerPath,
+    `${source.replace(/^export default \{/m, "const svelteKitWorker = {")}\n${scheduledWorkerSource("svelteKitWorker")}\n`,
+  );
 }
