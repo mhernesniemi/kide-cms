@@ -66,6 +66,7 @@ pnpm cms:restore      # restore files from the latest upgrade backup
 pnpm verify:pack      # assert the @kidecms/core publish manifest ships only managed files
 pnpm verify:package   # assemble a package-mode project from HEAD, build+boot it, test eject
 pnpm verify:starters  # assemble each starters/* overlay, check+seed+build it
+pnpm verify:sveltekit # assemble the SvelteKit target (adapters/sveltekit), check+build+boot it, drive real requests
 ```
 
 All `cms:*` scripts run through the `kide` bin (`src/cms/internals/cli.mjs`), which works identically in embedded and package mode. `kide eject` converts a package-mode project to embedded (one-way).
@@ -249,12 +250,13 @@ Routes in `src/cms/routes/` import app-specific code via `virtual:kide/*` aliase
 
 ## Admin rendering (no Astro)
 
-The admin does not use Astro pages. Every `/admin/*`, `/api/cms/*` and `/uploads/*` request goes through Kide's router (`routes/router.ts` + `routes/table.ts`, first match wins) behind `kideMiddleware` (`middleware/gate.ts`); Astro only injects catch-all endpoints (`routes/astro-endpoint.ts`) that hand over a `CmsContext`. Other hosts call `handleKideRequest` from `@kidecms/core/handler` and add `kide()` from `@kidecms/core/vite`.
+The admin does not use Astro pages. Every `/admin/*`, `/api/cms/*` and `/uploads/*` request goes through Kide's router (`routes/router.ts` + `routes/table.ts`, first match wins) behind `kideMiddleware` (`middleware/gate.ts`); Astro only injects catch-all endpoints (`routes/astro-endpoint.ts`) that hand over a `CmsContext`. SvelteKit uses `kideSvelteKit()` (`@kidecms/core/sveltekit`, Vite) plus the `handle` hook (`@kidecms/core/sveltekit/hooks`) — see `adapters/sveltekit/README.md`; other hosts build the same from `handleKideRequest` (`@kidecms/core/handler`) and `kide()` (`@kidecms/core/vite`). Generation and dev schema sync live in `internals/dev-tasks.ts`, shared by both host integrations.
 
 - **Pages** are `definePage(load, Page)` (`admin/render/page.tsx`): `load` reads the request and returns props or a `Response`, `Page` is server-only React rendered with `renderToString`. Async work belongs in loaders — React SSR here has no async components.
 - **Interactive parts** are `<Island name component props>` (`admin/render/island.tsx`): rendered separately with its own `identifierPrefix`, props round-tripped through JSON, hydrated in the browser by the `kide-island` custom element (`admin/client/entry.ts`). Register new island components in `admin/client/islands.ts`. Islands unmount when removed and hydrate when inserted, which is what lets `EditScripts` swap `[data-kide-refresh]` regions after a save.
 - **The browser bundle** is built by the host's Vite (`kide:admin-assets`) under fixed names `/_kide/admin.{js,css}` so the server build can link it without a manifest.
-- `routes/api/preview/render.astro` is the one Astro file left: it renders the project's own `BlockRenderer.astro` / `ContentRenderer.astro`.
+- Live preview renders the project's own renderers, so it is host-specific: `routes/api/preview/render.astro` (Astro) and `internals/sveltekit/preview.ts` (SvelteKit, a `hostRoutes` entry so Kide's `/api/cms/[collection]/[...path]` catch-all doesn't swallow it). Svelte renderers can't await, so their data comes from `resolveBlocks` / `resolveContent` (`core/render-data.ts`).
+- Config-time entry points loaded by a host's Vite config must survive plain Node: `internals/sveltekit/index.mjs` loads the TypeScript plugin through `tsx`, because Node won't strip types under `node_modules/`.
 
 ## Live Preview Protocol
 
