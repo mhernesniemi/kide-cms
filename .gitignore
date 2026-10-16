@@ -1,5 +1,7 @@
 # build output
 dist/
+/build/
+.svelte-kit/
 # generated types
 .astro/
 .generated/
