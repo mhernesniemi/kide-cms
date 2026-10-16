@@ -235,26 +235,21 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           },
         });
 
-        // Inject admin pages
-        injectRoute({ pattern: "/admin/login", entrypoint: new URL("../routes/admin/login.astro", import.meta.url) });
-        injectRoute({
-          pattern: "/admin/login/verify",
-          entrypoint: new URL("../routes/admin/login/verify.astro", import.meta.url),
-        });
+        const endpoint = new URL("../routes/astro-endpoint.ts", import.meta.url);
+        for (const pattern of [
+          "/admin/login",
+          "/admin/login/verify",
+          "/admin/forgot-password",
+          "/admin/reset-password",
+          "/admin/setup",
+          "/admin/invite",
+        ]) {
+          injectRoute({ pattern, entrypoint: endpoint });
+        }
         injectRoute({
           pattern: "/admin/account",
           entrypoint: new URL("../routes/admin/account.astro", import.meta.url),
         });
-        injectRoute({
-          pattern: "/admin/forgot-password",
-          entrypoint: new URL("../routes/admin/forgot-password.astro", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/admin/reset-password",
-          entrypoint: new URL("../routes/admin/reset-password.astro", import.meta.url),
-        });
-        injectRoute({ pattern: "/admin/setup", entrypoint: new URL("../routes/admin/setup.astro", import.meta.url) });
-        injectRoute({ pattern: "/admin/invite", entrypoint: new URL("../routes/admin/invite.astro", import.meta.url) });
         injectRoute({
           pattern: "/admin/assets",
           entrypoint: new URL("../routes/admin/assets/index.astro", import.meta.url),
@@ -270,7 +265,6 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
 
         // Kide's API and /uploads (Node: uploads dir, CF: R2) go through one router; the
         // preview partial stays its own route because it renders project Astro components.
-        const endpoint = new URL("../routes/astro-endpoint.ts", import.meta.url);
         injectRoute({ pattern: "/uploads/[...path]", entrypoint: endpoint });
         injectRoute({ pattern: "/api/cms/[...path]", entrypoint: endpoint });
         // A page partial (not an endpoint using the Container API, which doesn't

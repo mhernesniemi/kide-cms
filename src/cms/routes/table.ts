@@ -1,6 +1,12 @@
 import type { RouteDefinition } from "./router";
 
 export const cmsRoutes: RouteDefinition[] = [
+  { pattern: "/admin/login", load: () => import("./admin/login") },
+  { pattern: "/admin/login/verify", load: () => import("./admin/login/verify") },
+  { pattern: "/admin/forgot-password", load: () => import("./admin/forgot-password") },
+  { pattern: "/admin/reset-password", load: () => import("./admin/reset-password") },
+  { pattern: "/admin/setup", load: () => import("./admin/setup") },
+  { pattern: "/admin/invite", load: () => import("./admin/invite") },
   { pattern: "/uploads/[...path]", load: () => import("./uploads/[...path]") },
   { pattern: "/api/cms/auth/login", load: () => import("./api/auth/login") },
   { pattern: "/api/cms/auth/forgot-password", load: () => import("./api/auth/forgot-password") },
