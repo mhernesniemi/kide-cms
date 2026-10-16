@@ -1,0 +1,111 @@
+import { desc } from "drizzle-orm";
+import config from "virtual:kide/config";
+import { cms } from "virtual:kide/api";
+import DocumentsDataTable from "../components/DocumentsDataTable";
+import { Island } from "../render/island";
+import { formatDate, getDb, getLabelField, getSchema, getTranslatableFieldNames } from "../../core";
+import { canRead, getVisualStatus } from "../lib/access";
+import type { AdminUser } from "./types";
+
+const RECENT_LIMIT = 50;
+
+export async function loadRecentView(user: AdminUser) {
+  const runtimeContext = user ? { user } : {};
+  const cmsRuntime = cms as Record<string, any>;
+  const defaultLocale = config.locales?.default ?? "en";
+  const locales = config.locales?.supported ?? [];
+
+  // Bulk/system collections hidden from the sidebar (redirects, logs, …) are not
+  // "recent work" either — and they tend to be the biggest tables.
+  const pinnedSlugs = new Set(["taxonomies", "menus", "authors", "users"]);
+  const contentCollections = config.collections.filter(
+    (c) => !c.auth && !pinnedSlugs.has(c.slug) && c.admin?.sidebar !== false && canRead(config, user, c.slug),
+  );
+  // Same rule as ListView: a Locales column is only meaningful with more than one
+  // locale and at least one of the mixed-in collections having translatable fields.
+  const showLocalesColumn =
+    locales.length > 1 && contentCollections.some((cc) => getTranslatableFieldNames(cc).length > 0);
+
+  // Two passes so the page cost stays flat as content grows:
+  //   1. one tiny (_id, _updatedAt) query per collection — index-backed, no JSON
+  //   2. load only the 50 winning documents through the API (access rules,
+  //      translations, published snapshot) instead of 50 × N full documents.
+  const db = await getDb();
+  const schema = getSchema();
+  const candidates: Array<{ id: string; updatedAt: string; collection: (typeof contentCollections)[0] }> = [];
+  for (const cc of contentCollections) {
+    const table = (schema.cmsTables as Record<string, { main: any }>)[cc.slug]?.main;
+    if (!table?._updatedAt) continue;
+    const rows = (await db
+      .select({ id: table._id, updatedAt: table._updatedAt })
+      .from(table)
+      .orderBy(desc(table._updatedAt))
+      .limit(RECENT_LIMIT)) as Array<{ id: string; updatedAt: string }>;
+    for (const row of rows)
+      candidates.push({ id: String(row.id), updatedAt: String(row.updatedAt ?? ""), collection: cc });
+  }
+  candidates.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+  const allEntries: Array<{ doc: Record<string, unknown>; collection: (typeof contentCollections)[0] }> = [];
+  for (const candidate of candidates.slice(0, RECENT_LIMIT)) {
+    // find() (not findById) so per-document read rules apply exactly as in ListView.
+    const [doc] = await cmsRuntime[candidate.collection.slug].find(
+      { where: { _id: candidate.id }, status: "any", locale: defaultLocale, limit: 1 },
+      runtimeContext,
+    );
+    if (doc) allEntries.push({ doc, collection: candidate.collection });
+  }
+
+  const recentRows = allEntries.map(({ doc, collection: cc }) => {
+    const displayTitle = cc.singleton
+      ? cc.labels.singular
+      : String(doc[getLabelField(cc)] ?? doc.slug ?? cc.labels.singular);
+    // Only compute status for collections that opt into drafts. Otherwise it defaults
+    // to "draft" and the recent list shows a misleading badge for non-draftable docs.
+    const status = cc.drafts ? getVisualStatus(doc) : "";
+    return {
+      id: String(doc._id),
+      editHref: `/admin/${cc.slug}/${doc._id}`,
+      status,
+      singleton: cc.singleton,
+      locales: Array.isArray(doc._availableLocales) ? doc._availableLocales.map((l) => String(l)) : [defaultLocale],
+      searchText: displayTitle,
+      values: {
+        title: displayTitle,
+        collection: cc.labels.singular,
+        _status: status,
+        _updatedAt: formatDate(doc._updatedAt),
+      },
+    };
+  });
+
+  return { recentRows, showLocalesColumn };
+}
+
+export function RecentView({ recentRows, showLocalesColumn }: Awaited<ReturnType<typeof loadRecentView>>) {
+  return (
+    <section className="space-y-6 px-4 py-6 lg:py-8 lg:pr-8 lg:pl-12">
+      <div className="flex items-start justify-between gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">Recent</h1>
+      </div>
+      <Island
+        name="DocumentsDataTable"
+        component={DocumentsDataTable}
+        props={{
+          collectionSlug: "recent",
+          draftsEnabled: true,
+          title: "Recent",
+          columns: [
+            { key: "title", label: "Title" },
+            { key: "collection", label: "Collection" },
+            { key: "_status", label: "Status" },
+            { key: "_updatedAt", label: "Updated" },
+          ],
+          data: recentRows,
+          searchPlaceholder: "Filter recent entries...",
+          showLocalesColumn,
+        }}
+      />
+    </section>
+  );
+}

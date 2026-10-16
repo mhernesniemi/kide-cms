@@ -1,0 +1,119 @@
+import config from "virtual:kide/config";
+import { assets, folders } from "virtual:kide/runtime";
+import AssetsGrid from "../../../admin/components/AssetsGrid";
+import { AdminLayout, loadAdminLayout } from "../../../admin/layouts/AdminLayout";
+import { Island } from "../../../admin/render/island";
+import { definePage } from "../../../admin/render/page";
+import type { CmsContext } from "../../context";
+
+const ASSET_PAGE_SIZE = 24;
+
+const load = async (context: CmsContext) => {
+  const user = context.locals.user;
+  const accessibleCollections = config.collections.filter((c) => {
+    const rule = c.access?.read;
+    if (!rule) return true;
+    return rule({ user: user ?? null, doc: null, operation: "read", collection: c.slug });
+  });
+
+  const folderParam = context.url.searchParams.get("folder");
+  // Three sidebar scopes:
+  //   absent    → "all"     → every asset across all folders (unscoped)
+  //   "unfiled" → "unfiled" → assets not in any folder (folder IS NULL)
+  //   "<id>"    → that folder
+  const scope = !folderParam ? "all" : folderParam === "unfiled" ? "unfiled" : folderParam;
+  // Map the scope to the core `folder` filter: undefined = unscoped, null = IS NULL, id = that folder.
+  const folderScope = scope === "all" ? undefined : scope === "unfiled" ? null : scope;
+
+  const search = (context.url.searchParams.get("q") ?? "").trim();
+  const requestedPage = Math.max(1, Number(context.url.searchParams.get("page") ?? "1"));
+
+  // Current folder (for the heading / breadcrumb trail) — only for a real folder scope.
+  const currentFolder = typeof folderScope === "string" ? await folders.findById(folderScope) : null;
+  if (typeof folderScope === "string" && !currentFolder) return context.redirect("/admin/assets");
+
+  // Every folder — the sticky sidebar renders the whole tree as drop targets.
+  const allFolders = await folders.findAll();
+
+  // Assets in the current scope, filtered by name and paginated.
+  const total = await assets.count({ folder: folderScope, search });
+  const totalPages = Math.max(1, Math.ceil(total / ASSET_PAGE_SIZE));
+  const page = Math.min(requestedPage, totalPages);
+  const folderAssets = await assets.find({
+    folder: folderScope,
+    search,
+    limit: ASSET_PAGE_SIZE,
+    offset: (page - 1) * ASSET_PAGE_SIZE,
+  });
+
+  // Breadcrumb trail up to the current folder.
+  const breadcrumbs: Array<{ label: string; href: string; id: string }> = [];
+  if (currentFolder) {
+    let folder: typeof currentFolder | null = currentFolder;
+    const chain: typeof breadcrumbs = [];
+    while (folder) {
+      chain.unshift({ label: folder.name, href: `/admin/assets?folder=${folder._id}`, id: folder._id });
+      folder = folder.parent ? await folders.findById(folder.parent) : null;
+    }
+    breadcrumbs.push(...chain);
+  }
+
+  // Serialize for the React island.
+  const folderData = allFolders.map((f) => ({ _id: f._id, name: f.name, parent: f.parent ?? null }));
+  const assetData = folderAssets.map((a) => ({
+    _id: a._id,
+    filename: a.filename,
+    mimeType: a.mimeType,
+    url: a.url,
+    alt: a.alt,
+    focalX: a.focalX,
+    focalY: a.focalY,
+    _createdAt: a._createdAt,
+  }));
+
+  const layout = await loadAdminLayout(context);
+  return { layout, accessibleCollections, folderData, assetData, breadcrumbs, scope, search, page, totalPages, total };
+};
+
+type Props = Exclude<Awaited<ReturnType<typeof load>>, Response>;
+
+function AssetsPage({
+  layout,
+  accessibleCollections,
+  folderData,
+  assetData,
+  breadcrumbs,
+  scope,
+  search,
+  page,
+  totalPages,
+  total,
+}: Props) {
+  return (
+    <AdminLayout
+      layout={layout}
+      title="Assets | Kide CMS"
+      collections={accessibleCollections}
+      activeCollection="assets"
+      customNav={config.admin?.nav}
+    >
+      <Island
+        name="AssetsGrid"
+        component={AssetsGrid}
+        props={{
+          folders: folderData,
+          assets: assetData,
+          breadcrumbs,
+          scope,
+          search,
+          page,
+          totalPages,
+          total,
+          pageSize: ASSET_PAGE_SIZE,
+        }}
+      />
+    </AdminLayout>
+  );
+}
+
+export const GET = definePage(load, AssetsPage);

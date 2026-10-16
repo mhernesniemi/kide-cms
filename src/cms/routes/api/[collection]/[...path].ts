@@ -292,7 +292,7 @@ export const GET: CmsRoute = async ({ params, url, locals }) => {
 
   // The list table's "URL" column is computed, not stored — resolve it here too so
   // client-side re-fetches (sort/search/page changes) keep showing it. Mirrors
-  // ListView.astro's own getPagePath, since both run server-side against the same collection config.
+  // ListView's own getPagePath, since both run server-side against the same collection config.
   const collection = getCollection(collectionSlug);
   if (collection.preview || collection.pathPrefix) {
     for (const entry of docs as Array<Record<string, unknown>>) {

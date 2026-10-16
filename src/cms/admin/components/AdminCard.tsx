@@ -1,0 +1,26 @@
+import type { ReactNode } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+
+export function AdminCard({
+  title,
+  description,
+  compact = false,
+  className = "",
+  children,
+}: {
+  title: string;
+  description?: string;
+  compact?: boolean;
+  className?: string;
+  children?: ReactNode;
+}) {
+  return (
+    <Card className={className}>
+      <CardHeader className={compact ? "px-3 py-3" : "border-b"}>
+        <CardTitle className={compact ? "text-sm" : undefined}>{title}</CardTitle>
+        {description && <CardDescription>{description}</CardDescription>}
+      </CardHeader>
+      <CardContent className={compact ? "px-3 pb-3" : undefined}>{children}</CardContent>
+    </Card>
+  );
+}

@@ -886,7 +886,7 @@ export default function AssetsGrid({
             )}
             {uploadError && <p className="text-destructive text-sm">{uploadError}</p>}
 
-            {/* Same look and timing as the server-rendered Toast.astro */}
+            {/* Same look and timing as the server-rendered Toast */}
             {uploadNotice && (
               <div className="fixed top-4 left-1/2 z-[60] w-full max-w-sm -translate-x-1/2">
                 <div

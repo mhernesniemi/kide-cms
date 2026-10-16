@@ -39,7 +39,9 @@ const required = [
   "internals/context.ts",
   "middleware/auth.ts",
   "client/preview.ts",
-  "routes/admin/login.astro",
+  "routes/admin/login.tsx",
+  "admin/client/entry.ts",
+  "internals/vite-plugin.ts",
   "platform/node/database.ts",
   "platform/cloudflare/database.ts",
 ];

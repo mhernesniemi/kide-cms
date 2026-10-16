@@ -1,0 +1,303 @@
+import { Plus } from "lucide-react";
+
+import DocumentsDataTable, { PAGE_SIZE } from "../components/DocumentsDataTable";
+import { Island } from "../render/island";
+import type { AdminUser } from "./types";
+import { buttonVariants } from "../components/ui/button";
+import config from "virtual:kide/config";
+import { cms } from "virtual:kide/api";
+import { collaboration } from "virtual:kide/runtime";
+import { REVIEW_STATE_META } from "../lib/collaboration";
+import {
+  formatDate,
+  formatFieldValue,
+  formatPagePath,
+  getPageHref,
+  getLabelField,
+  getListColumns,
+  getTranslatableFieldNames,
+  humanize,
+  resolveCollaboration,
+} from "../../core";
+import { canDelete, canWrite, getVisualStatus } from "../lib/access";
+import { loadRelationOptionList, loadSharedSectionUsageCounts } from "../lib/edit-data";
+
+export type CollectionLike = {
+  slug: string;
+  labels: { singular: string; plural: string };
+  drafts?: boolean;
+  auth?: boolean;
+  preview?: boolean | string;
+  pathPrefix?: string;
+  fields: Record<string, any>;
+  views?: Record<string, any>;
+};
+
+export async function loadListView(url: URL, user: AdminUser, collection: CollectionLike) {
+  const runtimeContext = user ? { user } : {};
+  const cmsRuntime = cms as Record<string, any>;
+  const defaultLocale = config.locales?.default ?? "en";
+  const locales = config.locales?.supported ?? [];
+  // The Locales column only means something when there's more than one locale
+  // and this collection actually has translatable fields to show per-locale.
+  const showLocalesColumn = locales.length > 1 && getTranslatableFieldNames(collection).length > 0;
+
+  // Language filter (?lang=en → documents that exist in English, shown in English;
+  // ?lang=missing:en → documents not translated to English yet). Only offered when
+  // the collection is actually multilingual.
+  const langParam = showLocalesColumn ? (url.searchParams.get("lang") ?? "") : "";
+  const missingLocale = langParam.startsWith("missing:") ? langParam.slice("missing:".length) : "";
+  const langFilter = locales.includes(langParam)
+    ? { locale: langParam, availability: "exact" as const }
+    : locales.includes(missingLocale)
+      ? { locale: missingLocale, availability: "missing" as const }
+      : null;
+  const langHref = (value: string) => {
+    const next = new URL(url);
+    if (value) next.searchParams.set("lang", value);
+    else next.searchParams.delete("lang");
+    next.searchParams.delete("page");
+    return next.pathname + next.search;
+  };
+  // "fi" → "Finnish" (the admin UI is English); unknown codes fall back to the code.
+  const languageNames = new Intl.DisplayNames(["en"], { type: "language", fallback: "code" });
+  const languageName = (locale: string) => languageNames.of(locale) ?? locale.toUpperCase();
+  const langOptions = [
+    { value: "", label: "All languages" },
+    ...locales.map((locale) => ({ value: locale, label: `In ${languageName(locale)}` })),
+    ...locales
+      .filter((locale) => locale !== defaultLocale)
+      .map((locale) => ({ value: `missing:${locale}`, label: `Missing ${languageName(locale)}` })),
+  ].map((option) => ({ ...option, href: langHref(option.value) }));
+  const activeLang = langFilter ? langParam : "";
+
+  const viewConfig = collection.views ?? {};
+  const defaultSort = viewConfig.list?.defaultSort ?? { field: "_updatedAt", direction: "desc" };
+  const sortParam = url.searchParams.get("sort");
+  const sortDirParam = url.searchParams.get("dir");
+  const currentSort = sortParam
+    ? { field: sortParam, direction: (sortDirParam === "asc" ? "asc" : "desc") as "asc" | "desc" }
+    : defaultSort;
+  const currentPage = Math.max(1, Number(url.searchParams.get("page") ?? "1"));
+  const searchParam = url.searchParams.get("q") ?? "";
+  const offset = (currentPage - 1) * PAGE_SIZE;
+
+  const collectionApi = cmsRuntime[collection.slug];
+  const [docs, totalDocs] = await Promise.all([
+    collectionApi.find(
+      {
+        status: "any",
+        locale: langFilter?.locale ?? defaultLocale,
+        availability: langFilter?.availability,
+        sort: currentSort,
+        limit: PAGE_SIZE,
+        offset,
+        search: searchParam || undefined,
+      },
+      runtimeContext,
+    ),
+    collectionApi.count(
+      {
+        status: "any",
+        locale: langFilter?.locale ?? defaultLocale,
+        availability: langFilter?.availability,
+        search: searchParam || undefined,
+      },
+      runtimeContext,
+    ),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(totalDocs / PAGE_SIZE));
+
+  const listColumns = getListColumns(collection, viewConfig.list);
+
+  // Resolve relation columns to their related document labels (id → label) so the
+  // table shows e.g. the form title instead of the raw relation id.
+  const relationLabels: Record<string, string> = {};
+  for (const column of listColumns) {
+    const field = collection.fields[column];
+    if (field?.type !== "relation") continue;
+    const options = await loadRelationOptionList(
+      field.collection,
+      config,
+      cmsRuntime as any,
+      defaultLocale,
+      runtimeContext,
+    );
+    for (const option of options) relationLabels[option.value] = option.label;
+  }
+
+  // Collaboration columns (review state + editor) — only for collections in the
+  // collaboration list that also support drafts. Not sortable (non-DB columns).
+  const collabListColumns =
+    resolveCollaboration(config, collection.slug).enabled && collection.drafts ? ["__review", "__editor"] : [];
+  const displayColumns = [...listColumns, ...collabListColumns];
+
+  // Batch-load review state + editor for the listed documents.
+  let collabStates: Record<string, { reviewState: string; editor: string | null }> = {};
+  const collabUserNames: Record<string, string> = {};
+  if (collabListColumns.length > 0) {
+    collabStates = await collaboration.getStatesForDocs(
+      collection.slug,
+      docs.map((entry: Record<string, unknown>) => String(entry._id)),
+    );
+    const editorIds = [
+      ...new Set(
+        Object.values(collabStates)
+          .map((s) => s.editor)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    if (editorIds.length > 0) {
+      const users = await cmsRuntime.users?.find({ status: "any", limit: 100 }, runtimeContext).catch(() => []);
+      for (const u of users ?? []) collabUserNames[String(u._id)] = String(u.name ?? u.email ?? u._id);
+    }
+  }
+
+  const sharedSectionUsageCounts =
+    collection.slug === "shared-sections"
+      ? await loadSharedSectionUsageCounts(
+          docs.map((entry: Record<string, unknown>) => String(entry._id)),
+          config,
+          user,
+          cmsRuntime as any,
+          defaultLocale,
+          runtimeContext,
+        )
+      : {};
+  const hasPageColumn = displayColumns.includes("__page");
+
+  // Mirrors EditView's own hasPreview/previewUrl logic, so the listed URL matches
+  // what the document's own "Preview" button links to.
+  const getPagePath = (entry: Record<string, unknown>): string | null => {
+    const hasPreview = hasPageColumn && !!(collection.preview || (collection.pathPrefix && entry?.slug));
+    if (!hasPreview) return null;
+    return typeof collection.preview === "string"
+      ? collection.preview
+      : cms.meta.getRouteForDocument(collection.slug, entry);
+  };
+
+  const COLUMN_LABELS: Record<string, string> = {
+    __usage: "Used in",
+    __review: "Review",
+    __editor: "Editor",
+    __page: "URL",
+  };
+  const getColumnLabel = (column: string) => COLUMN_LABELS[column] ?? humanize(column);
+
+  const formatColumnValue = (column: string, entry: Record<string, unknown>, pagePath: string | null): string => {
+    if (column === "__review") {
+      const reviewState = collabStates[String(entry._id)]?.reviewState ?? "in_progress";
+      return REVIEW_STATE_META[reviewState as keyof typeof REVIEW_STATE_META].label;
+    }
+    if (column === "__editor") {
+      const editorId = collabStates[String(entry._id)]?.editor;
+      return editorId ? (collabUserNames[editorId] ?? "—") : "Unassigned";
+    }
+    if (column === "_status") return getVisualStatus(entry);
+    if (column === "__usage") return `${sharedSectionUsageCounts[String(entry._id)] ?? 0} places`;
+    if (column === "__page") return formatPagePath(pagePath);
+    // Timestamps and any `date` field render with the admin date settings, not as raw ISO strings.
+    if (column === "_updatedAt" || column === "_createdAt" || collection.fields[column]?.type === "date")
+      return formatDate(entry[column]);
+    if (column.startsWith("_")) return String(entry[column] ?? "—");
+    return formatFieldValue(collection.fields[column], entry[column], relationLabels);
+  };
+
+  const tableRows = docs.map((entry: Record<string, unknown>) => {
+    const pagePath = getPagePath(entry);
+    return {
+      id: String(entry._id),
+      // Filtered by a language: open that language's tab (for "Missing …", the translation form).
+      editHref: `/admin/${collection.slug}/${entry._id}${langFilter ? `?locale=${langFilter.locale}` : ""}`,
+      status: getVisualStatus(entry),
+      locales: Array.isArray(entry._availableLocales) ? entry._availableLocales.map((l) => String(l)) : [defaultLocale],
+      searchText: String(entry[getLabelField(collection)] ?? entry.slug ?? entry._id ?? ""),
+      pageHref: pagePath ? getPageHref(pagePath, !collection.drafts || entry._status === "published") : undefined,
+      values: Object.fromEntries(displayColumns.map((column) => [column, formatColumnValue(column, entry, pagePath)])),
+    };
+  });
+
+  return {
+    collection,
+    user,
+    showLocalesColumn,
+    defaultLocale,
+    locales,
+    displayColumns,
+    getColumnLabel,
+    tableRows,
+    activeLang,
+    langOptions,
+    totalDocs,
+    totalPages,
+    currentPage,
+    currentSort,
+    searchParam,
+  };
+}
+
+export function ListView({
+  collection,
+  user,
+  showLocalesColumn,
+  defaultLocale,
+  locales,
+  displayColumns,
+  getColumnLabel,
+  tableRows,
+  activeLang,
+  langOptions,
+  totalDocs,
+  totalPages,
+  currentPage,
+  currentSort,
+  searchParam,
+}: Awaited<ReturnType<typeof loadListView>>) {
+  return (
+    <section className="space-y-6 px-4 py-6 lg:py-8 lg:pr-8 lg:pl-12">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{collection.labels.plural}</h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {canWrite(config, user, collection.slug) && (
+            <a href={`/admin/${collection.slug}/new`} className={buttonVariants({})}>
+              <Plus className="size-4" />
+              {collection.slug === "users" ? "Invite user" : `New ${collection.labels.singular}`}
+            </a>
+          )}
+        </div>
+      </div>
+      <Island
+        name="DocumentsDataTable"
+        component={DocumentsDataTable}
+        props={{
+          collectionSlug: collection.slug,
+          draftsEnabled: collection.drafts,
+          duplicateEnabled: !collection.auth && canWrite(config, user, collection.slug),
+          deleteEnabled: canDelete(config, user, collection.slug),
+          showLocalesColumn,
+          defaultLocale: locales.length > 1 ? defaultLocale : undefined,
+          labelField: getLabelField(collection),
+          newHref: `/admin/${collection.slug}/new`,
+          title: collection.labels.plural,
+          columns: displayColumns.map((column) => ({
+            key: column,
+            label: getColumnLabel(column),
+            sortable: !column.startsWith("__"),
+          })),
+          data: tableRows,
+          searchPlaceholder: `Filter ${collection.labels.plural.toLowerCase()}...`,
+          languageFilter: showLocalesColumn ? { active: activeLang, options: langOptions } : undefined,
+          serverPagination: {
+            totalDocs,
+            totalPages,
+            currentPage,
+            currentSort,
+            currentSearch: searchParam,
+          },
+        }}
+      />
+    </section>
+  );
+}

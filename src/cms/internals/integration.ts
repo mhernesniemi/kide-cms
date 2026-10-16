@@ -226,8 +226,8 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
             // corrupt, run `pnpm dev:clean` to nuke and rebuild.
             optimizeDeps: {
               entries: [
-                path.join(adminDir, "**/*.{ts,tsx,astro}"),
-                path.join(routesDir, "admin/**/*.astro"),
+                path.join(adminDir, "**/*.{ts,tsx}"),
+                path.join(routesDir, "admin/**/*.tsx"),
                 path.resolve(root, generatedPath, "**/*.ts"),
                 packagePath("client", "**/*.ts"),
               ],
@@ -235,36 +235,11 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           },
         });
 
+        // Admin pages, Kide's API and /uploads (Node: uploads dir, CF: R2) all go through
+        // Kide's own router. The preview partial stays an Astro route because it renders
+        // the project's Astro components.
         const endpoint = new URL("../routes/astro-endpoint.ts", import.meta.url);
-        for (const pattern of [
-          "/admin/login",
-          "/admin/login/verify",
-          "/admin/forgot-password",
-          "/admin/reset-password",
-          "/admin/setup",
-          "/admin/invite",
-        ]) {
-          injectRoute({ pattern, entrypoint: endpoint });
-        }
-        injectRoute({
-          pattern: "/admin/account",
-          entrypoint: new URL("../routes/admin/account.astro", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/admin/assets",
-          entrypoint: new URL("../routes/admin/assets/index.astro", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/admin/assets/[id]",
-          entrypoint: new URL("../routes/admin/assets/[id].astro", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/admin/[...path]",
-          entrypoint: new URL("../routes/admin/[...path].astro", import.meta.url),
-        });
-
-        // Kide's API and /uploads (Node: uploads dir, CF: R2) go through one router; the
-        // preview partial stays its own route because it renders project Astro components.
+        injectRoute({ pattern: "/admin/[...path]", entrypoint: endpoint });
         injectRoute({ pattern: "/uploads/[...path]", entrypoint: endpoint });
         injectRoute({ pattern: "/api/cms/[...path]", entrypoint: endpoint });
         // A page partial (not an endpoint using the Container API, which doesn't
