@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 import { eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
@@ -9,7 +9,7 @@ import { authResponse, redirectWithCookies } from "./_better-auth";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, clientAddress }) => {
+export const POST: CmsRoute = async ({ request, clientAddress }) => {
   const ipLimit = await hitRateLimit("setup:ip", clientAddress, {
     max: 10,
     windowMs: 15 * 60 * 1000,

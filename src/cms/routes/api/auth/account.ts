@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 
 import { auditRequestMeta, hitRateLimit, logAudit } from "virtual:kide/runtime";
 import { auditActor, getAdminAuth, MIN_PASSWORD_LENGTH, resolveAdminSession } from "../../../core";
@@ -9,7 +9,7 @@ export const prerender = false;
 const back = (params: Record<string, string>) =>
   new Response(null, { status: 303, headers: { Location: `/admin/account?${new URLSearchParams(params)}` } });
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: CmsRoute = async ({ request }) => {
   const session = await resolveAdminSession(request);
   if (!session) return new Response(null, { status: 303, headers: { Location: "/admin/login" } });
 

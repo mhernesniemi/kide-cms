@@ -1,10 +1,10 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 import config from "virtual:kide/config";
 import { AssetInUseError, assets } from "virtual:kide/runtime";
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: CmsRoute = async ({ params }) => {
   const id = params.id;
   if (!id) return Response.json({ error: "Asset ID is required." }, { status: 400 });
 
@@ -19,7 +19,7 @@ const getActor = (locals: App.Locals) => {
   return user ? { id: user.id, email: user.email, role: user.role } : null;
 };
 
-export const PATCH: APIRoute = async ({ params, request, locals }) => {
+export const PATCH: CmsRoute = async ({ params, request, locals }) => {
   const id = params.id;
   if (!id) return Response.json({ error: "Asset ID is required." }, { status: 400 });
 
@@ -43,7 +43,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
   return Response.json(result);
 };
 
-export const DELETE: APIRoute = async ({ params, request, locals }) => {
+export const DELETE: CmsRoute = async ({ params, request, locals }) => {
   const id = params.id;
   if (!id) return new Response(null, { status: 400 });
 
@@ -61,7 +61,7 @@ export const DELETE: APIRoute = async ({ params, request, locals }) => {
   return new Response(null, { status: 204 });
 };
 
-export const POST: APIRoute = async ({ params, request, locals }) => {
+export const POST: CmsRoute = async ({ params, request, locals }) => {
   const id = params.id;
   if (!id) return new Response(null, { status: 400 });
 

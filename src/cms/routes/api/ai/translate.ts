@@ -1,9 +1,9 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 import { isAiEnabled, streamTranslation } from "virtual:kide/runtime";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: CmsRoute = async ({ request }) => {
   if (!isAiEnabled()) {
     return Response.json({ error: "AI features are not enabled." }, { status: 403 });
   }

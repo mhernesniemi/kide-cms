@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 
 import { cms } from "virtual:kide/api";
 import { pruneAuditLog, pruneRateLimits } from "../../../core";
@@ -9,7 +9,7 @@ export const prerender = false;
 
 const cmsRuntime = cms as Record<string, any> & { tasks: typeof cms.tasks };
 
-const handler: APIRoute = async ({ request }) => {
+const handler: CmsRoute = async ({ request }) => {
   if (!isAuthorized(request)) {
     return unauthorized();
   }

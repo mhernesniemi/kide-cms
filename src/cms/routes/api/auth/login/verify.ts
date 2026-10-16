@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../../context";
 
 import { auditRequestMeta, hitRateLimit, logAudit } from "virtual:kide/runtime";
 import { auditActor, getAdminAuth, loadAuthUser } from "../../../../core";
@@ -6,7 +6,7 @@ import { authResponse, readJson, redirectWithCookies } from "../_better-auth";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, clientAddress }) => {
+export const POST: CmsRoute = async ({ request, clientAddress }) => {
   const formData = await request.formData();
   const code = String(formData.get("code") ?? "").replace(/\s+/g, "");
   const useBackupCode = formData.get("method") === "backup";

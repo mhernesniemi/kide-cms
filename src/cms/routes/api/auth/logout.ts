@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 
 import { auditRequestMeta, logAudit } from "virtual:kide/runtime";
 import { auditActor, getAdminAuth, resolveAdminSession } from "../../../core";
@@ -6,7 +6,7 @@ import { authResponse } from "./_better-auth";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: CmsRoute = async ({ request }) => {
   const session = await resolveAdminSession(request);
   const auth = await getAdminAuth(request);
   const response = await authResponse(() => auth.api.signOut({ headers: request.headers, asResponse: true }));

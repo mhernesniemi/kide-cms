@@ -1,9 +1,9 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 import { folders } from "virtual:kide/runtime";
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: CmsRoute = async ({ url }) => {
   const parent = url.searchParams.get("parent");
   if (parent !== null) {
     const items = await folders.findByParent(parent || null);
@@ -13,7 +13,7 @@ export const GET: APIRoute = async ({ url }) => {
   return Response.json(items);
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: CmsRoute = async ({ request }) => {
   const contentType = request.headers.get("content-type") ?? "";
 
   if (contentType.includes("application/json")) {

@@ -176,7 +176,9 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         // Virtual module aliases — resolve route imports to the user's app files
         updateConfig({
           vite: {
-            plugins: [kideAdminAssets({ clientEntry: packagePath("admin", "client", "entry.ts"), adminCss: wrapperCss })],
+            plugins: [
+              kideAdminAssets({ clientEntry: packagePath("admin", "client", "entry.ts"), adminCss: wrapperCss }),
+            ],
             resolve: {
               alias: {
                 "virtual:kide/config": path.resolve(root, configPath),
@@ -266,134 +268,16 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           entrypoint: new URL("../routes/admin/[...path].astro", import.meta.url),
         });
 
-        // /uploads/* streams from the storage adapter (Node: uploads dir, CF: R2).
-        // Both platforms need it: Node's static layer only serves files that
-        // existed at build time, so runtime uploads 404 in production without it.
-        injectRoute({
-          pattern: "/uploads/[...path]",
-          entrypoint: new URL("../routes/uploads/[...path].ts", import.meta.url),
-        });
-
-        // Inject API routes
-        injectRoute({
-          pattern: "/api/cms/auth/login",
-          entrypoint: new URL("../routes/api/auth/login.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/auth/forgot-password",
-          entrypoint: new URL("../routes/api/auth/forgot-password.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/auth/reset-password",
-          entrypoint: new URL("../routes/api/auth/reset-password.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/auth/sso/[provider]/start",
-          entrypoint: new URL("../routes/api/auth/sso/[provider]/start.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/auth/logout",
-          entrypoint: new URL("../routes/api/auth/logout.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/auth/setup",
-          entrypoint: new URL("../routes/api/auth/setup.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/auth/invite",
-          entrypoint: new URL("../routes/api/auth/invite.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/auth/login/verify",
-          entrypoint: new URL("../routes/api/auth/login/verify.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/auth/account",
-          entrypoint: new URL("../routes/api/auth/account.ts", import.meta.url),
-        });
-        // Better Auth's own endpoints (OAuth callbacks, two-factor, passkeys) — allowlisted inside.
-        injectRoute({
-          pattern: "/api/cms/auth/[...all]",
-          entrypoint: new URL("../routes/api/auth/[...all].ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/assets/upload",
-          entrypoint: new URL("../routes/api/assets/upload.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/assets/folders",
-          entrypoint: new URL("../routes/api/assets/folders.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/assets/[id]",
-          entrypoint: new URL("../routes/api/assets/[id].ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/assets",
-          entrypoint: new URL("../routes/api/assets/index.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/asset-usage",
-          entrypoint: new URL("../routes/api/asset-usage.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/collaboration",
-          entrypoint: new URL("../routes/api/collaboration/index.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/edit-bar",
-          entrypoint: new URL("../routes/api/edit-bar.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/ai/alt-text",
-          entrypoint: new URL("../routes/api/ai/alt-text.ts", import.meta.url),
-        });
-        injectRoute({ pattern: "/api/cms/ai/seo", entrypoint: new URL("../routes/api/ai/seo.ts", import.meta.url) });
-        injectRoute({
-          pattern: "/api/cms/ai/translate",
-          entrypoint: new URL("../routes/api/ai/translate.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/cron/publish",
-          entrypoint: new URL("../routes/api/cron/publish.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/cron/tasks",
-          entrypoint: new URL("../routes/api/cron/tasks.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/webhooks/[provider]",
-          entrypoint: new URL("../routes/api/webhooks/[provider].ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/forms/submit/[slug]",
-          entrypoint: new URL("../routes/api/forms/submit/[slug].ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/locks/[...path]",
-          entrypoint: new URL("../routes/api/locks/[...path].ts", import.meta.url),
-        });
+        // Kide's API and /uploads (Node: uploads dir, CF: R2) go through one router; the
+        // preview partial stays its own route because it renders project Astro components.
+        const endpoint = new URL("../routes/astro-endpoint.ts", import.meta.url);
+        injectRoute({ pattern: "/uploads/[...path]", entrypoint: endpoint });
+        injectRoute({ pattern: "/api/cms/[...path]", entrypoint: endpoint });
         // A page partial (not an endpoint using the Container API, which doesn't
         // bundle for production) so live preview works in every deployed build.
         injectRoute({
           pattern: "/api/cms/preview/render",
           entrypoint: new URL("../routes/api/preview/render.astro", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/references/[collection]/[id]",
-          entrypoint: new URL("../routes/api/references/[collection]/[id].ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/img/[...path]",
-          entrypoint: new URL("../routes/api/img/[...path].ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/admin/search",
-          entrypoint: new URL("../routes/api/admin/search.ts", import.meta.url),
-        });
-        injectRoute({
-          pattern: "/api/cms/[collection]/[...path]",
-          entrypoint: new URL("../routes/api/[collection]/[...path].ts", import.meta.url),
         });
 
         // Inject auth middleware

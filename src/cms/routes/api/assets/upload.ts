@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 import { assets } from "virtual:kide/runtime";
 import config from "virtual:kide/config";
 import { PayloadTooLargeError, headerMatchesType, readLimitedFormData } from "../../../core";
@@ -22,7 +22,7 @@ const ALLOWED_TYPES = new Set(config.admin?.uploads?.allowedTypes ?? DEFAULT_ALL
 const MAX_FILE_SIZE = config.admin?.uploads?.maxFileSize ?? 50 * 1024 * 1024; // 50 MB
 const MAX_FILES_PER_UPLOAD = 20;
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: CmsRoute = async ({ request, locals }) => {
   const contentType = request.headers.get("content-type") ?? "";
 
   if (!contentType.includes("multipart/form-data")) {

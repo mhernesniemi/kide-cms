@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 
 import { auditRequestMeta, hitRateLimit, logAudit } from "virtual:kide/runtime";
 import config from "virtual:kide/config";
@@ -61,7 +61,7 @@ const allowedEndpoint = (method: string, path: string) => {
 
 const RATE_LIMITED = new Set(["/two-factor/verify-totp", "/passkey/verify-authentication"]);
 
-const handle: APIRoute = async ({ request, clientAddress }) => {
+const handle: CmsRoute = async ({ request, clientAddress }) => {
   const url = new URL(request.url);
   const path = url.pathname.slice(ADMIN_AUTH_BASE_PATH.length);
   if (!allowedEndpoint(request.method, path)) return Response.json({ error: "Not found" }, { status: 404 });

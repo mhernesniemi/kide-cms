@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
@@ -236,7 +236,7 @@ const getRuntimeContext = (
   };
 };
 
-export const GET: APIRoute = async ({ params, url, locals }) => {
+export const GET: CmsRoute = async ({ params, url, locals }) => {
   const collectionSlug = params.collection;
   if (!collectionSlug) {
     return Response.json({ error: "Collection is required." }, { status: 400 });
@@ -315,7 +315,7 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
   return Response.json({ docs, totalDocs, limit, offset, page, totalPages });
 };
 
-export const POST: APIRoute = async ({ params, request, locals, cache }) => {
+export const POST: CmsRoute = async ({ params, request, locals, cache }) => {
   const collectionSlug = params.collection;
   if (!collectionSlug) {
     return Response.json({ error: "Collection is required." }, { status: 400 });
@@ -409,7 +409,7 @@ export const POST: APIRoute = async ({ params, request, locals, cache }) => {
   return Response.json(created, { status: 201 });
 };
 
-export const PATCH: APIRoute = async ({ params, request, locals, cache }) => {
+export const PATCH: CmsRoute = async ({ params, request, locals, cache }) => {
   const collectionSlug = params.collection;
   if (!collectionSlug) {
     return Response.json({ error: "Collection is required." }, { status: 400 });
@@ -427,7 +427,7 @@ export const PATCH: APIRoute = async ({ params, request, locals, cache }) => {
   return Response.json(updated);
 };
 
-export const DELETE: APIRoute = async ({ params, locals, cache }) => {
+export const DELETE: CmsRoute = async ({ params, locals, cache }) => {
   const collectionSlug = params.collection;
   if (!collectionSlug) {
     return new Response(null, { status: 400 });

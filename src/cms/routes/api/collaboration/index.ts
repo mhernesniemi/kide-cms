@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 import config from "virtual:kide/config";
 import { collaboration } from "virtual:kide/runtime";
 import { isApprover, resolveCollaboration } from "../../../core";
@@ -31,7 +31,7 @@ const authorizeComment = async (commentId: string, actor: { id: string; role?: s
 
 // GET /api/cms/collaboration?collection=<slug>&id=<docId>
 // Returns the full collaboration snapshot for one document.
-export const GET: APIRoute = async ({ url }) => {
+export const GET: CmsRoute = async ({ url }) => {
   const collection = url.searchParams.get("collection");
   const id = url.searchParams.get("id");
   if (!collection || !id) return Response.json({ error: "collection and id are required." }, { status: 400 });
@@ -55,7 +55,7 @@ const authorizeCommentEdit = async (commentId: string, actor: { id: string }) =>
 };
 
 // POST /api/cms/collaboration  { collection, id, action, ...payload }
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: CmsRoute = async ({ request, locals }) => {
   const actor = getActor(locals);
   if (!actor) return Response.json({ error: "Authentication required." }, { status: 401 });
 

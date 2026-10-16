@@ -1,9 +1,9 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 import { assets } from "virtual:kide/runtime";
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: CmsRoute = async ({ url }) => {
   const lookupUrl = url.searchParams.get("url");
   if (lookupUrl) {
     const asset = await assets.findByUrl(lookupUrl);

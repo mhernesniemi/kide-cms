@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../../context";
 import { cms } from "virtual:kide/api";
 import { sendFormSubmissionEmail, isEmailConfigured } from "virtual:kide/email";
 import { hitRateLimit, PayloadTooLargeError, readLimitedFormData, safeUrl } from "../../../../core";
@@ -23,7 +23,7 @@ type FormFieldConfig = {
   options?: string[];
 };
 
-export const POST: APIRoute = async ({ request, params, redirect, clientAddress }) => {
+export const POST: CmsRoute = async ({ request, params, redirect, clientAddress }) => {
   const slug = String(params.slug ?? "");
   if (!slug) return new Response("Not found", { status: 404 });
 

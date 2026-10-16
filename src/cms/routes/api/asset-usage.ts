@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../context";
 import config from "virtual:kide/config";
 import { assets, countAssetUsage, findAssetUsage } from "virtual:kide/runtime";
 
@@ -15,7 +15,7 @@ export const prerender = false;
  * `incomplete` lists collections that could not be searched; a caller must not
  * read an empty result as "unused" while it is non-empty.
  */
-export const GET: APIRoute = async ({ url }) => {
+export const GET: CmsRoute = async ({ url }) => {
   const id = url.searchParams.get("id");
   const ids = url.searchParams.get("ids");
 

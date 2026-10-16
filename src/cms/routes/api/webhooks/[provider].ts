@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 
 import { cms } from "virtual:kide/api";
 import { readEnv } from "virtual:kide/runtime";
@@ -35,7 +35,7 @@ const verifySignature = async (body: string, signatureHeader: string, secret: st
 
 // Verify-then-enqueue: a valid HMAC-signed POST becomes a durable
 // `webhook.<provider>` task; the app handles it in config.integrations.tasks.
-export const POST: APIRoute = async ({ request, params }) => {
+export const POST: CmsRoute = async ({ request, params }) => {
   const provider = String(params.provider ?? "").replace(/[^a-zA-Z0-9_-]/g, "");
   const secret = provider ? readEnv(`WEBHOOK_SECRET_${provider.toUpperCase().replace(/-/g, "_")}`) : undefined;
   if (!secret) {

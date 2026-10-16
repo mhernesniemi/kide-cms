@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../../../context";
 
 import { hitRateLimit } from "virtual:kide/runtime";
 import config from "virtual:kide/config";
@@ -14,7 +14,7 @@ const toLogin = (error: string) =>
 const safeReturnTo = (value: string | null) =>
   value && /^\/admin(?:[/?#]|$)/.test(value) && !value.startsWith("//") ? value : "/admin";
 
-export const GET: APIRoute = async ({ params, request, url, clientAddress }) => {
+export const GET: CmsRoute = async ({ params, request, url, clientAddress }) => {
   const provider = getSsoProvider(config, params.provider ?? "");
   if (!provider) return toLogin("sso-unknown");
 

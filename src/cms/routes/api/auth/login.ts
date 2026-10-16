@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 
 import { auditRequestMeta, logAudit } from "virtual:kide/runtime";
 import config from "virtual:kide/config";
@@ -19,7 +19,7 @@ export const prerender = false;
 const MAX_ATTEMPTS = config.admin?.rateLimit?.maxAttempts ?? 5;
 const WINDOW_MS = config.admin?.rateLimit?.windowMs ?? 15 * 60 * 1000;
 
-export const POST: APIRoute = async ({ request, clientAddress }) => {
+export const POST: CmsRoute = async ({ request, clientAddress }) => {
   const contentType = request.headers.get("content-type") ?? "";
   const isJson = contentType.includes("application/json");
   const auth = resolveAdminAuth(config);

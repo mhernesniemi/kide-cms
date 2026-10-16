@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 
 import { cms } from "virtual:kide/api";
 
@@ -8,7 +8,7 @@ export const prerender = false;
 
 const cmsRuntime = cms as Record<string, any> & { scheduled: typeof cms.scheduled };
 
-const handler: APIRoute = async ({ request, cache }) => {
+const handler: CmsRoute = async ({ request, cache }) => {
   if (!isAuthorized(request)) {
     return unauthorized();
   }

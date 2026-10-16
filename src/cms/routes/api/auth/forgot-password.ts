@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "virtual:kide/db";
@@ -17,7 +17,7 @@ import { authResponse } from "./_better-auth";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, clientAddress }) => {
+export const POST: CmsRoute = async ({ request, clientAddress }) => {
   const auth = resolveAdminAuth(config);
   if (!auth.password.forgotPassword) return Response.json({ error: "Not found" }, { status: 404 });
   // No way to deliver a link: the page explains that instead of pretending to send one.

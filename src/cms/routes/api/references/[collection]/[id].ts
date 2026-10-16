@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../../context";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { SHARED_SECTIONS_COLLECTION, extractSharedSectionRefsFromDocument, getLabelField } from "../../../../core";
@@ -7,7 +7,7 @@ export const prerender = false;
 
 const cmsRuntime = cms as Record<string, any>;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: CmsRoute = async ({ params }) => {
   const { collection: collectionSlug, id: documentId } = params;
   if (!collectionSlug || !documentId) {
     return Response.json({ refs: [] });

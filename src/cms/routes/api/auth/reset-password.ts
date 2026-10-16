@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 
 import { hitRateLimit } from "virtual:kide/runtime";
 import { getAdminAuth, resolveAdminAuth, MIN_PASSWORD_LENGTH } from "../../../core";
@@ -13,7 +13,7 @@ const redirectWithError = (token: string, error: string) =>
     headers: { Location: `/admin/reset-password?token=${encodeURIComponent(token)}&error=${error}` },
   });
 
-export const POST: APIRoute = async ({ request, clientAddress }) => {
+export const POST: CmsRoute = async ({ request, clientAddress }) => {
   const auth = resolveAdminAuth(config);
   if (!auth.password.forgotPassword) return Response.json({ error: "Not found" }, { status: 404 });
 

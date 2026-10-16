@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 import { getStorage, isPublicUploadPath, transformImage } from "../../../core";
 import * as storage from "virtual:kide/storage";
 
@@ -19,7 +19,7 @@ const INLINE_SAFE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "imag
 const originalContentType = (src: string) =>
   MIME_TYPES[src.slice(src.lastIndexOf(".")).toLowerCase()] ?? "application/octet-stream";
 
-export const GET: APIRoute = async ({ params, request, url }) => {
+export const GET: CmsRoute = async ({ params, request, url }) => {
   const src = `/${params.path}`;
   // Public route: only ever serve what assets.upload() wrote. The storage adapters
   // are handed this path as-is, and an object store would happily return any key.

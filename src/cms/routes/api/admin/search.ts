@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../../context";
 
 import { cms } from "virtual:kide/api";
 import config from "virtual:kide/config";
@@ -44,7 +44,7 @@ const csv = (value: string | null) =>
     .map((s) => s.trim())
     .filter(Boolean);
 
-export const GET: APIRoute = async ({ url, locals }) => {
+export const GET: CmsRoute = async ({ url, locals }) => {
   if (!locals.user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }

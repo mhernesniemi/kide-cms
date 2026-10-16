@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { CmsRoute } from "../context";
 // Narrow import (not the core barrel): this route compiles in the Cloudflare
 // profile too, and the barrel drags in Node-only modules.
 import { getStorage } from "../../core/runtime";
@@ -23,7 +23,7 @@ const MIME_TYPES: Record<string, string> = {
 // so anything uploaded after `astro build` is invisible to it; this route is the
 // fallback that makes production uploads servable. Static files win when both
 // exist — same bytes either way.
-export const GET: APIRoute = async ({ params }) => {
+export const GET: CmsRoute = async ({ params }) => {
   const storagePath = `/uploads/${params.path}`;
   const storage = getStorage();
 
