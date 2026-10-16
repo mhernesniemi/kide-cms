@@ -1,0 +1,33 @@
+<svelte:head>
+  <title>Kide CMS</title>
+  <meta name="description" content="A code-first CMS built inside SvelteKit." />
+</svelte:head>
+
+<main class="flex min-h-[calc(100svh-6rem)] flex-col items-center px-6">
+  <div class="flex flex-1 flex-col items-center justify-center text-center">
+    <h1 class="mb-8 text-4xl font-semibold tracking-tight sm:text-5xl">Kide CMS</h1>
+    <p class="mb-10 text-lg text-gray-900">
+      Shape your content model in
+      <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.85em]">src/cms/collections/</code>
+      <br />
+      and register it in
+      <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.85em]">cms.config.ts</code>
+    </p>
+    <div class="flex gap-3">
+      <a
+        href="/admin"
+        class="rounded-md bg-gray-950 px-5 py-2.5 text-sm font-medium text-white no-underline transition-colors hover:bg-gray-700"
+      >
+        Open admin
+      </a>
+      <a
+        href="https://docs.kide.dev"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="rounded-md border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 no-underline transition-colors hover:border-gray-400 hover:text-gray-950"
+      >
+        Documentation
+      </a>
+    </div>
+  </div>
+</main>

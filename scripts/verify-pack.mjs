@@ -42,6 +42,11 @@ const required = [
   "routes/admin/login.tsx",
   "admin/client/entry.ts",
   "internals/vite-plugin.ts",
+  "internals/dev-tasks.ts",
+  "internals/sveltekit/index.mjs",
+  "internals/sveltekit/index.d.mts",
+  "internals/sveltekit/hooks.ts",
+  "routes/handler.ts",
   "platform/node/database.ts",
   "platform/cloudflare/database.ts",
 ];

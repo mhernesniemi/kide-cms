@@ -1,7 +1,7 @@
 {
   "name": "@kidecms/core",
   "version": "0.33.0",
-  "description": "Kide CMS runtime — core library, admin UI, routes, and middleware for Astro. Shipped as TypeScript source.",
+  "description": "Kide CMS runtime — core library, admin UI, routes, and middleware for Astro and SvelteKit. Shipped as TypeScript source.",
   "keywords": [
     "cms",
     "astro",
@@ -29,6 +29,8 @@
     "./astro": "./internals/integration.ts",
     "./vite": "./internals/vite-plugin.ts",
     "./handler": "./routes/handler.ts",
+    "./sveltekit": "./internals/sveltekit/index.mjs",
+    "./sveltekit/hooks": "./internals/sveltekit/hooks.ts",
     "./context": "./internals/context.ts",
     "./youtube": "./core/youtube.ts",
     "./client/preview": "./client/preview.ts",
@@ -88,21 +90,32 @@
     "uqr": "^0.1.3"
   },
   "peerDependencies": {
+    "@sveltejs/kit": "^3.0.0",
     "astro": "^7.0.0",
     "better-sqlite3": "^12.0.0",
     "drizzle-orm": "^0.45.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "sharp": "^0.35.0",
+    "svelte": "^5.0.0",
     "tailwindcss": "^4.0.0",
     "vite": "^8.0.0",
     "zod": "^4.0.0"
   },
   "peerDependenciesMeta": {
+    "@sveltejs/kit": {
+      "optional": true
+    },
+    "astro": {
+      "optional": true
+    },
     "better-sqlite3": {
       "optional": true
     },
     "sharp": {
+      "optional": true
+    },
+    "svelte": {
       "optional": true
     }
   }

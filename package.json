@@ -35,7 +35,8 @@
     "verify:package": "node scripts/verify-package-mode.mjs",
     "verify:starters": "node scripts/verify-starters.mjs",
     "dev:preview": "node scripts/dev-preview.mjs",
-    "test:workers": "vitest run --config vitest.workers.config.ts"
+    "test:workers": "vitest run --config vitest.workers.config.ts",
+    "verify:sveltekit": "node scripts/verify-sveltekit.mjs"
   },
   "dependencies": {
     "@astrojs/node": "^11.1.6",
@@ -57,6 +58,8 @@
     "@cloudflare/vitest-pool-workers": "^0.21.3",
     "@cloudflare/workers-types": "^5.20260918.1",
     "@eslint/js": "^10.0.1",
+    "@sveltejs/kit": "^3.1.0",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.13.5",
     "@types/react": "^19.3.0",
@@ -71,6 +74,7 @@
     "prettier": "^3.9.8",
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-tailwindcss": "^0.7.4",
+    "svelte": "^5.57.2",
     "tsx": "^4.23.13",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.70.0",

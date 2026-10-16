@@ -1,0 +1,22 @@
+{
+  "extends": "$app/tsconfig",
+  "compilerOptions": {
+    "strict": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "test", "*"],
+  "exclude": [
+    "src/service-worker",
+    "src/cms/**/__tests__",
+    "src/cms/**/*.mjs",
+    "src/cms/platform/cloudflare",
+    "src/cms/middleware/auth.ts",
+    "src/cms/routes/astro-endpoint.ts",
+    "src/cms/internals/integration.ts",
+    "eslint.config.mjs"
+  ]
+}

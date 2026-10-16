@@ -1,0 +1,26 @@
+{
+  "dependencies": {
+    "add": {
+      "@sveltejs/adapter-node": "^6.0.0",
+      "@sveltejs/kit": "^3.1.0",
+      "svelte": "^5.57.2"
+    },
+    "remove": ["astro", "@astrojs/node", "@astrojs/react"]
+  },
+  "devDependencies": {
+    "add": {
+      "@sveltejs/vite-plugin-svelte": "^7.3.1",
+      "svelte-check": "^4.7.6",
+      "vite": "^8.3.4"
+    },
+    "remove": ["@astrojs/check", "eslint-plugin-astro", "prettier-plugin-astro"]
+  },
+  "scripts": {
+    "dev": "vite dev",
+    "dev:clean": "rm -rf node_modules/.vite .svelte-kit && vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && eslint ."
+  },
+  "removeScripts": ["check:cloudflare", "verify:cloudflare", "verify:starters", "dev:preview", "test:workers"]
+}
