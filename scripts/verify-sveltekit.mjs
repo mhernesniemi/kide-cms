@@ -7,7 +7,7 @@
 //      KEEP=1 leaves the assembled project in place.
 import { execSync, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -55,6 +55,8 @@ try {
     // Mirrors the Astro Cloudflare target: the D1/R2 profile lives in src/cms/platform/cloudflare,
     // so only configs are swapped and the two platform selectors flipped.
     cpSync(path.join(overlay, "cloudflare/vite.config.ts"), path.join(dir, "vite.config.ts"));
+    cpSync(path.join(overlay, "cloudflare/src"), path.join(dir, "src"), { recursive: true });
+    rmSync(path.join(dir, "server.js"));
     cpSync(path.join(dir, "adapters/cloudflare/drizzle.config.ts"), path.join(dir, "drizzle.config.ts"));
     // database_id must be non-empty for local wrangler dev, even without a real D1.
     const wrangler = readFileSync(path.join(overlay, "cloudflare/wrangler.toml"), "utf8")
@@ -124,18 +126,28 @@ try {
   run("pnpm cms:generate");
   // The template ships no migration history — generate the baseline like create-kide-app does.
   if (cloudflare) run("pnpm exec drizzle-kit generate");
-  // Like verify-cloudflare: the Workers profile is type-checked in this repo by
-  // tsconfig.cloudflare.json — runtime Worker types clash with the DOM types the admin uses.
-  if (!cloudflare) run("pnpm check");
+  run("pnpm check");
   // The scaffold's formatter must load its plugins, and shipped files must already be formatted.
   run("pnpm format:check");
   run("pnpm build");
-  console.log(`[sveltekit-verify] ✓ ${cloudflare ? "build" : "check + build"} clean`);
+  run("git init -q");
+  for (const output of [".svelte-kit", "build"]) {
+    if (!existsSync(path.join(dir, output))) continue;
+    try {
+      execSync(`git check-ignore -q ${output}`, { cwd: dir });
+    } catch {
+      throw new Error(`${output}/ is not gitignored`);
+    }
+  }
+  console.log("[sveltekit-verify] ✓ check + build clean");
 
   if (cloudflare) {
     run(`pnpm exec wrangler d1 migrations apply ${projectName}-db --local`);
     // Production builds refuse to sign admin sessions without a secret.
-    writeFileSync(path.join(dir, ".dev.vars"), "KIDE_AUTH_SECRET=verify-only-secret-0123456789abcdef\n");
+    writeFileSync(
+      path.join(dir, ".dev.vars"),
+      "KIDE_AUTH_SECRET=verify-only-secret-0123456789abcdef\nCRON_SECRET=verify-only-cron\n",
+    );
   } else {
     run("pnpm cms:push");
   }
@@ -164,7 +176,12 @@ async function bootAndProbe(dir) {
     : spawn("node", ["server.js"], {
         cwd: dir,
         stdio: ["ignore", "pipe", "pipe"],
-        env: { ...process.env, PORT: String(port), KIDE_AUTH_SECRET: "verify-only-secret-0123456789abcdef" },
+        env: {
+          ...process.env,
+          PORT: String(port),
+          KIDE_AUTH_SECRET: "verify-only-secret-0123456789abcdef",
+          CRON_SECRET: "verify-only-cron",
+        },
       });
   let output = "";
   child.stdout.on("data", (d) => (output += d));
@@ -296,6 +313,16 @@ async function bootAndProbe(dir) {
       assert(scheduled.status === 200, `GET /__scheduled → ${scheduled.status}`);
       await new Promise((r) => setTimeout(r, 1000));
       assert(output.includes("Cron /api/cms/cron/publish:"), "the cron trigger did not reach /api/cms/cron/publish");
+    }
+
+    // SvelteKit's CSRF check runs before any hook and rejects a cross-site POST that has no
+    // Content-Type, so schedulers use GET or a JSON POST (see the README).
+    for (const init of [{}, { method: "POST", headers: { "Content-Type": "application/json" } }]) {
+      const res = await fetch(`${base}/api/cms/cron/tasks`, {
+        ...init,
+        headers: { Authorization: "Bearer verify-only-cron", ...init.headers },
+      });
+      assert(res.status === 200, `${init.method ?? "GET"} /api/cms/cron/tasks → ${res.status} ${await safeText(res)}`);
     }
 
     const anonymousPreview = await fetch(`${base}/api/cms/preview/render`, {
