@@ -18,9 +18,9 @@ src/
     .generated/           # Auto-generated schema/types/validators/api (do not edit)
     # managed package dirs (published to npm; in package mode these live in node_modules):
     core/                 # CMS runtime library (define, api, auth, schema, content, ...)
-    admin/                # Admin UI (components, layouts, lib)
-    routes/               # Admin pages + API routes (injected by integration)
-    middleware/           # Auth middleware (injected by integration)
+    admin/                # Admin UI (components, layouts, views, lib, render/ = SSR + islands, client/ = browser entry)
+    routes/               # Admin pages (.tsx) + API routes, dispatched by Kide's own router (table.ts)
+    middleware/           # Host-neutral request middleware (gate.ts) + the Astro wrapper (auth.ts)
     client/               # preview.ts — browser-side live-preview client
     platform/             # node / cloudflare database + storage implementations
     internals/            # Runner scripts, integration.ts, cli.mjs (`kide` bin), virtual.d.ts
@@ -115,11 +115,12 @@ If the change touches `src/cms/platform/`, `src/cms/middleware/`, or the request
 | `src/cms/collections/`             | Collection schemas                                    |
 | `src/cms/adapters/`                | Project-specific db / email / storage adapters        |
 | `src/cms/internals/`               | Thin runner scripts (runtime wiring, generator, etc.) |
-| `src/cms/internals/integration.ts` | Astro integration (route injection, virtual modules)  |
+| `src/cms/internals/integration.ts` | Astro integration (catch-all routes, middleware, dev) |
+| `src/cms/internals/vite-plugin.ts` | Host-neutral Vite setup + admin browser bundle        |
 | `src/cms/core/`                    | CMS runtime library (edit to change behavior)         |
 | `src/cms/admin/`                   | Admin UI components, layouts, styles                  |
-| `src/cms/routes/`                  | Admin pages + API routes injected by integration      |
-| `src/cms/middleware/`              | Auth middleware injected by integration               |
+| `src/cms/routes/`                  | Admin pages + API routes; `table.ts` is the route map |
+| `src/cms/middleware/`              | Request middleware (auth, CSRF, request scope)        |
 | `src/cms/client/`                  | Browser-side live-preview client                      |
 
 ## Dual-Distribution Guardrails
@@ -244,6 +245,16 @@ Routes in `src/cms/routes/` import app-specific code via `virtual:kide/*` aliase
 | `virtual:kide/block-renderer`   | `src/components/BlockRenderer.astro`   | Default Astro component                                                                                                         |
 | `virtual:kide/admin-css`        | Generated `.kide/admin.css`            | Side-effect import (styles)                                                                                                     |
 | `virtual:kide/custom-fields`    | Generated `.kide/custom-fields.ts`     | `{ customFields }` — custom admin field components                                                                              |
+| `virtual:kide/admin-assets`     | `internals/vite-plugin.ts`             | Default `{ scripts, styles, inlineModules }` — the admin bundle's URLs (dev server or built `/_kide/*`)                         |
+
+## Admin rendering (no Astro)
+
+The admin does not use Astro pages. Every `/admin/*`, `/api/cms/*` and `/uploads/*` request goes through Kide's router (`routes/router.ts` + `routes/table.ts`, first match wins) behind `kideMiddleware` (`middleware/gate.ts`); Astro only injects catch-all endpoints (`routes/astro-endpoint.ts`) that hand over a `CmsContext`. Other hosts call `handleKideRequest` from `@kidecms/core/handler` and add `kide()` from `@kidecms/core/vite`.
+
+- **Pages** are `definePage(load, Page)` (`admin/render/page.tsx`): `load` reads the request and returns props or a `Response`, `Page` is server-only React rendered with `renderToString`. Async work belongs in loaders — React SSR here has no async components.
+- **Interactive parts** are `<Island name component props>` (`admin/render/island.tsx`): rendered separately with its own `identifierPrefix`, props round-tripped through JSON, hydrated in the browser by the `kide-island` custom element (`admin/client/entry.ts`). Register new island components in `admin/client/islands.ts`. Islands unmount when removed and hydrate when inserted, which is what lets `EditScripts` swap `[data-kide-refresh]` regions after a save.
+- **The browser bundle** is built by the host's Vite (`kide:admin-assets`) under fixed names `/_kide/admin.{js,css}` so the server build can link it without a manifest.
+- `routes/api/preview/render.astro` is the one Astro file left: it renders the project's own `BlockRenderer.astro` / `ContentRenderer.astro`.
 
 ## Live Preview Protocol
 
