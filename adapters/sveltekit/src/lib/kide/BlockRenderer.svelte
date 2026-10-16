@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { SHARED_BLOCK_TYPE, type RenderBlock } from "@kidecms/core";
+  import type { RenderBlock } from "@kidecms/core";
+  // Not from the package root: that would pull the server runtime into the browser bundle.
+  import { SHARED_BLOCK_TYPE } from "@kidecms/core/shared-sections";
   import { blockComponents, blockFileName } from "./blocks";
 
   // Blocks come from `resolveBlocks(cms, doc.blocks)` in your load function.

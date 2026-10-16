@@ -2,13 +2,14 @@
 // Assembles the SvelteKit target (adapters/sveltekit overlay over this repo, Astro userland
 // removed), type-checks and builds it, then boots the Node server and drives real requests
 // through setup, the admin, uploads, a published page and live preview.
-// Run: node scripts/verify-sveltekit.mjs
+// Run: node scripts/verify-sveltekit.mjs [--starter=marketing]   (KEEP=1 leaves the project in place)
 import { execSync, spawn } from "node:child_process";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 const root = process.cwd();
+const starter = process.argv.find((arg) => arg.startsWith("--starter="))?.slice("--starter=".length);
 const dir = mkdtempSync(path.join(tmpdir(), "kide-sveltekit-verify-"));
 const run = (cmd, cwd = dir, env = {}) => execSync(cmd, { cwd, stdio: "inherit", env: { ...process.env, ...env } });
 
@@ -32,10 +33,18 @@ try {
   ]) {
     rmSync(path.join(dir, astroOnly), { recursive: true, force: true });
   }
-  cpSync(path.join(dir, "adapters/sveltekit"), dir, {
+  const overlay = path.join(dir, "adapters/sveltekit");
+  cpSync(overlay, dir, {
     recursive: true,
     filter: (src) => !src.endsWith("README.md") && !src.endsWith("package.patch.json"),
   });
+  if (starter) {
+    // The starter's content model and seed are host-independent; its pages and blocks
+    // come from the Svelte port in starters/sveltekit/.
+    console.log(`[sveltekit-verify] applying the "${starter}" starter`);
+    cpSync(path.join(root, "starters", starter, "src/cms"), path.join(dir, "src/cms"), { recursive: true });
+    cpSync(path.join(root, "starters/sveltekit", starter), dir, { recursive: true });
+  }
   rmSync(path.join(dir, "adapters"), { recursive: true, force: true });
 
   const pkgPath = path.join(dir, "package.json");
@@ -58,6 +67,7 @@ try {
   console.log("[sveltekit-verify] ✓ check + build clean");
 
   run("pnpm cms:push");
+  if (starter) run("pnpm cms:seed");
   console.log("[sveltekit-verify] booting the Node server and driving real requests");
   await bootAndProbe(dir);
   console.log("\n[sveltekit-verify] ✓ SvelteKit target builds AND serves the admin, API and site");
@@ -170,6 +180,24 @@ async function bootAndProbe(dir) {
       preview.status === 200 && previewHtml.includes("Rendered by SvelteKit") && previewHtml.includes("cms-content"),
       `POST /api/cms/preview/render → ${preview.status}\n${previewHtml.slice(0, 500)}`,
     );
+    if (starter === "marketing") {
+      for (const [pathname, expected] of [
+        ["/", 'data-cms="blocks"'],
+        ["/blog", "/blog/"],
+        ["/contact", "/api/cms/forms/submit/contact"],
+      ]) {
+        const res = await fetch(`${base}${pathname}`);
+        const html = await safeText(res);
+        assert(res.status === 200 && html.includes(expected), `GET ${pathname} → ${res.status}, missing ${expected}`);
+        if (pathname === "/blog") {
+          const post = html.match(/href="(\/blog\/[^"]+)"/)?.[1];
+          assert(post, "blog index lists no posts");
+          const postRes = await fetch(`${base}${post}`);
+          assert(postRes.status === 200, `GET ${post} → ${postRes.status}`);
+        }
+      }
+    }
+
     const anonymousPreview = await fetch(`${base}/api/cms/preview/render`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: origin },

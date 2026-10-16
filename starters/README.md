@@ -16,4 +16,5 @@ Each directory here is an overlay that the scaffolder copies **on top of** the b
 - Whole-file replacement: if a starter changes one line of a base file, it ships the entire file. If a base file is unchanged, do not include it.
 - Every starter has a `starter.json` with `{ "name", "label", "hint", "order" }`. `name` matches the directory, `label` and `hint` are shown by the scaffolder prompt, `order` sorts the list (lower first).
 - Pages and components must render without seed content — seeding is optional and an empty database may never produce a 500.
+- `starters/sveltekit/<name>/` is the SvelteKit port of a starter's pages and components (same `src/cms` content model and seed, taken from `starters/<name>/`). It has no `starter.json`, so the scaffolder and `verify-starters` skip it; `node scripts/verify-sveltekit.mjs --starter=<name>` assembles and checks it.
 - Starters are validated by `scripts/verify-starters.mjs`: overlay allowlist, `pnpm check` on the assembled project, seed with row-count verification, build.

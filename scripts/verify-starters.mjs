@@ -47,7 +47,9 @@ db.close();
 
 const starters = existsSync(startersDir)
   ? readdirSync(startersDir, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
+      // Same rule as create-kide-app: a starter is a directory with a starter.json
+      // (starters/sveltekit/ holds host ports of the starters, not a starter itself).
+      .filter((entry) => entry.isDirectory() && existsSync(path.join(startersDir, entry.name, "starter.json")))
       .map((entry) => entry.name)
   : [];
 

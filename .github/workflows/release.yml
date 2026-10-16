@@ -46,6 +46,7 @@ jobs:
       - run: pnpm verify:package
       - run: pnpm verify:cloudflare
       - run: node scripts/verify-sveltekit.mjs
+      - run: node scripts/verify-sveltekit.mjs --starter=marketing
       - run: pnpm verify:starters
       - run: node scripts/verify-upgrade.mjs
 

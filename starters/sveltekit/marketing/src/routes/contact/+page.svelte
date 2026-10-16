@@ -1,0 +1,18 @@
+<script lang="ts">
+  import CmsForm from "@/lib/kide/CmsForm.svelte";
+
+  let { data } = $props();
+</script>
+
+<svelte:head>
+  <title>Contact</title>
+  <meta name="description" content="Get in touch with us." />
+</svelte:head>
+
+<main class="mx-auto max-w-2xl px-6 py-14 sm:py-20">
+  <h1 class="mb-3 text-3xl font-semibold tracking-tight sm:text-4xl">Contact</h1>
+  <p class="mb-10 text-lg leading-relaxed text-gray-600">
+    Tell us about your project and we will get back to you within one business day.
+  </p>
+  <CmsForm form={data.form} />
+</main>

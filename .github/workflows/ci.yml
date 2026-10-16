@@ -100,3 +100,4 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: node scripts/verify-sveltekit.mjs
+      - run: node scripts/verify-sveltekit.mjs --starter=marketing

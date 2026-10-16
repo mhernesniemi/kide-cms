@@ -17,3 +17,4 @@ public/uploads/
 
 # SvelteKit target overlay — Svelte files need prettier-plugin-svelte, which the Astro template doesn't ship.
 adapters/sveltekit/**/*.svelte
+starters/sveltekit/**/*.svelte
