@@ -23,6 +23,7 @@ type IslandProps<P> = {
  * Server-renders a React component the browser hydrates as its own root. Each
  * island renders separately with its own id prefix so useId values match the
  * client's hydrateRoot; props go through JSON so both sides see identical data.
+ * Children are server-rendered once and handed to the component as static HTML.
  */
 export function Island<P extends object>({ name, component: Component, props, children }: IslandProps<P>) {
   const prefix = `k${renderToken}${islandCount++}-`;
@@ -37,7 +38,16 @@ export function Island<P extends object>({ name, component: Component, props, ch
     </Component>
   );
   const html = renderToString(element, { identifierPrefix: prefix });
+  // The slot also travels on its own: a component may not render its children during SSR
+  // (a closed drawer, a portal), and the browser still needs them once it opens.
+  const slotTemplate = slot === undefined ? "" : `<template data-kide-slot>${slot}</template>`;
   return (
-    <kide-island ssr="" component={name} prefix={prefix} props={json} dangerouslySetInnerHTML={{ __html: html }} />
+    <kide-island
+      ssr=""
+      component={name}
+      prefix={prefix}
+      props={json}
+      dangerouslySetInnerHTML={{ __html: html + slotTemplate }}
+    />
   );
 }

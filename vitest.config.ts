@@ -2,6 +2,8 @@ import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // The Astro tsconfig preserves JSX; admin .tsx under test needs React's transform.
+  oxc: { jsx: { runtime: "automatic", importSource: "react" } },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
