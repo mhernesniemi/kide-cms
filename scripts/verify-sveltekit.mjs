@@ -2,7 +2,7 @@
 // Assembles the SvelteKit target (adapters/sveltekit overlay over this repo, Astro userland
 // removed), type-checks and builds it, then boots the Node server and drives real requests
 // through setup, the admin, uploads, a published page and live preview.
-// Run: pnpm verify:sveltekit
+// Run: node scripts/verify-sveltekit.mjs
 import { execSync, spawn } from "node:child_process";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

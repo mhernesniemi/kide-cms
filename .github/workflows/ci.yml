@@ -99,4 +99,4 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm verify:sveltekit
+      - run: node scripts/verify-sveltekit.mjs

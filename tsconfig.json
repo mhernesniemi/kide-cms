@@ -7,13 +7,5 @@
     }
   },
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": [
-    "dist",
-    "docs",
-    "packages",
-    "starters",
-    "src/cms/platform/cloudflare",
-    "adapters/cloudflare",
-    "adapters/sveltekit"
-  ]
+  "exclude": ["dist", "docs", "packages", "starters", "src/cms/platform/cloudflare", "adapters/cloudflare"]
 }

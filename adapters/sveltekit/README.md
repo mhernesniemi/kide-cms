@@ -1,6 +1,6 @@
 # SvelteKit target
 
-Project files for running Kide in a SvelteKit app instead of Astro. Repo-only: `pnpm verify:sveltekit` lays them over this repo (dropping the Astro userland) to build, boot and probe the result; create-kide-app does not offer this target yet.
+Project files for running Kide in a SvelteKit app instead of Astro. Repo-only: `node scripts/verify-sveltekit.mjs` lays them over this repo (dropping the Astro userland) to build, boot and probe the result; create-kide-app does not offer this target yet.
 
 ## How it works
 

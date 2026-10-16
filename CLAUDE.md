@@ -66,7 +66,7 @@ pnpm cms:restore      # restore files from the latest upgrade backup
 pnpm verify:pack      # assert the @kidecms/core publish manifest ships only managed files
 pnpm verify:package   # assemble a package-mode project from HEAD, build+boot it, test eject
 pnpm verify:starters  # assemble each starters/* overlay, check+seed+build it
-pnpm verify:sveltekit # assemble the SvelteKit target (adapters/sveltekit), check+build+boot it, drive real requests
+node scripts/verify-sveltekit.mjs  # assemble the SvelteKit target (adapters/sveltekit), check+build+boot it, drive real requests
 ```
 
 All `cms:*` scripts run through the `kide` bin (`src/cms/internals/cli.mjs`), which works identically in embedded and package mode. `kide eject` converts a package-mode project to embedded (one-way).
