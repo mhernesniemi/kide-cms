@@ -177,7 +177,7 @@ export type { AssetUsageRef, AssetUsageResult } from "./asset-usage";
 export { parseBlocks, parseList, cacheTags } from "./content";
 export { renderRichText, createRichTextFromPlainText, richTextToPlainText, htmlToRichText } from "./richtext";
 export { resolveBlocks, resolveContent } from "./render-data";
-export type { RenderBlock, RenderSegment } from "./render-data";
+export type { PrepareBlock, RenderBlock, RenderSegment } from "./render-data";
 export {
   SHARED_BLOCK_TYPE,
   SHARED_SECTIONS_COLLECTION,

@@ -12,12 +12,16 @@ import { contentSegments } from "./values";
 type RenderStatus = "published" | "any";
 type CmsLike = Record<string, any>;
 
+/** Loads whatever a block component needs that it can't await itself (link targets, related docs). */
+export type PrepareBlock = (type: string, props: Record<string, unknown>) => Promise<Record<string, unknown>>;
+
 export type RenderBlock = Record<string, unknown> & { type?: unknown };
 
 export async function resolveBlocks(
   cms: CmsLike,
   blocks: Array<Record<string, unknown>> = [],
   status: RenderStatus = "published",
+  prepare?: PrepareBlock,
 ): Promise<RenderBlock[]> {
   const resolved: RenderBlock[] = [];
   for (const block of blocks) {
@@ -36,7 +40,14 @@ export async function resolveBlocks(
       resolved.push({ type: SHARED_BLOCK_TYPE, ref: block.ref, title: block.title ?? "Missing shared section" });
     }
   }
-  return resolved;
+  if (!prepare) return resolved;
+  return Promise.all(
+    resolved.map(async (block) =>
+      block.type === SHARED_BLOCK_TYPE
+        ? block
+        : { ...(await prepare(String(block.type ?? ""), block)), type: block.type },
+    ),
+  );
 }
 
 export type RenderSegment =
@@ -48,6 +59,7 @@ export async function resolveContent(
   cms: CmsLike,
   content?: ContentDocument | null,
   status: RenderStatus = "published",
+  prepare?: PrepareBlock,
 ): Promise<RenderSegment[]> {
   // Trim trailing empty paragraphs (an editor artifact of ending the document
   // with a block) so they don't render as visible empty space.
@@ -78,5 +90,10 @@ export async function resolveContent(
       resolved.push({ kind: "missingShared", ref });
     }
   }
-  return resolved;
+  if (!prepare) return resolved;
+  return Promise.all(
+    resolved.map(async (segment) =>
+      segment.kind === "block" ? { ...segment, fields: await prepare(segment.blockType, segment.fields) } : segment,
+    ),
+  );
 }

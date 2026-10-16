@@ -49,6 +49,7 @@ export function kideSvelteKit(options: KideSvelteKitOptions = {}): Plugin[] {
       renderers: options.renderers ?? {
         block: "src/lib/kide/BlockRenderer.svelte",
         content: "src/lib/kide/ContentRenderer.svelte",
+        blockData: "src/lib/kide/block-data.ts",
       },
     }),
   ];

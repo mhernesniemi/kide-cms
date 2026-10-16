@@ -33,8 +33,11 @@ export interface KideViteOptions {
   generatedPath?: string;
   /** Path to the adapters directory (default: "src/cms/adapters") */
   adaptersPath?: string;
-  /** Host components the live-preview render endpoint uses, when the host has one. */
-  renderers?: { block: string; content: string };
+  /**
+   * Host files the live-preview render endpoint uses: the block/content renderers, and
+   * for hosts whose components can't await, the module that prepares block data.
+   */
+  renderers?: { block: string; content: string; blockData?: string };
 }
 
 const ASSETS_ID = "virtual:kide/admin-assets";
@@ -116,6 +119,9 @@ export function kide(options: KideViteOptions = {}): Plugin[] {
           ...(options.renderers && {
             "virtual:kide/block-renderer": path.resolve(root, options.renderers.block),
             "virtual:kide/content-renderer": path.resolve(root, options.renderers.content),
+          }),
+          ...(options.renderers?.blockData && {
+            "virtual:kide/block-data": path.resolve(root, options.renderers.blockData),
           }),
           "virtual:kide/admin-css": adminCss,
           "virtual:kide/custom-fields": customFields,

@@ -79,3 +79,31 @@ describe("resolveContent", () => {
     expect(await resolveContent(fakeCms({}).cms, null)).toEqual([]);
   });
 });
+
+describe("prepare hook", () => {
+  it("prepares blocks and content block fields, but not placeholders", async () => {
+    const { cms } = fakeCms({});
+    const prepare = async (type: string, props: Record<string, unknown>) => ({ ...props, prepared: type });
+    expect(
+      await resolveBlocks(
+        cms,
+        [
+          { type: "hero", heading: "Hi" },
+          { type: SHARED_BLOCK_TYPE, ref: "gone" },
+        ],
+        "any",
+        prepare,
+      ),
+    ).toEqual([
+      { type: "hero", heading: "Hi", prepared: "hero" },
+      { type: SHARED_BLOCK_TYPE, ref: "gone", title: "Missing shared section" },
+    ]);
+    const segments = await resolveContent(
+      cms,
+      { type: "root", children: [{ type: "block", blockType: "cta", fields: { heading: "Go" } }] } as any,
+      "published",
+      prepare,
+    );
+    expect(segments).toEqual([{ kind: "block", blockType: "cta", fields: { heading: "Go", prepared: "cta" } }]);
+  });
+});

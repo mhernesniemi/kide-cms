@@ -125,3 +125,10 @@ declare module "virtual:kide/admin-assets" {
   const assets: { scripts: string[]; styles: string[]; inlineModules: string[] };
   export default assets;
 }
+
+declare module "virtual:kide/block-data" {
+  export const createPrepareBlock: (context: {
+    url: URL;
+    status: "published" | "any";
+  }) => import("../core").PrepareBlock;
+}

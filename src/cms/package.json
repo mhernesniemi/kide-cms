@@ -33,6 +33,7 @@
     "./sveltekit/hooks": "./internals/sveltekit/hooks.ts",
     "./context": "./internals/context.ts",
     "./youtube": "./core/youtube.ts",
+    "./shared-sections": "./core/shared-sections.ts",
     "./client/preview": "./client/preview.ts",
     "./platform/*": "./platform/*.ts",
     "./package.json": "./package.json",
