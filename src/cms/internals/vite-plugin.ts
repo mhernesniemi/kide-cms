@@ -152,6 +152,9 @@ export function kide(options: KideViteOptions = {}): Plugin[] {
       // when deps change. For the rare case where the pre-bundle cache is genuinely
       // corrupt, run `pnpm dev:clean` to nuke and rebuild.
       optimizeDeps: {
+        // Generated under node_modules/, so the optimizer would pre-bundle it like a
+        // dependency and keep serving a stale copy after a field is added.
+        exclude: ["virtual:kide/custom-fields"],
         entries: [
           packagePath("admin", "**/*.{ts,tsx}"),
           packagePath("routes", "admin/**/*.tsx"),
