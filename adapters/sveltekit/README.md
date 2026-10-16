@@ -15,7 +15,7 @@ The CMS itself is unchanged — `src/cms/` is the same package in both hosts. Sv
 
 ## Deploying
 
-`@sveltejs/adapter-node` derives the request origin from the `Host` header and assumes `https` unless `paths.origin` is set. Behind a TLS proxy that's correct; for plain http, set `paths.origin` (in `sveltekit({ paths: { origin } })`), or same-origin form posts are rejected as cross-site. Production also needs `KIDE_AUTH_SECRET`, and the database schema pushed (`pnpm cms:push`) — dev pushes on start, production never does.
+Start the production server with `pnpm start` (`server.js`): it raises adapter-node's request body limit (`BODY_SIZE_LIMIT`, 512K by default) to clear Kide's own upload limits, which `node build` alone would not. `@sveltejs/adapter-node` derives the request origin from the `Host` header and assumes `https` unless `paths.origin` is set. Behind a TLS proxy that's correct; for plain http, set `paths.origin` (in `sveltekit({ paths: { origin } })`), or same-origin form posts are rejected as cross-site. Production also needs `KIDE_AUTH_SECRET`, and the database schema pushed (`pnpm cms:push`) — dev pushes on start, production never does.
 
 ## Cloudflare
 

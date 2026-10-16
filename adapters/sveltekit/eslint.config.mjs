@@ -22,7 +22,7 @@ export default tseslint.config(
   },
   {
     // Standalone Node scripts (build/verify tooling, the kide CLI launcher).
-    files: ["scripts/**/*.mjs", "src/cms/internals/cli.mjs", "src/cms/internals/mcp-worker-boot.mjs"],
+    files: ["scripts/**/*.mjs", "src/cms/internals/cli.mjs", "src/cms/internals/mcp-worker-boot.mjs", "server.js"],
     languageOptions: {
       globals: {
         process: "readonly",

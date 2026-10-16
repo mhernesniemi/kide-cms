@@ -159,7 +159,7 @@ async function bootAndProbe(dir) {
         cwd: dir,
         stdio: ["ignore", "pipe", "pipe"],
       })
-    : spawn("node", ["build"], {
+    : spawn("node", ["server.js"], {
         cwd: dir,
         stdio: ["ignore", "pipe", "pipe"],
         env: { ...process.env, PORT: String(port), KIDE_AUTH_SECRET: "verify-only-secret-0123456789abcdef" },
@@ -221,7 +221,9 @@ async function bootAndProbe(dir) {
       assert(res.status === 200, `GET ${page} → ${res.status}\n${(await safeText(res)).slice(0, 500)}`);
     }
 
-    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    // A realistic size: the Node adapter's default body limit (512K) would reject it.
+    const png = new Uint8Array(2 * 1024 * 1024);
+    png.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
     const form = new FormData();
     form.set("file", new Blob([png], { type: "image/png" }), "probe.png");
     const uploadRes = await fetch(`${base}/api/cms/assets/upload`, authed({ method: "POST", body: form }));
