@@ -9,6 +9,7 @@ import {
 import type { RequestScope, SessionUser } from "../core";
 import { eq } from "drizzle-orm";
 import type { CmsContext } from "../routes/context";
+import { isGuardedPath } from "./paths";
 
 import config from "virtual:kide/config";
 import "virtual:kide/runtime";
@@ -76,7 +77,6 @@ const handle = async (context: CmsContext, next: Next) => {
   }
 
   // Skip auth for public pages and static assets
-  const isAdminRoute = pathname.startsWith("/admin");
   const isAdminApiRoute = pathname.startsWith("/api/cms");
   const isLoginPage = pathname === "/admin/login";
   const isForgotPasswordPage = pathname === "/admin/forgot-password";
@@ -89,11 +89,7 @@ const handle = async (context: CmsContext, next: Next) => {
   const isSetupApi = pathname === "/api/cms/auth/setup";
   const isInvitePage = pathname === "/admin/invite";
 
-  // Public despite the /api/cms prefix: cmsImageUrl() puts these URLs on public pages.
-  // Only reads files under public/, which are served unauthenticated anyway.
-  const isPublicImageApi = pathname.startsWith("/api/cms/img/");
-
-  if ((!isAdminRoute && !isAdminApiRoute) || isPublicImageApi) {
+  if (!isGuardedPath(pathname)) {
     return next();
   }
 

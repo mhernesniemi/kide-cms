@@ -56,12 +56,26 @@ const matchRoute = (route: CompiledRoute, parts: string[]): Record<string, strin
   return parts.length === route.segments.length ? params : null;
 };
 
+/**
+ * Path segments, or null for a malformed path. Empty segments (`//admin`, `/api//cms`)
+ * are refused rather than collapsed: the middleware classifies requests by the raw
+ * pathname, so a router that read `//admin` as `/admin` would serve it unauthenticated.
+ */
+export const pathSegments = (pathname: string): string[] | null => {
+  const trimmed = pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  if (!trimmed.startsWith("/")) return null;
+  if (trimmed === "/") return [];
+  const parts = trimmed.slice(1).split("/");
+  return parts.includes("") ? null : parts;
+};
+
 /** First match wins, so list specific patterns before the catch-alls they overlap. */
 export function createRouter(definitions: RouteDefinition[]) {
   const routes = definitions.map(compile);
 
   const match = (pathname: string) => {
-    const parts = pathname.split("/").filter(Boolean);
+    const parts = pathSegments(pathname);
+    if (!parts) return null;
     for (const route of routes) {
       const params = matchRoute(route, parts);
       if (params) return { route, params };

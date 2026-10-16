@@ -173,6 +173,16 @@ async function bootAndProbe(dir) {
       redirect: "manual",
     });
 
+    // Malformed paths must not slip past the auth check (anonymous, after setup).
+    for (const pathname of ["//admin/recent", "/admin//recent", "/api//cms/assets", "//api/cms/assets"]) {
+      const res = await fetch(`${base}${pathname}`, { redirect: "manual" });
+      const body = await safeText(res);
+      assert(
+        res.status !== 200 || !/kide-island|"items"/.test(body),
+        `anonymous GET ${pathname} → ${res.status}, served Kide content`,
+      );
+    }
+
     const recent = await fetch(`${base}/admin/recent`, authed());
     const recentHtml = await safeText(recent);
     assert(recent.status === 200, `GET /admin/recent → ${recent.status}\n${recentHtml.slice(0, 500)}`);
