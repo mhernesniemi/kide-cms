@@ -3,7 +3,7 @@
 // removed), type-checks and builds it, then boots it — Node server, or the Worker under
 // `wrangler dev` for --target=cloudflare — and drives real requests through setup, the
 // admin, uploads, a published page and live preview (plus the cron trigger on Cloudflare).
-// Run: node scripts/verify-sveltekit.mjs [--starter=marketing] [--target=cloudflare]
+// Run: node scripts/verify-sveltekit.mjs [--starter=marketing] [--target=cloudflare] [--mode=package]
 //      KEEP=1 leaves the assembled project in place.
 import { execSync, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -16,6 +16,9 @@ const arg = (name) => process.argv.find((a) => a.startsWith(`--${name}=`))?.slic
 const starter = arg("starter");
 const target = arg("target") ?? "node";
 const cloudflare = target === "cloudflare";
+// package: install a packed @kidecms/core instead of the embedded workspace runtime.
+const packageMode = arg("mode") === "package";
+const MANAGED = ["admin", "client", "core", "internals", "middleware", "platform", "routes"];
 const projectName = "sk-verify";
 const dir = mkdtempSync(path.join(tmpdir(), "kide-sveltekit-verify-"));
 const run = (cmd, cwd = dir, env = {}) => execSync(cmd, { cwd, stdio: "inherit", env: { ...process.env, ...env } });
@@ -79,6 +82,24 @@ try {
 
   const pkgPath = path.join(dir, "package.json");
   const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
+  if (packageMode) {
+    // Mirrors create-kide-app's package mode: the runtime comes from the published artifact.
+    const packDir = mkdtempSync(path.join(tmpdir(), "kide-sveltekit-pack-"));
+    const tarball = execSync(`pnpm --filter @kidecms/core pack --pack-destination ${packDir}`, {
+      cwd: root,
+      encoding: "utf-8",
+    })
+      .trim()
+      .split("\n")
+      .pop();
+    for (const managed of MANAGED) rmSync(path.join(dir, "src/cms", managed), { recursive: true, force: true });
+    rmSync(path.join(dir, "src/cms/package.json"), { force: true });
+    rmSync(path.join(dir, "pnpm-workspace.yaml"), { force: true });
+    rmSync(path.join(dir, "vitest.workers.config.ts"), { force: true });
+    rmSync(path.join(dir, "scripts/generate-test-fixtures.ts"), { force: true });
+    pkg.dependencies["@kidecms/core"] = `file:${tarball}`;
+    delete pkg.scripts["test:fixtures"];
+  }
   const patches = ["adapters/sveltekit/package.patch.json"];
   if (cloudflare) patches.push("adapters/sveltekit/cloudflare/package.patch.json");
   for (const file of patches) {

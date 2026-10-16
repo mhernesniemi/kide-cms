@@ -101,4 +101,5 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: node scripts/verify-sveltekit.mjs
       - run: node scripts/verify-sveltekit.mjs --starter=marketing
+      - run: node scripts/verify-sveltekit.mjs --mode=package --starter=marketing
       - run: node scripts/verify-sveltekit.mjs --target=cloudflare --starter=marketing

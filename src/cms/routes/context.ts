@@ -1,3 +1,9 @@
+// Every Kide route and host hook imports this module, so these ambient declarations
+// (virtual:kide/* modules, the <kide-island> element) reach the project's type check in
+// package mode too, where the runtime isn't under the project's own include paths.
+/// <reference path="../internals/virtual.d.ts" />
+/// <reference path="../admin/render/jsx.d.ts" />
+
 export interface CmsCache {
   set: (options: false) => void;
   invalidate: (options: { tags: string[] }) => void | Promise<void>;
