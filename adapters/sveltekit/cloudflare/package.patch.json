@@ -8,6 +8,7 @@
   },
   "devDependencies": {
     "add": {
+      "@cloudflare/workers-types": "^5.20260918.1",
       "wrangler": "^4.149.0"
     },
     "moveFromDependencies": ["better-sqlite3"]
@@ -15,5 +16,6 @@
   "scripts": {
     "preview": "vite build && wrangler dev",
     "deploy": "vite build && wrangler deploy"
-  }
+  },
+  "removeScripts": ["start"]
 }

@@ -29,7 +29,7 @@ export async function getFile(storagePath: string): Promise<ArrayBuffer | null> 
 export async function getFileStream(storagePath: string): Promise<{ body: ReadableStream; size: number } | null> {
   const obj = await (await getBucket()).get(toKey(storagePath));
   if (!obj) return null;
-  return { body: obj.body, size: obj.size };
+  return { body: obj.body as unknown as ReadableStream, size: obj.size };
 }
 
 export async function deleteFile(storagePath: string): Promise<void> {

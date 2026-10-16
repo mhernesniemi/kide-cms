@@ -75,7 +75,7 @@ export async function resizeWithImagesBinding(
     .transform(transform)
     .output({ format: OUTPUT_FORMATS[options.format ?? "webp"] ?? "image/webp", quality: options.quality ?? 80 });
 
-  const response = new Response(result.image(), {
+  const response = new Response(result.image() as unknown as ReadableStream, {
     headers: {
       "Content-Type": result.contentType(),
       "Cache-Control": "public, max-age=31536000, immutable",
