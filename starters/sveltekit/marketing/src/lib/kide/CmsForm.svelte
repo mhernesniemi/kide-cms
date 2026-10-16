@@ -33,19 +33,22 @@
       {@const inputId = `${form.slug}-${field.name}`}
       {#if field.type === "textarea"}
         <label for={inputId} class="flex flex-col gap-1 text-sm">
-          <span class="font-medium">{field.label}{#if field.required}<span aria-hidden="true"> *</span>{/if}</span>
+          <span class="font-medium"
+            >{field.label}{#if field.required}<span aria-hidden="true"> *</span>{/if}</span
+          >
           <textarea
             id={inputId}
             name={field.name}
             rows={field.rows ?? 4}
             placeholder={field.placeholder ?? ""}
             required={field.required}
-            class={inputClass}
-          ></textarea>
+            class={inputClass}></textarea>
         </label>
       {:else if field.type === "select"}
         <label for={inputId} class="flex flex-col gap-1 text-sm">
-          <span class="font-medium">{field.label}{#if field.required}<span aria-hidden="true"> *</span>{/if}</span>
+          <span class="font-medium"
+            >{field.label}{#if field.required}<span aria-hidden="true"> *</span>{/if}</span
+          >
           <select id={inputId} name={field.name} required={field.required} class={inputClass}>
             <option value="">Select…</option>
             {#each field.options ?? [] as opt (opt)}
@@ -56,7 +59,9 @@
       {:else if field.type === "radio"}
         <!-- A radio group needs the label for the whole group, hence fieldset/legend. -->
         <fieldset class="flex flex-col gap-1 text-sm">
-          <legend class="font-medium">{field.label}{#if field.required}<span aria-hidden="true"> *</span>{/if}</legend>
+          <legend class="font-medium"
+            >{field.label}{#if field.required}<span aria-hidden="true"> *</span>{/if}</legend
+          >
           {#each field.options ?? [] as opt, index (opt)}
             <label for={`${inputId}-${index}`} class="flex items-center gap-2">
               <input id={`${inputId}-${index}`} type="radio" name={field.name} value={opt} required={field.required} />
@@ -67,12 +72,16 @@
       {:else if field.type === "checkbox"}
         <label for={inputId} class="flex items-center gap-2 text-sm">
           <input id={inputId} type="checkbox" name={field.name} required={field.required} />
-          <span>{field.label}{#if field.required}<span aria-hidden="true"> *</span>{/if}</span>
+          <span
+            >{field.label}{#if field.required}<span aria-hidden="true"> *</span>{/if}</span
+          >
         </label>
       {:else}
         <!-- text | email | tel | number — the block type doubles as the input type -->
         <label for={inputId} class="flex flex-col gap-1 text-sm">
-          <span class="font-medium">{field.label}{#if field.required}<span aria-hidden="true"> *</span>{/if}</span>
+          <span class="font-medium"
+            >{field.label}{#if field.required}<span aria-hidden="true"> *</span>{/if}</span
+          >
           <input
             id={inputId}
             type={field.type}

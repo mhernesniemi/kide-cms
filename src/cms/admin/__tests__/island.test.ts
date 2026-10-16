@@ -60,7 +60,9 @@ describe("Island", () => {
     expect(document.querySelector('nav a[href="/admin/recent"]')?.textContent).toBe("Recent");
 
     // The nested island arrived as static HTML inside the slot and hydrates on insertion.
-    await settle(() => document.querySelectorAll("kide-island[ssr]").length === 0 && !!document.querySelector("#count"));
+    await settle(
+      () => document.querySelectorAll("kide-island[ssr]").length === 0 && !!document.querySelector("#count"),
+    );
     await act(async () => {
       document.querySelector<HTMLButtonElement>("#count")!.click();
     });

@@ -9,6 +9,8 @@ pnpm-lock.yaml
 # Build output, caches, and local data.
 dist/
 .astro/
+build/
+.svelte-kit/
 .wrangler/
 .cms-cache/
 .kide/

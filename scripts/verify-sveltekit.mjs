@@ -116,7 +116,7 @@ try {
     Object.assign(pkg.scripts, patch.scripts);
     for (const name of patch.removeScripts ?? []) delete pkg.scripts[name];
   }
-  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
+  writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
 
   console.log("[sveltekit-verify] installing, checking, building");
   // --no-frozen-lockfile: the dep swap above diverges from the lockfile; CI defaults to frozen
@@ -127,6 +127,8 @@ try {
   // Like verify-cloudflare: the Workers profile is type-checked in this repo by
   // tsconfig.cloudflare.json — runtime Worker types clash with the DOM types the admin uses.
   if (!cloudflare) run("pnpm check");
+  // The scaffold's formatter must load its plugins, and shipped files must already be formatted.
+  run("pnpm format:check");
   run("pnpm build");
   console.log(`[sveltekit-verify] ✓ ${cloudflare ? "build" : "check + build"} clean`);
 

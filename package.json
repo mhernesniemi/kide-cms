@@ -74,6 +74,7 @@
     "oauth2-mock-server": "^9.2.0",
     "prettier": "^3.9.8",
     "prettier-plugin-astro": "^0.14.1",
+    "prettier-plugin-svelte": "^4.1.1",
     "prettier-plugin-tailwindcss": "^0.7.4",
     "svelte": "^5.57.2",
     "tsx": "^4.23.13",

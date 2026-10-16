@@ -19,7 +19,9 @@
         <a href={`/blog/${post.slug}`} class="group block py-6 no-underline">
           <article>
             {#if post.publishedAt}
-              <time class="mb-1 block text-xs text-gray-400" datetime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
+              <time class="mb-1 block text-xs text-gray-400" datetime={post.publishedAt}
+                >{formatDate(post.publishedAt)}</time
+              >
             {/if}
             <h2 class="mb-1.5 text-lg font-medium transition-colors group-hover:text-gray-500">{post.title}</h2>
             {#if post.excerpt}<p class="m-0 text-sm leading-relaxed text-gray-600">{post.excerpt}</p>{/if}

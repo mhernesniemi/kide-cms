@@ -14,8 +14,7 @@
     <BlockRenderer blocks={data.blocks} />
   {:else}
     <p class="py-20 text-gray-500">
-      No content yet. Open the <a href="/admin" class="text-gray-950 underline">admin</a> and publish
-      the Front page.
+      No content yet. Open the <a href="/admin" class="text-gray-950 underline">admin</a> and publish the Front page.
     </p>
   {/if}
 </main>

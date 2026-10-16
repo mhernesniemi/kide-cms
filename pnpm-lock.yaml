@@ -128,9 +128,12 @@ importers:
       prettier-plugin-astro:
         specifier: ^0.14.1
         version: 0.14.1
+      prettier-plugin-svelte:
+        specifier: ^4.1.1
+        version: 4.1.1(prettier@3.9.8)(svelte@5.57.2(@typescript-eslint/types@8.70.0))
       prettier-plugin-tailwindcss:
         specifier: ^0.7.4
-        version: 0.7.4(prettier-plugin-astro@0.14.1)(prettier@3.9.8)
+        version: 0.7.4(prettier-plugin-astro@0.14.1)(prettier-plugin-svelte@4.1.1(prettier@3.9.8)(svelte@5.57.2(@typescript-eslint/types@8.70.0)))(prettier@3.9.8)
       svelte:
         specifier: ^5.57.2
         version: 5.57.2(@typescript-eslint/types@8.70.0)
@@ -4327,6 +4330,13 @@ packages:
   prettier-plugin-astro@0.14.1:
     resolution: {integrity: sha512-RiBETaaP9veVstE4vUwSIcdATj6dKmXljouXc/DDNwBSPTp8FRkLGDSGFClKsAFeeg+13SB0Z1JZvbD76bigJw==}
     engines: {node: ^14.15.0 || >=16.0.0}
+
+  prettier-plugin-svelte@4.1.1:
+    resolution: {integrity: sha512-wXvbXMjSvb4C9ENWTHXyd+ihakKCsJ6rJhLP6/8HFNj4GkZr48jqL9PoKsl2sk7SyCZRTnJ7O2TTowUpOxP/KA==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      prettier: ^3.0.0
+      svelte: ^5.0.0
 
   prettier-plugin-tailwindcss@0.7.4:
     resolution: {integrity: sha512-UKii4RjY05SNt/WQi6/NcOn/LsT0/ILLXsxygjbRg5/YZelsSu5jTqorYHPDGq4nZy5q5hpCu+XdGZ1xaJEQgw==}
@@ -9359,11 +9369,17 @@ snapshots:
       prettier: 3.9.8
       sass-formatter: 0.7.9
 
-  prettier-plugin-tailwindcss@0.7.4(prettier-plugin-astro@0.14.1)(prettier@3.9.8):
+  prettier-plugin-svelte@4.1.1(prettier@3.9.8)(svelte@5.57.2(@typescript-eslint/types@8.70.0)):
+    dependencies:
+      prettier: 3.9.8
+      svelte: 5.57.2(@typescript-eslint/types@8.70.0)
+
+  prettier-plugin-tailwindcss@0.7.4(prettier-plugin-astro@0.14.1)(prettier-plugin-svelte@4.1.1(prettier@3.9.8)(svelte@5.57.2(@typescript-eslint/types@8.70.0)))(prettier@3.9.8):
     dependencies:
       prettier: 3.9.8
     optionalDependencies:
       prettier-plugin-astro: 0.14.1
+      prettier-plugin-svelte: 4.1.1(prettier@3.9.8)(svelte@5.57.2(@typescript-eslint/types@8.70.0))
 
   prettier@3.9.8: {}
 
