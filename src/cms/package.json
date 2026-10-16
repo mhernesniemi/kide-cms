@@ -27,6 +27,8 @@
   "exports": {
     ".": "./core/index.ts",
     "./astro": "./internals/integration.ts",
+    "./vite": "./internals/vite-plugin.ts",
+    "./handler": "./routes/handler.ts",
     "./context": "./internals/context.ts",
     "./youtube": "./core/youtube.ts",
     "./client/preview": "./client/preview.ts",

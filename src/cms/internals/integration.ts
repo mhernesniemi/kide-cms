@@ -4,8 +4,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, watch, 
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { analyzeSharedDeps, formatConflicts } from "./shared-deps";
-import { kideAdminAssets } from "./vite-plugin";
+import { kide } from "./vite-plugin";
 
 // All runtime files resolve relative to this module, never the project root, so
 // the integration works identically embedded (workspace package in the project
@@ -15,16 +14,6 @@ const packageDir = realpathSync(path.dirname(fileURLToPath(import.meta.url)));
 const packageRoot = path.dirname(packageDir);
 const packagePath = (...segments: string[]) => path.join(packageRoot, ...segments);
 const requireFromPackage = createRequire(import.meta.url);
-
-// Locate a file inside a dependency without going through its exports map
-// (needed for CSS-only packages whose exports have no importable condition).
-const resolvePackageFile = (pkg: string, file: string) => {
-  for (const base of requireFromPackage.resolve.paths(pkg) ?? []) {
-    const candidate = path.join(base, pkg, file);
-    if (existsSync(candidate)) return candidate;
-  }
-  throw new Error(`[kide] Could not locate ${file} in package "${pkg}".`);
-};
 
 export interface CmsIntegrationOptions {
   /** Path to the CMS config file (default: "src/cms/cms.config") */
@@ -115,123 +104,22 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
   return {
     name: "kide-cms",
     hooks: {
-      "astro:config:setup": ({ command, updateConfig, injectRoute, injectScript, addMiddleware, logger }) => {
+      "astro:config:setup": ({ command, updateConfig, injectRoute, injectScript, addMiddleware }) => {
         const root = process.cwd();
 
-        // One copy per library the admin shares with the project — see shared-deps.ts.
-        const sharedDeps = analyzeSharedDeps({
-          projectRoot: root,
-          packageFile: packagePath("package.json"),
-          dependencies: JSON.parse(readFileSync(packagePath("package.json"), "utf8")).dependencies ?? {},
-        });
-        if (sharedDeps.conflicts.length > 0) logger.warn(formatConflicts(sharedDeps.conflicts));
-
-        // Generate a wrapper CSS: Tailwind sources + the core admin chrome +
-        // the project's theme file. Chrome (layers, focus, editor styles,
-        // variants) is core-owned and updates with the package; the project
-        // file defines only color tokens.
-        const adminDir = packagePath("admin");
-        const routesDir = packagePath("routes");
-        const adminBaseCss = path.join(adminDir, "admin-base.css");
-        // tw-animate-css is a CSS-only package (exports only a "style" condition),
-        // so Node resolution can't reach into it — walk the module paths instead.
-        const twAnimateCssPath = resolvePackageFile("tw-animate-css", "dist/tw-animate.css");
-        const userAdminCss = path.resolve(root, "src/styles/admin.css");
-        const generatedDir = path.join(root, "node_modules", ".kide");
-        mkdirSync(generatedDir, { recursive: true });
-        const wrapperCss = path.join(generatedDir, "admin.css");
-        writeFileSync(
-          wrapperCss,
-          [
-            `@source "${adminDir}";`,
-            `@source "${routesDir}";`,
-            `@import "${adminBaseCss}";`,
-            `@import "${twAnimateCssPath}";`,
-            `@import "${userAdminCss}";`,
-            "",
-          ].join("\n"),
-        );
-
-        // Generate custom field components barrel (user-authored fields live
-        // project-side in src/cms/fields/, outside the managed runtime dirs)
-        const customFieldsDir = path.resolve(root, "src/cms/fields");
-        const customFieldsBarrel = path.join(generatedDir, "custom-fields.ts");
-        const generateFieldsBarrel = () => {
-          if (existsSync(customFieldsDir)) {
-            const files = readdirSync(customFieldsDir).filter((f) => f.endsWith(".tsx"));
-            const imports = files.map((f) => {
-              const name = f.replace(".tsx", "");
-              return `  "${name}": (await import("${path.join(customFieldsDir, f)}")).default,`;
-            });
-            writeFileSync(
-              customFieldsBarrel,
-              `export const customFields: Record<string, any> = {\n${imports.join("\n")}\n};\n`,
-            );
-          } else {
-            writeFileSync(customFieldsBarrel, "export const customFields: Record<string, any> = {};\n");
-          }
-        };
-        generateFieldsBarrel();
-
-        // Virtual module aliases — resolve route imports to the user's app files
         updateConfig({
           vite: {
-            plugins: [
-              kideAdminAssets({ clientEntry: packagePath("admin", "client", "entry.ts"), adminCss: wrapperCss }),
-            ],
-            resolve: {
-              alias: {
-                "virtual:kide/config": path.resolve(root, configPath),
-                "virtual:kide/api": path.resolve(root, generatedPath, "api"),
-                "virtual:kide/schema": path.resolve(root, generatedPath, "schema"),
-                "virtual:kide/runtime": path.resolve(root, runtimePath),
-                "virtual:kide/db": path.resolve(root, adaptersPath, "db"),
-                "virtual:kide/email": path.resolve(root, adaptersPath, "email"),
-                "virtual:kide/storage": path.resolve(root, adaptersPath, "storage"),
-                "virtual:kide/block-renderer": path.resolve(root, "src/components/BlockRenderer.astro"),
-                "virtual:kide/content-renderer": path.resolve(root, "src/components/ContentRenderer.astro"),
-                "virtual:kide/admin-css": wrapperCss,
-                "virtual:kide/custom-fields": customFieldsBarrel,
+            plugins: kide({
+              root,
+              configPath,
+              runtimePath,
+              generatedPath,
+              adaptersPath,
+              renderers: {
+                block: "src/components/BlockRenderer.astro",
+                content: "src/components/ContentRenderer.astro",
               },
-              // Two React copies (project + package) break hooks/context identity, and two
-              // copies of any admin UI library break Vite's pre-bundling (shared-deps.ts).
-              dedupe: ["react", "react-dom", ...sharedDeps.dedupe],
-            },
-            // The package ships TypeScript/Astro source — Vite must compile it
-            // rather than treat it as an external Node dependency in SSR.
-            ssr: {
-              noExternal: ["@kidecms/core"],
-            },
-            // Pre-bundle admin component deps.
-            //
-            // Admin components live under src/cms/admin/ but are only reached via injected
-            // routes, so Vite's default dep scanner (which starts from index.html) skips
-            // them entirely. Without pre-bundling, packages like @tiptap/react are served
-            // raw to the browser; their CJS sub-deps (use-sync-external-store/shim) break
-            // ESM imports; React hydration silently fails; fields render but don't respond
-            // to clicks (and appear to "disappear" when interacted with).
-            //
-            // `entries` points the dep scanner directly at every admin source file. We
-            // include admin/, the injected routes, .generated/ (api.ts, schema.ts), and
-            // client/ — all paths that can introduce a browser-side dep. If any one is
-            // missing and a request hits a code path with an undiscovered dep, Vite
-            // re-optimizes mid-session, which 504s in-flight chunk requests with
-            // "Outdated Optimize Dep" and breaks hydration on whatever tab is open
-            // (appears as random "React fields stop working" failures).
-            //
-            // We intentionally do NOT set `force: true` here. Forcing re-optimization on
-            // every dev start regenerates chunk hashes, which 504s any browser tab opened
-            // before the restart. Vite's content-based hash already invalidates correctly
-            // when deps change. For the rare case where the pre-bundle cache is genuinely
-            // corrupt, run `pnpm dev:clean` to nuke and rebuild.
-            optimizeDeps: {
-              entries: [
-                path.join(adminDir, "**/*.{ts,tsx}"),
-                path.join(routesDir, "admin/**/*.tsx"),
-                path.resolve(root, generatedPath, "**/*.ts"),
-                packagePath("client", "**/*.ts"),
-              ],
-            },
+            }),
           },
         });
 
