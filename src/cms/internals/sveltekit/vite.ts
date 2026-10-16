@@ -23,16 +23,17 @@ export function kideSvelteKit(options: KideSvelteKitOptions = {}): Plugin[] {
     name: "kide:sveltekit",
     // Runs before module resolution, so .generated/ exists when routes import it.
     // Once per process: SvelteKit's server and client builds share one.
-    config() {
+    config(_, env) {
       if (!generated) {
         generated = true;
         runGenerator(root, generatorPath);
       }
       // The admin is React; a SvelteKit project has no React plugin to compile its JSX.
       const jsx = { oxc: { jsx: { runtime: "automatic" as const, importSource: "react" } } };
-      if (options.platform !== "cloudflare") return jsx;
+      if (options.platform !== "cloudflare" || env.command !== "build") return jsx;
       // Workers can't require() at runtime: bundle every dependency into the server
       // output and resolve worker builds of them, as Astro's Cloudflare adapter does.
+      // Build only — `vite dev` runs on Node against wrangler's platform proxy.
       return {
         ...jsx,
         ssr: {

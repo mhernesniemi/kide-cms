@@ -46,10 +46,13 @@ function isCloudflareD1(cwd: string): boolean {
   }
 }
 
+// Miniflare keeps its own metadata.sqlite next to the D1 database files.
+const isLocalD1File = (file: string) => file.endsWith(".sqlite") && file !== "*.sqlite" && file !== "metadata.sqlite";
+
 function hasLocalD1Database(cwd: string): boolean {
   const dir = path.join(cwd, ".wrangler/state/v3/d1/miniflare-D1DatabaseObject");
   try {
-    return readdirSync(dir).some((file) => file.endsWith(".sqlite") && file !== "*.sqlite");
+    return readdirSync(dir).some(isLocalD1File);
   } catch {
     return false;
   }

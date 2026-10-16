@@ -7,7 +7,8 @@ function getLocalD1Path(): string | null {
   const dir = ".wrangler/state/v3/d1/miniflare-D1DatabaseObject";
   if (!existsSync(dir)) return null;
   try {
-    const file = readdirSync(dir).find((f) => f.endsWith(".sqlite") && f !== "*.sqlite");
+    // Miniflare keeps its own metadata.sqlite next to the D1 database file.
+    const file = readdirSync(dir).find((f) => f.endsWith(".sqlite") && f !== "*.sqlite" && f !== "metadata.sqlite");
     return file ? `${dir}/${file}` : null;
   } catch {
     return null;
