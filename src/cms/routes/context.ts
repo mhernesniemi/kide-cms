@@ -1,8 +1,11 @@
 // Every Kide route and host hook imports this module, so these ambient declarations
 // (virtual:kide/* modules, the <kide-island> element) reach the project's type check in
 // package mode too, where the runtime isn't under the project's own include paths.
+// Script declaration files (no exports), so an import can't stand in for these.
+/* eslint-disable @typescript-eslint/triple-slash-reference */
 /// <reference path="../internals/virtual.d.ts" />
 /// <reference path="../admin/render/jsx.d.ts" />
+/* eslint-enable @typescript-eslint/triple-slash-reference */
 
 export interface CmsCache {
   set: (options: false) => void;
