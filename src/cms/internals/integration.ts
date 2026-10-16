@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { analyzeSharedDeps, formatConflicts } from "./shared-deps";
+import { kideAdminAssets } from "./vite-plugin";
 
 // All runtime files resolve relative to this module, never the project root, so
 // the integration works identically embedded (workspace package in the project
@@ -175,6 +176,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
         // Virtual module aliases — resolve route imports to the user's app files
         updateConfig({
           vite: {
+            plugins: [kideAdminAssets({ clientEntry: packagePath("admin", "client", "entry.ts"), adminCss: wrapperCss })],
             resolve: {
               alias: {
                 "virtual:kide/config": path.resolve(root, configPath),

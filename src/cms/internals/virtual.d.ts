@@ -120,3 +120,8 @@ declare module "virtual:kide/email" {
   ): Promise<boolean>;
   export function isEmailConfigured(): boolean;
 }
+
+declare module "virtual:kide/admin-assets" {
+  const assets: { scripts: string[]; styles: string[]; inlineModules: string[] };
+  export default assets;
+}
