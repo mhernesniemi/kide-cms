@@ -67,5 +67,11 @@ describe("Island", () => {
       document.querySelector<HTMLButtonElement>("#count")!.click();
     });
     await settle(() => document.querySelector("#count")?.textContent === "count 1");
+
+    // Removing the islands unmounts their roots (a microtask); do it before jsdom is torn down.
+    await act(async () => {
+      document.body.innerHTML = "";
+      await Promise.resolve();
+    });
   });
 });
