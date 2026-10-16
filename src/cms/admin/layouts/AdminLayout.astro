@@ -1,0 +1,26 @@
+---
+// For custom admin pages in Astro projects (`@kidecms/core/admin/layouts/AdminLayout.astro`).
+// Kide's own pages render AdminLayout.tsx directly; this wraps it around the page's slot.
+import { createElement } from "react";
+import { renderToString } from "react-dom/server";
+import { resetIslands } from "../render/island";
+import { AdminLayout, loadAdminLayout } from "./AdminLayout";
+
+type Props = {
+  title?: string;
+  collections?: Parameters<typeof AdminLayout>[0]["collections"];
+  activeCollection?: string | null;
+  embed?: boolean;
+  customNav?: Parameters<typeof AdminLayout>[0]["customNav"];
+};
+
+const SLOT = "<!--kide-admin-slot-->";
+const layout = await loadAdminLayout(Astro);
+resetIslands();
+const html = renderToString(
+  createElement(AdminLayout, { ...(Astro.props as Props), layout }, createElement("kide-admin-slot")),
+).replace("<kide-admin-slot></kide-admin-slot>", SLOT);
+const [before, after] = html.split(SLOT);
+---
+
+<Fragment set:html={`<!doctype html>${before}`} /><slot /><Fragment set:html={after} />

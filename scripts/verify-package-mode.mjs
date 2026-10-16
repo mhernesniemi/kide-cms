@@ -5,7 +5,7 @@
 // requests through setup/login/upload. This is the anti-drift gate proving the
 // same source serves both distribution modes. Run: pnpm verify:package
 import { execFileSync, execSync, spawn } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -47,6 +47,21 @@ try {
   delete pkg.devDependencies["jsdom"];
   rmSync(path.join(project, "scripts/generate-test-fixtures.ts"), { force: true });
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
+  // A custom admin page exactly as the docs show it, so the documented layout import stays working.
+  mkdirSync(path.join(project, "src/pages/admin"), { recursive: true });
+  writeFileSync(
+    path.join(project, "src/pages/admin/custom-check.astro"),
+    [
+      "---",
+      'import AdminLayout from "@kidecms/core/admin/layouts/AdminLayout.astro";',
+      "---",
+      "",
+      '<AdminLayout title="Custom | Admin">',
+      "  <h1>custom-page-ok</h1>",
+      "</AdminLayout>",
+      "",
+    ].join("\n"),
+  );
   // Keep pnpm-lock.yaml: only the @kidecms/core dep re-resolves; everything else
   // stays pinned (mirrors how create-kide-app scaffolds from a cloned tag).
 
@@ -160,6 +175,15 @@ async function bootAndProbe(project) {
 
     const admin = await fetch(`${base}/admin`, { headers: { cookie }, redirect: "manual" });
     assert(admin.status < 500, `GET /admin (authed) → ${admin.status}`);
+
+    const custom = await fetch(`${base}/admin/custom-check`, { headers: { cookie }, redirect: "manual" });
+    const customHtml = await safeText(custom);
+    assert(
+      custom.status === 200 &&
+        customHtml.includes("custom-page-ok") &&
+        customHtml.includes('component="CommandPalette"'),
+      `GET /admin/custom-check (custom page on AdminLayout.astro) → ${custom.status}\n${customHtml.slice(0, 500)}`,
+    );
 
     // Asset round-trip through the node storage adapter.
     const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
