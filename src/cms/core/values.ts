@@ -309,7 +309,7 @@ export const resolveLinkUrl = async (
 
 const renderNode = (node: RichTextNode): string => {
   if (node.type === "text") {
-    let content = escapeHtml(String(node.value ?? ""));
+    let content = escapeHtml(String(node.value ?? "")).replaceAll("\n", "<br />");
     if (node.bold) content = `<strong>${content}</strong>`;
     if (node.italic) content = `<em>${content}</em>`;
     if (node.href) {

@@ -30,14 +30,8 @@ import { toggleHeading } from "../lib/editor-commands";
 import { openPreviewChannel } from "../lib/preview-channel";
 import SharedSectionEditSheet from "./SharedSectionEditSheet";
 import { useSharedSection } from "../lib/use-shared-section";
-import {
-  LinkDialog,
-  fetchLinkGroups,
-  cmsNodeToTiptap,
-  tiptapNodeToCms,
-  type CmsNode,
-  type LinkGroup,
-} from "./RichTextEditor";
+import { LinkDialog, fetchLinkGroups, type LinkGroup } from "./RichTextEditor";
+import { cmsNodeToTiptap, tiptapNodeToCms, starterKitOptions, type CmsNode } from "./richtext-tiptap";
 import { SubField, humanize, type BlockTypesMeta, type SubFieldMeta } from "./block-fields";
 import type { LinkableCollection } from "./InternalLinkPicker";
 import { blockNodeSpec, BLOCK_NODE_NAME, SHARED_BLOCK_TYPE, type BlockNodeOptions } from "./content-block-spec";
@@ -495,8 +489,7 @@ export default function ContentEditor({
       setBaseline(JSON.stringify(tiptapToContent(editor.getJSON())));
     },
     extensions: [
-      // StarterKit bundles its own Link; disabled so the configured one below is the only registration.
-      StarterKit.configure({ link: false }),
+      StarterKit.configure(starterKitOptions),
       EditorImage,
       Link.configure({
         openOnClick: false,
