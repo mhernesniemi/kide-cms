@@ -7,6 +7,17 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.33.1] - 2026-10-20
+
+### Fixed
+
+- **Soft line breaks survive saving.** A Shift+Enter break in a rich-text or content field was
+  dropped on save; it's now stored as `\n` in the text value (the shape `htmlToRichText` and
+  `createRichTextFromPlainText` already produce) and rendered as `<br />`.
+- **Pasted formatting the CMS can't store no longer vanishes on save.** The editors no longer enable
+  underline, strike, inline code, code blocks or horizontal rules, so pasted or shortcut-typed
+  formatting falls back to plain text. Pasted code blocks previously lost their text entirely.
+
 ## [0.33.0] - 2026-10-13
 
 ### Fixed
