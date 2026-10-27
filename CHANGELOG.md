@@ -7,6 +7,30 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.35.0] - 2026-10-27
+
+Node deploy features for container platforms. All opt-in through env vars; existing projects need
+no changes.
+
+### Added
+
+- **Health endpoint.** `GET /api/cms/health` returns `200` when the database answers with the CMS
+  schema in place, otherwise `503`. For deploy healthchecks and uptime monitors.
+- **Migrations on Node.** `CMS_MIGRATE_ON_BOOT=1` applies the committed migrations in
+  `src/cms/migrations/` (the same files D1 uses) on the first database connection, using only
+  drizzle-orm. `kide migrate` applies them from the CLI, `kide migrate --baseline` marks them
+  applied on a database synced with `cms:push`, and `kide migrate --check` fails CI when a schema
+  change has no migration. `CMS_MIGRATIONS_DIR` overrides the folder.
+- **In-process scheduler.** `CMS_SCHEDULER=1` runs scheduled publishing and background tasks every
+  minute inside a long-running Node server, replacing an external cron.
+- **`CMS_CACHE_DIR`** moves the resized-image cache (default `./.cms-cache`) to a persistent volume.
+
+### Fixed
+
+- **Overlapping schedulers publish once.** Each due document is claimed before it's published or
+  unpublished, so two cron runs at the same time (e.g. old and new containers during a deploy) no
+  longer fire hooks and webhooks twice.
+
 ## [0.34.0] - 2026-10-27
 
 ### Added
