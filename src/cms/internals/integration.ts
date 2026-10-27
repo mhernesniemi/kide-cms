@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, watch, 
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { allowedDomainsFromOrigin } from "./allowed-domains";
 import { analyzeSharedDeps, formatConflicts } from "./shared-deps";
 
 // All runtime files resolve relative to this module, never the project root, so
@@ -114,7 +115,7 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
   return {
     name: "kide-cms",
     hooks: {
-      "astro:config:setup": ({ command, updateConfig, injectRoute, injectScript, addMiddleware, logger }) => {
+      "astro:config:setup": ({ command, config, updateConfig, injectRoute, injectScript, addMiddleware, logger }) => {
         const root = process.cwd();
 
         // One copy per library the admin shares with the project — see shared-deps.ts.
@@ -171,6 +172,12 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           }
         };
         generateFieldsBarrel();
+
+        // Build-time: the adapter bakes allowedDomains into the server. A project's own setting wins.
+        const allowedDomains = allowedDomainsFromOrigin(process.env.CMS_TRUSTED_ORIGIN);
+        if (allowedDomains && !config.security?.allowedDomains?.length) {
+          updateConfig({ security: { allowedDomains } });
+        }
 
         // Virtual module aliases — resolve route imports to the user's app files
         updateConfig({

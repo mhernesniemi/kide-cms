@@ -370,7 +370,7 @@ async function bootAndProbe(project, port) {
 
     const setupRes = await fetch(`${base}/api/cms/auth/setup`, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: base },
+      headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: base, "Sec-Fetch-Site": "same-origin" },
       body: new URLSearchParams({
         name: "Verify Admin",
         email: "verify@example.com",

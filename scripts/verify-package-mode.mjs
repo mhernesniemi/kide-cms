@@ -150,7 +150,7 @@ async function bootAndProbe(project) {
     });
     const setupRes = await fetch(`${base}/api/cms/auth/setup`, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: base },
+      headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: base, "Sec-Fetch-Site": "same-origin" },
       body: setupBody,
       redirect: "manual",
     });
@@ -167,7 +167,7 @@ async function bootAndProbe(project) {
     form.set("file", new Blob([png], { type: "image/png" }), "probe.png");
     const uploadRes = await fetch(`${base}/api/cms/assets/upload`, {
       method: "POST",
-      headers: { cookie, Origin: base },
+      headers: { cookie, Origin: base, "Sec-Fetch-Site": "same-origin" },
       body: form,
       redirect: "manual",
     });
