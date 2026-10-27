@@ -185,7 +185,11 @@ export async function transformImage(
     source = null;
   }
   if (!source) return null;
-  const cacheDir = path.join(process.cwd(), ".cms-cache", "img");
+  // Set CMS_CACHE_DIR to a persistent volume so resized variants survive deploys.
+  const cacheRoot = process.env.CMS_CACHE_DIR
+    ? path.resolve(process.env.CMS_CACHE_DIR)
+    : path.join(process.cwd(), ".cms-cache");
+  const cacheDir = path.join(cacheRoot, "img");
 
   const resolvedFormat: Format = ALLOWED_FORMATS.includes(options.format as Format)
     ? (options.format as Format)

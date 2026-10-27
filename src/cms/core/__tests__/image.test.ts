@@ -1,7 +1,8 @@
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import sharp from "sharp";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
   cdnCgiImageUrl,
@@ -213,6 +214,22 @@ describe("transformImage", () => {
       expect(result!.contentType).toBe("image/webp");
     } finally {
       configureCmsRuntime({ getDb: async () => null, storage: nodeStorage });
+    }
+  });
+
+  it("writes variants under CMS_CACHE_DIR when set", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "kide-cache-"));
+    const original = process.env.CMS_CACHE_DIR;
+    try {
+      process.env.CMS_CACHE_DIR = dir;
+      expect(await transformImage(fixtureRel, { width: 320 })).not.toBeNull();
+      await vi.waitFor(() =>
+        expect(readdirSync(path.join(dir, "img")).some((f) => f.includes("__vitest-fixture__"))).toBe(true),
+      );
+    } finally {
+      if (original === undefined) delete process.env.CMS_CACHE_DIR;
+      else process.env.CMS_CACHE_DIR = original;
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 
