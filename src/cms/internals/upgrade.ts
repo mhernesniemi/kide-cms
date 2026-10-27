@@ -344,6 +344,9 @@ const choosePacketDir = (cwd: string, fromRef: string, targetRef: string) => {
 const backupFiles = (cwd: string, packetDir: string, files: string[]) => {
   const backupDir = path.join(packetDir, "backup");
   mkdirSync(backupDir, { recursive: true });
+  // Snapshots are pre-upgrade copies, not project code: keep `eslint .` out of them. ESLint
+  // resolves config per directory, so this works whatever the project's root config says.
+  writeFileSync(path.join(backupDir, "eslint.config.mjs"), 'export default [{ ignores: ["**/*"] }];\n');
   const backedUp: string[] = [];
   const missing: string[] = [];
   const entries: BackupEntry[] = [];
