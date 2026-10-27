@@ -15,6 +15,8 @@ import config from "virtual:kide/config";
 import "virtual:kide/runtime";
 import { getDb } from "virtual:kide/db";
 
+import { startSchedulerOnce } from "./scheduler";
+
 let hasUsers: boolean | null = null;
 
 export const resetUserCache = () => {
@@ -62,6 +64,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
 const handle = async (context: APIContext, next: MiddlewareNext) => {
   const { pathname } = context.url;
+  startSchedulerOnce(context);
 
   // `?preview` exposes draft content on public pages; require a session (unauth → strip it).
   if (context.url.searchParams.has("preview")) {
