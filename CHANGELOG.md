@@ -7,6 +7,21 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.34.0] - 2026-10-27
+
+### Added
+
+- **S3-compatible storage profile.** Uploads can live in any S3-compatible bucket (AWS S3, UpCloud
+  Object Storage, Hetzner, MinIO, R2's S3 API): point `src/cms/adapters/storage.ts` at
+  `@kidecms/core/platform/s3/storage` and set `S3_BUCKET`, `S3_ACCESS_KEY_ID`,
+  `S3_SECRET_ACCESS_KEY` (plus `S3_ENDPOINT` / `S3_REGION` / `S3_PREFIX` as needed). Opt-in;
+  existing projects need no changes.
+
+### Changed
+
+- **Image resizing on Node reads originals through the storage adapter** instead of the uploads
+  directory on disk, so resizing works with any adapter, including custom ones.
+
 ## [0.33.1] - 2026-10-20
 
 ### Fixed
