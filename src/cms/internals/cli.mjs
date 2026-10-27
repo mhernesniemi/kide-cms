@@ -10,6 +10,7 @@ import { register } from "tsx/esm/api";
 const COMMANDS = {
   generate: "./generator.ts",
   push: "./push.ts",
+  migrate: "./migrate.ts",
   seed: "./seed.ts",
   admin: "./create-admin.ts",
   reindex: "./reindex.ts",
