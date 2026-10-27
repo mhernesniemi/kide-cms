@@ -1,4 +1,5 @@
 import type { ImagePreset } from "./define";
+import { getStorage } from "./runtime";
 
 const ALLOWED_WIDTHS = [320, 480, 640, 768, 960, 1024, 1280, 1536, 1920];
 const ALLOWED_FORMATS = ["webp", "avif", "jpeg", "png"] as const;
@@ -175,17 +176,16 @@ export async function transformImage(
   const sharpModule = "sharp";
   const sharp = (await import(/* @vite-ignore */ sharpModule)).default;
 
-  // Must match the storage adapter: the source lives wherever uploads are written.
-  const uploadsDir = process.env.CMS_UPLOADS_DIR
-    ? path.resolve(process.env.CMS_UPLOADS_DIR)
-    : path.join(process.cwd(), "public", "uploads");
+  // Read through the storage adapter so the source can live on disk or in an object store.
+  // The adapter rejects traversal by throwing; that's the same miss as an absent file.
+  let source: ArrayBuffer | null;
+  try {
+    source = await getStorage().getFile(src);
+  } catch {
+    source = null;
+  }
+  if (!source) return null;
   const cacheDir = path.join(process.cwd(), ".cms-cache", "img");
-
-  // Resolve the source safely under uploadsDir, rejecting traversal.
-  const rel = src.replace(/^\/+/, "").replace(/^uploads(?:\/|$)/, "");
-  const filePath = path.resolve(uploadsDir, rel);
-  if (filePath !== uploadsDir && !filePath.startsWith(uploadsDir + path.sep)) return null;
-  if (!existsSync(filePath)) return null;
 
   const resolvedFormat: Format = ALLOWED_FORMATS.includes(options.format as Format)
     ? (options.format as Format)
@@ -213,7 +213,7 @@ export async function transformImage(
     };
   }
 
-  let pipeline = sharp(readFileSync(filePath));
+  let pipeline = sharp(Buffer.from(source));
 
   if (autoCrop) {
     pipeline = pipeline.resize(resolvedWidth!, resolvedHeight!, {

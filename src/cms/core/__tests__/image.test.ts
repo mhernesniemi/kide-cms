@@ -1,5 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -13,6 +12,8 @@ import {
   setCloudflareImageMode,
   transformImage,
 } from "../image";
+import { configureCmsRuntime, resetCmsRuntime } from "../runtime";
+import * as nodeStorage from "../../platform/node/storage";
 
 describe("cmsImageUrl", () => {
   it("returns empty string for empty src", () => {
@@ -163,6 +164,7 @@ describe("transformImage", () => {
   };
 
   beforeAll(async () => {
+    configureCmsRuntime({ getDb: async () => null, storage: nodeStorage });
     // 200×400 portrait test image
     mkdirSync(path.dirname(fixtureAbs), { recursive: true });
     const buffer = await sharp({
@@ -177,6 +179,7 @@ describe("transformImage", () => {
   afterAll(() => {
     rmSync(fixtureAbs, { force: true });
     cleanCache();
+    resetCmsRuntime();
   });
 
   it("returns null for missing files", async () => {
@@ -188,25 +191,28 @@ describe("transformImage", () => {
     expect(await transformImage("/uploads/../../package.json")).toBeNull();
   });
 
-  it("reads the source from CMS_UPLOADS_DIR when set", async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "kide-img-"));
-    const original = process.env.CMS_UPLOADS_DIR;
+  it("reads the source through the configured storage adapter", async () => {
+    const buffer = await sharp({
+      create: { width: 100, height: 100, channels: 3, background: { r: 10, g: 20, b: 30 } },
+    })
+      .png()
+      .toBuffer();
+    const bytes = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+    const remote = new Map([["/uploads/__vitest-fixture__-remote.png", bytes]]);
+    configureCmsRuntime({
+      getDb: async () => null,
+      storage: {
+        putFile: async () => {},
+        getFile: async (p) => remote.get(p) ?? null,
+        deleteFile: async () => {},
+      },
+    });
     try {
-      process.env.CMS_UPLOADS_DIR = dir;
-      const buffer = await sharp({
-        create: { width: 100, height: 100, channels: 3, background: { r: 10, g: 20, b: 30 } },
-      })
-        .png()
-        .toBuffer();
-      writeFileSync(path.join(dir, "__vitest-fixture-relo__.png"), buffer);
-
-      const result = await transformImage("/uploads/__vitest-fixture-relo__.png", { width: 320 });
+      const result = await transformImage("/uploads/__vitest-fixture__-remote.png", { width: 320 });
       expect(result).not.toBeNull();
       expect(result!.contentType).toBe("image/webp");
     } finally {
-      if (original === undefined) delete process.env.CMS_UPLOADS_DIR;
-      else process.env.CMS_UPLOADS_DIR = original;
-      rmSync(dir, { recursive: true, force: true });
+      configureCmsRuntime({ getDb: async () => null, storage: nodeStorage });
     }
   });
 

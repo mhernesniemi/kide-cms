@@ -42,6 +42,7 @@ const required = [
   "routes/admin/login.astro",
   "platform/node/database.ts",
   "platform/cloudflare/database.ts",
+  "platform/s3/storage.ts",
 ];
 const missing = required.filter((file) => !files.includes(file));
 

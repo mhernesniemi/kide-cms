@@ -22,7 +22,7 @@ src/
     routes/               # Admin pages + API routes (injected by integration)
     middleware/           # Auth middleware (injected by integration)
     client/               # preview.ts — browser-side live-preview client
-    platform/             # node / cloudflare database + storage implementations
+    platform/             # node / cloudflare database + storage implementations, s3 storage
     internals/            # Runner scripts, integration.ts, cli.mjs (`kide` bin), virtual.d.ts
   components/             # App-level components (incl. BlockRenderer)
   layouts/, pages/, styles/, env.d.ts
