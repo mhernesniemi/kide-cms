@@ -335,6 +335,19 @@ describe("drafts and publishing", () => {
     expect(scheduled._publishAt).toBe(future);
   });
 
+  it("publishes a due document once when two schedulers overlap", async () => {
+    await (cms as any).scheduled.processPublishing();
+    const post = await (cms as any).posts.create({ title: "Overlap post" });
+    await (cms as any).posts.schedule(post._id, new Date(Date.now() - 60_000).toISOString());
+
+    const runs = await Promise.all([
+      (cms as any).scheduled.processPublishing(),
+      (cms as any).scheduled.processPublishing(),
+    ]);
+    expect(runs[0].published + runs[1].published).toBe(1);
+    expect((await (cms as any).posts.findById(post._id, { status: "any" }))._status).toBe("published");
+  });
+
   it("keeps a scheduled end date through publishing", async () => {
     const post = await (cms as any).posts.create({ title: "Campaign post" });
     const start = new Date(Date.now() - 60_000).toISOString();

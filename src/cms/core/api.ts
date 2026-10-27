@@ -1691,9 +1691,29 @@ export const createCms = (config: CMSConfig) => {
             .from(tables.main)
             .where(and(eq(tables.main._status, "scheduled"), lte(tables.main._publishAt, timestamp)));
 
+          // Claim each document before publishing: when two schedulers overlap (e.g. old and new
+          // container during a deploy), only one claim matches, so hooks and webhooks fire once.
           for (const row of toPublish) {
-            const doc = row as Record<string, unknown>;
-            await collectionApiInstance.publish(String(doc._id), ctx);
+            const id = String((row as Record<string, unknown>)._id);
+            const publishAt = (row as Record<string, unknown>)._publishAt as string;
+            const claimed = await db
+              .update(tables.main)
+              .set({ _publishAt: null })
+              .where(
+                and(
+                  eq(tables.main._id, id),
+                  eq(tables.main._status, "scheduled"),
+                  eq(tables.main._publishAt, publishAt),
+                ),
+              )
+              .returning({ _id: tables.main._id });
+            if (claimed.length === 0) continue;
+            try {
+              await collectionApiInstance.publish(id, ctx);
+            } catch (error) {
+              await db.update(tables.main).set({ _publishAt: publishAt }).where(eq(tables.main._id, id));
+              throw error;
+            }
             published++;
           }
 
@@ -1709,8 +1729,26 @@ export const createCms = (config: CMSConfig) => {
             );
 
           for (const row of toUnpublish) {
-            const doc = row as Record<string, unknown>;
-            await collectionApiInstance.unpublish(String(doc._id), ctx);
+            const id = String((row as Record<string, unknown>)._id);
+            const unpublishAt = (row as Record<string, unknown>)._unpublishAt as string;
+            const claimed = await db
+              .update(tables.main)
+              .set({ _unpublishAt: null })
+              .where(
+                and(
+                  eq(tables.main._id, id),
+                  eq(tables.main._status, "published"),
+                  eq(tables.main._unpublishAt, unpublishAt),
+                ),
+              )
+              .returning({ _id: tables.main._id });
+            if (claimed.length === 0) continue;
+            try {
+              await collectionApiInstance.unpublish(id, ctx);
+            } catch (error) {
+              await db.update(tables.main).set({ _unpublishAt: unpublishAt }).where(eq(tables.main._id, id));
+              throw error;
+            }
             unpublished++;
           }
         }
