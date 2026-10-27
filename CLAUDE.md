@@ -14,7 +14,7 @@ src/
     adapters/             # db, email, storage adapters
     fields/               # Custom admin field components (user-authored .tsx, optional)
     runtime.ts            # Composition root — wires adapters into the core runtime
-    migrations/           # Drizzle migrations (Cloudflare D1 only — Node syncs via cms:push, no migrate-on-boot)
+    migrations/           # Drizzle migrations (D1 always; Node opt-in via CMS_MIGRATE_ON_BOOT / `kide migrate`, else cms:push)
     .generated/           # Auto-generated schema/types/validators/api (do not edit)
     # managed package dirs (published to npm; in package mode these live in node_modules):
     core/                 # CMS runtime library (define, api, auth, schema, content, ...)
