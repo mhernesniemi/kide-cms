@@ -352,6 +352,10 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
           entrypoint: new URL("../routes/api/ai/translate.ts", import.meta.url),
         });
         injectRoute({
+          pattern: "/api/cms/health",
+          entrypoint: new URL("../routes/api/health.ts", import.meta.url),
+        });
+        injectRoute({
           pattern: "/api/cms/cron/publish",
           entrypoint: new URL("../routes/api/cron/publish.ts", import.meta.url),
         });

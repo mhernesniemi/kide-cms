@@ -90,8 +90,9 @@ const handle = async (context: APIContext, next: MiddlewareNext) => {
   // Public despite the /api/cms prefix: cmsImageUrl() puts these URLs on public pages.
   // Only reads files under public/, which are served unauthenticated anyway.
   const isPublicImageApi = pathname.startsWith("/api/cms/img/");
+  const isHealthApi = pathname === "/api/cms/health";
 
-  if ((!isAdminRoute && !isAdminApiRoute) || isPublicImageApi) {
+  if ((!isAdminRoute && !isAdminApiRoute) || isPublicImageApi || isHealthApi) {
     return next();
   }
 
