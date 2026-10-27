@@ -196,7 +196,7 @@ await dispose(); // flush fire-and-forget tasks, then close the DB
 
 ## Stack
 
-Astro 7, React 19, Drizzle ORM (SQLite dev), Zod, Tiptap, shadcn/ui, Tailwind CSS v4, Better Auth (admin sign-in; PBKDF2 password hashes), nanoid, Sharp (image optimization), pnpm, Node >=22.12.0
+Astro 7, React 19, Drizzle ORM (SQLite dev), Zod, Tiptap, shadcn/ui, Tailwind CSS v4, Better Auth (admin sign-in; PBKDF2 password hashes), nanoid, Sharp (image optimization), pnpm, Node >=22.23.4
 
 ## Field Types
 

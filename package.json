@@ -5,7 +5,7 @@
   "version": "0.35.1",
   "packageManager": "pnpm@10.27.0",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.23.4"
   },
   "scripts": {
     "dev": "astro dev",
@@ -38,43 +38,43 @@
     "test:workers": "vitest run --config vitest.workers.config.ts"
   },
   "dependencies": {
-    "@astrojs/node": "^11.1.6",
+    "@astrojs/node": "^11.1.9",
     "@astrojs/react": "^6.0.6",
     "@kidecms/core": "workspace:*",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^7.3.3",
+    "astro": "^7.4.2",
     "better-sqlite3": "^12.11.1",
-    "drizzle-orm": "^0.45.2",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "sharp": "^0.35.4",
+    "drizzle-orm": "^0.45.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4.3.3",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.10",
+    "@astrojs/check": "^0.9.12",
     "@cloudflare/vitest-pool-workers": "^0.21.3",
-    "@cloudflare/workers-types": "^5.20260918.1",
+    "@cloudflare/workers-types": "^5.20261027.1",
     "@eslint/js": "^10.0.1",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^24.13.5",
+    "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@typescript-eslint/parser": "^8.70.0",
-    "drizzle-kit": "^0.31.10",
-    "eslint": "^10.10.0",
+    "@typescript-eslint/parser": "^8.72.1",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^10.13.0",
     "eslint-plugin-astro": "^1.7.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^29.1.1",
-    "oauth2-mock-server": "^9.2.0",
-    "prettier": "^3.9.8",
+    "oauth2-mock-server": "^9.3.0",
+    "prettier": "^3.9.10",
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-tailwindcss": "^0.7.4",
-    "tsx": "^4.23.13",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.70.0",
-    "vitest": "^4.1.11"
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^4.1.12"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
