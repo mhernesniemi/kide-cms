@@ -7,6 +7,25 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.36.0] - 2026-10-27
+
+### Changed
+
+- **Node.js 22.23.4 or newer is required.** Astro 7.4.2 raised its minimum to the October 2026
+  Node.js security release. Update Node before upgrading.
+- **Dependencies bumped** within their current majors, including Astro 7.4.2, `@astrojs/node`
+  11.1.9, Better Auth 1.7.14 and Tiptap 3.32.
+
+### Fixed
+
+- **Admin saves work when the Node adapter doesn't trust the `Host` header.** `@astrojs/node`
+  11.1.7+ only trusts `Host` for domains in `security.allowedDomains` and otherwise reports the
+  request URL as `localhost`, which made Kide's CSRF check reject same-origin admin requests.
+  The check now accepts the browser's `Sec-Fetch-Site: same-origin` first, falling back to
+  `Origin`/`Referer`.
+- **`CMS_TRUSTED_ORIGIN` sets Astro's `security.allowedDomains`** when present at build time and
+  the project hasn't configured its own, so `Astro.url` reports the real host behind a proxy.
+
 ## [0.35.1] - 2026-10-27
 
 ### Fixed
