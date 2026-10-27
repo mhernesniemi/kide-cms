@@ -7,6 +7,15 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.35.1] - 2026-10-27
+
+### Fixed
+
+- **Embedded upgrades pass lint again.** The upgrade packet's `backup/` copies of managed files
+  were linted by `eslint .`, so a backed-up `.mjs` file failed `pnpm check` after upgrading. The
+  backup folder now carries its own ESLint config that ignores it. 0.35.0 was never published to
+  npm because of this; 0.35.1 ships its changes.
+
 ## [0.35.0] - 2026-10-27
 
 Node deploy features for container platforms. All opt-in through env vars; existing projects need
