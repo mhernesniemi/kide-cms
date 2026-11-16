@@ -1,0 +1,56 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":disableDependencyDashboard"],
+  "timezone": "Europe/Helsinki",
+  "schedule": ["before 9am on monday"],
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
+  "rangeStrategy": "update-lockfile",
+  "platformAutomerge": false,
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "automerge": true
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "schedule": ["before 9am on monday"]
+  },
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "matchCurrentVersion": "/^0\\./",
+      "matchUpdateTypes": ["minor"],
+      "automerge": false
+    },
+    {
+      "groupName": "astro",
+      "matchPackageNames": ["astro", "@astrojs/**"]
+    },
+    {
+      "groupName": "cloudflare",
+      "matchPackageNames": ["wrangler", "miniflare", "workerd", "@cloudflare/**"]
+    },
+    {
+      "groupName": "github actions",
+      "matchManagers": ["github-actions"]
+    },
+    {
+      "description": "Node and pnpm versions are policy decisions made by hand",
+      "matchDepTypes": ["engines", "packageManager"],
+      "enabled": false
+    },
+    {
+      "matchManagers": ["nvm", "github-actions"],
+      "matchPackageNames": ["node"],
+      "enabled": false
+    }
+  ]
+}
