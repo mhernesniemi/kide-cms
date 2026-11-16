@@ -7,6 +7,15 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.37.0] - 2026-11-16
+
+### Changed
+
+- **`KIDE_AUTH_SECRET` is now `KIDE_SECRET`.** It's Kide's one application secret, not only an
+  auth setting. `KIDE_AUTH_SECRET` and `BETTER_AUTH_SECRET` still work as fallbacks, so existing
+  deployments need no change; rename the variable when convenient. Keep the same value: a new
+  one signs everyone out and breaks existing two-factor enrolments.
+
 ## [0.36.0] - 2026-10-27
 
 ### Changed
