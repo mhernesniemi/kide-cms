@@ -44,7 +44,7 @@ try {
   const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
   delete pkg.dependencies["@astrojs/node"];
   delete pkg.dependencies["sharp"];
-  pkg.dependencies["@astrojs/cloudflare"] = "~14.1.7";
+  pkg.dependencies["@astrojs/cloudflare"] = "~14.4.8";
   if (pkg.dependencies["better-sqlite3"]) {
     pkg.devDependencies["better-sqlite3"] = pkg.dependencies["better-sqlite3"];
     delete pkg.dependencies["better-sqlite3"];
