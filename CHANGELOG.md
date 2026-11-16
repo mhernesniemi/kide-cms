@@ -7,6 +7,21 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.38.0] - 2026-11-16
+
+### Changed
+
+- **Dependencies updated**, including Astro 7.4.12, `@astrojs/node` 11.1.13, `@astrojs/react` 7,
+  Better Auth 1.7.23, Tiptap 3.34, AI SDK 7 (`ai`) with `@ai-sdk/openai` 4, and pnpm 10.34.9.
+  The Astro and pnpm bumps fix published security advisories.
+- **`better-sqlite3` 13 is supported.** The peer range is now `^12.0.0 || ^13.0.0`, so existing
+  projects keep working on 12.
+
+### Upgrade notes
+
+- Package mode: `pnpm add @kidecms/core@latest`. Also bump `astro` to 7.4.12 or newer for the
+  security fixes.
+
 ## [0.37.0] - 2026-11-16
 
 ### Changed
