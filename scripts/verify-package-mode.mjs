@@ -124,7 +124,7 @@ async function bootAndProbe(project) {
       ...process.env,
       PORT: String(port),
       HOST: "127.0.0.1",
-      KIDE_AUTH_SECRET: "verify-only-secret-0123456789abcdef",
+      KIDE_SECRET: "verify-only-secret-0123456789abcdef",
     },
   });
   let output = "";

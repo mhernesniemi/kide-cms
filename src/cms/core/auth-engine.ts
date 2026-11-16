@@ -264,17 +264,17 @@ const DEV_SECRET = "kide-development-secret-do-not-use-in-production";
 let warnedDevSecret = false;
 
 export const resolveAuthSecret = () => {
-  const secret = safeEnv("KIDE_AUTH_SECRET") ?? safeEnv("BETTER_AUTH_SECRET");
+  const secret = safeEnv("KIDE_SECRET") || safeEnv("KIDE_AUTH_SECRET") || safeEnv("BETTER_AUTH_SECRET");
   if (secret) return secret;
   if (process.env.NODE_ENV === "production") {
     throw new Error(
-      "[kide] KIDE_AUTH_SECRET is not set. Generate one with `openssl rand -base64 32` and add it to the " +
+      "[kide] KIDE_SECRET is not set. Generate one with `openssl rand -base64 32` and add it to the " +
         "deployment environment — it signs admin session cookies.",
     );
   }
   if (!warnedDevSecret) {
     warnedDevSecret = true;
-    console.warn("[kide] KIDE_AUTH_SECRET is not set — using a development secret.");
+    console.warn("[kide] KIDE_SECRET is not set — using a development secret.");
   }
   return DEV_SECRET;
 };

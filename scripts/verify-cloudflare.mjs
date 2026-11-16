@@ -68,7 +68,7 @@ try {
 
   // Production builds refuse to sign admin sessions without a secret; wrangler dev reads
   // local secrets from .dev.vars next to the config it boots with.
-  const devVars = "KIDE_AUTH_SECRET=verify-only-secret-0123456789abcdef\n";
+  const devVars = "KIDE_SECRET=verify-only-secret-0123456789abcdef\n";
   writeFileSync(path.join(dir, ".dev.vars"), devVars);
   writeFileSync(path.join(dir, "dist/server/.dev.vars"), devVars);
 
