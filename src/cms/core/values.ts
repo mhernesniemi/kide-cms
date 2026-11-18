@@ -71,7 +71,7 @@ const NAMED_ENTITIES: Record<string, string> = {
   middot: "·",
 };
 
-const decodeEntities = (text: string): string =>
+export const decodeEntities = (text: string): string =>
   text.replace(/&(#x?[0-9a-f]+|[a-z][a-z0-9]*);/gi, (whole, code: string) => {
     if (code[0] === "#") {
       const n = code[1] === "x" || code[1] === "X" ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);

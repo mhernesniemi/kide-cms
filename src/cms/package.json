@@ -28,6 +28,7 @@
     ".": "./core/index.ts",
     "./astro": "./internals/integration.ts",
     "./context": "./internals/context.ts",
+    "./importer": "./core/importer/index.ts",
     "./youtube": "./core/youtube.ts",
     "./client/preview": "./client/preview.ts",
     "./platform/*": "./platform/*.ts",

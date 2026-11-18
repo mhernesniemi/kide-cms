@@ -11,6 +11,7 @@ const COMMANDS = {
   generate: "./generator.ts",
   push: "./push.ts",
   migrate: "./migrate.ts",
+  import: "./import.ts",
   seed: "./seed.ts",
   admin: "./create-admin.ts",
   reindex: "./reindex.ts",
