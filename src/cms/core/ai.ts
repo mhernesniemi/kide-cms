@@ -3,7 +3,9 @@ import { getStorage, readEnv } from "./runtime";
 const getStreamText = async () => (await import("ai")).streamText;
 
 export function isAiEnabled(): boolean {
-  return !!(readEnv("AI_PROVIDER") && readEnv("AI_API_KEY"));
+  const key = readEnv("AI_API_KEY");
+  // The scaffolded .env carries .env.example's "sk-..." placeholder; that isn't a key.
+  return !!(readEnv("AI_PROVIDER") && key && !key.includes("..."));
 }
 
 export async function getAiModel(): Promise<any> {
