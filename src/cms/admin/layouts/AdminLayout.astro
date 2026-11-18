@@ -10,69 +10,29 @@ import {
   FolderTree,
   Image,
   Layers,
-  LayoutGrid,
   Menu,
   PencilRuler,
   Plus,
   Users,
-  BarChart,
-  Bell,
-  Bookmark,
-  Calendar,
-  Database,
-  Globe,
-  Home,
   Inbox,
-  Key,
-  Link,
   Link2,
-  Lock,
-  Mail,
   MessageSquare,
-  Package,
-  Palette,
   Search,
-  Settings,
-  Shield,
-  Star,
-  Tag,
-  Terminal,
-  Zap,
+  icons as lucideIcons,
 } from "lucide-react";
 
-const navIconMap: Record<string, any> = {
-  BarChart,
-  Bell,
-  Bookmark,
-  Calendar,
-  Clock,
-  Database,
-  FileText,
-  FolderTree,
-  Globe,
-  Home,
-  Image,
-  Inbox,
-  Key,
-  Layers,
-  LayoutGrid,
-  Link,
-  Link2,
-  Lock,
-  Mail,
-  Menu,
-  MessageSquare,
-  Package,
-  Palette,
-  PencilRuler,
-  Search,
-  Settings,
-  Shield,
-  Star,
-  Tag,
-  Terminal,
-  Users,
-  Zap,
+// Any Lucide icon, by name ("ArrowRightLeft" or "arrow-right-left"). Rendered on the server, so
+// the full set costs the browser nothing.
+const warnedIcons = new Set<string>();
+const navIcon = (name: string | undefined, fallback: any = Layers) => {
+  if (!name) return fallback;
+  const pascal = name.replace(/(^|[-_\s])([a-z0-9])/g, (_, __, c: string) => c.toUpperCase());
+  const icon = (lucideIcons as Record<string, any>)[name] ?? (lucideIcons as Record<string, any>)[pascal];
+  if (!icon && !warnedIcons.has(name)) {
+    warnedIcons.add(name);
+    console.warn(`[kide] Unknown admin icon "${name}"; see https://lucide.dev/icons for names.`);
+  }
+  return icon ?? fallback;
 };
 
 import CommandPalette from "../components/CommandPalette";
@@ -246,7 +206,7 @@ for (const c of navCollections) {
     href: `/admin/${c.slug}`,
     label: c.labels.plural,
     singularLabel: c.labels.singular,
-    Icon: c.admin?.icon ? (navIconMap[c.admin.icon] ?? Layers) : (pinnedIcons[c.slug] ?? Layers),
+    Icon: c.admin?.icon ? navIcon(c.admin.icon) : (pinnedIcons[c.slug] ?? Layers),
     active: activeCollection === c.slug,
     // Submissions are created by end users filling out forms, not added manually.
     newHref: c.slug === "form-submissions" ? undefined : `/admin/${c.slug}/new`,
@@ -282,7 +242,7 @@ for (const item of customNav) {
   navItems.push({
     href: item.href,
     label: item.label,
-    Icon: navIconMap[item.icon ?? ""] ?? Layers,
+    Icon: navIcon(item.icon),
     active: currentPath === item.href || currentPath.startsWith(item.href + "/"),
     weight: item.weight ?? 50,
     group: "Custom",
