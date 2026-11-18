@@ -101,7 +101,6 @@ export const getListColumns = (collection: CollectionConfig, viewConfig?: { colu
   const columns = [firstField];
   if (collection.preview || collection.pathPrefix) columns.push("__page");
   if (collection.drafts) columns.push("_status");
-  if (collection.timestamps !== false) columns.push("_createdAt");
   columns.push("_updatedAt");
   return columns;
 };
