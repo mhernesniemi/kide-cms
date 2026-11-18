@@ -113,7 +113,8 @@ export type {
 } from "./define";
 
 export { createCms, FieldError } from "./api";
-export type { FindOptions, WhereOperators } from "./api";
+export { translatableHash } from "./api";
+export type { FindOptions, LocaleState, WhereOperators } from "./api";
 
 export { enqueueTask, drainTasks, tickSchedules, pruneTasks } from "./tasks";
 export { peekRateLimit, hitRateLimit, recordRateLimit, clearRateLimit, pruneRateLimits } from "./rate-limit";
@@ -210,6 +211,7 @@ export {
   initDateFormat,
   formatDate,
   getDateSettings,
+  languageName,
   resolveAdminRoute,
   humanize,
   formatFieldValue,

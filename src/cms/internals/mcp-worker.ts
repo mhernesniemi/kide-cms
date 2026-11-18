@@ -117,14 +117,16 @@ const ops: Record<string, (args: OpArgs) => unknown> = {
     return collectionApi.update(id, cleaned, runtimeContext());
   },
 
-  publishDocument: async ({ collection, id }) => {
+  publishDocument: async ({ collection, id, locale }) => {
     ensureMutableCollection(getCollection(collection));
-    return getCollectionApi(collection).publish(id, runtimeContext());
+    const api = getCollectionApi(collection);
+    return locale ? api.publishTranslation(id, locale, runtimeContext()) : api.publish(id, runtimeContext());
   },
 
-  unpublishDocument: async ({ collection, id }) => {
+  unpublishDocument: async ({ collection, id, locale }) => {
     ensureMutableCollection(getCollection(collection));
-    return getCollectionApi(collection).unpublish(id, runtimeContext());
+    const api = getCollectionApi(collection);
+    return locale ? api.unpublishTranslation(id, locale, runtimeContext()) : api.unpublish(id, runtimeContext());
   },
 
   scheduleDocument: async ({ collection, id, publishAt, unpublishAt }) => {

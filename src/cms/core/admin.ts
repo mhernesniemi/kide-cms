@@ -18,6 +18,15 @@ export const getDateSettings = (): DateSettings => dateSettings;
 
 export const formatDate = (value: unknown): string => formatDateWith(value, dateSettings);
 
+const languageNames = new Intl.DisplayNames(["en"], { type: "language", fallback: "code" });
+/** "fi" → "Finnish", for every place the admin names a content language. */
+export const languageName = (locale: string): string => {
+  try {
+    return languageNames.of(locale) ?? locale.toUpperCase();
+  } catch {
+    return locale.toUpperCase();
+  }
+};
 
 export type AdminRoute =
   | { kind: "dashboard" }

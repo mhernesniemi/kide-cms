@@ -129,6 +129,35 @@ const publishedValue = (collection: CollectionConfig, tables: any, key: string):
     : sql`CAST(${value} AS TEXT)`;
 };
 
+const translationPublishedValue = (collection: CollectionConfig, tr: any, key: string): unknown => {
+  const field = collection.fields[key];
+  if (!tr._published || !field) return tr[key];
+  const path = `$.${key}`;
+  const value = sql`(CASE WHEN json_type(${tr._published}, ${path}) IS NOT NULL THEN json_extract(${tr._published}, ${path}) ELSE ${tr[key]} END)`;
+  if (isJsonField(field)) return value;
+  return field.type === "number" || field.type === "boolean"
+    ? sql`CAST(${value} AS NUMERIC)`
+    : sql`CAST(${value} AS TEXT)`;
+};
+
+/** Stable fingerprint of a document's translatable values; translations store it to detect an outdated original. */
+export const translatableHash = (collection: CollectionConfig, doc: Record<string, unknown>): string => {
+  const text = JSON.stringify(getTranslatableFieldNames(collection).map((name) => doc[name] ?? null));
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+};
+
+export type LocaleState = {
+  status: "draft" | "published" | "scheduled" | "changed";
+  updatedAt?: string;
+  /** The original changed after this translation was last saved. */
+  outdated?: boolean;
+};
+
 const operatorCondition = (column: unknown, op: string, value: unknown, arrayValued: boolean): SQL => {
   const list = () =>
     sql.join(
@@ -246,8 +275,10 @@ const buildWhereConditions = (
       // otherwise. Without this, e.g. findOne({ slug, locale: "en" }) can never match
       // a translated slug.
       const tr = tables.translations;
+      const live = options.published && tr._status ? sql` AND ${tr._status} = 'published'` : sql``;
+      const trValue = options.published ? translationPublishedValue(collection, tr, key) : tr[key];
       conditions.push(
-        sql`(EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale} AND ${match(tr[key])}) OR (${match(mainValue)} AND NOT EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale} AND ${tr[key]} IS NOT NULL)))`,
+        sql`(EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale}${live} AND ${match(trValue)}) OR (${match(mainValue)} AND NOT EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale}${live} AND ${trValue} IS NOT NULL)))`,
       );
     } else if (mainValue !== tables.main[key]) {
       // Candidates come from the column's own index plus the few documents with
@@ -433,7 +464,8 @@ const prepareIncomingData = (
   }
 
   for (const [fieldName, field] of Object.entries(collection.fields)) {
-    if (!field.required) continue;
+    // An empty translation field inherits the original, which satisfies `required`.
+    if (!field.required || locale) continue;
     const candidate = data[fieldName] ?? existing?.[fieldName];
     if (isEmptyValue(candidate)) throw new FieldError(fieldName, `${fieldLabel(fieldName, field)} is required.`);
   }
@@ -707,23 +739,49 @@ export const createCms = (config: CMSConfig) => {
      * `availability: "exact"` — the document must exist in the requested locale;
      * `"missing"` — it must not (neither its source locale nor a translation).
      */
-    const availabilityCondition = (tables: any, options: { locale?: string; availability?: string }) => {
+    const availabilityCondition = (
+      tables: any,
+      options: { locale?: string; availability?: string },
+      published = false,
+    ) => {
       const { availability } = options;
       if (!options.locale || (availability !== "exact" && availability !== "missing")) return null;
       if (!tables.translations || !config.locales) return null;
       const tr = tables.translations;
-      const exists = sql`(${tables.main._sourceLocale} = ${options.locale} OR EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale}))`;
+      const live = published && tr._status ? sql` AND ${tr._status} = 'published'` : sql``;
+      const exists = sql`(${tables.main._sourceLocale} = ${options.locale} OR EXISTS (SELECT 1 FROM ${tr} WHERE ${tr._entityId} = ${tables.main._id} AND ${tr._languageCode} = ${options.locale}${live}))`;
       return availability === "exact" ? exists : sql`NOT ${exists}`;
+    };
+
+    const visualStatus = (status: unknown, pending: unknown): LocaleState["status"] => {
+      if (!collection.drafts) return "published";
+      if (status === "published" && pending) return "changed";
+      return status === "published" || status === "scheduled" ? status : "draft";
     };
 
     const overlayLocale = (
       doc: Record<string, unknown>,
-      translations: Array<Record<string, unknown>>,
+      allTranslations: Array<Record<string, unknown>>,
       locale?: string | null,
+      published = false,
     ) => {
       const baseDoc = { ...doc };
       const translatableFields = getTranslatableFieldNames(collection);
       const sourceLocale = sourceLocaleOf(doc);
+      // Published reads see only published translations, as they were when published.
+      const translations =
+        published && collection.drafts
+          ? allTranslations
+              .filter((translation) => translation._status === "published")
+              .map((translation) => {
+                if (typeof translation._published !== "string") return translation;
+                try {
+                  return { ...translation, ...JSON.parse(translation._published) };
+                } catch {
+                  return translation;
+                }
+              })
+          : allTranslations;
       const availableLocales = [
         ...new Set([
           ...(sourceLocale ? [sourceLocale] : []),
@@ -742,11 +800,29 @@ export const createCms = (config: CMSConfig) => {
         }
       }
 
-      return {
+      const result: Record<string, unknown> = {
         ...baseDoc,
         _availableLocales: availableLocales,
         _locale: locale ?? null,
       };
+      if (!published && sourceLocale && translatableFields.length > 0) {
+        const hash = translations.length ? translatableHash(collection, doc) : "";
+        const states: Record<string, LocaleState> = {
+          [sourceLocale]: {
+            status: visualStatus(doc._status, doc._published),
+            ...(typeof doc._updatedAt === "string" ? { updatedAt: doc._updatedAt } : {}),
+          },
+        };
+        for (const translation of translations) {
+          states[String(translation._languageCode)] = {
+            status: visualStatus(translation._status ?? "published", translation._published),
+            ...(typeof translation._updatedAt === "string" ? { updatedAt: translation._updatedAt } : {}),
+            ...(translation._sourceHash && translation._sourceHash !== hash ? { outdated: true } : {}),
+          };
+        }
+        result._localeStates = states;
+      }
+      return result;
     };
 
     const stripSensitiveFields = (doc: Record<string, unknown>) => {
@@ -799,6 +875,52 @@ export const createCms = (config: CMSConfig) => {
       return filtered;
     };
 
+    const translationRow = async (id: string, locale: string) => {
+      const tables = await getTableRefs(slug);
+      if (!tables.translations) return null;
+      const db = await getDb();
+      const rows = await db
+        .select()
+        .from(tables.translations)
+        .where(and(eq(tables.translations._entityId, id), eq(tables.translations._languageCode, locale)))
+        .limit(1);
+      return (rows[0] as Record<string, unknown> | undefined) ?? null;
+    };
+
+    const translationValues = (row: Record<string, unknown>) => {
+      const values: Record<string, unknown> = {};
+      for (const name of getTranslatableFieldNames(collection)) {
+        let value = row[name];
+        if (isJsonField(collection.fields[name]) && typeof value === "string") {
+          try {
+            value = JSON.parse(value);
+          } catch {}
+        }
+        values[name] = value ?? null;
+      }
+      return values;
+    };
+
+    const translationAccess = async (
+      id: string,
+      locale: string,
+      operation: "update" | "publish",
+      context: RuntimeContext,
+    ) => {
+      const db = await getDb();
+      const tables = await getTableRefs(slug);
+      if (!tables.translations) throw new Error(`Collection "${slug}" does not support translations.`);
+      const existingRows = await db.select().from(tables.main).where(eq(tables.main._id, id)).limit(1);
+      if (existingRows.length === 0) throw new Error(`${collection.labels.singular} not found.`);
+      const existing = deserializeFromDb(collection, existingRows[0] as Record<string, unknown>);
+      if (!(await canAccess(collection, operation, context, existing))) {
+        throw new Error(`Access denied for ${collection.slug}.`);
+      }
+      const row = await translationRow(id, locale);
+      if (!row) throw new Error(`No "${locale}" translation.`);
+      return { db, tables, row };
+    };
+
     return {
       async find(options: FindOptions = {}, context: RuntimeContext = {}) {
         const db = await getDb();
@@ -817,7 +939,7 @@ export const createCms = (config: CMSConfig) => {
         if (status !== "any" && collection.drafts) {
           conditions.unshift(statusCondition(tables, status, where.byCandidates));
         }
-        const availability = availabilityCondition(tables, options);
+        const availability = availabilityCondition(tables, options, published);
         if (availability) conditions.push(availability);
 
         if (options.search?.trim()) {
@@ -892,14 +1014,16 @@ export const createCms = (config: CMSConfig) => {
                 const docTranslations = parsedTranslations.filter(
                   (translation: Record<string, unknown>) => translation._entityId === doc._id,
                 );
-                return finalizeRead(overlayLocale(doc, docTranslations, options.locale), context);
+                return finalizeRead(overlayLocale(doc, docTranslations, options.locale, published), context);
               }),
             );
           }
         }
 
         return Promise.all(
-          docs.map((doc: Record<string, unknown>) => finalizeRead(overlayLocale(doc, [], options.locale), context)),
+          docs.map((doc: Record<string, unknown>) =>
+            finalizeRead(overlayLocale(doc, [], options.locale, published), context),
+          ),
         );
       },
 
@@ -969,7 +1093,10 @@ export const createCms = (config: CMSConfig) => {
           });
         }
 
-        return finalizeRead(overlayLocale(doc, translations, options.locale), context);
+        return finalizeRead(
+          overlayLocale(doc, translations, options.locale, effectiveStatus === "published" && !!collection.drafts),
+          context,
+        );
       },
 
       async create(data: Record<string, unknown>, context: RuntimeContext = {}) {
@@ -1478,7 +1605,7 @@ export const createCms = (config: CMSConfig) => {
         if (status !== "any" && collection.drafts) {
           conditions.unshift(statusCondition(tables, status, where.byCandidates));
         }
-        const availability = availabilityCondition(tables, filter);
+        const availability = availabilityCondition(tables, filter, published);
         if (availability) conditions.push(availability);
         if (filter.search?.trim()) {
           const searchTerm = `%${filter.search.trim().toLowerCase()}%`;
@@ -1589,21 +1716,39 @@ export const createCms = (config: CMSConfig) => {
 
         const translatableFields = getTranslatableFieldNames(collection);
         const translatedValues = prepareIncomingData(collection, data, locale, existing);
-        const filtered = pick(translatedValues, translatableFields);
+        // An empty field falls back to the original rather than overriding it with nothing.
+        const filtered = Object.fromEntries(
+          Object.entries(pick(translatedValues, translatableFields)).map(([key, value]) => [
+            key,
+            value === "" ? null : value,
+          ]),
+        );
 
         const hookContext = getHookContext(collection, "update", context);
         const transformedFiltered = collection.hooks?.beforeUpsertTranslation
           ? await collection.hooks.beforeUpsertTranslation(filtered, locale, existing, hookContext)
           : filtered;
-        const serialized = serializeForDb(collection, transformedFiltered);
+        const serialized: Record<string, unknown> = {
+          ...serializeForDb(collection, transformedFiltered),
+          _updatedAt: now(),
+          _sourceHash: translatableHash(collection, existing),
+        };
 
-        const existingTranslation = await db
-          .select()
-          .from(tables.translations)
-          .where(and(eq(tables.translations._entityId, id), eq(tables.translations._languageCode, locale)))
-          .limit(1);
+        const existingTranslation = await translationRow(id, locale);
+        const publishNow = data._status === "published";
+        if (collection.drafts) {
+          if (publishNow) {
+            serialized._status = "published";
+            serialized._published = null;
+          } else if (!existingTranslation) {
+            serialized._status = "draft";
+          } else if (existingTranslation._status === "published" && !existingTranslation._published) {
+            // Same as documents: the live text is parked so draft edits stay off the site.
+            serialized._published = JSON.stringify(translationValues(existingTranslation));
+          }
+        }
 
-        if (existingTranslation.length > 0) {
+        if (existingTranslation) {
           await db
             .update(tables.translations)
             .set(serialized)
@@ -1636,8 +1781,65 @@ export const createCms = (config: CMSConfig) => {
           });
         }
 
+        if (publishNow) auditContent("content.publish", slug, id, context);
         syncSearch(config, collection, id);
         return (await this.findById(id, { locale, status: "any" }, context))!;
+      },
+
+      async publishTranslation(id: string, locale: string, context: RuntimeContext = {}) {
+        if (!collection.drafts) throw new Error(`${collection.labels.singular} does not support draft status.`);
+        const { db, tables } = await translationAccess(id, locale, "publish", context);
+        await db
+          .update(tables.translations)
+          .set({ _status: "published", _published: null, _updatedAt: now() })
+          .where(and(eq(tables.translations._entityId, id), eq(tables.translations._languageCode, locale)));
+        auditContent("content.publish", slug, id, context);
+        syncSearch(config, collection, id);
+        return (await this.findById(id, { locale, status: "any" }, context))!;
+      },
+
+      async unpublishTranslation(id: string, locale: string, context: RuntimeContext = {}) {
+        if (!collection.drafts) throw new Error(`${collection.labels.singular} does not support draft status.`);
+        const { db, tables } = await translationAccess(id, locale, "publish", context);
+        await db
+          .update(tables.translations)
+          .set({ _status: "draft", _published: null, _updatedAt: now() })
+          .where(and(eq(tables.translations._entityId, id), eq(tables.translations._languageCode, locale)));
+        auditContent("content.unpublish", slug, id, context);
+        syncSearch(config, collection, id);
+        return (await this.findById(id, { locale, status: "any" }, context))!;
+      },
+
+      async discardTranslationDraft(id: string, locale: string, context: RuntimeContext = {}) {
+        if (!collection.drafts) throw new Error(`${collection.labels.singular} does not support draft status.`);
+        const { db, tables, row } = await translationAccess(id, locale, "update", context);
+        if (typeof row._published === "string") {
+          const snapshot = JSON.parse(row._published);
+          const restore: Record<string, unknown> = { _published: null };
+          for (const name of getTranslatableFieldNames(collection)) {
+            if (!(name in snapshot)) continue;
+            const value = snapshot[name];
+            restore[name] = isJsonField(collection.fields[name]) && value !== null ? JSON.stringify(value) : value;
+          }
+          await db
+            .update(tables.translations)
+            .set(restore)
+            .where(and(eq(tables.translations._entityId, id), eq(tables.translations._languageCode, locale)));
+        }
+        return (await this.findById(id, { locale, status: "any" }, context))!;
+      },
+
+      async deleteTranslation(id: string, locale: string, context: RuntimeContext = {}): Promise<boolean> {
+        const { db, tables } = await translationAccess(id, locale, "update", context);
+        await db
+          .delete(tables.translations)
+          .where(and(eq(tables.translations._entityId, id), eq(tables.translations._languageCode, locale)));
+        if (collection.timestamps !== false) {
+          await db.update(tables.main).set({ _updatedAt: now() }).where(eq(tables.main._id, id));
+        }
+        auditContent("content.update", slug, id, context);
+        syncSearch(config, collection, id);
+        return true;
       },
     };
   };

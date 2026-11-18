@@ -46,6 +46,8 @@ export const cmsAuthorsTranslations = sqliteTable(
       .notNull()
       .references(() => cmsAuthors._id, { onDelete: "cascade" }),
     _languageCode: text("_language_code").notNull(),
+    _updatedAt: text("_updated_at"),
+    _sourceHash: text("_source_hash"),
     description: text("description"),
   },
   (table) => ({
@@ -92,6 +94,10 @@ export const cmsPostsTranslations = sqliteTable(
       .notNull()
       .references(() => cmsPosts._id, { onDelete: "cascade" }),
     _languageCode: text("_language_code").notNull(),
+    _status: text("_status").notNull().default("published"),
+    _published: text("_published"),
+    _updatedAt: text("_updated_at"),
+    _sourceHash: text("_source_hash"),
     title: text("title"),
     slug: text("slug"),
     excerpt: text("excerpt"),
@@ -150,6 +156,10 @@ export const cmsPagesTranslations = sqliteTable(
       .notNull()
       .references(() => cmsPages._id, { onDelete: "cascade" }),
     _languageCode: text("_language_code").notNull(),
+    _status: text("_status").notNull().default("published"),
+    _published: text("_published"),
+    _updatedAt: text("_updated_at"),
+    _sourceHash: text("_source_hash"),
     title: text("title"),
     slug: text("slug"),
     summary: text("summary"),

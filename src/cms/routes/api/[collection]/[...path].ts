@@ -3,7 +3,7 @@ import type { APIRoute } from "astro";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import { collaboration } from "virtual:kide/runtime";
-import { FieldError, formatPagePath, getPageHref, isApprover, resolveCollaboration } from "../../../core";
+import { FieldError, formatPagePath, getPageHref, isApprover, languageName, resolveCollaboration } from "../../../core";
 import { loadSharedSectionUsageCounts } from "../../../admin/lib/edit-data";
 
 export const prerender = false;
@@ -202,9 +202,45 @@ const handleHtmlMutation = async (
       return redirect(redirectTo, { status: "success", msg: `Version ${version} restored` });
     }
 
-    if (action === "save-translation" && locale) {
-      await collectionApi.upsertTranslation(documentId, locale, data, ctx);
-      return redirect(redirectTo, { status: "success", msg: `${locale} translation saved` });
+    if (locale && action.endsWith("-translation")) {
+      const language = languageName(locale);
+      if (action === "save-translation") {
+        const blocked =
+          collection.drafts && intent === "publish" && !(await publishAllowed(collection, documentId, locals));
+        const publish = collection.drafts && intent === "publish" && !blocked;
+        await collectionApi.upsertTranslation(
+          documentId,
+          locale,
+          { ...data, ...(publish ? { _status: "published" } : {}) },
+          ctx,
+        );
+        if (blocked)
+          return redirect(redirectTo, { status: "error", msg: `Saved — needs review approval before publishing` });
+        const msg = publish
+          ? `${language} translation published`
+          : `${language} translation saved${collection.drafts ? " as draft" : ""}`;
+        return redirect(redirectTo, { status: "success", msg });
+      }
+      if (action === "publish-translation") {
+        if (!(await publishAllowed(collection, documentId, locals))) {
+          return redirect(redirectTo, { status: "error", msg: `Needs review approval before publishing` });
+        }
+        await collectionApi.publishTranslation(documentId, locale, ctx);
+        return redirect(redirectTo, { status: "success", msg: `${language} translation published` });
+      }
+      if (action === "unpublish-translation") {
+        await collectionApi.unpublishTranslation(documentId, locale, ctx);
+        return redirect(redirectTo, { status: "success", msg: `${language} translation unpublished` });
+      }
+      if (action === "discard-translation") {
+        await collectionApi.discardTranslationDraft(documentId, locale, ctx);
+        return redirect(redirectTo, { status: "success", msg: `Changes discarded` });
+      }
+      if (action === "delete-translation") {
+        await collectionApi.deleteTranslation(documentId, locale, ctx);
+        const base = redirectTo.split("?")[0];
+        return redirect(base, { status: "success", msg: `${language} translation deleted` });
+      }
     }
 
     return redirect(redirectTo);

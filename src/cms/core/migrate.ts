@@ -360,7 +360,8 @@ export const importDocuments = async (
       const created = await cms[item.collection].create(item.data, context);
       report.created++;
       for (const [locale, overlay] of Object.entries(item.translations ?? {})) {
-        await cms[item.collection].upsertTranslation(created._id, locale, overlay, context);
+        const live = item.data._status === "published" ? { _status: "published" } : {};
+        await cms[item.collection].upsertTranslation(created._id, locale, { ...overlay, ...live }, context);
         report.translated++;
       }
     } catch (e) {
