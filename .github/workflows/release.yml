@@ -1,9 +1,9 @@
 name: Release
 
 # Publishes @kidecms/core to npm when a v* tag is pushed. The tag version must
-# match src/cms/package.json (and the root template version). Requires the
-# NPM_TOKEN repository secret (npm automation token with publish rights to the
-# @kidecms scope).
+# match src/cms/package.json (and the root template version). Publishes through
+# npm Trusted Publishing (OIDC): @kidecms/core trusts this repo's release.yml, so
+# no npm token is stored.
 
 on:
   push:
@@ -26,6 +26,8 @@ jobs:
           node-version: 22.23.4
           cache: pnpm
           registry-url: https://registry.npmjs.org
+      # Trusted Publishing needs npm >= 11.5.1; Node 22 bundles npm 10.
+      - run: npm install -g npm@^11.5.1
       - run: pnpm install --frozen-lockfile
 
       - name: Tag matches package version
@@ -48,10 +50,10 @@ jobs:
       - run: pnpm verify:starters
       - run: node scripts/verify-upgrade.mjs
 
+      # npm itself, not pnpm, so the OIDC exchange runs (src/cms has no workspace: deps).
       - name: Publish @kidecms/core
-        run: pnpm --filter @kidecms/core publish --no-git-checks --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        working-directory: src/cms
+        run: npm publish --provenance
 
       # Notes come from the tag's CHANGELOG section; the title stays the bare
       # tag — edit on github.com to append a descriptive suffix if wanted.
