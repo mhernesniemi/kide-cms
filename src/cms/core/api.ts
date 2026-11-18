@@ -14,7 +14,7 @@ import {
   setCredentialPassword,
 } from "./auth-engine";
 import type { CMSConfig, CollectionConfig, FieldConfig, RichTextDocument } from "./define";
-import { getCollectionMap, getTranslatableFieldNames, isStructuralField } from "./define";
+import { documentRoute, getCollectionMap, getTranslatableFieldNames, isStructuralField } from "./define";
 import { getDb, trackTask } from "./runtime";
 import { getSchema } from "./schema";
 import { indexDocument, isCollectionSearchable, removeDocument } from "./search";
@@ -615,7 +615,7 @@ const auditContent = (action: string, slug: string, resourceId: string, context:
 const syncSearch = (config: CMSConfig, collection: CollectionConfig, docId: string) => {
   if (!isCollectionSearchable(collection)) return;
   const locales = config.locales?.supported ?? [];
-  trackTask(indexDocument(collection, docId, locales));
+  trackTask(indexDocument(collection, docId, locales, config.locales?.default));
 };
 
 const removeSearch = (collection: CollectionConfig, docId: string) => {
@@ -1657,12 +1657,18 @@ export const createCms = (config: CMSConfig) => {
         })),
       getFields: (slug: string) => ensureCollection(config, slug).fields,
       getCollection: (slug: string) => ensureCollection(config, slug),
-      getRouteForDocument: (slug: string, doc: Record<string, unknown>) => {
-        const collection = ensureCollection(config, slug);
-        const slugValue = String(doc.slug ?? "");
-        return collection.pathPrefix
-          ? `/${collection.pathPrefix}/${slugValue}`
-          : `/${slugValue === "home" ? "" : slugValue}`;
+      getRouteForDocument: (slug: string, doc: Record<string, unknown>, locale?: string | null) => {
+        const defaultLocale = config.locales?.default ?? null;
+        // A read in a locale the document lacks falls back to its own language, and so does its route.
+        const available = Array.isArray(doc._availableLocales) ? (doc._availableLocales as string[]) : null;
+        const requested = typeof doc._locale === "string" ? doc._locale : null;
+        const docLocale =
+          requested && (!available || available.includes(requested))
+            ? requested
+            : typeof doc._sourceLocale === "string"
+              ? doc._sourceLocale
+              : requested;
+        return documentRoute(ensureCollection(config, slug), doc, locale ?? docLocale ?? defaultLocale, defaultLocale);
       },
       getConfig: () => config,
       getLocales: () => config.locales,

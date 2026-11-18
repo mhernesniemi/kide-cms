@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   defineCollection,
   defineConfig,
+  documentRoute,
   fields,
   getCollectionLabel,
   getCollectionMap,
@@ -138,5 +139,22 @@ describe("withSite", () => {
 
   it("fails loudly when the target field already exists", () => {
     expect(() => withSite(makeCollection({ fields: { site: fields.text() } }))).toThrow(/already exists/);
+  });
+});
+
+describe("documentRoute", () => {
+  it("joins prefix and slug, with a prefix-less home slug at the root", () => {
+    expect(documentRoute({ pathPrefix: "blog" }, { slug: "hello" })).toBe("/blog/hello");
+    expect(documentRoute({ pathPrefix: "/blog/" }, { slug: "hello" })).toBe("/blog/hello");
+    expect(documentRoute({}, { slug: "about" })).toBe("/about");
+    expect(documentRoute({}, { slug: "home" })).toBe("/");
+  });
+
+  it("adds a locale segment for non-default locales and uses per-locale prefixes", () => {
+    const posts = { pathPrefix: { en: "blogs", fi: "blogit" } };
+    expect(documentRoute(posts, { slug: "x" }, "en", "en")).toBe("/blogs/x");
+    expect(documentRoute(posts, { slug: "y" }, "fi", "en")).toBe("/fi/blogit/y");
+    expect(documentRoute(posts, { slug: "z" }, "sv", "en")).toBe("/sv/blogs/z");
+    expect(documentRoute({}, { slug: "home" }, "fi", "en")).toBe("/fi");
   });
 });

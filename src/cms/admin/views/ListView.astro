@@ -27,7 +27,7 @@ type CollectionLike = {
   drafts?: boolean;
   auth?: boolean;
   preview?: boolean | string;
-  pathPrefix?: string;
+  pathPrefix?: string | Record<string, string>;
   fields: Record<string, any>;
   views?: Record<string, any>;
 };

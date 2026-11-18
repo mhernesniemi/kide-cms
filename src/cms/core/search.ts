@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 
 import type { CollectionConfig, FieldConfig, RichTextDocument, SearchableConfig } from "./define";
-import { getLabelField, getTranslatableFieldNames } from "./define";
+import { documentRoute, getLabelField, getTranslatableFieldNames } from "./define";
 import { getDb } from "./runtime";
 import { getSchema } from "./schema";
 import { escapeHtml, richTextToPlainText } from "./values";
@@ -143,20 +143,17 @@ const resolveSearchableFieldNames = (collection: CollectionConfig): string[] => 
   return cfg.fields;
 };
 
-const buildUrl = (collection: CollectionConfig, doc: Record<string, unknown>, locale: string | null): string => {
-  const slugValue = String(doc.slug ?? "");
-  const prefix = collection.pathPrefix ? `/${collection.pathPrefix}` : "";
-  const path = slugValue === "home" ? "" : `/${slugValue}`;
-  const localePrefix = locale ? `/${locale}` : "";
-  return `${localePrefix}${prefix}${path}`;
-};
-
 /**
  * Re-indexes a single document across all supported locales. Always deletes existing rows first,
  * then inserts fresh rows for each locale where the document is published. Idempotent.
  * Errors are logged but never thrown — search must never break a write.
  */
-export const indexDocument = async (collection: CollectionConfig, docId: string, locales: string[]): Promise<void> => {
+export const indexDocument = async (
+  collection: CollectionConfig,
+  docId: string,
+  locales: string[],
+  defaultLocale?: string | null,
+): Promise<void> => {
   if (!isCollectionSearchable(collection)) return;
   try {
     await ensureSearchSchema();
@@ -214,7 +211,7 @@ export const indexDocument = async (collection: CollectionConfig, docId: string,
         .map((chunk) => chunk.trim())
         .filter(Boolean);
       const body = bodyParts.join("\n\n");
-      const url = buildUrl(collection, doc, locale);
+      const url = documentRoute(collection, doc, locale, defaultLocale);
       const publishedAt = String(doc._publishedAt ?? doc._createdAt ?? "");
 
       await db.run(
@@ -464,7 +461,11 @@ export const search = async (query: string, options: SearchOptions = {}): Promis
  * Full rebuild: clears the index and re-indexes every document in every searchable collection.
  * Safe to run at any time; used by `pnpm cms:reindex`.
  */
-export const reindexAll = async (collections: CollectionConfig[], locales: string[]): Promise<{ indexed: number }> => {
+export const reindexAll = async (
+  collections: CollectionConfig[],
+  locales: string[],
+  defaultLocale?: string | null,
+): Promise<{ indexed: number }> => {
   await ensureSearchSchema();
   const db = await getDb();
   await db.run(sql`DELETE FROM cms_search_index`);
@@ -480,7 +481,7 @@ export const reindexAll = async (collections: CollectionConfig[], locales: strin
     const rows = await db.select().from(tables.main);
     for (const row of rows) {
       const doc = row as Record<string, unknown>;
-      await indexDocument(collection, String(doc._id), locales);
+      await indexDocument(collection, String(doc._id), locales, defaultLocale);
       indexed++;
     }
   }

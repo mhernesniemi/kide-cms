@@ -198,7 +198,8 @@ export type CollectionConfig = {
   slug: string;
   labels: CollectionLabels;
   labelField?: string;
-  pathPrefix?: string;
+  /** URL prefix for public pages (`"blog"`), or one per locale (`{ en: "blogs", fi: "blogit" }`). */
+  pathPrefix?: string | Record<string, string>;
   preview?: boolean | string;
   /** Whether documents may be picked as internal link targets in the admin.
    * Defaults to true for non-singleton collections with a `slug` field; set
@@ -653,6 +654,30 @@ export const getCollectionMap = (config: CMSConfig) =>
   Object.fromEntries(config.collections.map((collection) => [collection.slug, collection]));
 
 export const getDefaultLocale = (config: CMSConfig) => config.locales?.default ?? null;
+
+/**
+ * Public path of a document: `/<locale>/<prefix>/<slug>`. The default locale has no locale
+ * segment, the prefix can differ per locale, and a prefix-less `home` slug is the site root.
+ */
+export const documentRoute = (
+  collection: Pick<CollectionConfig, "pathPrefix">,
+  doc: Record<string, unknown>,
+  locale?: string | null,
+  defaultLocale?: string | null,
+): string => {
+  const { pathPrefix } = collection;
+  const raw =
+    typeof pathPrefix === "string"
+      ? pathPrefix
+      : pathPrefix
+        ? (pathPrefix[locale ?? ""] ?? pathPrefix[defaultLocale ?? ""] ?? "")
+        : "";
+  const prefix = raw.replace(/^\/+|\/+$/g, "");
+  const slug = String(doc.slug ?? "");
+  const localeSegment = locale && locale !== defaultLocale ? `/${locale}` : "";
+  const path = prefix ? `/${prefix}/${slug}` : slug === "home" ? "" : `/${slug}`;
+  return `${localeSegment}${path}` || "/";
+};
 
 export const getTranslatableFieldNames = (collection: CollectionConfig) =>
   Object.entries(collection.fields)

@@ -32,6 +32,7 @@ export {
   fields,
   defineCollection,
   defineConfig,
+  documentRoute,
   withSite,
   getCollectionMap,
   getDefaultLocale,

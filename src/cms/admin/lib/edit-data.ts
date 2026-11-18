@@ -7,7 +7,9 @@ import {
 import { canRead, canWrite } from "./access";
 
 type User = { id: string; role?: string; email?: string } | null | undefined;
-type CmsRuntime = Record<string, any> & { meta: { getRouteForDocument: (slug: string, doc: any) => string } };
+type CmsRuntime = Record<string, any> & {
+  meta: { getRouteForDocument: (slug: string, doc: any, locale?: string | null) => string };
+};
 type RuntimeContext = Record<string, unknown>;
 type CollectionLike = { slug: string; fields: Record<string, any> };
 
