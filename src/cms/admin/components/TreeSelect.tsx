@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "./ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -22,6 +22,8 @@ type Props = {
   emptyMessage?: string;
   items: TreeSelectItem[];
   onChange?: (value: string) => void;
+  /** Pick several values; the hidden input then carries a JSON string array. */
+  multiple?: boolean;
 };
 
 export function flattenTree<T extends { children?: T[] }>(
@@ -67,6 +69,16 @@ export function flattenByParent<T>(
   return result;
 }
 
+const parseMany = (raw: string | undefined): string[] => {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+};
+
 export default function TreeSelect({
   name,
   value: initialValue,
@@ -75,12 +87,15 @@ export default function TreeSelect({
   emptyMessage = "No results found.",
   items,
   onChange: onChangeProp,
+  multiple = false,
 }: Props) {
-  const [value, setValue] = useState(initialValue ?? "");
+  const [value, setValue] = useState(multiple ? "" : (initialValue ?? ""));
+  const [values, setValues] = useState<string[]>(() => (multiple ? parseMany(initialValue) : []));
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const hiddenRef = useRef<HTMLInputElement>(null);
   const isInitial = useRef(true);
+  const hiddenValue = multiple ? JSON.stringify(values) : value;
 
   useEffect(() => {
     if (isInitial.current) {
@@ -88,9 +103,11 @@ export default function TreeSelect({
       return;
     }
     hiddenRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
-  }, [value]);
+  }, [hiddenValue]);
 
   const selected = items.find((i) => i.value === value);
+  const isSelected = (v: string) => (multiple ? values.includes(v) : value === v);
+  const labelOf = (v: string) => items.find((i) => i.value === v);
 
   // Filtering is ours, not cmdk's: cmdk reorders the DOM while filtering (and
   // doesn't restore it when the query clears), which would bump the pinned
@@ -103,9 +120,46 @@ export default function TreeSelect({
     if (!next) setQuery("");
   };
 
+  const choose = (next: string) => {
+    if (multiple) {
+      setValues((current) => (current.includes(next) ? current.filter((v) => v !== next) : [...current, next]));
+      return;
+    }
+    const resolved = next === value ? "" : next;
+    setValue(resolved);
+    onChangeProp?.(resolved);
+    handleOpenChange(false);
+  };
+
+  const clear = () => {
+    if (multiple) setValues([]);
+    else {
+      setValue("");
+      onChangeProp?.("");
+    }
+    handleOpenChange(false);
+  };
+
   return (
     <div className="space-y-2">
-      <input ref={hiddenRef} type="hidden" name={name} value={value} />
+      <input ref={hiddenRef} type="hidden" name={name} value={hiddenValue} />
+      {multiple && values.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {values.map((v) => (
+            <span key={v} className="bg-muted inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-sm">
+              {labelOf(v)?.label ?? v}
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground"
+                aria-label={`Remove ${labelOf(v)?.label ?? v}`}
+                onClick={() => setValues((current) => current.filter((x) => x !== v))}
+              >
+                <X className="size-3.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <Button
@@ -115,8 +169,8 @@ export default function TreeSelect({
             size="lg"
             className="w-full justify-between text-sm font-normal"
           >
-            <span className={cn("truncate", !selected && "text-muted-foreground")}>
-              {selected ? (
+            <span className={cn("truncate", (multiple || !selected) && "text-muted-foreground")}>
+              {!multiple && selected ? (
                 <span className="flex items-center gap-1">
                   {selected.path.length > 1 && (
                     <span className="text-muted-foreground">
@@ -139,33 +193,23 @@ export default function TreeSelect({
             <CommandList>
               {filtered.length === 0 && <CommandEmpty>{emptyMessage}</CommandEmpty>}
               {!q && (
-                <CommandItem
-                  value="__none__"
-                  onSelect={() => {
-                    setValue("");
-                    onChangeProp?.("");
-                    handleOpenChange(false);
-                  }}
-                >
+                <CommandItem value="__none__" onSelect={clear}>
                   <div className="flex items-center">
-                    <Check className={cn("mr-2 ml-1 size-4 shrink-0", !value ? "opacity-100" : "opacity-0")} />
+                    <Check
+                      className={cn(
+                        "mr-2 ml-1 size-4 shrink-0",
+                        (multiple ? values.length === 0 : !value) ? "opacity-100" : "opacity-0",
+                      )}
+                    />
                     <span className="text-muted-foreground">None</span>
                   </div>
                 </CommandItem>
               )}
               {filtered.map((item) => (
-                <CommandItem
-                  key={item.value}
-                  value={item.path.join(" / ")}
-                  onSelect={() => {
-                    setValue(item.value === value ? "" : item.value);
-                    onChangeProp?.(item.value === value ? "" : item.value);
-                    handleOpenChange(false);
-                  }}
-                >
+                <CommandItem key={item.value} value={item.path.join(" / ")} onSelect={() => choose(item.value)}>
                   <div className="flex items-center" style={{ paddingLeft: `${item.depth * 1.25}rem` }}>
                     <Check
-                      className={cn("mr-2 ml-1 size-4 shrink-0", value === item.value ? "opacity-100" : "opacity-0")}
+                      className={cn("mr-2 ml-1 size-4 shrink-0", isSelected(item.value) ? "opacity-100" : "opacity-0")}
                     />
                     {item.label}
                   </div>

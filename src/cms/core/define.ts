@@ -11,6 +11,8 @@ export type LocaleConfig = {
 export type AdminFieldComponent = {
   component?: string;
   placeholder?: string;
+  /** `taxonomy-select`: slug of the `taxonomies` document whose terms are offered (falls back to `placeholder`). */
+  taxonomy?: string;
   position?: "content" | "sidebar";
   rows?: number;
   help?: string;
@@ -610,6 +612,24 @@ export const fields = {
       ...(options ?? {}),
       admin: { ...(options?.admin ?? {}), component: "link" },
     }),
+  /**
+   * Term picker over a `taxonomies` document. Stores the term slug, or an array of slugs
+   * with `hasMany`. Mark it `translatable` when terms differ per locale.
+   */
+  taxonomy: (
+    options: { taxonomy: string; hasMany?: boolean } & Omit<TextFieldConfig, "type" | "defaultValue">,
+  ): TextFieldConfig | JsonFieldConfig => {
+    const { taxonomy, hasMany, ...rest } = options;
+    const admin = {
+      ...(rest.admin ?? {}),
+      component: "taxonomy-select",
+      taxonomy,
+      placeholder: rest.admin?.placeholder ?? taxonomy,
+    };
+    return hasMany
+      ? createField<JsonFieldConfig>("json", { ...(rest as Omit<JsonFieldConfig, "type">), admin })
+      : createField<TextFieldConfig>("text", { ...rest, admin });
+  },
   relation: (options: Omit<RelationFieldConfig, "type">) => createField<RelationFieldConfig>("relation", options),
   array: (options: Omit<ArrayFieldConfig, "type">) => createField<ArrayFieldConfig>("array", options),
   json: (options?: Omit<JsonFieldConfig, "type">) => createField<JsonFieldConfig>("json", options),

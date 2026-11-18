@@ -30,6 +30,17 @@ describe("fields factory", () => {
     expect(fields.relation({ collection: "authors" }).collection).toBe("authors");
   });
 
+  it("builds taxonomy fields as a term slug, or a slug list with hasMany", () => {
+    expect(fields.taxonomy({ taxonomy: "tags" })).toMatchObject({
+      type: "text",
+      admin: { component: "taxonomy-select", taxonomy: "tags" },
+    });
+    expect(fields.taxonomy({ taxonomy: "tags", hasMany: true })).toMatchObject({
+      type: "json",
+      admin: { component: "taxonomy-select", taxonomy: "tags" },
+    });
+  });
+
   it("defaults slugs to unique, with explicit opt-out", () => {
     expect(fields.slug().unique).toBe(true);
     expect(fields.slug({ unique: false }).unique).toBe(false);

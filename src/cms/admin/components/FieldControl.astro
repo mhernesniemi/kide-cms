@@ -207,14 +207,17 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
           />
         )}
 
-        {field.type === "text" && field.admin?.component === "taxonomy-select" && !readOnly && (
-          <TaxonomySelect
-            client:load
-            name={name}
-            value={serializedValue}
-            taxonomySlug={field.admin?.placeholder ?? ""}
-          />
-        )}
+        {(field.type === "text" || field.type === "json") &&
+          field.admin?.component === "taxonomy-select" &&
+          !readOnly && (
+            <TaxonomySelect
+              client:load
+              name={name}
+              value={field.type === "json" ? JSON.stringify(Array.isArray(value) ? value : []) : serializedValue}
+              taxonomySlug={field.admin?.taxonomy ?? field.admin?.placeholder ?? ""}
+              multiple={field.type === "json"}
+            />
+          )}
 
         {field.type === "text" && field.admin?.component === "color" && !readOnly && (
           <ColorField
@@ -485,7 +488,8 @@ const sharedBlockTypesMeta = toBlockTypesMeta(sharedBlockTypes);
             field.admin?.component !== "taxonomy-terms" &&
             field.admin?.component !== "shared-section-block" &&
             field.admin?.component !== "link" &&
-            field.admin?.component !== "repeater")) && (
+            field.admin?.component !== "repeater" &&
+            !(field.admin?.component === "taxonomy-select" && !readOnly))) && (
           <Textarea
             className={controlClass}
             id={name}
