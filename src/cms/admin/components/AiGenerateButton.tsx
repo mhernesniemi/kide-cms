@@ -34,6 +34,36 @@ function setFieldValue(name: string, value: string) {
   field.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+export type AiAction = { label: string; endpoint: string; payload: Record<string, unknown>; targetField: string };
+
+/** Streams an AI response into the target field; payload keys naming form fields read their live value. */
+export async function runAiAction({ endpoint, payload, targetField }: AiAction) {
+  const livePayload = { ...payload };
+  for (const key of Object.keys(livePayload)) {
+    const el = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${key}"]`);
+    if (el) livePayload[key] = el.value;
+  }
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(livePayload),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: "Generation failed" }));
+    throw new Error(err.error || "Generation failed");
+  }
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response stream");
+  const decoder = new TextDecoder();
+  let accumulated = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    accumulated += decoder.decode(value, { stream: true });
+    setFieldValue(targetField, accumulated);
+  }
+}
+
 export default function AiGenerateButton({
   endpoint,
   payload,
@@ -47,35 +77,7 @@ export default function AiGenerateButton({
     setLoading(true);
     setError(null);
     try {
-      const livePayload = { ...payload };
-      for (const key of Object.keys(livePayload)) {
-        const el = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${key}"]`);
-        if (el) livePayload[key] = el.value;
-      }
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(livePayload),
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({ error: "Generation failed" }));
-        throw new Error(err.error || "Generation failed");
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("No response stream");
-
-      const decoder = new TextDecoder();
-      let accumulated = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        accumulated += decoder.decode(value, { stream: true });
-        setFieldValue(targetField, accumulated);
-      }
+      await runAiAction({ label, endpoint, payload, targetField });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed");
     } finally {
