@@ -30,11 +30,15 @@ export async function loadDocument(
   requestedLocale: string | null,
   defaultLocale: string,
   runtimeContext: RuntimeContext,
+  preferredLocale?: string,
 ): Promise<LoadedDocument> {
   const base = await collectionApi.findById(documentId, { status: "any" }, runtimeContext);
   if (!base) return { doc: null, baseDoc: null, baseLocale: defaultLocale, locale: defaultLocale, versions: [] };
   const baseLocale = String(base._sourceLocale ?? defaultLocale);
-  const locale = requestedLocale ?? baseLocale;
+  // Without an explicit tab, open the editor's working language when the document has it.
+  const available = Array.isArray(base._availableLocales) ? (base._availableLocales as string[]) : [];
+  const locale =
+    requestedLocale ?? (preferredLocale && available.includes(preferredLocale) ? preferredLocale : baseLocale);
   const doc =
     locale === baseLocale ? base : await collectionApi.findById(documentId, { status: "any", locale }, runtimeContext);
   const versions = await collectionApi.versions(documentId, runtimeContext);

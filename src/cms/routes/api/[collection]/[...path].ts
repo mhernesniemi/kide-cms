@@ -296,6 +296,8 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
   const limit = url.searchParams.get("limit") ? Number(url.searchParams.get("limit")) : 20;
   const offset = url.searchParams.get("offset") ? Number(url.searchParams.get("offset")) : 0;
   const search = url.searchParams.get("search") ?? undefined;
+  const availabilityParam = url.searchParams.get("availability");
+  const availability = availabilityParam === "exact" || availabilityParam === "missing" ? availabilityParam : undefined;
 
   const findOptions = {
     where: parseJsonQuery(url.searchParams.get("where")),
@@ -303,13 +305,17 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
     limit,
     offset,
     locale,
+    availability,
     status,
     search,
   };
 
   const [docs, totalDocs] = await Promise.all([
     cmsRuntime[collectionSlug].find(findOptions, ctx),
-    cmsRuntime[collectionSlug].count({ where: findOptions.where, status: findOptions.status, locale, search }, ctx),
+    cmsRuntime[collectionSlug].count(
+      { where: findOptions.where, status: findOptions.status, locale, availability, search },
+      ctx,
+    ),
   ]);
 
   if (collectionSlug === "shared-sections") {
