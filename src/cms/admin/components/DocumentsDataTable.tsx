@@ -48,6 +48,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Input } from "./ui/input";
+import { DEFAULT_DATE_SETTINGS, formatDateWith, type DateSettings } from "../../core/date-format";
 import { cn } from "../lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
@@ -101,20 +102,9 @@ type DocumentsDataTableProps = {
   statusOptions?: string[];
   /** Language filter in the toolbar (multilingual collections only); each option is a server-side link. */
   languageFilter?: { active: string; options: Array<{ value: string; label: string; href: string }> };
+  dateSettings?: DateSettings;
 };
 
-const formatDateClient = (value: unknown): string => {
-  if (!value) return "\u2014";
-  const date = new Date(String(value));
-  if (isNaN(date.getTime())) return String(value);
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
 
 const getVisualStatus = (d: Record<string, unknown>): string => {
   const status = String(d._status ?? "draft");
@@ -126,10 +116,10 @@ const getVisualStatus = (d: Record<string, unknown>): string => {
 // Rebuilds row values after a client-side re-fetch (sort/search/page change). The
 // "__page"/"__usage" values are pre-computed server-side (see the collection GET route)
 // since they aren't stored fields — this just reads them back.
-const formatRowValue = (columnKey: string, entry: Record<string, unknown>): string => {
+const formatRowValue = (columnKey: string, entry: Record<string, unknown>, dateSettings: DateSettings): string => {
   if (columnKey === "_status") return getVisualStatus(entry);
   if (columnKey === "__usage") return `${Number(entry.__usage ?? 0)} places`;
-  if (columnKey === "_updatedAt" || columnKey === "_createdAt") return formatDateClient(entry[columnKey]);
+  if (columnKey === "_updatedAt" || columnKey === "_createdAt") return formatDateWith(entry[columnKey], dateSettings);
   return String(entry[columnKey] ?? "—");
 };
 
@@ -170,6 +160,7 @@ export default function DocumentsDataTable({
   serverPagination,
   statusOptions,
   languageFilter,
+  dateSettings = DEFAULT_DATE_SETTINGS,
 }: DocumentsDataTableProps) {
   const isServerMode = !!serverPagination;
 
@@ -258,7 +249,7 @@ export default function DocumentsDataTable({
                 : [],
             searchText: String(entry[labelField] ?? entry.slug ?? entry._id ?? ""),
             pageHref: entry._pageHref as string | undefined,
-            values: Object.fromEntries(columns.map((column) => [column.key, formatRowValue(column.key, entry)])),
+            values: Object.fromEntries(columns.map((column) => [column.key, formatRowValue(column.key, entry, dateSettings)])),
           })),
         );
         setServerTotalDocs(result.totalDocs);
@@ -286,7 +277,7 @@ export default function DocumentsDataTable({
         setIsLoading(false);
       }
     },
-    [isServerMode, collectionSlug, columns, defaultLocale, labelField],
+    [isServerMode, collectionSlug, columns, defaultLocale, labelField, dateSettings],
   );
 
   // Cleanup debounce timer

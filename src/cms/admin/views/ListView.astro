@@ -9,6 +9,7 @@ import { collaboration } from "virtual:kide/runtime";
 import { REVIEW_STATE_META } from "../lib/collaboration";
 import {
   formatDate,
+  getDateSettings,
   formatFieldValue,
   formatPagePath,
   getPageHref,
@@ -251,6 +252,7 @@ const tableRows = docs.map((entry: Record<string, unknown>) => {
       sortable: !column.startsWith("__"),
     }))}
     data={tableRows}
+    dateSettings={getDateSettings()}
     searchPlaceholder={`Filter ${collection.labels.plural.toLowerCase()}...`}
     languageFilter={showLocalesColumn ? { active: activeLang, options: langOptions } : undefined}
     serverPagination={{

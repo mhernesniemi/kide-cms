@@ -209,6 +209,7 @@ export type { CropOptions, TransformOptions } from "./image";
 export {
   initDateFormat,
   formatDate,
+  getDateSettings,
   resolveAdminRoute,
   humanize,
   formatFieldValue,

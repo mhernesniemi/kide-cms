@@ -406,13 +406,13 @@ export type AdminAuthConfig = {
 export type ColorOption = { label: string; value: string };
 
 export type AdminConfig = {
-  /** BCP-47 locale for admin date/time display (e.g. "en-US", "en-GB", "fi-FI"). Default "en-US". */
+  /** BCP-47 locale for admin date/time display (e.g. "en-US", "en-GB", "fi-FI"). Default "en-GB". Edits within the last day show as relative time. */
   dateFormat?: string;
   /** IANA time zone for admin date/time display (e.g. "Europe/Helsinki"). Overrides the browser's zone. */
   timeZone?: string;
   /**
    * Overrides for how admin dates/times are rendered, merged over the defaults
-   * (numeric date + 2-digit hour/minute). Use e.g. `{ hour12: false }` for 24-hour time,
+   * (short month name + 2-digit hour/minute). Use e.g. `{ hour12: false }` for 24-hour time,
    * `{ second: "2-digit" }` to show seconds, or `{ hour: undefined, minute: undefined }` for date-only.
    */
   dateTimeFormat?: Intl.DateTimeFormatOptions;

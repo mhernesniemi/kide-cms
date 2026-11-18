@@ -2,7 +2,7 @@
 import DocumentsDataTable from "../components/DocumentsDataTable";
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
-import { formatDate, formatPagePath, getPageHref, getTranslatableFieldNames } from "../../core";
+import { formatDate, getDateSettings, formatPagePath, getPageHref, getTranslatableFieldNames } from "../../core";
 import { canRead } from "../lib/access";
 
 const user = Astro.locals.user;
@@ -60,6 +60,7 @@ const singletonsData = await Promise.all(
     collectionSlug="singles"
     draftsEnabled={true}
     duplicateEnabled={false}
+    dateSettings={getDateSettings()}
     title="Singles"
     columns={[
       { key: "name", label: "Name" },

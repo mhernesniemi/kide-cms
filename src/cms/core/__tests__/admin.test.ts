@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { getFieldGroups, initDateFormat, formatDate } from "../admin";
+import { getDateSettings, getFieldGroups, initDateFormat, formatDate } from "../admin";
+import { formatDateWith } from "../date-format";
 import type { CMSConfig } from "../define";
 import { fields } from "../define";
 
@@ -8,11 +9,18 @@ const base: CMSConfig = { collections: [] };
 const D = "2026-07-01T14:30:00Z";
 
 describe("formatDate", () => {
-  it("defaults to en-US 12-hour time", () => {
+  it("defaults to a short month name and 24-hour time", () => {
     initDateFormat({ ...base, admin: { timeZone: "UTC" } });
-    const out = formatDate(D);
-    expect(out).toContain("02:30");
-    expect(out).toMatch(/PM/i);
+    expect(formatDate(D)).toBe("1 Jul 2026, 14:30");
+  });
+
+  it("shows edits from the last day as relative time", () => {
+    initDateFormat({ ...base, admin: { timeZone: "UTC" } });
+    const now = Date.parse(D);
+    expect(formatDateWith(new Date(now - 20_000).toISOString(), getDateSettings(), now)).toBe("just now");
+    expect(formatDateWith(new Date(now - 5 * 60_000).toISOString(), getDateSettings(), now)).toBe("5 minutes ago");
+    expect(formatDateWith(new Date(now - 3 * 3_600_000).toISOString(), getDateSettings(), now)).toBe("3 hours ago");
+    expect(formatDateWith(new Date(now + 3_600_000).toISOString(), getDateSettings(), now)).toBe("1 Jul 2026, 15:30");
   });
 
   it("honours a 24-hour override via dateTimeFormat", () => {
@@ -20,9 +28,9 @@ describe("formatDate", () => {
     expect(formatDate(D)).toContain("14:30");
   });
 
-  it("uses the configured locale's date ordering", () => {
-    initDateFormat({ ...base, admin: { dateFormat: "en-GB", timeZone: "UTC" } });
-    expect(formatDate(D)).toMatch(/01\/07\/2026/);
+  it("uses the configured locale", () => {
+    initDateFormat({ ...base, admin: { dateFormat: "en-US", timeZone: "UTC" } });
+    expect(formatDate(D)).toMatch(/Jul 1, 2026/);
   });
 
   it("lets a configured timeZone override the per-request browser zone", () => {
