@@ -7,6 +7,13 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.39.1] - 2026-11-19
+
+### Fixed
+
+- **Release publishing.** 0.39.0 was tagged but never reached npm; 0.39.1 is the same release, now
+  published through npm Trusted Publishing. See 0.39.0 below for the changes.
+
 ## [0.39.0] - 2026-11-18
 
 ### Added
