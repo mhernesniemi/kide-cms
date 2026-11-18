@@ -7,6 +7,46 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.39.0] - 2026-11-18
+
+### Added
+
+- **WordPress importer** (`pnpm exec kide import`, mappings via `@kidecms/core/importer`): scout a MySQL
+  dump, map post types with `defineMapping`, then `plan` → `apply` → `verify` → `check-live`. Reads ACF,
+  Gutenberg, Polylang/WPML, menus, Yoast permalinks, Gravity Forms and Redirection. `plan` blocks on
+  unmapped fields, invalid values, missing references or media, bundled terms and lost text, and advises
+  which fields to make translatable.
+- **Per-language translation drafts.** In draft-enabled collections each translation has its own
+  status: new translations start as drafts, edits to a published one stay off the site until it is
+  published again. New API: `publishTranslation`, `unpublishTranslation`, `discardTranslationDraft`,
+  `deleteTranslation`; `upsertTranslation` takes `_status: "published"`. Reads with `status: "any"`
+  carry `_localeStates`, and translations saved before the original changed are flagged outdated.
+- **`fields.taxonomy({ taxonomy, hasMany })`**: a term picker over a `taxonomies` document; `hasMany`
+  stores an array of slugs.
+- **Per-locale `pathPrefix`** (`{ en: "blogs", fi: "blogit" }`) and `documentRoute()`; routes, search and
+  preview follow the document's language.
+
+### Changed
+
+- **Translation editing in the admin**: one layout for every language, shared fields disabled, empty
+  fields show the original as placeholder, a language switcher with per-language status, a Languages
+  column showing every language, "Missing <language>" filters for all languages, and a remembered
+  working language.
+- **Admin dates** default to `17 Nov 2026, 21:38` (`dateFormat: "en-GB"`), with relative times for the
+  last 24 hours. List columns default to Updated only.
+- **AI field actions** moved to a sparkle menu in the field's label row; AI stays off while
+  `AI_API_KEY` is the `.env.example` placeholder.
+- **`admin.icon`** accepts any Lucide icon name and warns about unknown ones.
+- Empty translation fields fall back to the original, so `required` no longer applies to translations.
+
+### Upgrade notes
+
+- Package mode: `pnpm add @kidecms/core@latest`, then `pnpm cms:push`: translation tables gain
+  `_status`, `_published`, `_updated_at` and `_source_hash`. Existing translations stay published.
+- Code that calls `upsertTranslation` for published documents in draft-enabled collections should pass
+  `_status: "published"` (or call `publishTranslation`); a new translation is otherwise a draft.
+- Set `admin.dateFormat: "en-US"` to keep the previous date order.
+
 ## [0.38.0] - 2026-11-16
 
 ### Changed
