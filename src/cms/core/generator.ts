@@ -610,6 +610,7 @@ const generateApiFile = (
     publishTranslation(id: string, locale: string, ${ctx}): Promise<${baseName}Document>;
     unpublishTranslation(id: string, locale: string, ${ctx}): Promise<${baseName}Document>;
     discardTranslationDraft(id: string, locale: string, ${ctx}): Promise<${baseName}Document>;
+    markTranslationCurrent(id: string, locale: string, ${ctx}): Promise<${baseName}Document>;
     deleteTranslation(id: string, locale: string, ${ctx}): Promise<boolean>;
   };`;
     })

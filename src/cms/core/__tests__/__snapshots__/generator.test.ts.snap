@@ -44,6 +44,7 @@ export const cms = createCms(config) as {
     publishTranslation(id: string, locale: string, context?: CmsContext): Promise<ArticlesDocument>;
     unpublishTranslation(id: string, locale: string, context?: CmsContext): Promise<ArticlesDocument>;
     discardTranslationDraft(id: string, locale: string, context?: CmsContext): Promise<ArticlesDocument>;
+    markTranslationCurrent(id: string, locale: string, context?: CmsContext): Promise<ArticlesDocument>;
     deleteTranslation(id: string, locale: string, context?: CmsContext): Promise<boolean>;
   };
   writers: {
@@ -67,6 +68,7 @@ export const cms = createCms(config) as {
     publishTranslation(id: string, locale: string, context?: CmsContext): Promise<WritersDocument>;
     unpublishTranslation(id: string, locale: string, context?: CmsContext): Promise<WritersDocument>;
     discardTranslationDraft(id: string, locale: string, context?: CmsContext): Promise<WritersDocument>;
+    markTranslationCurrent(id: string, locale: string, context?: CmsContext): Promise<WritersDocument>;
     deleteTranslation(id: string, locale: string, context?: CmsContext): Promise<boolean>;
   };
   meta: ReturnType<typeof createCms>["meta"];

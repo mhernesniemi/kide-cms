@@ -510,6 +510,9 @@ describe("translations", () => {
     expect((await authors.findById(author._id))._localeStates.fi.outdated).toBeUndefined();
     await authors.update(author._id, { description: "Original, edited" });
     expect((await authors.findById(author._id))._localeStates.fi.outdated).toBe(true);
+    await authors.markTranslationCurrent(author._id, "fi");
+    expect((await authors.findById(author._id))._localeStates.fi.outdated).toBeUndefined();
+    await authors.update(author._id, { description: "Original, edited again" });
     await authors.upsertTranslation(author._id, "fi", { description: "Päivitetty" });
     expect((await authors.findById(author._id))._localeStates.fi.outdated).toBeUndefined();
   });

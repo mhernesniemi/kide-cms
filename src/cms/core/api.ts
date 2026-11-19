@@ -918,7 +918,7 @@ export const createCms = (config: CMSConfig) => {
       }
       const row = await translationRow(id, locale);
       if (!row) throw new Error(`No "${locale}" translation.`);
-      return { db, tables, row };
+      return { db, tables, row, existing };
     };
 
     return {
@@ -1826,6 +1826,16 @@ export const createCms = (config: CMSConfig) => {
             .set(restore)
             .where(and(eq(tables.translations._entityId, id), eq(tables.translations._languageCode, locale)));
         }
+        return (await this.findById(id, { locale, status: "any" }, context))!;
+      },
+
+      /** Confirms a translation still matches the original, clearing its outdated flag without changing content. */
+      async markTranslationCurrent(id: string, locale: string, context: RuntimeContext = {}) {
+        const { db, tables, existing } = await translationAccess(id, locale, "update", context);
+        await db
+          .update(tables.translations)
+          .set({ _sourceHash: translatableHash(collection, existing) })
+          .where(and(eq(tables.translations._entityId, id), eq(tables.translations._languageCode, locale)));
         return (await this.findById(id, { locale, status: "any" }, context))!;
       },
 

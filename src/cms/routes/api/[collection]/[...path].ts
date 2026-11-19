@@ -236,6 +236,10 @@ const handleHtmlMutation = async (
         await collectionApi.discardTranslationDraft(documentId, locale, ctx);
         return redirect(redirectTo, { status: "success", msg: `Changes discarded` });
       }
+      if (action === "confirm-translation") {
+        await collectionApi.markTranslationCurrent(documentId, locale, ctx);
+        return redirect(redirectTo, { status: "success", msg: `${language} translation marked as up to date` });
+      }
       if (action === "delete-translation") {
         await collectionApi.deleteTranslation(documentId, locale, ctx);
         const base = redirectTo.split("?")[0];
