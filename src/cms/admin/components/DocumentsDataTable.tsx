@@ -585,39 +585,44 @@ export default function DocumentsDataTable({
               cell: ({ row }: { row: { original: DataTableRow } }) => {
                 const base = row.original.editHref.split("?")[0];
                 const states = row.original.localeStates;
-                const shown = supportedLocales && states ? supportedLocales : row.original.locales;
+                const listed = supportedLocales && states ? supportedLocales : row.original.locales;
+                // The API lists the original language first in _localeStates.
+                const original = states ? Object.keys(states)[0] : undefined;
+                const shown = original ? [original, ...listed.filter((locale) => locale !== original)] : listed;
                 return (
-                  <div className="flex flex-wrap gap-1.5">
-                    {shown.map((locale) => {
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {shown.map((locale, index) => {
                       const state = states?.[locale];
                       const missing = Boolean(states) && !state;
                       const label = states ? describeLocale(locale, state) : languageLabel(locale);
                       return (
-                        <a
-                          key={locale}
-                          href={`${base}?locale=${locale}`}
-                          title={label}
-                          aria-label={label}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "gap-1.5 uppercase transition-colors",
-                              missing
-                                ? "text-muted-foreground/60 hover:text-muted-foreground border-dashed"
-                                : "text-muted-foreground hover:border-foreground/50 hover:text-foreground",
-                              state?.outdated && "border-amber-500/60",
-                            )}
+                        <React.Fragment key={locale}>
+                          {original && index === 1 && <span className="bg-border h-4 w-px" />}
+                          <a
+                            href={`${base}?locale=${locale}`}
+                            title={label}
+                            aria-label={label}
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            {state && (
-                              <span
-                                className={cn("size-1.5 rounded-full", LOCALE_DOT[state.status] ?? LOCALE_DOT.draft)}
-                              />
-                            )}
-                            {locale}
-                          </Badge>
-                        </a>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "gap-1.5 uppercase transition-colors",
+                                missing
+                                  ? "text-muted-foreground/60 hover:text-muted-foreground border-dashed"
+                                  : "text-muted-foreground hover:border-foreground/50 hover:text-foreground",
+                                state?.outdated && "border-amber-500/60",
+                              )}
+                            >
+                              {state && (
+                                <span
+                                  className={cn("size-1.5 rounded-full", LOCALE_DOT[state.status] ?? LOCALE_DOT.draft)}
+                                />
+                              )}
+                              {locale}
+                            </Badge>
+                          </a>
+                        </React.Fragment>
                       );
                     })}
                   </div>

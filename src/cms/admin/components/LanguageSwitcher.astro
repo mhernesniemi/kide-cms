@@ -30,36 +30,39 @@ const describe = (locale: string) => {
 
 <nav aria-label="Language" class="bg-muted inline-flex h-8 items-center gap-0.5 rounded-lg border p-0.5">
   {
-    locales.map((locale) => {
+    [baseLocale, ...locales.filter((locale) => locale !== baseLocale)].map((locale, index) => {
       const state = states[locale];
       return (
-        <a
-          href={hrefFor(locale)}
-          title={describe(locale)}
-          aria-label={describe(locale)}
-          aria-current={selected === locale ? "page" : undefined}
-          class={cn(
-            "inline-flex h-full min-w-9 items-center justify-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors",
-            selected === locale
-              ? "bg-background text-foreground shadow-sm"
-              : state
-                ? "text-muted-foreground hover:text-foreground"
-                : "text-muted-foreground/50 hover:text-muted-foreground",
-          )}
-        >
-          {state ? (
-            <span
-              class={cn(
-                "size-1.5 rounded-full",
-                DOT[state.status] ?? DOT.draft,
-                state.outdated && "ring-2 ring-amber-500/40",
-              )}
-            />
-          ) : (
-            <span class="size-1.5 rounded-full border border-current opacity-60" />
-          )}
-          {locale.toUpperCase()}
-        </a>
+        <>
+          {index === 1 && <span class="bg-border mx-0.5 h-4 w-px" />}
+          <a
+            href={hrefFor(locale)}
+            title={describe(locale)}
+            aria-label={describe(locale)}
+            aria-current={selected === locale ? "page" : undefined}
+            class={cn(
+              "inline-flex h-full min-w-9 items-center justify-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors",
+              selected === locale
+                ? "bg-background text-foreground shadow-sm"
+                : state
+                  ? "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground/50 hover:text-muted-foreground",
+            )}
+          >
+            {state ? (
+              <span
+                class={cn(
+                  "size-1.5 rounded-full",
+                  DOT[state.status] ?? DOT.draft,
+                  state.outdated && "ring-2 ring-amber-500/40",
+                )}
+              />
+            ) : (
+              <span class="size-1.5 rounded-full border border-current opacity-60" />
+            )}
+            {locale.toUpperCase()}
+          </a>
+        </>
       );
     })
   }
