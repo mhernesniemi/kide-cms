@@ -7,13 +7,14 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
 
-import { decodeEntities } from "../values";
+import { decodeEntities } from "@kidecms/core";
 import { htmlText, outputStrings, words } from "./domain";
 import { parseBlocks, walkBlocks } from "./gutenberg";
 import { loadPlan } from "./report";
-import { getMeta, importDir, loadRecords, type Staging } from "./staging";
+import { getMeta, loadRecords, type Staging } from "./staging";
 
 export type LivePage = {
   url: string;
@@ -28,7 +29,7 @@ export type LivePage = {
   missing: string[];
   /** In another staged record that isn't migrated (skipped type, filtered record). */
   skipped: Array<{ text: string; source: string }>;
-  /** Nowhere in the dump: the live page changed after the export. */
+  /** Nowhere in the dump: rendered by a plugin, feed or template, or changed after the export. */
   drift: string[];
 };
 
@@ -119,10 +120,12 @@ export const checkLive = async (
     return sourceKeys[lo];
   };
   const pageSource = new Map<string, string>();
-  const cacheDir = path.join(importDir(), "live");
+  // Shared across projects and fresh runs like the media cache; `--refresh` refetches.
+  const cacheDir = path.resolve(process.env.KIDE_LIVE_CACHE ?? path.join(homedir(), ".cache", "kide", "import-live"));
   mkdirSync(cacheDir, { recursive: true });
 
-  type Target = { url: string; docId: string; collection: string; locale: string; text: string[] };
+  type Target = { url: string; docId: string; collection: string; locale: string; text: string[]; refs: string[] };
+  const docText = new Map(plan.docs.map((d) => [d.docId, outputStrings(d.data)]));
   const targets: Target[] = [];
   const known: string[] = [];
   for (const doc of plan.docs) {
@@ -135,7 +138,16 @@ export const checkLive = async (
       const text = outputStrings(fields);
       known.push(...text.filter((t) => words(t).length >= 4));
       if (record?.status !== "publish" || typeof record.permalink !== "string") continue;
-      targets.push({ url: `${base}${record.permalink}`, docId: doc.docId, collection: doc.collection, locale, text });
+      // Documents this page embeds or links (a form, liftups): their text renders on it too.
+      const refs = [...new Set(outputStrings(fields).filter((s) => s !== doc.docId && docText.has(s)))];
+      targets.push({
+        url: `${base}${record.permalink}`,
+        docId: doc.docId,
+        collection: doc.collection,
+        locale,
+        text,
+        refs,
+      });
       pageSource.set(`${base}${record.permalink}`, k);
     }
   }
@@ -180,6 +192,9 @@ export const checkLive = async (
     const own = t.text.map(key).join(" \u0000 ");
     const bag = new Map<string, number>();
     for (const w of words(t.text.join(" "))) bag.set(w, (bag.get(w) ?? 0) + 1);
+    const refText = t.refs.flatMap((id) => docText.get(id) ?? []);
+    const refBag = new Map<string, number>();
+    for (const w of words(refText.join(" "))) refBag.set(w, (refBag.get(w) ?? 0) + 1);
     const page: LivePage = {
       url: t.url,
       docId: t.docId,
@@ -195,7 +210,8 @@ export const checkLive = async (
     };
     for (const b of blocks) {
       if (contains(own, bag, b)) page.found++;
-      else if (knownText.includes(key(b))) page.listed++;
+      else if (knownText.includes(key(b)) || (refBag.size && contains(refText.map(key).join(" "), refBag, b)))
+        page.listed++;
       else {
         const from = sourceOf(key(b));
         if (!from) page.drift.push(b);
@@ -228,9 +244,9 @@ export const renderLive = (report: LiveReport, minScore: number): string => {
     "",
     "Score = share of the page's source content found in its Kide document (or, for listings, in another imported document).",
     "Blocks missing from Kide are looked up in the dump: in the page's own record → **missing** (counts against the score);",
-    "in another staged record that isn't migrated → **skipped source**; nowhere in the dump → **drift** (the live page changed after the export).",
+    "in another staged record that isn't migrated → **skipped source**; nowhere in the dump → **not in the dump** (rendered by a plugin, feed or template, or changed after the export).",
     "",
-    "| collection | pages | mean score | below threshold | pages with skipped-source text | pages with drift | not 200 |",
+    "| collection | pages | mean score | below threshold | pages with skipped-source text | pages with text not in the dump | not 200 |",
     "| --- | --- | --- | --- | --- | --- | --- |",
     ...[...byCollection].map(([c, ps]) => {
       const ok = ps.filter((p) => p.status === 200);
@@ -258,8 +274,8 @@ export const renderLive = (report: LiveReport, minScore: number): string => {
   }
   const drifted = report.pages.filter((p) => p.drift.length);
   if (drifted.length) {
-    lines.push("", `## Drift: ${drifted.length} page(s) changed on the live site after the dump`, "");
-    for (const p of drifted.slice(0, 15)) lines.push(`- ${p.url}: ${cut(p.drift[0])}`);
+    lines.push("", `## Not in the dump: ${drifted.length} page(s) show text the export doesn't contain`, "");
+    for (const p of drifted) lines.push(`- ${p.url}: ${cut(p.drift[0])}`);
   }
   for (const f of report.failed) lines.push(`- fetch failed: ${f.url} — ${f.message}`);
   return `${lines.join("\n")}\n`;

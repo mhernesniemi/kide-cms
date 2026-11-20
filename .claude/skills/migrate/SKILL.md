@@ -7,11 +7,11 @@ description: Migrate content from another CMS (WordPress, Payload, Contentful, �
 
 Follow **[`MIGRATING.md`](../../../MIGRATING.md)** at the repo root; it's the canonical playbook. The short version:
 
-**WordPress** (mysqldump): use the `kide import` pipeline, not a hand-written importer.
+**WordPress** (mysqldump): use the `kide import` pipeline from the `@kidecms/wordpress` plugin (`pnpm add -D @kidecms/wordpress`), not a hand-written importer.
 
 1. `pnpm exec kide import scout <dump.sql.gz> --uploads <wp-content/uploads>` → read `.kide/import/profile.md`; inspect records with `pnpm exec kide import sample <type>`.
-2. Model the target the Kide way (taxonomies, menus, forms, localized `pathPrefix`, references; see the concept table in `MIGRATING.md`), confirm the model and scope with the user, then `pnpm cms:generate && pnpm cms:push`.
-3. Write one `migration/<type>.map.ts` per source type with `defineMapping` / `skipSource` from `@kidecms/core/importer`. Every source path must be read by `map` or listed in `drop` with a reason.
+2. Model the target the Kide way (localized `pathPrefix`, references; see the concept table in `MIGRATING.md`). Menus, taxonomies, forms and redirects are `presets.*` and core blocks map to `standardBlocks({ forms: true })`, both from `@kidecms/core`: use them, don't write your own. Confirm the model and scope with the user, then `pnpm cms:generate && pnpm cms:push`.
+3. Write one `migration/<type>.map.ts` per source type with `defineMapping` / `skipSource` from `@kidecms/wordpress` (several mappings may share a source, split by `filter`). Every source path must be read by `map` or listed in `drop` with a reason. Menus, term trees and Gravity Forms are `ctx.menuItems` / `ctx.termTree` / `ctx.form`.
 4. `pnpm exec kide import plan` until READY, fixing what `.kide/import/ledger.md` lists (unaccounted paths, invalid shapes, dangling refs and terms, bundled terms, missing media, low text recall).
 5. `pnpm exec kide import apply` → `pnpm exec kide import verify` → `pnpm exec kide import check-live` → check `/admin`, `pnpm check`, `pnpm test`.
 

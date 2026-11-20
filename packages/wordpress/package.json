@@ -1,0 +1,28 @@
+{
+  "name": "@kidecms/wordpress",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WordPress \u2192 Kide CMS importer: scout a MySQL dump, map it with defineMapping, then plan \u2192 apply \u2192 verify \u2192 check-live.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts"
+  },
+  "files": [
+    "src",
+    "!src/__tests__"
+  ],
+  "dependencies": {
+    "@wordpress/autop": "5.1.0",
+    "@wordpress/block-serialization-default-parser": "6.1.0",
+    "@wordpress/shortcode": "5.1.0"
+  },
+  "peerDependencies": {
+    "@kidecms/core": ">=0.39.1",
+    "better-sqlite3": "^12.0.0 || ^13.0.0"
+  },
+  "devDependencies": {
+    "@kidecms/core": "workspace:*"
+  }
+}

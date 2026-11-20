@@ -11,28 +11,47 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import {
+  decodeEntities,
   documentRoute,
   getTranslatableFieldNames,
   htmlToRichText,
   slugify,
   type CMSConfig,
   type CollectionConfig,
+  type FieldConfig,
   type ContentNode,
   type RichTextNode,
-} from "..";
-import { validateDocument, validateTranslations } from "../migrate";
+  validateDocument,
+  validateTranslations,
+} from "@kidecms/core";
 import {
+  CONTAINER_BLOCKS,
+  CONVERTED,
+  EMPTY_BLOCKS,
+  HTML_BLOCKS,
   blockData,
   collectDomain,
   expandBlocks,
   htmlText,
   isCovered,
+  isEmpty,
   matchesPath,
   outputStrings,
+  stripComments,
   textRecall,
   truncate,
+  words,
 } from "./domain";
-import { autop, blockHtml, findShortcodes, replaceShortcodes, type ShortcodeHandler, type WpBlock } from "./gutenberg";
+import {
+  autop,
+  blockHtml,
+  findShortcodes,
+  isAcfBlock,
+  replaceShortcodes,
+  walkBlocks,
+  type ShortcodeHandler,
+  type WpBlock,
+} from "./gutenberg";
 import {
   isSkip,
   Tracker,
@@ -45,6 +64,8 @@ import {
   type Skip,
 } from "./mapping";
 import { reusableLookup } from "./profile";
+import { autoFields, autoRecord } from "./automap";
+import { gravityForm, menuItems, termTree } from "./structures";
 import { termParts } from "./terms";
 import { getMeta, loadMedia, loadRecords, type Staging, type StagedMedia, type StagedRecord } from "./staging";
 
@@ -56,27 +77,12 @@ export const MEDIA_TOKEN = /\/uploads\/\.kide-media\/([A-Za-z0-9_-]+)/g;
 export const mediaToken = (key: string) => `${MEDIA_PREFIX}${Buffer.from(key).toString("base64url")}`;
 export const tokenKey = (encoded: string) => Buffer.from(encoded, "base64url").toString("utf8");
 
-const HTML_BLOCKS = new Set(
-  [
-    "paragraph",
-    "heading",
-    "list",
-    "list-item",
-    "quote",
-    "pullquote",
-    "image",
-    "gallery",
-    "preformatted",
-    "verse",
-    "code",
-    "freeform",
-    "buttons",
-    "button",
-    "file",
-  ].map((n) => `core/${n}`),
-);
-const CONTAINER_BLOCKS = new Set(["group", "columns", "column", "row", "stack"].map((n) => `core/${n}`));
-const EMPTY_BLOCKS = new Set(["spacer", "separator", "more", "nextpage"].map((n) => `core/${n}`));
+/** `acf/color-text` / `exf/link-list` → `colorText` / `linkList`: the Kide block a block maps onto by name. */
+const blockTypeOf = (name: string) =>
+  name.slice(name.indexOf("/") + 1).replace(/[-_]+([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+
+/** Markup that means something without text: embeds, media, forms, custom elements. */
+const MARKUP = /<(iframe|script|video|audio|object|embed|img|svg|form|input|canvas|[a-z]+-[a-z][\w-]*)\b/i;
 const DEFAULT_SHORTCODES: Record<string, ShortcodeHandler> = {
   caption: (_, inner) => inner,
   embed: (_, inner) => inner,
@@ -186,12 +192,15 @@ export const loadMappings = async (dir = mappingsDir()): Promise<Array<Mapping |
     const mod = (await import(pathToFileURL(path.join(dir, file)).href)).default as MappingModule;
     out.push(...(Array.isArray(mod) ? mod : [mod]));
   }
-  const seen = new Map<string, number>();
-  for (const m of out) seen.set(m.source, (seen.get(m.source) ?? 0) + 1);
-  const dupes = [...seen].filter(([, n]) => n > 1).map(([s]) => s);
-  if (dupes.length) throw new Error(`More than one mapping for source type(s): ${dupes.join(", ")}`);
+  const skipped = new Set(out.filter(isSkip).map((m) => m.source));
+  const conflicts = [...skipped].filter((s) => out.filter((m) => m.source === s).length > 1);
+  if (conflicts.length) throw new Error(`Source type(s) both skipped and mapped: ${conflicts.join(", ")}`);
   return out;
 };
+
+/** `wp-12` for posts, `wp-term-5` for terms, `wp-redirect-3` / `wp-form-4` / … for every other source. */
+const defaultId = (r: StagedRecord) =>
+  r.key.startsWith("post:") ? `wp-${r.id}` : `wp-${r.key.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase()}`;
 
 const sha = (value: unknown) => createHash("sha1").update(JSON.stringify(value)).digest("hex");
 
@@ -255,24 +264,51 @@ export const planImport = async (
 
   const active = mappings.filter((m) => !options.only || options.only.includes(m.source));
   const docIdByKey = new Map<string, string>();
-  const collectionByType = new Map(
-    mappings.filter((m): m is Mapping => !isSkip(m)).map((m) => [m.source, m.collection] as const),
-  );
+  const collectionByKey = new Map<string, string>();
+  const sourceCounts = new Map<string, number>();
+  for (const m of mappings) if (!isSkip(m)) sourceCounts.set(m.source, (sourceCounts.get(m.source) ?? 0) + 1);
+  /** Sources split over several mappings: a filter returning `false` there means "another mapping's record". */
+  const shared = new Set([...sourceCounts].filter(([, n]) => n > 1).map(([s]) => s));
   const ledgers: SourceLedger[] = [];
   const docs: PlannedDoc[] = [];
   const urlChanges: UrlChange[] = [];
+  /** Every route a planned document is served at, so redirects can't hide one. */
+  const routes = new Set<string>();
   const docLedger = new Map<string, SourceLedger>();
 
   // --- pass 1: filter, group translations, assign document ids -----------------
-  type Prepared = { mapping: Mapping; collection: CollectionConfig; ledger: SourceLedger; groups: StagedRecord[][] };
+  type Prepared = {
+    mapping: Mapping;
+    collection: CollectionConfig;
+    ledger: SourceLedger;
+    groups: StagedRecord[][];
+    filterReads: Set<string>;
+  };
   const prepared: Prepared[] = [];
   const allMappedIds = new Map<string, string>();
+  const accounted = new Set<string>();
+  const splitProblems: string[] = [];
   for (const m of mappings) {
     if (isSkip(m)) continue;
     for (const r of byType.get(m.source) ?? []) {
       const verdict = m.filter ? m.filter(r) : true;
-      if (verdict === true) allMappedIds.set(r.key, "");
+      if (verdict !== false) accounted.add(r.key);
+      if (verdict !== true) continue;
+      if (collectionByKey.has(r.key))
+        splitProblems.push(`\`${r.key}\` is claimed by both \`${collectionByKey.get(r.key)}\` and \`${m.collection}\``);
+      allMappedIds.set(r.key, "");
+      collectionByKey.set(r.key, m.collection);
     }
+  }
+  for (const source of shared) {
+    const lost = (byType.get(source) ?? []).filter((r) => !accounted.has(r.key));
+    if (lost.length)
+      splitProblems.push(
+        `\`${source}\`: ${lost.length} record(s) no mapping's filter claims (e.g. ${lost
+          .slice(0, 3)
+          .map((r) => r.key)
+          .join(", ")}) — return a reason string to leave one out`,
+      );
   }
 
   const prepareMapping = (m: Mapping | Skip) => {
@@ -302,10 +338,13 @@ export const planImport = async (
       return;
     }
     if (!list.length) ledger.issues.push({ kind: "warning", message: `no staged records of type "${m.source}"` });
+    const filterReads = new Set<string>();
+    const filterTracker = new Tracker(filterReads);
     const kept: StagedRecord[] = [];
     for (const r of list) {
-      const verdict = m.filter ? m.filter(r) : true;
+      const verdict = m.filter ? m.filter(track(r, "", filterTracker) as SourceRecord) : true;
       if (verdict === true) kept.push(r);
+      else if (verdict === false && shared.has(m.source)) ledger.records--;
       else {
         const reason = typeof verdict === "string" ? verdict : "filtered";
         ledger.filtered[reason] = (ledger.filtered[reason] ?? 0) + 1;
@@ -344,10 +383,10 @@ export const planImport = async (
       return [base, ...members.filter((x) => x !== base)];
     });
     for (const [base, ...rest] of groups) {
-      const docId = m.id ? m.id(base) : base.key.startsWith("term:") ? `wp-term-${base.id}` : `wp-${base.id}`;
+      const docId = m.id ? m.id(base) : defaultId(base);
       for (const r of [base, ...rest]) docIdByKey.set(r.key, docId);
     }
-    prepared.push({ mapping: m, collection, ledger, groups });
+    prepared.push({ mapping: m, collection, ledger, groups, filterReads });
   };
   for (const m of active) if (m.source !== URL_CHANGES) prepareMapping(m);
 
@@ -356,7 +395,7 @@ export const planImport = async (
     if (isSkip(m) || active.includes(m)) continue;
     for (const r of byType.get(m.source) ?? []) {
       if (!allMappedIds.has(r.key)) continue;
-      docIdByKey.set(r.key, m.id ? m.id(r) : r.key.startsWith("term:") ? `wp-term-${r.id}` : `wp-${r.id}`);
+      docIdByKey.set(r.key, m.id ? m.id(r) : defaultId(r));
     }
   }
 
@@ -421,11 +460,18 @@ export const planImport = async (
   };
 
   // --- pass 2: map --------------------------------------------------------------
-  const mapPrepared = ({ mapping, collection, ledger, groups }: Prepared) => {
-    const reads = new Set<string>();
+  const mapPrepared = ({ mapping, collection, ledger, groups, filterReads }: Prepared) => {
+    const reads = new Set(filterReads);
     const domain = new Map<string, { records: number; sample: string }>();
     const recalls: number[] = [];
     const translatable = new Set(getTranslatableFieldNames(collection));
+    const declared = Object.assign(
+      {},
+      ...Object.values(collection.fields).map((f) => (f.type === "content" ? (f.blocks ?? {}) : {})),
+    );
+    const notices = new Set<string>();
+    // Translatable fields a translation leaves empty: Kide serves the original's value there.
+    const inherits = new Map<string, string[]>();
     // Per field: how many translations exist, and how many carry a value of their own.
     const divergence = new Map<string, { translations: number; differs: number; samples: string[] }>();
     for (const type of mapping.includes ?? []) {
@@ -468,9 +514,10 @@ export const planImport = async (
           issues: ledger.issues,
           docMedia,
           docIdByKey,
-          collectionByType,
+          collectionByKey,
           byKey,
           media,
+          fileIndex,
           reusable,
           uploadsDir,
           urlToMediaKey,
@@ -478,6 +525,9 @@ export const planImport = async (
           recordForUrl,
           byType,
           byGroup,
+          collection,
+          declared,
+          notices,
         });
         try {
           const out = mapping.map(track(record, "", tracker) as any, ctx);
@@ -511,6 +561,10 @@ export const planImport = async (
         for (const k of new Set([...Object.keys(out), ...Object.keys(base.out)])) {
           if (k.startsWith("_")) continue;
           const differs = JSON.stringify(out[k] ?? null) !== JSON.stringify(base.out[k] ?? null);
+          // Two empty values say nothing about whether the field is shared.
+          if (!differs && isEmpty(out[k])) continue;
+          if (isEmpty(out[k]) && translatable.has(k) && isTranslatedText(collection.fields[k]))
+            inherits.set(k, [...(inherits.get(k) ?? []), record.key]);
           const stat = divergence.get(k) ?? { translations: 0, differs: 0, samples: [] };
           stat.translations++;
           if (differs) {
@@ -566,6 +620,7 @@ export const planImport = async (
             defaultLocale,
           );
           const before = normalizePath(record.permalink);
+          routes.add(route);
           if (route !== before) {
             ledger.issues.push({ kind: "url-change", key: record.key, message: `${before} → ${route}` });
             urlChanges.push({ key: record.key, collection: collection.slug, docId, from: before, to: route });
@@ -614,6 +669,12 @@ export const planImport = async (
       }
     }
 
+    for (const [field, keys] of inherits)
+      ledger.issues.push({
+        kind: "translation-advice",
+        message: `"${field}" is empty in ${keys.length} translation(s), which therefore show the original's value (e.g. ${keys.slice(0, 3).join(", ")}); fill them in Kide if the original's language is wrong there.`,
+      });
+
     ledger.recall = {
       min: recalls.length ? Math.min(...recalls) : 1,
       avg: recalls.length ? recalls.reduce((a, b) => a + b, 0) / recalls.length : 1,
@@ -633,7 +694,7 @@ export const planImport = async (
   const deferred = active.filter((m) => m.source === URL_CHANGES);
   if (deferred.length) {
     const list: StagedRecord[] = urlChanges.map((c, i) => ({
-      key: `${URL_CHANGES}:${i + 1}`,
+      key: `${URL_CHANGES}:${c.key}`,
       type: URL_CHANGES,
       id: i + 1,
       status: "publish",
@@ -650,10 +711,70 @@ export const planImport = async (
     for (const p of prepared.slice(start)) mapPrepared(p);
   }
 
-  const ids = new Map<string, number>();
-  for (const d of docs) ids.set(`${d.collection}/${d.docId}`, (ids.get(`${d.collection}/${d.docId}`) ?? 0) + 1);
-  for (const [id, n] of ids)
-    if (n > 1) ledgers[0]?.issues.push({ kind: "duplicate-id", message: `${n} documents share the id ${id}` });
+  // Internal links still carry WordPress URLs; point every one whose document moved at its Kide route
+  // (rich text, link fields, menus, redirect targets). A redirect's `from` is the old URL on purpose.
+  const moved = new Map(urlChanges.map((c) => [c.from, c.to]));
+  if (moved.size) {
+    const movedTo = (v: string) => {
+      const p = sitePath(v);
+      return p === null ? undefined : moved.get(normalizePath(p));
+    };
+    const relink = (value: unknown, key?: string): unknown => {
+      if (typeof value === "string") return key === "from" ? value : (movedTo(value) ?? value);
+      if (Array.isArray(value)) return value.map((v) => relink(v));
+      if (!value || typeof value !== "object") return value;
+      return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, relink(v, k)]));
+    };
+    for (const d of docs) {
+      d.data = relink(d.data) as Record<string, unknown>;
+      d.translations = relink(d.translations) as Record<string, Record<string, unknown>>;
+      d.hash = sha({ data: d.data, translations: d.translations });
+    }
+  }
+
+  // Redirects after the move: one pointing at itself, or away from a route a document now owns, is
+  // dropped; of two from the same URL, the site's own rule wins over a generated url-change one.
+  const isRedirect = (d: PlannedDoc) => {
+    const fields = collections.get(d.collection)?.fields;
+    return !!fields?.from && !!fields?.to;
+  };
+  const redirectPath = (v: unknown) => {
+    const p = typeof v === "string" ? sitePath(v) : null;
+    return p === null ? null : normalizePath(p);
+  };
+  const generated = (d: PlannedDoc) => d.sourceKeys[0]?.startsWith(`${URL_CHANGES}:`);
+  const seenFrom = new Map<string, PlannedDoc>();
+  const dropped = new Set<PlannedDoc>();
+  const drop = (d: PlannedDoc, message: string) => {
+    dropped.add(d);
+    const ledger = docLedger.get(d.docId);
+    if (ledger) {
+      ledger.docs--;
+      ledger.issues.push({ kind: "warning", key: d.sourceKeys[0], message });
+    }
+  };
+  for (const d of [...docs].sort((a, b) => Number(generated(a)) - Number(generated(b)))) {
+    if (!isRedirect(d)) continue;
+    const from = redirectPath(d.data.from);
+    const to = redirectPath(d.data.to);
+    if (!from) continue;
+    if (from === to) drop(d, `redirect ${from} points at itself once routes are flat — left out`);
+    else if (routes.has(from)) drop(d, `redirect from ${from} would hide the document now served there — left out`);
+    else if (seenFrom.has(from))
+      drop(d, `redirect from ${from} duplicates ${seenFrom.get(from)!.sourceKeys[0]} — left out`);
+    else seenFrom.set(from, d);
+  }
+  if (dropped.size) docs.splice(0, docs.length, ...docs.filter((d) => !dropped.has(d)));
+
+  // Ids are unique across collections: the plan and the applied state are keyed by id alone.
+  const ids = new Map<string, PlannedDoc[]>();
+  for (const d of docs) ids.set(d.docId, [...(ids.get(d.docId) ?? []), d]);
+  for (const [id, list] of ids)
+    if (list.length > 1)
+      docLedger.get(list[1].docId)?.issues.push({
+        kind: "duplicate-id",
+        message: `${list.length} documents share the id "${id}" (${list.map((d) => `${d.sourceKeys[0]} → ${d.collection}`).join(", ")}); give one mapping an \`id\``,
+      });
 
   // Every taxonomy-select value must name a term of its taxonomy in that locale.
   const termSets = new Map<string, Set<string>>();
@@ -715,6 +836,15 @@ export const planImport = async (
     }
   }
 
+  // A drop list shared between mappings is only stale when it matches nothing in any of them.
+  const allPaths = ledgers.flatMap((l) => l.paths.map((p) => p.path));
+  const reported = new Set<string>();
+  for (const l of ledgers)
+    l.staleDrops = l.staleDrops.filter((d) => {
+      if (reported.has(d) || allPaths.some((p) => matchesPath(d, p))) return false;
+      return reported.add(d);
+    });
+
   const mapped = new Set(mappings.flatMap((m) => [m.source, ...(isSkip(m) ? [] : (m.includes ?? []))]));
   const unmapped = options.only
     ? []
@@ -722,15 +852,16 @@ export const planImport = async (
         .filter(([type]) => !mapped.has(type) && type !== "wp_block")
         .map(([type, list]) => ({ type, records: list.length }));
 
-  const blocking: string[] = [];
+  const blocking: string[] = [...splitProblems];
   for (const u of unmapped)
     blocking.push(`source type \`${u.type}\` (${u.records} records) has no mapping or skipSource()`);
   for (const l of ledgers) {
     const open = l.paths.filter((p) => p.status === "unaccounted");
-    if (open.length) blocking.push(`\`${l.source}\`: ${open.length} unaccounted path(s)`);
+    const label = shared.has(l.source) ? `${l.source} → ${l.collection}` : l.source;
+    if (open.length) blocking.push(`\`${label}\`: ${open.length} unaccounted path(s)`);
     const counts = new Map<IssueKind, number>();
     for (const i of l.issues) if (BLOCKING.includes(i.kind)) counts.set(i.kind, (counts.get(i.kind) ?? 0) + 1);
-    for (const [kind, n] of counts) blocking.push(`\`${l.source}\`: ${n} ${kind} issue(s)`);
+    for (const [kind, n] of counts) blocking.push(`\`${label}\`: ${n} ${kind} issue(s)`);
   }
 
   return { ledgers, unmapped, docs, media, blocking, urlChanges, durationMs: Date.now() - started };
@@ -751,9 +882,10 @@ type ContextDeps = {
   issues: Issue[];
   docMedia: Set<string>;
   docIdByKey: Map<string, string>;
-  collectionByType: Map<string, string>;
+  collectionByKey: Map<string, string>;
   byKey: Map<string, StagedRecord>;
   media: Map<string, StagedMedia>;
+  fileIndex: Map<string, string>;
   reusable: (ref: number) => string | undefined;
   uploadsDir: string | undefined;
   urlToMediaKey: (url: string, allowExternal: boolean) => string | null;
@@ -761,13 +893,21 @@ type ContextDeps = {
   recordForUrl: (url: string) => StagedRecord | undefined;
   byType: Map<string, StagedRecord[]>;
   byGroup: Map<string, StagedRecord[]>;
+  collection: CollectionConfig;
+  /** Block types the collection's content fields declare (decides how core blocks convert). */
+  declared: Record<string, Record<string, unknown>>;
+  /** Once-per-mapping notices already reported. */
+  notices: Set<string>;
 };
 
 const makeContext = (deps: ContextDeps): MapContext => {
   const { mapping, record, tracker, issues, docMedia, docIdByKey, byKey, media } = deps;
   const issue = (kind: IssueKind, message: string) => issues.push({ kind, key: record.key, message });
 
-  const claimMedia = (key: string) => {
+  const claimMedia = (claimed: string) => {
+    // Polylang copies an attachment per language; the same file is one medium.
+    const file = media.get(claimed)?.file;
+    const key = (file && deps.fileIndex.get(file)) || claimed;
     docMedia.add(key);
     const m = media.get(key);
     if (deps.uploadsDir && m?.file && !existsSync(path.join(deps.uploadsDir, m.file)))
@@ -799,8 +939,12 @@ const makeContext = (deps: ContextDeps): MapContext => {
 
   const shortcodeHandlers = (html: string): Record<string, ShortcodeHandler> => {
     const handlers: Record<string, ShortcodeHandler> = {};
-    for (const name of new Set(findShortcodes(html))) {
-      const own = mapping.shortcodes?.[name];
+    for (const name of new Set(findShortcodes(stripComments(html)))) {
+      const own =
+        mapping.shortcodes?.[name] ??
+        (name === "gravityform" && deps.declared.form && !firstDrop(mapping, "shortcode:gravityform")
+          ? (a: Record<string, string>) => formBlock(a.id, a.title === "true", a.description === "true")
+          : undefined);
       const fallback = mapping.shortcodes?.["*"];
       if (own === "keep") tracker.read(`shortcode:${name}`, name);
       else if (own) handlers[name] = own;
@@ -827,51 +971,349 @@ const makeContext = (deps: ContextDeps): MapContext => {
     return nodes;
   };
 
+  // Shortcode handlers that return content nodes leave this token; `splice` swaps the nodes in.
+  const TOKEN = /⟦(\d+)⟧/g;
+  const splice = (nodes: ContentNode[], embedded: ContentNode[][]): ContentNode[] => {
+    const out: ContentNode[] = [];
+    const textOf = (n: any): string =>
+      typeof n.value === "string" ? n.value : (n.children ?? []).map(textOf).join("");
+    const strip = (n: any): any => {
+      if (typeof n.value === "string") return { ...n, value: n.value.replace(TOKEN, "") };
+      return Array.isArray(n.children) ? { ...n, children: n.children.map(strip) } : n;
+    };
+    for (const node of nodes) {
+      const found = [...JSON.stringify(node).matchAll(TOKEN)].map((m) => embedded[Number(m[1])] ?? []);
+      if (!found.length) {
+        out.push(node);
+        continue;
+      }
+      const rest = strip(node);
+      if (textOf(rest).trim()) out.push(rest);
+      out.push(...found.flat());
+    }
+    return out;
+  };
+
   // `fromSource: false` for HTML a block handler built: its text was already expected via the reads that fed it.
-  const htmlNodes = (html: string, fromSource = true): RichTextNode[] => {
-    const prepared = replaceShortcodes(html, shortcodeHandlers(html), (name) =>
-      tracker.read(`shortcode:${name}`, name),
+  const htmlNodes = (html: string, fromSource = true): ContentNode[] => {
+    const embedded: ContentNode[][] = [];
+    const prepared = replaceShortcodes(
+      html,
+      shortcodeHandlers(html),
+      (name) => tracker.read(`shortcode:${name}`, name),
+      (nodes) => `⟦${embedded.push(nodes as ContentNode[]) - 1}⟧`,
     );
     const withParagraphs = /<p[\s>]/i.test(prepared) ? prepared : autop(prepared);
-    if (fromSource) tracker.expect(htmlText(withParagraphs));
-    return rewriteNodes(htmlToRichText(withParagraphs).children as RichTextNode[]);
+    if (fromSource) tracker.expect(htmlText(withParagraphs.replace(TOKEN, " ")));
+    const nodes = rewriteNodes(htmlToRichText(withParagraphs).children as RichTextNode[]) as ContentNode[];
+    return embedded.length ? splice(nodes, embedded) : nodes;
+  };
+
+  const block = (blockType: string, fields: Record<string, unknown>): ContentNode => ({
+    type: "block",
+    blockType,
+    fields,
+  });
+  const paragraph = (value: string, bold = false): ContentNode => ({
+    type: "paragraph",
+    children: [{ type: "text", value, ...(bold ? { bold: true } : {}) }],
+  });
+  const fallback = (name: string, blockType: string) => {
+    if (deps.notices.has(name)) return;
+    deps.notices.add(name);
+    issue(
+      "warning",
+      `${name} became plain content; declare ${blockType === "form" ? "standardBlocks({ forms: true })" : `standardBlocks().${blockType}`} on the content field to keep it`,
+    );
+  };
+  const caption = (html: string) => htmlText(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i.exec(html)?.[1] ?? "");
+
+  // Code keeps its line breaks and indentation; rich text has no code node.
+  const codeBlock = (b: WpBlock): ContentNode[] => {
+    const html = blockHtml(b);
+    if (!deps.declared.code) {
+      fallback(b.name, "code");
+      return htmlNodes(html);
+    }
+    tracker.expect(htmlText(html));
+    const code = decodeEntities(html.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "")).replace(/^\n+|\s+$/g, "");
+    const language = /language-([\w-]+)/.exec(html)?.[1] ?? String(b.attrs.language ?? "");
+    return [block("code", { language, code })];
+  };
+
+  const formBlock = (id: unknown, showTitle: boolean, showDescription: boolean): ContentNode[] => {
+    const form = ctx.ref(`form:${Number(id)}`, { optional: true });
+    if (!form) {
+      issue("warning", `form ${String(id)} isn't imported — its block is left out`);
+      return [];
+    }
+    return [block("form", { form, showTitle, showDescription })];
+  };
+
+  /** Content nodes → items of a nested `blocks` field (accordion panel); undeclared blocks are hoisted after it. */
+  const panelItems = (nodes: ContentNode[], types: Record<string, unknown>) => {
+    const items: Record<string, unknown>[] = [];
+    const hoisted: ContentNode[] = [];
+    let prose: ContentNode[] = [];
+    const flush = () => {
+      if (prose.length) items.push({ type: "text", body: { type: "root", children: prose } });
+      prose = [];
+    };
+    for (const node of nodes) {
+      const b = node as { type: string; blockType?: string; fields?: Record<string, any> };
+      if (b.type !== "block") prose.push(node);
+      else if (b.blockType && b.blockType in types) {
+        flush();
+        items.push({ type: b.blockType, ...b.fields });
+      } else if (b.blockType === "accordion") {
+        prose.push({ type: "heading", level: 3, children: [{ type: "text", value: String(b.fields?.title ?? "") }] });
+        flush();
+        items.push(...((b.fields?.body as Record<string, unknown>[]) ?? []));
+      } else hoisted.push(node);
+    }
+    flush();
+    return { items, hoisted };
+  };
+
+  /** Core blocks Kide converts itself: to `standardBlocks()` when the collection declares them, else to plain content. */
+  const STANDARD: Record<string, (b: WpBlock) => ContentNode[]> = {
+    "core/shortcode": (b) => htmlNodes(blockHtml(b)),
+    "core/cover": (b) => {
+      const src = ctx.media(b.attrs.id ?? b.attrs.url, { optional: true });
+      const image: ContentNode[] = src ? [{ type: "image", src, alt: String(b.attrs.alt ?? "") }] : [];
+      return [...image, ...renderBlocks(b.innerBlocks)];
+    },
+    "core/details": (b) => {
+      const own = b.innerContent.filter((x): x is string => x !== null).join("");
+      const title = htmlText(/<summary[^>]*>([\s\S]*?)<\/summary>/i.exec(own)?.[1] ?? "");
+      tracker.expect(title);
+      const inner = b.innerBlocks.length
+        ? renderBlocks(b.innerBlocks)
+        : htmlNodes(blockHtml(b).replace(/<summary[\s\S]*?<\/summary>/i, ""));
+      const panel = deps.declared.accordion?.body as { type?: string; types?: Record<string, unknown> } | undefined;
+      if (panel?.type !== "blocks") {
+        fallback("core/details", "accordion");
+        return [paragraph(title, true), ...inner];
+      }
+      const { items, hoisted } = panelItems(inner, panel.types ?? {});
+      if (hoisted.length)
+        issue(
+          "warning",
+          `accordion "${truncate(title, 40)}": ${hoisted.map((n) => (n as any).blockType).join(", ")} can't sit in a panel, placed after it; add it with standardBlocks({ panelBlocks })`,
+        );
+      return [block("accordion", { title, body: items }), ...hoisted];
+    },
+    "core/table": (b) => {
+      const html = blockHtml(b);
+      tracker.expect(htmlText(html));
+      const rows = [...html.matchAll(/<tr[\s>][\s\S]*?<\/tr>/gi)].map((m) =>
+        [...m[0].matchAll(/<t([dh])[^>]*>([\s\S]*?)<\/t\1>/gi)].map((c) => htmlText(c[2])).join(" | "),
+      );
+      if (deps.declared.table)
+        return [
+          block("table", {
+            caption: caption(html),
+            headerRow: /<thead/i.test(html),
+            rows: rows.map((cells) => ({ cells })),
+          }),
+        ];
+      fallback("core/table", "table");
+      return [...rows.map((r) => paragraph(r)), ...(caption(html) ? [paragraph(caption(html))] : [])];
+    },
+    "core/video": (b) => {
+      const html = blockHtml(b);
+      const src = /<video[^>]*\ssrc="([^"]+)"/i.exec(html)?.[1] ?? "";
+      const text = caption(html);
+      tracker.expect(text);
+      if (!deps.declared.video) {
+        fallback("core/video", "video");
+        return htmlNodes(`<p><a href="${src}">${text || src.split("/").pop()}</a></p>`, false);
+      }
+      const file = ctx.media(b.attrs.id, { optional: true }) ?? (src ? ctx.media(src) : null);
+      return [block("video", { file, autoplay: /<video[^>]*\sautoplay/i.test(html), caption: text })];
+    },
+    "core/embed": (b) => {
+      const url = String(b.attrs.url ?? "");
+      tracker.expect(caption(blockHtml(b)));
+      if (deps.declared.embed) return [block("embed", { url })];
+      fallback("core/embed", "embed");
+      return htmlNodes(`<p><a href="${url}">${url}</a></p>`, false);
+    },
+    "core/audio": (b) => {
+      const html = blockHtml(b);
+      const src = /<audio[^>]*\ssrc="([^"]+)"/i.exec(html)?.[1] ?? "";
+      const text = caption(html);
+      tracker.expect(text);
+      if (!deps.declared.audio) {
+        fallback("core/audio", "audio");
+        return htmlNodes(`<p><a href="${src}">${text || src.split("/").pop()}</a></p>`, false);
+      }
+      return [
+        block("audio", {
+          file: ctx.media(b.attrs.id, { optional: true }) ?? (src ? ctx.media(src) : null),
+          caption: text,
+        }),
+      ];
+    },
+    "core/code": (b) => codeBlock(b),
+    "core/preformatted": (b) => codeBlock(b),
+    "core/html": (b) => {
+      const code = blockHtml(b);
+      if (!deps.declared.html) {
+        fallback("core/html", "html");
+        return htmlNodes(code);
+      }
+      tracker.expect(htmlText(code));
+      return [block("html", { code: code.trim() })];
+    },
+    "core/media-text": (b) => {
+      const src = ctx.media(b.attrs.mediaId ?? b.attrs.mediaLink, { optional: true });
+      return [
+        ...(src ? [{ type: "image", src, alt: String(b.attrs.mediaAlt ?? "") } as ContentNode] : []),
+        ...renderBlocks(b.innerBlocks),
+      ];
+    },
+    "gravityforms/form": (b) => {
+      if (deps.declared.form) return formBlock(b.attrs.formId, b.attrs.title !== false, b.attrs.description !== false);
+      fallback("gravityforms/form", "form");
+      return [];
+    },
+  };
+
+  /** A handler's view of a block; `done()` settles which of its text the handler consumed. */
+  const blockInput = (b: WpBlock): { input: BlockInput; done: () => void } => {
+    const base = `block:${b.name}`;
+    tracker.read(base, b.name);
+    let htmlRead = false;
+    let innerUsed = false;
+    let rendered: ContentNode[] | undefined;
+    const children: Array<{ done: () => void }> = [];
+    const mark = tracker.expected.length;
+    const input: BlockInput = {
+      name: b.name,
+      attrs: track(Object.fromEntries(Object.entries(b.attrs).filter(([k]) => k !== "data")), `${base}.attrs`, tracker),
+      data: track(blockData(b), `${base}.data`, tracker),
+      get innerHTML() {
+        htmlRead = true;
+        return blockHtml(b);
+      },
+      inner: () => {
+        innerUsed = true;
+        return (rendered ??= renderBlocks(b.innerBlocks));
+      },
+      auto: (blockType = blockTypeOf(b.name)) => {
+        const fields = deps.declared[blockType] as Record<string, FieldConfig> | undefined;
+        if (!fields) throw new Error(`b.auto(): no declared block "${blockType}" on this collection's content fields`);
+        return autoFields(fields, isAcfBlock(b) ? input.data : input.attrs, ctx);
+      },
+      children: () => {
+        innerUsed = true;
+        return b.innerBlocks.map((child) => {
+          const view = blockInput(child);
+          children.push(view);
+          return view.input;
+        });
+      },
+    };
+    const done = () => {
+      for (const child of children.splice(0)) child.done();
+      // Inner blocks the handler never looked at are still source content: if it drops them, recall says so.
+      if (!htmlRead && !innerUsed) for (const c of b.innerBlocks) tracker.expect(htmlText(blockHtml(c)));
+      // Text of inner blocks the handler rendered or read is accounted there; count only the block's own markup.
+      if (!htmlRead) return;
+      const html = innerUsed ? b.innerContent.filter((x) => x !== null).join("") : blockHtml(b);
+      // Pieces of that markup the handler passed to ctx.text/richText are part of it: count them once.
+      const whole = words(htmlText(html)).join(" ");
+      for (let i = tracker.expected.length - 1; i >= mark; i--)
+        if (whole.includes(words(tracker.expected[i]).join(" "))) tracker.expected.splice(i, 1);
+      tracker.read(`${base}.innerHTML`, html);
+    };
+    return { input, done };
+  };
+
+  const blockSource = (b: WpBlock) => {
+    const base = `block:${b.name}`;
+    tracker.read(base, b.name);
+    return isAcfBlock(b)
+      ? track(blockData(b), `${base}.data`, tracker)
+      : track(Object.fromEntries(Object.entries(b.attrs).filter(([k]) => k !== "data")), `${base}.attrs`, tracker);
+  };
+
+  /**
+   * A block filled by name from its own data, plus what it holds: an unfilled repeater takes one row
+   * per child block (a carousel's cards), an unfilled `heading`/`title` its heading child's text.
+   */
+  const autoBlock = (b: WpBlock, fields: Record<string, FieldConfig>): ContentNode => {
+    const values = autoFields(fields, blockSource(b), ctx);
+    const children = b.innerBlocks.filter((c) => !CONVERTED.has(c.name));
+    let usedHeading: WpBlock | undefined;
+    for (const [name, field] of Object.entries(fields)) {
+      if (name in values) continue;
+      if (field.type === "json" && field.itemFields && children.length) {
+        values[name] = children
+          .map((c) => autoFields(field.itemFields!, blockSource(c), ctx))
+          .filter((row) => Object.keys(row).length);
+      } else if (field.type === "text" && (name === "heading" || name === "title")) {
+        const heading = [...walkBlocks(b.innerBlocks)].find((c) => c.name === "core/heading");
+        if (heading) {
+          usedHeading = heading;
+          tracker.read(`block:${heading.name}`, heading.name);
+          for (const c of walkBlocks(b.innerBlocks))
+            if (CONTAINER_BLOCKS.has(c.name)) tracker.read(`block:${c.name}`, c.name);
+          values[name] = htmlText(blockHtml(heading));
+          tracker.expect(values[name] as string);
+        }
+      }
+    }
+    // Content children that filled nothing (a paragraph, an unused heading) must still arrive somewhere.
+    const content = (list: WpBlock[]): WpBlock[] =>
+      list.flatMap((c) => (CONTAINER_BLOCKS.has(c.name) ? content(c.innerBlocks) : HTML_BLOCKS.has(c.name) ? [c] : []));
+    for (const c of content(b.innerBlocks)) if (c !== usedHeading) tracker.expect(htmlText(blockHtml(c)));
+    // The block's own saved markup is a render of its attributes; only words it adds must still arrive.
+    const own = htmlText(b.innerContent.filter((x): x is string => x !== null).join(""));
+    if (own) {
+      tracker.reads.add(`block:${b.name}.innerHTML`);
+      const known = new Set(words(JSON.stringify(b.attrs)));
+      const extra = words(own).filter((w) => !known.has(w));
+      if (extra.length) tracker.expect(extra.join(" "));
+    }
+    return block(blockTypeOf(b.name), values);
   };
 
   const renderBlocks = (blocks: WpBlock[]): ContentNode[] => {
     const out: ContentNode[] = [];
     for (const b of blocks) {
       const base = `block:${b.name}`;
+      const before = out.length;
+      let converted = false;
       if (b.name === "core/block") {
         issue("warning", `reusable block ${String(b.attrs.ref)} not found in the source — skipped`);
         continue;
       }
       const handler = mapping.blocks?.[b.name];
       if (handler) {
-        tracker.read(base, b.name);
-        const input: BlockInput = {
-          name: b.name,
-          attrs: track(
-            Object.fromEntries(Object.entries(b.attrs).filter(([k]) => k !== "data")),
-            `${base}.attrs`,
-            tracker,
-          ),
-          data: track(blockData(b), `${base}.data`, tracker),
-          get innerHTML() {
-            const html = blockHtml(b);
-            tracker.read(`${base}.innerHTML`, html);
-            return html;
-          },
-          inner: () => renderBlocks(b.innerBlocks),
-        };
+        const { input, done } = blockInput(b);
         const result = handler(input, ctx);
-        if (typeof result === "string") out.push(...(htmlNodes(result, false) as ContentNode[]));
+        done();
+        if (typeof result === "string") out.push(...htmlNodes(result, false));
         else if (Array.isArray(result)) out.push(...result);
         else if (result) out.push(result);
       } else if (firstDrop(mapping, base)) {
         continue;
+      } else if (!CONVERTED.has(b.name) && !STANDARD[b.name] && deps.declared[blockTypeOf(b.name)]) {
+        // A plugin, ACF or unconverted core block maps onto the declared block of the same name,
+        // field by field, from its ACF data or its attributes.
+        out.push(autoBlock(b, deps.declared[blockTypeOf(b.name)] as Record<string, FieldConfig>));
+      } else if (STANDARD[b.name] ?? (b.name.startsWith("core-embed/") && STANDARD["core/embed"])) {
+        tracker.read(base, b.name);
+        // The built-in conversion decides what of a plugin block's attributes matters; all are accounted.
+        JSON.stringify(track(b.attrs, `${base}.attrs`, new Tracker(tracker.reads)));
+        tracker.reads.add(`${base}.innerHTML`);
+        out.push(...(STANDARD[b.name] ?? STANDARD["core/embed"])(b));
+        converted = true;
       } else if (CONTAINER_BLOCKS.has(b.name)) {
         tracker.read(base, b.name);
-        out.push(...(b.innerBlocks.length ? renderBlocks(b.innerBlocks) : (htmlNodes(b.innerHTML) as ContentNode[])));
+        out.push(...(b.innerBlocks.length ? renderBlocks(b.innerBlocks) : htmlNodes(b.innerHTML)));
       } else if (EMPTY_BLOCKS.has(b.name)) {
         tracker.read(base, b.name);
       } else if (HTML_BLOCKS.has(b.name)) {
@@ -883,9 +1325,19 @@ const makeContext = (deps: ContextDeps): MapContext => {
         };
         tracker.read(base, b.name);
         markInner(b.innerBlocks);
-        out.push(...(htmlNodes(blockHtml(b)) as ContentNode[]));
+        out.push(...htmlNodes(blockHtml(b)));
+        converted = true;
       }
       // Anything else is unaccounted: left out of the document, listed in the ledger until handled or dropped.
+      // Markup without text (a widget, a custom element) converts to nothing: keep it as HTML or say so.
+      if (converted && out.length === before && MARKUP.test(blockHtml(b))) {
+        if (deps.declared.html) out.push(block("html", { code: blockHtml(b).trim() }));
+        else
+          issue(
+            "warning",
+            `${b.name} holds markup but no text (${truncate(blockHtml(b), 50)}) — left out; declare standardBlocks().html to keep it`,
+          );
+      }
     }
     return out;
   };
@@ -902,7 +1354,7 @@ const makeContext = (deps: ContextDeps): MapContext => {
       const docId = resolveRef("post", id, o?.optional);
       const raw = id && typeof id === "object" ? (id as any).ID : id;
       const target = byKey.get(`post:${Number(raw)}`);
-      const collection = target && deps.collectionByType.get(target.type);
+      const collection = target && deps.collectionByKey.get(target.key);
       return docId && collection
         ? {
             type: "reference",
@@ -917,11 +1369,15 @@ const makeContext = (deps: ContextDeps): MapContext => {
       const raw =
         value && typeof value === "object" ? ((value as any).ID ?? (value as any).id ?? (value as any).url) : value;
       if (raw == null || raw === "" || raw === 0 || raw === "0" || raw === false) return null;
+      // A snapshot of a since-deleted attachment still names its file.
+      const url = value && typeof value === "object" ? (value as any).url : undefined;
       const key =
         typeof raw === "number" || /^\d+$/.test(String(raw))
           ? media.has(`att:${raw}`)
             ? `att:${raw}`
-            : null
+            : typeof url === "string" && url
+              ? deps.urlToMediaKey(url, true)
+              : null
           : deps.urlToMediaKey(String(raw), true);
       if (!key) {
         if (!o?.optional) issue("missing-media", `media ${truncate(raw, 60)} isn't in the source`);
@@ -933,7 +1389,7 @@ const makeContext = (deps: ContextDeps): MapContext => {
       tracker.consume(html);
       if (typeof html !== "string" || !html.trim()) return { type: "root", children: [] };
       // "keep" shortcodes are literal text wherever they sit, including blocks that never become rich text.
-      for (const name of new Set(findShortcodes(html.replace(/<!--(?!\s*\/?wp:)[\s\S]*?-->/g, "")))) {
+      for (const name of new Set(findShortcodes(stripComments(html)))) {
         const rule = mapping.shortcodes?.[name] ?? (DEFAULT_SHORTCODES[name] ? undefined : mapping.shortcodes?.["*"]);
         if (rule === "keep" && !firstDrop(mapping, `shortcode:${name}`)) tracker.read(`shortcode:${name}`, name);
       }
@@ -942,7 +1398,7 @@ const makeContext = (deps: ContextDeps): MapContext => {
     richText: (html) => {
       tracker.consume(html);
       if (typeof html !== "string" || !html.trim()) return { type: "root", children: [] };
-      return { type: "root", children: htmlNodes(html) };
+      return { type: "root", children: htmlNodes(html) as RichTextNode[] };
     },
     text: (html) => {
       tracker.consume(html);
@@ -958,7 +1414,7 @@ const makeContext = (deps: ContextDeps): MapContext => {
       const key = fileLinkKey(v.url);
       const target = key ? undefined : deps.recordForUrl(v.url);
       const docId = target && docIdByKey.get(target.key);
-      const collection = target && deps.collectionByType.get(target.type);
+      const collection = target && deps.collectionByKey.get(target.key);
       if (target && docId && collection)
         return {
           type: "reference",
@@ -1001,6 +1457,10 @@ const makeContext = (deps: ContextDeps): MapContext => {
         .filter((r) => !filter || filter(r))
         .map((r) => track(r, `${type}:`, tracker) as SourceRecord);
     },
+    auto: (src) => autoRecord(src, deps.collection, ctx),
+    menuItems: (menu) => menuItems(menu, ctx),
+    termTree: (taxonomy, options) => termTree(taxonomy, ctx, options),
+    form: (form) => gravityForm(form, ctx),
     warn: (message) => issue("warning", message),
   };
   return ctx;

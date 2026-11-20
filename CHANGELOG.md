@@ -7,6 +7,88 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+### Added
+
+- **`@kidecms/wordpress`:** the WordPress importer moved out of core into its own plugin package
+  (`pnpm add -D @kidecms/wordpress`; mappings import from it instead of `@kidecms/core/importer`, and
+  `kide import` runs it). It parses with WordPress's own `@wordpress/block-serialization-default-parser`,
+  `@wordpress/shortcode` and `@wordpress/autop`.
+
+- **Collection presets and standard blocks.** `presets.forms`, `presets.formSubmissions`, `presets.menus`,
+  `presets.taxonomies` and `presets.redirects`, plus `standardBlocks()` (accordion, table, video, audio, embed, code, html, and `form` with `{ forms: true }`),
+  from `@kidecms/core`. The marketing starter uses the presets instead of its own copies.
+- **WordPress importer:**
+  - Several mappings can share a source type, split by `filter` (posts into collections by category).
+  - `ctx.menuItems`, `ctx.termTree` and `ctx.form` build menus, term trees and Gravity Forms.
+  - Core details/table/video/audio/embed/html/media-text/cover/shortcode blocks, legacy `core-embed/*`, and
+    Gravity Forms blocks and `[gravityform]` shortcodes convert without handlers.
+  - `kide import --help` lists commands and flags; a drop list shared between mappings no longer reports
+    patterns another mapping uses as stale; `url-change` records need no `drop` entries.
+  - Shortcode handlers can return content nodes; block handlers get `b.children()` to build a parent
+    block (a carousel) from its child blocks.
+  - Internal links to documents whose route changed are rewritten to the new route.
+  - Bedrock installs are detected.
+  - Downloaded media is cached in `~/.cache/kide/import-media` (`KIDE_MEDIA_CACHE`), so re-runs and fresh
+    projects don't fetch the source site again.
+
+### Fixed
+
+- **WordPress importer:**
+  - Files the source answers 4xx for no longer fail their documents on `apply`: the references are
+    dropped and reported.
+  - Reading a block's `innerHTML` alongside `inner()` no longer counts its text twice.
+  - Media-modal and REST snapshots in block attributes, shortcode-like text in block JSON, Yoast scores
+    and menu-item bookkeeping no longer need `drop` entries.
+  - `verify` reads every locale the way the site serves it and flags empty fields and lost blocks.
+  - Default ids are unique across sources (`wp-form-4`, `wp-redirect-3`; posts stay `wp-<id>`), and a
+    duplicate id blocks the plan with the sources involved instead of crashing it. Imports of forms or
+    redirects with the old default ids are recreated under the new ones on the next `apply`.
+  - Gravity Forms Chained Selects keep every level; fields read in `filter` count as covered; the
+    translation advice ignores fields that are empty in both languages; `check-live` credits text from
+    documents a page embeds (forms) and no longer calls plugin output "drift".
+- **WordPress importer (round 3):** `apply` refuses while the database schema is behind the config;
+  core code/preformatted blocks keep their text verbatim (`code` block); markup-only blocks become an
+  `html` block or a warning instead of vanishing; Polylang's per-language copies of one file count as
+  one medium; empty ACF repeaters stage as `[]`; `ctx.termTree(src, { split: true })` and `termSlugs`
+  split bundled terms; Gravity Forms CAPTCHA and page-break fields are left out; files the source
+  answered 4xx for aren't retried until `apply --all`. `MenuItem` and `TermNode` are exported.
+- **API:** `findById(id, { status })` reads collections without drafts instead of returning null.
+- **WordPress importer (round 10):** inner content a block handler or auto-mapped block leaves out now
+  fails the text check instead of vanishing at 100% recall; an auto-mapped block's saved markup needs no
+  `drop`; taxonomy fields match terms whatever their spelling (`jobTitles` ← `job_title`).
+- **WordPress importer (round 9):** a handler that reads `innerHTML` and converts pieces of it with
+  `ctx.text`/`richText` gets that text counted once; a block's `heading`/`title` also fills from a heading
+  nested in a group.
+- **WordPress importer (round 8):** `b.auto()` gives a block handler the auto-mapped fields to spread and
+  override; field names also match `<name>Id` / `<name>Url`; a media snapshot of a deleted attachment falls
+  back to its URL.
+- **API:** `meta.isTranslatableField` (used by the MCP translation tool) follows the same rule as storage, so
+  translatable image, date, number, boolean and relation fields can be translated there too.
+- **WordPress importer (round 7):** Yoast `%%…%%` default patterns aren't staged as SEO content; taxonomy
+  fields match snake_case taxonomies (`jobTitle` ← `job_title`); script/style bodies aren't scanned for
+  shortcodes; an empty `--uploads` folder falls back to downloading; each stale drop is reported once; core blocks without a built-in conversion map by name like plugin blocks;
+  a block's unfilled repeater takes one row per child block and its unfilled heading/title its heading
+  child's text; a 4xx at the source is cached (`.gone` in the media cache) so fresh projects don't ask again.
+- **WordPress importer (round 6):** plugin blocks (not just ACF) map onto a same-named declared block from
+  their attributes; `auto` leaves unresolved references out with a warning, turns post ids in link fields
+  into reference links, drops empty rows, and falls back to same-named ACF meta; the plan drops redirects
+  that point at themselves, hide a moved document's route or duplicate another; `--help` on any
+  `kide import` subcommand only prints usage.
+- **WordPress importer (round 5):** `ctx.auto(src)` fills a collection by field name and type (post columns,
+  terms, Yoast SEO, ACF meta), and ACF blocks map onto the declared block of the same name; every internal
+  URL value is rewritten to moved documents' routes, Redirection targets included; translations that
+  leave a text field empty are reported; the profile shows each type's URL prefixes and nested URLs,
+  collapses data-keyed objects, and lists attributes of core blocks without a built-in conversion.
+- **WordPress importer (round 4):** the schema check compares the database with the config itself (the
+  generated schema is stale too until `cms:push`); `verify` also flags translations the site serves with
+  the original's value; `check-live` pages are cached in `~/.cache/kide/import-live` like media.
+- **Translations:** a translation that clears a field (`null`, an empty rich-text/content document or
+  `{}`) inherits the original instead of hiding it.
+- **WordPress importer:** term names decode HTML entities, and so does the text check; media downloads
+  allow 5 minutes per file.
+
 ## [0.39.1] - 2026-11-19
 
 ### Fixed

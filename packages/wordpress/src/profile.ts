@@ -9,6 +9,9 @@ export type TypeProfile = {
   statuses: Record<string, number>;
   locales: Record<string, number>;
   groups: number;
+  /** Where the type's published URLs live (first segment after the locale), and how many go deeper than prefix + slug. */
+  prefixes: Array<{ locale: string; prefix: string; records: number }>;
+  nested: number;
   paths: PathStat[];
 };
 
@@ -51,9 +54,27 @@ export const buildProfile = (records: StagedRecord[]): TypeProfile[] => {
       statuses,
       locales,
       groups: new Set(list.map((r) => r.group).filter(Boolean)).size,
+      ...urlShape(list),
       paths: [...stats.values()],
     };
   });
+};
+
+const urlShape = (list: StagedRecord[]) => {
+  const prefixes = new Map<string, { locale: string; prefix: string; records: number }>();
+  let nested = 0;
+  for (const r of list) {
+    if (typeof r.permalink !== "string" || !["publish", "private"].includes(r.status)) continue;
+    const segments = r.permalink.split("/").filter(Boolean);
+    const localePrefix = r.locale && segments[0] === r.locale ? `/${segments.shift()}` : "";
+    if (segments.length > 2) nested++;
+    const prefix = `${localePrefix}${segments.length > 1 ? `/${segments[0]}` : ""}/…`;
+    const key = `${r.locale ?? ""}|${prefix}`;
+    const entry = prefixes.get(key) ?? { locale: r.locale ?? "", prefix, records: 0 };
+    entry.records++;
+    prefixes.set(key, entry);
+  }
+  return { prefixes: [...prefixes.values()].sort((a, b) => b.records - a.records).slice(0, 12), nested };
 };
 
 const counts = (o: Record<string, number>) =>
@@ -82,6 +103,11 @@ export const renderProfile = (meta: Record<string, string | undefined>, types: T
     const blocks = t.paths.filter((p) => p.path.startsWith("block:"));
     const shortcodes = t.paths.filter((p) => p.path.startsWith("shortcode:"));
     lines.push("", `## \`${t.type}\` — ${t.records} records${t.groups ? ` · ${t.groups} translation groups` : ""}`, "");
+    if (t.prefixes.length)
+      lines.push(
+        `Published URLs: ${t.prefixes.map((p) => `\`${p.prefix}\` ${p.records}`).join(" · ")}${t.nested ? ` · ${t.nested} deeper than \`/<prefix>/<slug>\` (these URLs change in Kide)` : ""}`,
+        "",
+      );
     lines.push("| path | filled | sample |", "| --- | --- | --- |");
     for (const p of fields) lines.push(`| \`${p.path}\` | ${p.records}/${t.records} | ${cell(p.sample)} |`);
     if (blocks.length) {

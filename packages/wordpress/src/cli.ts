@@ -4,31 +4,47 @@
  *   kide import scout <dump.sql[.gz]> [--uploads <wp-content/uploads dir>] [--media-base <url>] [--site-url <url>] [--prefix wp_]
  *   kide import sample <type> [--id <n>] [--n 2] [--full]
  *   kide import plan [--only <type,type>] [--show <id|key>] [--min-recall 0.95]
- *   kide import apply [--all] [--force] [--no-prune] [--concurrency 6]
+ *   kide import apply [--all] [--force] [--no-prune] [--concurrency 12]
  *   kide import verify [--min-recall 0.95]
  *   kide import check-live [--base <url>] [--min-score 0.9] [--concurrency 6] [--limit N] [--refresh]
  *
  * Mappings live in migration/*.map.ts. Outputs go to .kide/import/.
  */
-import { writeFileSync } from "node:fs";
+import { readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { applyImport } from "../core/importer/apply";
-import { checkLive, liveScore, renderLive } from "../core/importer/live";
-import { truncate } from "../core/importer/domain";
-import { loadMappings, planImport } from "../core/importer/plan";
-import { buildProfile, renderProfile } from "../core/importer/profile";
-import { renderLedger, savePlan } from "../core/importer/report";
-import { getMeta, importDir, loadMedia, loadRecords, openStaging } from "../core/importer/staging";
-import { verifyImport } from "../core/importer/verify";
-import { scoutWordPress } from "../core/importer/wordpress";
-import { loadProjectConfig, loadProjectRuntime } from "./project";
+import { applyImport } from "./apply";
+import { checkLive, liveScore, renderLive } from "./live";
+import { truncate } from "./domain";
+import { loadMappings, planImport } from "./plan";
+import { buildProfile, renderProfile } from "./profile";
+import { renderLedger, savePlan } from "./report";
+import { getMeta, importDir, loadMedia, loadRecords, openStaging } from "./staging";
+import { verifyImport } from "./verify";
+import { scoutWordPress } from "./wordpress";
+import { loadProjectConfig, loadProjectRuntime } from "@kidecms/core/internals/project.ts";
 
 // Per-document audit lines would bury the report on a real site.
 process.env.CMS_LOG_LEVEL ??= "warn";
 
+const USAGE = `Usage: kide import <command>  (playbook: MIGRATING.md)
+
+  scout <dump.sql[.gz]> [--uploads <dir>] [--site-url <url>] [--media-base <url>] [--prefix wp_]
+  sample <type> [--id <n>] [--n 2] [--full]       staged records of a source type
+  plan [--only <type,…>] [--show <id|key>] [--min-recall 0.95]
+  apply [--all] [--force] [--no-prune] [--concurrency 12]
+  verify [--min-recall 0.95]
+  check-live [--base <url>] [--min-score 0.9] [--concurrency 6] [--limit N] [--refresh]
+
+Mappings: migration/*.map.ts · reports: .kide/import/{profile,ledger,verify,live}.md`;
+
 const [command, ...args] = process.argv.slice(2);
 const flag = (name: string) => args.includes(`--${name}`);
+// Every subcommand writes or fetches something, so asking for help must never run one.
+if (args.includes("--help") || args.includes("-h")) {
+  console.log(USAGE);
+  process.exit(0);
+}
 const option = (name: string) => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 ? args[i + 1] : undefined;
@@ -56,9 +72,18 @@ try {
     case "scout": {
       const dump = positional[0] ?? fail("usage: kide import scout <dump.sql[.gz]> [--uploads <dir>]");
       const started = Date.now();
+      let uploads = option("uploads") ? path.resolve(option("uploads")!) : undefined;
+      // A Bedrock checkout has an empty uploads folder (just .gitkeep): download from the site instead.
+      if (
+        uploads &&
+        !readdirSync(uploads, { recursive: true }).some((f) => !String(f).split("/").pop()!.startsWith("."))
+      ) {
+        console.log(`[kide import] ${uploads} holds no files — media will be downloaded from the site on apply.`);
+        uploads = undefined;
+      }
       const summary = await scoutWordPress(staging, path.resolve(dump), {
         prefix: option("prefix"),
-        uploadsDir: option("uploads") ? path.resolve(option("uploads")!) : undefined,
+        uploadsDir: uploads,
         mediaBaseUrl: option("media-base"),
         siteUrl: option("site-url"),
       });
@@ -79,7 +104,7 @@ try {
     }
 
     case "sample": {
-      const type = positional[0] ?? fail("usage: kide import sample <type> [--id <n>] [--n 2]");
+      const type = positional[0] ?? fail("usage: kide import sample <type> [--id <n>] [--n 2] [--full]");
       const id = option("id");
       const n = Number(option("n") ?? 2);
       const list = loadRecords(staging).filter((r) => r.type === type && (!id || String(r.id) === id));
@@ -136,6 +161,9 @@ try {
       console.log(
         `[kide import] ${r.created} created · ${r.updated} updated · ${r.unchanged} unchanged · ${r.deleted} deleted · media ${r.media.uploaded} uploaded, ${r.media.reused} reused · ${r.durationMs}ms`,
       );
+      if (r.media.missing.length)
+        console.log(`  ${r.media.missing.length} file(s) missing at the source (4xx), their references dropped:`);
+      for (const f of r.media.missing.slice(0, 20)) console.log(`    ${f.key} — ${f.message}`);
       for (const f of r.media.failed.slice(0, 20)) console.log(`  media failed: ${f.key} — ${f.message}`);
       for (const f of r.failed.slice(0, 20)) console.log(`  failed: ${f.docId} — ${f.message}`);
       if (r.failed.length || r.media.failed.length) process.exitCode = 1;
@@ -175,7 +203,7 @@ try {
       const below = ok.filter((p) => score(p) < minScore);
       const mean = ok.length ? ok.reduce((a, p) => a + score(p), 0) / ok.length : 1;
       console.log(
-        `[kide import] ${r.pages.length} live pages in ${Date.now() - started}ms · mean ${(mean * 100).toFixed(1)}% · ${below.length} below ${(minScore * 100).toFixed(0)}% · ${ok.filter((p) => p.skipped.length).length} show skipped-source text · ${ok.filter((p) => p.drift.length).length} drifted · ${r.pages.length - ok.length} not 200 · ${r.failed.length} failed`,
+        `[kide import] ${r.pages.length} live pages in ${Date.now() - started}ms · mean ${(mean * 100).toFixed(1)}% · ${below.length} below ${(minScore * 100).toFixed(0)}% · ${ok.filter((p) => p.skipped.length).length} show skipped-source text · ${ok.filter((p) => p.drift.length).length} with text not in the dump · ${r.pages.length - ok.length} not 200 · ${r.failed.length} failed`,
       );
       console.log(`Details: ${out("live.md")}`);
       if (below.length || r.failed.length) process.exitCode = 1;
@@ -183,7 +211,7 @@ try {
     }
 
     default:
-      console.log("Usage: kide import <scout|sample|plan|apply|verify|check-live> — see src/cms/internals/import.ts");
+      console.log(USAGE);
       process.exitCode = command ? 1 : 0;
   }
 } catch (e) {

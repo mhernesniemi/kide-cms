@@ -5,7 +5,7 @@ export const savePlan = (db: Staging, plan: PlanResult) => {
   db.transaction(() => {
     db.exec("DELETE FROM plan_docs; DELETE FROM plan_meta;");
     const insert = db.prepare(
-      "INSERT INTO plan_docs (doc_id, collection, source_keys, hash, data, translations, expected, media, text_match) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT OR REPLACE INTO plan_docs (doc_id, collection, source_keys, hash, data, translations, expected, media, text_match) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     );
     for (const d of plan.docs)
       insert.run(

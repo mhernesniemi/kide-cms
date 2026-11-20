@@ -77,6 +77,9 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.15.0(jiti@2.7.0))
+      '@kidecms/wordpress':
+        specifier: workspace:*
+        version: link:packages/wordpress
       '@types/better-sqlite3':
         specifier: ^9.6.0
         version: 9.6.0
@@ -131,6 +134,28 @@ importers:
       vitest:
         specifier: ^4.1.12
         version: 4.1.12(@opentelemetry/api@1.10.0)(@types/node@24.19.2)(jsdom@31.0.1(@noble/hashes@2.4.0))(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/wordpress:
+    dependencies:
+      '@wordpress/autop':
+        specifier: 5.1.0
+        version: 5.1.0
+      '@wordpress/block-serialization-default-parser':
+        specifier: 6.1.0
+        version: 6.1.0
+      '@wordpress/shortcode':
+        specifier: 5.1.0
+        version: 5.1.0
+      better-sqlite3:
+        specifier: ^12.0.0 || ^13.0.0
+        version: 13.2.0
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.4(@cloudflare/workers-types@5.20261116.1)(@opentelemetry/api@1.10.0)(@types/better-sqlite3@9.6.0)(better-sqlite3@13.2.0)(kysely@0.29.9)
+    devDependencies:
+      '@kidecms/core':
+        specifier: workspace:*
+        version: link:../../src/cms
 
   src/cms:
     dependencies:
@@ -2663,6 +2688,18 @@ packages:
   '@vscode/l10n@0.0.18':
     resolution: {integrity: sha512-KYSIHVmslkaCDyw013pphY+d7x1qV8IZupYfeIfzNA+nsaWHbn5uPuQRvdRFsa9zFzGeudPuoGoZ1Op4jrJXIQ==}
 
+  '@wordpress/autop@5.1.0':
+    resolution: {integrity: sha512-PhQPcSqJ/tQCkS5hDtHnnnpZfB/cxHXkXrcfmCM8sOMUFF0Xea0MmSMDIT4VyPatdXE8SD2WewSO6IOl1r/JOg==}
+    engines: {node: '>=22.13.0'}
+
+  '@wordpress/block-serialization-default-parser@6.1.0':
+    resolution: {integrity: sha512-3A++v/Sa0SSre1Rj5EicD2b4Caah4f6gOwAdfcpurEdksUtMYXOrQLL8wDxt8fC1GpEeirB6M4nA8pL6xEHC7g==}
+    engines: {node: '>=22.13.0'}
+
+  '@wordpress/shortcode@5.1.0':
+    resolution: {integrity: sha512-o5Rjf21cXSI5cOX3MhjkdMyr1nUtpIp6X/3IdSK0PoB4SOfr4pTu6O7QqFG3/UuAgkuAX+STtqKla2zJ80aYow==}
+    engines: {node: '>=22.13.0'}
+
   '@workflow/serde@4.1.0':
     resolution: {integrity: sha512-pav4F2BoirECWR7Nf1TKt+2eETcBj7jj4cBefQ8VXQCA6NPkaKeLfj/zMgi+3zYV5ZIBT4GuUiphsj0/b9hPQQ==}
 
@@ -3845,6 +3882,9 @@ packages:
   media-typer@1.1.1:
     resolution: {integrity: sha512-yz3xRaG20c6/BOzvYoDaGtPmGscs7YivItZEEqe6GbwNfHuxu9YNmvnEkMzKldAGY4/80pRcQRZSEnhquk9XuQ==}
     engines: {node: '>= 0.8'}
+
+  memize@2.1.1:
+    resolution: {integrity: sha512-8Nl+i9S5D6KXnruM03Jgjb+LwSupvR13WBr4hJegaaEyobvowCVupi79y2WSiWvO1mzBWxPwEYE5feCe8vyA5w==}
 
   merge-descriptors@2.0.0:
     resolution: {integrity: sha512-Snk314V5ayFLhp3fkUREub6WtjBfPdCPY1Ln8/8munuLuiYhsABgBVWsozAG+MWMbVEvcdcpbi9R7ww22l9Q3g==}
@@ -7372,6 +7412,14 @@ snapshots:
 
   '@vscode/l10n@0.0.18': {}
 
+  '@wordpress/autop@5.1.0': {}
+
+  '@wordpress/block-serialization-default-parser@6.1.0': {}
+
+  '@wordpress/shortcode@5.1.0':
+    dependencies:
+      memize: 2.1.1
+
   '@workflow/serde@4.1.0': {}
 
   accepts@2.0.0:
@@ -8547,6 +8595,8 @@ snapshots:
   mdn-data@2.27.1: {}
 
   media-typer@1.1.1: {}
+
+  memize@2.1.1: {}
 
   merge-descriptors@2.0.0: {}
 

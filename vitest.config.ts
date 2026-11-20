@@ -9,7 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "packages/*/src/**/*.test.ts"],
     // Worker-runtime tests run under vitest.workers.config.ts, not the node pool.
     exclude: ["**/node_modules/**", "**/*.workers.test.ts"],
     // Integration tests share module-level runtime state (initSchema/configureCmsRuntime),

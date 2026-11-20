@@ -6,7 +6,7 @@
  *   title · meta.hero_title · meta.rows[].label · terms.category
  *   block:acf/hero · block:acf/hero.data.heading · shortcode:gallery
  */
-import { decodeEntities } from "../values";
+import { decodeEntities } from "@kidecms/core";
 import { findShortcodes, isAcfBlock, nestAcf, parseBlocks, walkBlocks, type WpBlock } from "./gutenberg";
 import type { StagedRecord } from "./staging";
 
@@ -21,6 +21,10 @@ export const STRUCTURAL = new Set([
   "modified",
   "permalink",
   "frontPage",
+  // url-change records: where the change came from.
+  "collection",
+  "docId",
+  "sourceKey",
 ]);
 const VISUAL_ATTRS = new Set([
   "className",
@@ -52,14 +56,35 @@ export const truncate = (v: unknown, n = 80): string => {
   return flat.length > n ? `${flat.slice(0, n - 1)}…` : flat;
 };
 
-// Objects keyed by data (keywords, ids, dates) are one value, not hundreds of fields.
+// Objects keyed by data (keywords, ids, dates, URLs) are one value, not hundreds of fields.
 const MAP_LIKE_KEYS = 40;
+const DATA_KEY = /^(https?:\/\/|\/|\d+$|[0-9a-f]{12,}$|\d{4}-\d{2})/i;
+const dataKeyed = (value: object) => Object.keys(value).some((k) => DATA_KEY.test(k));
+
+/**
+ * A copy of a WordPress object the editor embedded in block attributes (a media-modal attachment,
+ * a REST post): only its id is content; the rest is a stale snapshot of the real record.
+ */
+const snapshotId = (value: Record<string, unknown>): string | undefined => {
+  const id = ["ID", "id"].find((k) => typeof value[k] === "number" || /^\d+$/.test(String(value[k] ?? "")));
+  const snapshot =
+    "nonces" in value || "editLink" in value || "_links" in value || ("mime" in value && "sizes" in value);
+  return id && snapshot ? id : undefined;
+};
 
 const walkLeaves = (value: unknown, path: string, visit: (path: string, value: unknown) => void) => {
   if (isEmpty(value)) return;
+  const id =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? snapshotId(value as Record<string, unknown>)
+      : undefined;
+  if (id) return visit(path ? `${path}.${id}` : id, (value as Record<string, unknown>)[id]);
   if (Array.isArray(value)) {
     for (const item of value) walkLeaves(item, `${path}[]`, visit);
-  } else if (typeof value === "object" && (!path || Object.keys(value as object).length <= MAP_LIKE_KEYS)) {
+  } else if (
+    typeof value === "object" &&
+    (!path || (Object.keys(value as object).length <= MAP_LIKE_KEYS && !dataKeyed(value as object)))
+  ) {
     for (const [k, v] of Object.entries(value as Record<string, unknown>))
       walkLeaves(v, path ? `${path}.${k}` : k, visit);
   } else {
@@ -78,6 +103,43 @@ export const blockAttrs = (block: WpBlock): Record<string, unknown> =>
         !(block.name.startsWith("acf/") && ["data", "name", "mode", "id", "wpClassName"].includes(k)),
     ),
   );
+
+export const HTML_BLOCKS = new Set(
+  [
+    "paragraph",
+    "heading",
+    "list",
+    "list-item",
+    "quote",
+    "pullquote",
+    "image",
+    "gallery",
+    "verse",
+    "freeform",
+    "buttons",
+    "button",
+    "file",
+  ].map((n) => `core/${n}`),
+);
+export const CONTAINER_BLOCKS = new Set(["group", "columns", "column", "row", "stack"].map((n) => `core/${n}`));
+export const EMPTY_BLOCKS = new Set(["spacer", "separator", "more", "nextpage"].map((n) => `core/${n}`));
+/** Core blocks the planner converts itself (see `STANDARD` in plan.ts); their attributes aren't content. */
+export const STANDARD_BLOCKS = new Set(
+  [
+    "shortcode",
+    "cover",
+    "details",
+    "table",
+    "video",
+    "embed",
+    "audio",
+    "html",
+    "media-text",
+    "code",
+    "preformatted",
+  ].map((n) => `core/${n}`),
+);
+export const CONVERTED = new Set([...HTML_BLOCKS, ...CONTAINER_BLOCKS, ...EMPTY_BLOCKS, ...STANDARD_BLOCKS]);
 
 export const isCoreBlock = (name: string) => name.startsWith("core/");
 
@@ -123,16 +185,22 @@ export const collectDomain = (
       if (block.name === "core/block") continue;
       const base = `block:${block.name}`;
       visit(base, block.name);
-      if (isCoreBlock(block.name)) continue;
+      // Converted core blocks carry layout attributes only; any other core block's attributes (rss feed
+      // URL, query loop settings) are content a mapping has to account for.
+      if (CONVERTED.has(block.name)) continue;
       walkLeaves(blockData(block), `${base}.data`, visit);
       walkLeaves(blockAttrs(block), `${base}.attrs`, visit);
       if (!isAcfBlock(block) && htmlText(block.innerHTML)) visit(`${base}.innerHTML`, block.innerHTML);
     }
-    // Brackets inside HTML comments (`<!--[if lte IE 8]>`) aren't shortcodes.
-    const text = record.content.replace(/<!--(?!\s*\/?wp:)[\s\S]*?-->/g, "");
+    // Brackets inside comments (`<!--[if lte IE 8]>`, block attribute JSON) aren't shortcodes.
+    const text = stripComments(record.content);
     for (const name of new Set(findShortcodes(text))) visit(`shortcode:${name}`, name);
   }
 };
+
+/** Text that can't hold a shortcode: comments (block attribute JSON) and script/style bodies (`i[e]`). */
+export const stripComments = (html: string) =>
+  html.replace(/<!--[\s\S]*?-->/g, "").replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, "");
 
 // --- glob matching for `drop` --------------------------------------------------
 
