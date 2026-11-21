@@ -14,7 +14,7 @@ import {
   setCredentialPassword,
 } from "./auth-engine";
 import type { CMSConfig, CollectionConfig, FieldConfig, RichTextDocument } from "./define";
-import { documentRoute, getCollectionMap, getTranslatableFieldNames, isStructuralField } from "./define";
+import { documentRoute, getCollectionMap, getTranslatableFieldNames } from "./define";
 import { getDb, trackTask } from "./runtime";
 import { getSchema } from "./schema";
 import { indexDocument, isCollectionSearchable, removeDocument } from "./search";
@@ -362,6 +362,16 @@ const coerceJsonOrBlocks = (field: FieldConfig, value: unknown) => {
   }
   return value ?? fallback;
 };
+
+/** `{}` or a rich-text/content root with no children: what a cleared or inherited field reads back as. */
+const isEmptyDocument = (value: unknown) =>
+  !!value &&
+  typeof value === "object" &&
+  !Array.isArray(value) &&
+  (Object.keys(value).length === 0 ||
+    ((value as { type?: unknown }).type === "root" &&
+      Array.isArray((value as { children?: unknown }).children) &&
+      (value as { children: unknown[] }).children.length === 0));
 
 const coerceRichText = (value: unknown) => {
   if (typeof value === "string") {
@@ -793,9 +803,8 @@ export const createCms = (config: CMSConfig) => {
         const translation = translations.find((entry) => entry._languageCode === locale);
         if (translation) {
           for (const fieldName of translatableFields) {
-            if (translation[fieldName] !== undefined && translation[fieldName] !== null) {
-              baseDoc[fieldName] = translation[fieldName];
-            }
+            const value = translation[fieldName];
+            if (value !== undefined && value !== null && !isEmptyDocument(value)) baseDoc[fieldName] = value;
           }
         }
       }
@@ -1061,7 +1070,9 @@ export const createCms = (config: CMSConfig) => {
         const doc = deserializeFromDb(collection, rows[0] as Record<string, unknown>);
         const allowed = await canAccess(collection, "read", context, doc);
         if (!allowed) throw new Error(`Access denied for ${collection.slug}.`);
-        if (options.status && options.status !== "any" && doc._status !== options.status) return null;
+        // Without drafts every document is live, so a status filter has nothing to exclude.
+        if (collection.drafts && options.status && options.status !== "any" && doc._status !== options.status)
+          return null;
 
         const effectiveStatus = options.status ?? (collection.drafts ? "published" : "any");
         if (effectiveStatus === "published" && typeof (rows[0] as any)._published === "string") {
@@ -1720,7 +1731,7 @@ export const createCms = (config: CMSConfig) => {
         const filtered = Object.fromEntries(
           Object.entries(pick(translatedValues, translatableFields)).map(([key, value]) => [
             key,
-            value === "" ? null : value,
+            data[key] === null || value === "" || isEmptyDocument(value) ? null : value,
           ]),
         );
 
@@ -1887,7 +1898,8 @@ export const createCms = (config: CMSConfig) => {
       isTranslatableField: (slug: string, fieldName: string) => {
         const collection = ensureCollection(config, slug);
         const field = collection.fields[fieldName];
-        return !!field?.translatable && !isStructuralField(field);
+        // Same rule as storage (`getTranslatableFieldNames`): a field marked translatable is, whatever its type.
+        return !!field?.translatable;
       },
     },
     scheduled: {

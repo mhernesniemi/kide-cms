@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { defineCollection, defineConfig, fields } from "../../define";
-import { validateDocument } from "../../migrate";
+import { defineCollection, defineConfig, fields } from "@kidecms/core";
+import { validateDocument } from "@kidecms/core";
 import { blockHtml, nestAcf, parseBlocks } from "../gutenberg";
 import { defineMapping, skipSource, type Mapping } from "../mapping";
 import { readMysqlDump } from "../mysql-dump";

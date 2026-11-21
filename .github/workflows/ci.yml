@@ -18,6 +18,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      - run: pnpm --filter @kidecms/wordpress check
+      - run: pnpm --filter @kidecms/wordpress test
       - run: pnpm test
       - run: pnpm test:workers
 

@@ -4,7 +4,8 @@
  * mapping reads, so coverage is derived from what the code actually does — no
  * separate list of mapped fields to keep in sync.
  */
-import type { ContentDocument, ContentNode, RichTextDocument, StoredLink } from "..";
+import type { ContentDocument, ContentNode, RichTextDocument, StoredLink } from "@kidecms/core";
+import { decodeEntities } from "@kidecms/core";
 import { htmlText } from "./domain";
 import type { ShortcodeHandler } from "./gutenberg";
 import type { StagedRecord } from "./staging";
@@ -17,8 +18,12 @@ export type BlockInput = {
   /** ACF block fields with repeaters/flexible content nested (empty for non-ACF blocks). */
   data: Record<string, any>;
   innerHTML: string;
-  /** Inner blocks rendered as Kide content nodes (same rules as `ctx.content`). */
+  /** Inner blocks rendered as Kide content nodes (same rules as `ctx.content`); rendered once. */
   inner: () => ContentNode[];
+  /** Inner blocks as raw inputs (each with `.name`), for a parent built from its children (a carousel from its cards). */
+  children: () => BlockInput[];
+  /** The declared block's fields (default: the same-named block) filled by name, to spread and override in a handler. */
+  auto: (blockType?: string) => Record<string, unknown>;
 };
 
 export type MapContext = {
@@ -50,9 +55,24 @@ export type MapContext = {
   translation: (keyOrRecord: unknown, locale: string | undefined) => SourceRecord | undefined;
   /** Records of a type listed in the mapping's `includes`, tracked: their fields join this mapping's coverage. */
   records: (type: string, filter?: (record: SourceRecord) => boolean) => SourceRecord[];
+  /**
+   * Every field of the mapping's collection filled by name and declared type: title, slug (`home` for
+   * the front page), the content body, featured image, excerpt, date, parent, terms, Yoast SEO, and
+   * ACF meta of the same name (camelCase or snake_case). Spread it and override what differs.
+   */
+  auto: (src: SourceRecord) => Record<string, unknown>;
+  /** A nav menu term → `menu-items` tree from its `nav_menu_item` records (needs `includes: ["nav_menu_item"]`). */
+  menuItems: (menu: SourceRecord) => MenuItem[];
+  /** A `taxonomy` record → `taxonomy-terms` tree in its locale (needs `includes: ["term:<taxonomy>"]`). */
+  termTree: (taxonomy: SourceRecord, options?: { split?: boolean }) => TermNode[];
+  /** A Gravity Forms `form` record → the fields of the `forms` preset collection. */
+  form: (form: SourceRecord) => Record<string, unknown>;
   locale: string | undefined;
   warn: (message: string) => void;
 };
+
+export type MenuItem = { id: string; label: string; href: string; target?: "_blank"; children: MenuItem[] };
+export type TermNode = { id: string; name: string; slug: string; children: TermNode[] };
 
 export type BlockHandler = (
   block: BlockInput,
@@ -63,7 +83,11 @@ export type Mapping = {
   /** Source type: a WP post type (`page`, `post`, `case`) or `term:<taxonomy>`. */
   source: string;
   collection: string;
-  /** Return false or a reason string to leave a record out (counted in the ledger). */
+  /**
+   * Return a reason string to leave a record out (counted in the ledger), or false. Several mappings
+   * may share a `source` (posts split into collections by category): each record goes to the one
+   * whose filter returns true, and `false` there means "not mine" rather than "filtered".
+   */
   filter?: (src: SourceRecord) => boolean | string;
   /** Kide `_id` for the document. Defaults to `wp-<id>` / `wp-term-<id>`. */
   id?: (src: SourceRecord) => string;
@@ -73,12 +97,15 @@ export type Mapping = {
    * taxonomy). Read them with `ctx.records(type)`; their paths are covered here as `<type>:<path>`.
    */
   includes?: string[];
-  /** Paths deliberately not migrated → reason. Globs allowed: `meta._yoast_*`, `block:core/spacer`. */
+  /** Paths deliberately not migrated → reason. Globs allowed: `meta.legacy_*`, `block:core/spacer`. */
   drop?: Record<string, string>;
   blocks?: Record<string, BlockHandler>;
   /** `"set"` when the mapping deliberately dedupes (term lists): each distinct source word must arrive, not every copy. */
   textMatch?: "multiset" | "set";
-  /** Shortcode name → handler, or "keep" to leave it as literal text (code samples). `"*"` applies to all others. */
+  /**
+   * Shortcode name → handler (HTML, or content nodes such as a form block), or "keep" to leave it as
+   * literal text (code samples, `[placeholder]` prose). `"*"` applies to all others.
+   */
   shortcodes?: Record<string, ShortcodeHandler | "keep">;
 };
 
@@ -116,7 +143,7 @@ export class Tracker {
   expectedTexts(): string[] {
     const out = [...this.expected];
     for (const value of this.strings.keys()) {
-      if (!this.consumed.has(value)) out.push(/<[a-z!]/i.test(value) ? htmlText(value) : value);
+      if (!this.consumed.has(value)) out.push(/<[a-z!]/i.test(value) ? htmlText(value) : decodeEntities(value));
     }
     return out;
   }

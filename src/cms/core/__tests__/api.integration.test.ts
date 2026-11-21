@@ -196,6 +196,22 @@ describe("where operators", () => {
     expect(await (cms as any).posts.find({ where, locale: "en", status: "any" })).toEqual([]);
   });
 
+  it("reads collections without drafts with a published status filter", async () => {
+    const author = await (cms as any).authors.create({ name: "No drafts", slug: "no-drafts" });
+    expect((await (cms as any).authors.findById(author._id, { status: "published" }))?._id).toBe(author._id);
+  });
+
+  it("lets a translation without its own body inherit the original's", async () => {
+    const body = { type: "root", children: [{ type: "paragraph", children: [{ type: "text", value: "Shared" }] }] };
+    const post = await (cms as any).posts.create({ title: "Inherit", slug: "inherit-en", body });
+    await (cms as any).posts.upsertTranslation(post._id, "fi", { title: "Peritty", slug: "inherit-fi", body: null });
+    const fi = await (cms as any).posts.findById(post._id, { locale: "fi", status: "any" });
+    expect(fi.title).toBe("Peritty");
+    expect(fi.body).toEqual(body);
+    await (cms as any).posts.upsertTranslation(post._id, "fi", { body: {} });
+    expect((await (cms as any).posts.findById(post._id, { locale: "fi", status: "any" })).body).toEqual(body);
+  });
+
   it("rejects unknown and mismatched operators", async () => {
     await expect(findOps({ category: { like: "ops" } })).rejects.toThrow(/Unknown where operator/);
     await expect(findOps({ category: { contains: "ops" } })).rejects.toThrow(/isn't supported/);

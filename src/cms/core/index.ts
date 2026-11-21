@@ -14,6 +14,7 @@ export {
 export type { CmsRuntimeConfig, CmsStorageAdapter, CmsEmailAdapter, RequestScope } from "./runtime";
 
 export { initSchema, getSchema, resetSchema } from "./schema";
+export { presets, standardBlocks } from "./presets";
 
 export {
   FIELD_MODEL,
@@ -25,7 +26,7 @@ export {
 } from "./field-model";
 export type { FieldModelEntry } from "./field-model";
 
-export { validateDocument, importDocuments, renderModelMarkdown } from "./migrate";
+export { validateDocument, validateTranslations, importDocuments, renderModelMarkdown } from "./migrate";
 export type { ValidationIssue, ValidationResult, ImportItem, ImportReport } from "./migrate";
 
 export {
@@ -193,6 +194,7 @@ export {
 } from "./shared-sections";
 export {
   cloneValue,
+  decodeEntities,
   slugify,
   escapeHtml,
   safeUrl,

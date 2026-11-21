@@ -61,7 +61,8 @@ export const FIELD_MODEL: Record<string, FieldModelEntry> = {
   link: {
     storage: "json",
     control: "link control (internal page picker / external URL + label + new-tab)",
-    valueShape: "{ type:'internal'|'external', url:string, label?:string, newTab?:boolean }",
+    valueShape:
+      "{ type:'internal'|'external'|'custom', url:string, label?:string, newTab?:boolean } — or { type:'reference', docId, collection, url } for an internal document",
   },
   "taxonomy-terms": {
     storage: "json",

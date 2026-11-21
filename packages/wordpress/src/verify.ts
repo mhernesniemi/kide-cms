@@ -3,11 +3,12 @@
  * reconcile it with the plan — present, every planned field still filled, media
  * resolved, translations stored, and the source text actually in the database.
  */
-import { createCmsContext } from "../../internals/context";
+import { getTranslatableFieldNames } from "@kidecms/core";
+import { createCmsContext } from "@kidecms/core/context";
 import { isEmpty, outputStrings, textRecall } from "./domain";
-import { MEDIA_PREFIX, normalizePath } from "./plan";
+import { MEDIA_PREFIX, MEDIA_TOKEN, normalizePath, tokenKey } from "./plan";
 import { loadPlan } from "./report";
-import { loadRecords, type Staging } from "./staging";
+import { getMeta, loadRecords, type Staging } from "./staging";
 
 export type VerifyReport = {
   checked: number;
@@ -27,6 +28,23 @@ export const verifyImport = async (staging: Staging, options: { minRecall?: numb
   const api = cms as unknown as Record<string, any>;
   const report: VerifyReport = { checked: 0, ok: 0, problems: [], byCollection: {} };
   const ctx = { _system: true };
+  const storedAt = new Map(
+    (
+      staging.prepare("SELECT key, storage_path FROM media_state").all() as Array<{ key: string; storage_path: string }>
+    ).map((r) => [r.key, r.storage_path]),
+  );
+  /** A planned value as the CMS stores it: trimmed text, media as its (content-deduped) file. */
+  const asStored = (value: unknown) =>
+    JSON.stringify(value ?? null, (_, v) => (typeof v === "string" ? v.trim() : v)).replace(
+      MEDIA_TOKEN,
+      (token, encoded: string) => storedAt.get(tokenKey(encoded)) ?? token,
+    );
+  const gone = new Set(JSON.parse(getMeta(staging, "missingMedia") ?? "[]") as string[]);
+  /** A planned value that only pointed at files missing at the source is legitimately empty. */
+  const onlyGoneMedia = (value: unknown) => {
+    const keys = [...JSON.stringify(value).matchAll(MEDIA_TOKEN)].map((m) => tokenKey(m[1]));
+    return keys.length > 0 && keys.every((k) => gone.has(k));
+  };
 
   try {
     for (const doc of plan.docs) {
@@ -53,7 +71,8 @@ export const verifyImport = async (staging: Staging, options: { minRecall?: numb
         stored ??= fieldsOnly;
         for (const [field, value] of Object.entries(doc.data)) {
           if (field.startsWith("_") || isEmpty(value)) continue;
-          if (isEmpty(fieldsOnly[field])) problem(`${label}field "${field}" was planned but is empty in the CMS`);
+          if (isEmpty(fieldsOnly[field]) && !onlyGoneMedia(value))
+            problem(`${label}field "${field}" was planned but is empty in the CMS`);
         }
         if (JSON.stringify(fieldsOnly).includes(MEDIA_PREFIX)) problem(`${label}unresolved media placeholder stored`);
         const base = textRecall(doc.expected.base ?? [], outputStrings(fieldsOnly), doc.textMatch);
@@ -92,12 +111,34 @@ export const verifyImport = async (staging: Staging, options: { minRecall?: numb
             continue;
           }
           stats.translations++;
+          // Read the locale the way the site serves it, so a translation that hides the original shows up.
+          const served = await api[doc.collection].findById(
+            doc.docId,
+            { locale, status: doc.data._status === "published" ? "published" : "any" },
+            ctx,
+          );
+          const planned: Record<string, unknown> = { ...doc.data, ...doc.translations[locale] };
+          const blocks = (v: unknown) => (JSON.stringify(v ?? null).match(/"type":"block"/g) ?? []).length;
+          for (const field of getTranslatableFieldNames(api.meta.getCollection(doc.collection))) {
+            if (isEmpty(planned[field]) || onlyGoneMedia(planned[field])) continue;
+            if (isEmpty(served?.[field]))
+              problem(`${locale} field "${field}" was planned but the site serves it empty`);
+            else if (blocks(served?.[field]) < blocks(planned[field]))
+              problem(
+                `${locale} field "${field}" serves ${blocks(served?.[field])} of ${blocks(planned[field])} blocks`,
+              );
+            else if (
+              field in (doc.translations[locale] ?? {}) &&
+              asStored(doc.translations[locale][field]) !== asStored(doc.data[field]) &&
+              JSON.stringify(served?.[field]) === JSON.stringify(stored?.[field])
+            )
+              problem(
+                `${locale} field "${field}" has its own translation in the plan but the site serves the original`,
+              );
+          }
           const recall = textRecall(
             doc.expected[locale] ?? [],
-            outputStrings({
-              ...stored,
-              ...Object.fromEntries(Object.entries(overlay).filter(([, v]) => v !== null && v !== undefined)),
-            }),
+            outputStrings(Object.fromEntries(Object.entries(served ?? {}).filter(([k]) => !k.startsWith("_")))),
             doc.textMatch,
           );
           if (recall.recall < minRecall)

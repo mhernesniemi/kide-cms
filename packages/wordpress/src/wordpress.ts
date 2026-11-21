@@ -54,7 +54,19 @@ const INTERNAL_TAXONOMIES = new Set([
   "link_category",
 ]);
 const INTERNAL_META =
-  /^(_edit_lock|_edit_last|_wp_old_slug|_wp_old_date|_encloseme|_pingme|_wp_trash_.*|_wp_desired_post_slug|_oembed_.*|_wp_attachment_metadata|_wp_attached_file|_wp_attachment_image_alt|_dp_original|_pll_.*|_wpml_.*|_icl_.*)$/;
+  /^(_edit_lock|_edit_last|_wp_old_slug|_wp_old_date|_encloseme|_pingme|_wp_trash_.*|_wp_desired_post_slug|_oembed_.*|_wp_attachment_metadata|_wp_attached_file|_wp_attachment_image_alt|_dp_original|_pll_.*|_wpml_.*|_icl_.*|_menu_item_(xfn|classes)|_relevanssi_noindex_reason|_yoast_wpseo_(content_score|linkdex|estimated-reading-time-minutes|seo_title_score|meta_description_score|inclusive_language_score|is_content_planner_.*|wordproof_timestamp|schema_page_type|schema_article_type))$/;
+
+/** Gravity Forms choices; Chained Selects nest the next level's choices under each one. */
+const choiceTree = (choices: unknown): Array<Record<string, unknown>> =>
+  Array.isArray(choices)
+    ? choices.map((c: any) => ({
+        text: c.text ?? "",
+        value: c.value ?? "",
+        ...(Array.isArray(c.choices) && c.choices.length ? { choices: choiceTree(c.choices) } : {}),
+      }))
+    : [];
+
+const LIST_FIELDS = new Set(["repeater", "flexible_content", "gallery", "relationship", "checkbox"]);
 
 export type ScoutOptions = { prefix?: string; uploadsDir?: string; mediaBaseUrl?: string; siteUrl?: string };
 
@@ -128,9 +140,21 @@ export const scoutWordPress = async (
       "AND option_name IN ('siteurl','home','upload_path','upload_url_path','page_on_front','show_on_front','polylang')",
     ).map((o) => [o.option_name, String(o.option_value ?? "")]),
   );
-  const siteUrl = (options.siteUrl || options_.home || options_.siteurl || "").replace(/\/$/, "");
+  // Bedrock installs WordPress under /wp, serves uploads from /app/uploads and sets `home` from the env.
+  const bedrock = /\/wp\/?$/.test(options_.siteurl ?? "");
+  const home = options_.home && options_.home !== options_.siteurl ? options_.home : undefined;
+  const siteUrl = (
+    options.siteUrl ||
+    home ||
+    (bedrock ? options_.siteurl.replace(/\/wp\/?$/, "") : options_.home || options_.siteurl) ||
+    ""
+  ).replace(/\/$/, "");
   const uploadPath =
-    options_.upload_path && !options_.upload_path.startsWith("/") ? options_.upload_path : "wp-content/uploads";
+    options_.upload_path && !options_.upload_path.startsWith("/")
+      ? options_.upload_path
+      : bedrock
+        ? "app/uploads"
+        : "wp-content/uploads";
   const uploadsUrl = (options.mediaBaseUrl || options_.upload_url_path || `${siteUrl}/${uploadPath}`).replace(
     /\/$/,
     "",
@@ -220,6 +244,13 @@ export const scoutWordPress = async (
 
   // --- posts + meta ----------------------------------------------------------
   const posts = all("posts");
+  // ACF stores an empty repeater/gallery as "": its field definition says the value is a list.
+  const listFields = new Set(
+    posts
+      .filter((p) => p.post_type === "acf-field")
+      .filter((p) => LIST_FIELDS.has(String((maybeUnserialize(p.post_content) as { type?: unknown })?.type)))
+      .map((p) => String(p.post_name)),
+  );
   const metaByPost = new Map<number, Record<string, unknown>>();
   for (const m of all("postmeta")) {
     const bucket = metaByPost.get(Number(m.post_id)) ?? {};
@@ -255,7 +286,9 @@ export const scoutWordPress = async (
       if (INTERNAL_POST_TYPES.has(p.post_type) || SKIPPED_STATUSES.has(p.post_status)) continue;
 
       const cleaned: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(meta)) if (!INTERNAL_META.test(k)) cleaned[k] = v;
+      for (const [k, v] of Object.entries(meta))
+        // A Yoast `%%title%% %%sep%% %%sitename%%` value is the site's default pattern, not content.
+        if (!INTERNAL_META.test(k) && !(k.startsWith("_yoast_wpseo_") && String(v).includes("%%"))) cleaned[k] = v;
       const { _thumbnail_id, _wp_page_template, ...rest } = cleaned;
       const record: StagedRecord = {
         key: `post:${id}`,
@@ -276,9 +309,12 @@ export const scoutWordPress = async (
         template: _wp_page_template && _wp_page_template !== "default" ? _wp_page_template : null,
         featuredImage: nonZero(_thumbnail_id),
         terms: postTerms.get(id) ?? {},
-        meta: nestAcf(rest),
+        meta: nestAcf(rest, listFields),
         permalink: postPermalink.get(id) ?? null,
       };
+      // A menu item's content lives in its `_menu_item_*` meta; the post columns are bookkeeping.
+      if (record.type === "nav_menu_item")
+        for (const k of ["slug", "content", "excerpt", "date", "parent", "author"]) delete record[k];
       insertRecord.run(record.key, record.type, JSON.stringify(record));
       types[record.type] = (types[record.type] ?? 0) + 1;
     }
@@ -302,7 +338,7 @@ export const scoutWordPress = async (
         slug: term.slug ?? "",
         description: tt.description ?? "",
         parent: nonZero(tt.parent),
-        meta: nestAcf(termMeta.get(id) ?? {}),
+        meta: nestAcf(termMeta.get(id) ?? {}, listFields),
       };
       insertRecord.run(record.key, record.type, JSON.stringify(record));
       types[record.type] = (types[record.type] ?? 0) + 1;
@@ -370,9 +406,7 @@ export const scoutWordPress = async (
           content: f.content ?? "",
           maxLength: f.maxLength ?? "",
           checkboxLabel: f.checkboxLabel ?? "",
-          choices: Array.isArray(f.choices)
-            ? f.choices.map((c: any) => ({ text: c.text ?? "", value: c.value ?? "" }))
-            : [],
+          choices: choiceTree(f.choices),
           inputs: Array.isArray(f.inputs)
             ? f.inputs.filter((i: any) => !i.isHidden).map((i: any) => ({ id: i.id, label: i.label ?? "" }))
             : [],
