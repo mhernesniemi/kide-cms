@@ -7,6 +7,17 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.40.0] - 2026-11-21
+
+### Added
+
+- **Mark a translation as up to date.** An outdated translation can be confirmed from the editor
+  without changing it; new API `markTranslationCurrent(id, locale)`.
+
+### Changed
+
+- **Languages column** lists the original language first, set apart from its translations.
+
 ## [0.39.1] - 2026-11-19
 
 ### Fixed
