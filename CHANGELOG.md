@@ -7,7 +7,7 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
-## [Unreleased]
+## [0.41.0] - 2026-11-21
 
 ### Added
 
@@ -35,6 +35,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 
 ### Fixed
 
+- **`cms:upgrade`** deletes files a release moved elsewhere; before, git rename detection left them in place.
 - **WordPress importer:**
   - Files the source answers 4xx for no longer fail their documents on `apply`: the references are
     dropped and reported.
