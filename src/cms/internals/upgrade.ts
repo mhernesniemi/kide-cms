@@ -240,7 +240,7 @@ const resolveCommit = (repoDir: string, ref: string) => {
 };
 
 // Template-only dirs that never exist in scaffolded projects — excluded from packets.
-const TEMPLATE_ONLY_PREFIXES = ["starters/"];
+const TEMPLATE_ONLY_PREFIXES = ["starters/", "packages/"];
 
 const listChangedFiles = (repoDir: string, fromCommit: string, toCommit: string) => {
   const output = run("git", ["diff", "--name-only", fromCommit, toCommit], { cwd: repoDir });

@@ -42,6 +42,8 @@ jobs:
       # Full gate — a tag push does not trigger the branch CI workflow, so the
       # release must run everything itself before publishing.
       - run: pnpm check
+      - run: pnpm --filter @kidecms/wordpress check
+      - run: pnpm --filter @kidecms/wordpress test
       - run: pnpm test
       - run: pnpm test:workers
       - run: pnpm verify:pack

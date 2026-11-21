@@ -77,9 +77,6 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.15.0(jiti@2.7.0))
-      '@kidecms/wordpress':
-        specifier: workspace:*
-        version: link:packages/wordpress
       '@types/better-sqlite3':
         specifier: ^9.6.0
         version: 9.6.0

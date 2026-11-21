@@ -36,6 +36,7 @@ try {
   rmSync(path.join(project, "src/cms/package.json"), { force: true });
   rmSync(path.join(project, "pnpm-workspace.yaml"), { force: true });
   rmSync(path.join(project, "adapters"), { recursive: true, force: true });
+  rmSync(path.join(project, "packages"), { recursive: true, force: true });
 
   const pkgPath = path.join(project, "package.json");
   const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));

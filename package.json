@@ -57,7 +57,6 @@
     "@cloudflare/vitest-pool-workers": "^0.23.0",
     "@cloudflare/workers-types": "^5.20261116.1",
     "@eslint/js": "^10.0.1",
-    "@kidecms/wordpress": "workspace:*",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
