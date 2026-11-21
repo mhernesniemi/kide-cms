@@ -89,6 +89,17 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 - **WordPress importer:** term names decode HTML entities, and so does the text check; media downloads
   allow 5 minutes per file.
 
+## [0.40.0] - 2026-11-21
+
+### Added
+
+- **Mark a translation as up to date.** An outdated translation can be confirmed from the editor
+  without changing it; new API `markTranslationCurrent(id, locale)`.
+
+### Changed
+
+- **Languages column** lists the original language first, set apart from its translations.
+
 ## [0.39.1] - 2026-11-19
 
 ### Fixed
