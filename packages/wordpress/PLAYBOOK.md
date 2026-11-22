@@ -1,15 +1,10 @@
-# Migrating content into Kide
+# WordPress → Kide playbook
 
-The playbook referenced by `AGENTS.md`. Plain Markdown, no tooling required (it
-also ships as the `/migrate` skill).
+The playbook for `@kidecms/wordpress`. Goal: an import where the admin is correct on the first
+real run (proper field controls, resolved images/relations, working locales and search) and where
+you can **prove** nothing was silently lost. The project's `AGENTS.md` covers Kide itself.
 
-Goal: an import where the admin is correct on the first real run (proper field
-controls, resolved images/relations, working locales and search) and where you can
-**prove** nothing was silently lost.
-
-## WordPress: the `kide-wp` pipeline
-
-For WordPress, don't write an importer script. You write **mappings** (source →
+Don't write an importer script. You write **mappings** (source →
 Kide as plain functions) and the pipeline does the rest: parsing (with WordPress's own
 block, shortcode and autop code), staging, coverage accounting, validation, media,
 incremental writes and reconciliation. It's the `@kidecms/wordpress` plugin:
@@ -29,7 +24,7 @@ check-live**. Everything the agent needs to read is in `.kide/import/`: `profile
 (what exists), `ledger.md` (what's still unaccounted, with samples), `verify.md` (what
 didn't land), `live.md` (what the live site shows that Kide doesn't).
 
-### 1. Scout
+## 1. Scout
 
 `scout` streams a `mysqldump` (plain or `.gz`, any table prefix) into
 `.kide/import/staging.db` and writes `profile.md`: every source type with record
@@ -61,7 +56,7 @@ projects and `apply --all` re-runs don't fetch them again.
 Bedrock (`siteurl` ending in `/wp`) is detected: the site root drops `/wp` and uploads
 come from `/app/uploads`. `--site-url` and `--media-base <url>` override both.
 
-### 2. Model the target the Kide way
+## 2. Model the target the Kide way
 
 Map every source concept to Kide's native construct first; a generic collection is the
 last resort. `MODEL.md` (`pnpm cms:describe`) lists field controls and value shapes.
@@ -136,7 +131,7 @@ the plan says per field how many translations do, so editors know which ones to 
 (published only? personal data such as employees and authors? menus? forms?) and get
 them confirmed. Then `pnpm cms:generate && pnpm cms:push` (stop the dev server first).
 
-### 3. Map
+## 3. Map
 
 One file per source type in `migration/<type>.map.ts`. **Map by shape first**: name the Kide
 fields after their source and let the importer fill them, then write code only for what differs.
@@ -267,7 +262,7 @@ type). `pnpm exec kide-wp plan --only post` checks one type without saving the p
 `--show <wp id or record key>` (`--show 12`, `--show form:4`) prints the planned document for
 one record; `kide-wp sample <type> --full` shows records without truncation.
 
-### 4. Plan until READY
+## 4. Plan until READY
 
 `plan` validates every document against the model and blocks on:
 
@@ -296,7 +291,7 @@ Kide route differs from its WordPress URL (nested pages, non-ASCII slugs); redir
 with a `url-change` mapping. Fix, re-run, repeat. It takes a second even on large sites,
 since nothing is written.
 
-### 5. Apply + verify
+## 5. Apply + verify
 
 `apply` refuses a blocked plan (`--force` overrides). It writes only documents whose
 content changed since the last apply (`--all` rewrites everything), uploads media once
@@ -326,43 +321,11 @@ Only the delta is written.
 Paths can be redirected for throwaway runs: `KIDE_IMPORT_DIR`, `KIDE_IMPORT_MAPPINGS`,
 `CMS_DATABASE_URL`, `CMS_UPLOADS_DIR`.
 
-## Other sources: the `load()` toolkit
-
-For non-WordPress sources, write an importer with `createCmsContext()` and validate
-with `load(items, { dryRun: true })` before writing:
-
-```ts
-import { createCmsContext } from "@kidecms/core/context";
-const { load, reindex, dispose } = await createCmsContext();
-
-const items = source.map((row) => ({
-  collection: "posts",
-  data: { _id: `src-${row.id}`, title: row.title, body: buildContent(row), _status: "published" },
-  translations: row.fi ? { fi: { title: row.fi.title } } : undefined,
-}));
-
-const dry = await load(items, { dryRun: true }); // fix everything it flags, including `warnings`
-if (dry.failed || dry.warnings.length) {
-  console.log(JSON.stringify({ invalid: dry.invalid, warnings: dry.warnings }, null, 2));
-  process.exit(1);
-}
-await load(items); // throws ImportFailedError if any document fails
-await reindex();
-await dispose();
-```
-
-Build prose with `htmlToRichText(html)`, upload media with
-`assets.upload(file, { alt, dedupe: true })`, and wipe target collections first
-(`deleteMany({}, { _system: true })`) so deterministic `_id`s replace instead of duplicating.
-
 ## Pitfalls
 
 - Guessing field shapes instead of reading `MODEL.md`: blocks render as JSON.
-- `cms:push` stalling on a rename: use `RECREATE=slug pnpm cms:push --allow-data-loss`.
 - Dropping something to get the plan green: every `drop` needs a real reason, and
   it shows up in the ledger for review.
-- Storing single-language content under the default locale: the pipeline sets
-  `_sourceLocale` for you; in `load()` scripts, set it yourself.
 - GDPR: drop `author` and personal-data fields unless explicitly cleared.
 - Bundled terms: old CSV imports often stored several terms as one name
   (`AJAX|Drupal|Jquery`). `plan` blocks on them. Split them with

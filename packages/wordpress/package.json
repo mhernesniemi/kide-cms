@@ -1,6 +1,6 @@
 {
   "name": "@kidecms/wordpress",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "WordPress → Kide CMS importer: scout a MySQL dump, map it with defineMapping, then kide-wp plan → apply → verify → check-live.",
   "type": "module",
   "license": "MIT",
@@ -18,7 +18,8 @@
   "files": [
     "bin",
     "src",
-    "!src/__tests__"
+    "!src/__tests__",
+    "PLAYBOOK.md"
   ],
   "dependencies": {
     "@wordpress/autop": "5.1.0",

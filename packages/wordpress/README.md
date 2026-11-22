@@ -1,7 +1,7 @@
 # @kidecms/wordpress
 
 WordPress → Kide CMS importer. Scout a MySQL dump, describe the target with `defineMapping`, then
-`kide-wp plan → apply → verify → check-live`. The playbook is `MIGRATING.md` in a Kide project.
+`kide-wp plan → apply → verify → check-live`. The playbook is [`PLAYBOOK.md`](./PLAYBOOK.md).
 
 ```bash
 pnpm add -D @kidecms/wordpress

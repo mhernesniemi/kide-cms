@@ -27,7 +27,7 @@ import { loadProjectConfig, loadProjectRuntime } from "@kidecms/core/internals/p
 // Per-document audit lines would bury the report on a real site.
 process.env.CMS_LOG_LEVEL ??= "warn";
 
-const USAGE = `Usage: kide-wp <command>  (playbook: MIGRATING.md)
+const USAGE = `Usage: kide-wp <command>  (playbook: node_modules/@kidecms/wordpress/PLAYBOOK.md)
 
   scout <dump.sql[.gz]> [--uploads <dir>] [--site-url <url>] [--media-base <url>] [--prefix wp_]
   sample <type> [--id <n>] [--n 2] [--full]       staged records of a source type

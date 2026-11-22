@@ -27,7 +27,7 @@ pnpm cms:generate && pnpm cms:push     # sync schema (renames/drops: --recreate=
 - **WordPress:** use the mapping pipeline from `@kidecms/wordpress` (`pnpm add -D @kidecms/wordpress`): `pnpm exec kide-wp scout <dump> --uploads <dir>` → write `migration/<type>.map.ts` → `pnpm exec kide-wp plan` until READY → `apply` → `verify`.
 - **Other sources:** write an importer script with `load()` (below), then `pnpm cms:reindex`.
 
-**Full playbook: read [`MIGRATING.md`](./MIGRATING.md).** (Also available as the `/migrate` skill where project skills are loaded, but the file is the source of truth.)
+**WordPress playbook:** `node_modules/@kidecms/wordpress/PLAYBOOK.md` once the plugin is installed (also the `/migrate` skill).
 
 A migration script bootstraps with `createCmsContext()` and uses `load()` (validate + create):
 
@@ -35,14 +35,20 @@ A migration script bootstraps with `createCmsContext()` and uses `load()` (valid
 import { createCmsContext } from "@kidecms/core/context";
 const { cms, assets, load, reindex, dispose } = await createCmsContext();
 
-// dry run first — fix everything it flags before importing for real
-const report = await load(items, { dryRun: true });
-if (report.failed) {
-  console.log(report.invalid);
+const items = source.map((row) => ({
+  collection: "posts",
+  data: { _id: `src-${row.id}`, title: row.title, body: buildContent(row), _status: "published" },
+  translations: row.fi ? { fi: { title: row.fi.title } } : undefined,
+}));
+
+// dry run first — fix everything it flags, including warnings, before importing for real
+const dry = await load(items, { dryRun: true });
+if (dry.failed || dry.warnings.length) {
+  console.log(JSON.stringify({ invalid: dry.invalid, warnings: dry.warnings }, null, 2));
   process.exit(1);
 }
 
-await load(items); // { _system:true, _skipSearch:true } by default
+await load(items); // { _system:true, _skipSearch:true } by default; throws ImportFailedError if any document fails
 await reindex();
 await dispose();
 ```
@@ -57,7 +63,8 @@ await dispose();
 - **Field controls matter.** Use the right field so the admin shows a real control, not JSON: `fields.relation({ hasMany: true })` (multi-pick), `fields.color()` (swatch picker), `fields.link()` (URL+label), `fields.image()` (asset picker), and for object lists `fields.json({ admin: { component: "repeater" }, itemFields: { … } })` (typed repeater rows). See `MODEL.md` for the full table.
 - **`content` field** stores any `{ type:'root', children:[…] }` doc as-is; inline block `fields` are **not** validated, so you control their shape — but declare `blocks` so the editor renders them. Build prose with `htmlToRichText(html)`; the stored inline-block discriminator is `type:'block'`.
 - **Images:** `assets.upload(file, { alt, dedupe: true })` returns `{ storagePath }`; store that string in image fields. `dedupe` makes re-runs idempotent (content-hash), no external map needed.
-- **Translations:** base-locale row + `cms.<col>.upsertTranslation(id, locale, translatableFields)`. Declare locales in `cms.config.ts`.
+- **Translations:** base-locale row + `cms.<col>.upsertTranslation(id, locale, translatableFields)`. Declare locales in `cms.config.ts`. Content that only exists in another language needs `_sourceLocale` set, or it lands under the default locale.
+- **Personal data:** leave out authors and other personal fields unless the user has cleared them.
 - **Published vs draft is the importer's call** — filter the source if you only want published content.
 
 ## Building an app on Kide

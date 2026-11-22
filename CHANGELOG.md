@@ -7,6 +7,14 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+### Changed
+
+- **`MIGRATING.md` is gone from the project root.** The WordPress playbook ships with the importer as
+  `node_modules/@kidecms/wordpress/PLAYBOOK.md` (`@kidecms/wordpress` 0.2.1); the generic `load()` notes
+  are in `AGENTS.md`.
+
 ## [0.42.1] - 2026-11-22
 
 ### Fixed
