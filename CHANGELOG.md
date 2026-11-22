@@ -7,6 +7,25 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+### Added
+
+- **SvelteKit support (beta).** Kide now runs on Vite-powered frameworks: Astro and SvelteKit. A SvelteKit
+  project adds `kideSvelteKit()` to `vite.config.ts` and `export { handle } from "@kidecms/core/sveltekit/hooks"`
+  to `src/hooks.server.ts`; the rest of the CMS (collections, local API, admin, Node and Cloudflare targets) is
+  shared. See `adapters/sveltekit/README.md`.
+- `@kidecms/core/vite` (`kide()`) and `@kidecms/core/handler` (`handleKideRequest`) for wiring Kide into other
+  Vite hosts.
+
+### Changed
+
+- The admin no longer renders through Astro: pages are server-rendered React with hydrated islands, and every
+  `/admin/*`, `/api/cms/*` and `/uploads/*` request goes through Kide's own router. Astro projects need no changes.
+  Embedded projects with edits to admin `.astro` views should port them to the `.tsx` equivalents in
+  `src/cms/admin/`.
+- Custom admin pages in Astro projects keep using `@kidecms/core/admin/layouts/AdminLayout.astro`.
+
 ## [0.42.2] - 2026-11-22
 
 ### Changed

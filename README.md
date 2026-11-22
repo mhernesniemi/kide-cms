@@ -1,8 +1,8 @@
 # Kide CMS
 
-[![Built with Astro](https://astro.badg.es/v2/built-with-astro/tiny.svg)](https://astro.build)
+The CMS that lives in your app. For Vite-powered frameworks: **Astro** and **SvelteKit** (beta).
 
-A code-first CMS for Astro. Define collections in TypeScript and get a generated admin UI and typed content API.
+Define collections in TypeScript and get a generated admin UI and typed content API.
 
 ![Kide admin UI](.github/admin-screenshot.png)
 
@@ -11,7 +11,7 @@ A code-first CMS for Astro. Define collections in TypeScript and get a generated
 
 ## Why Kide
 
-**An Astro integration, not a headless service.** Kide lives in your repo: collections in TypeScript, content read through an import, the admin served by your own app, pages cached by Astro's route cache with tag invalidation.
+**Lives in your app, not a headless service.** Kide runs inside your own server: collections in TypeScript, content read through a function call instead of HTTP, the admin served at your domain and deployed with your code.
 
 **No plugin API.** You extend Kide the way you extend any code you own. Small needs are lifecycle hooks. Need more? `pnpm exec kide eject` moves the runtime, routes, and admin into `src/cms/` to read, change, and audit. Package mode when you want a dependency, embedded when you want the source.
 
@@ -29,6 +29,11 @@ A code-first CMS for Astro. Define collections in TypeScript and get a generated
 ```bash
 pnpx create-kide-app
 ```
+
+Pick a framework:
+
+- **Astro** - one integration in `astro.config.mjs`.
+- **SvelteKit** (beta) - a Vite plugin plus a one-line `handle` hook.
 
 Pick how the runtime lives in your project:
 
@@ -82,7 +87,7 @@ posts: {
 
 ## Stack
 
-Astro 7, React 19, Drizzle ORM, SQLite/D1, Zod, Tiptap, shadcn/ui, Tailwind CSS
+Astro 7 or SvelteKit 3 on Vite; admin in React 19. Drizzle ORM, SQLite/D1, Zod, Tiptap, shadcn/ui, Tailwind CSS
 
 ## Note
 

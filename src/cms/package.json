@@ -5,7 +5,8 @@
   "keywords": [
     "cms",
     "astro",
-    "headless-cms",
+    "sveltekit",
+    "vite",
     "content-management",
     "typescript",
     "admin-panel"
