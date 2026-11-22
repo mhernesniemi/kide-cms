@@ -31,6 +31,18 @@ export const POST: CmsRoute = async ({ request }) => {
       return Response.json(folder);
     }
 
+    if (action === "move" && id) {
+      try {
+        const folder = await folders.move(String(id), parent ? String(parent) : null);
+        if (!folder) return Response.json({ error: "Not found." }, { status: 404 });
+        return Response.json(folder);
+      } catch (error) {
+        if (error instanceof Error && error.name === "FolderMoveError")
+          return Response.json({ error: error.message }, { status: 400 });
+        throw error;
+      }
+    }
+
     if (action === "delete" && id) {
       await folders.delete(String(id));
       return new Response(null, { status: 204 });

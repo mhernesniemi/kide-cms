@@ -6,6 +6,7 @@ import {
   ChevronRight,
   CircleCheck,
   Folder,
+  FolderInput,
   FolderPlus,
   GripVertical,
   Images,
@@ -100,10 +101,12 @@ function assetsUrl(opts: { scope?: string; q?: string; page?: number }) {
 function DraggableAssetCard({
   asset,
   selected,
+  dimmed,
   onToggleSelect,
 }: {
   asset: AssetItem;
   selected: boolean;
+  dimmed: boolean;
   onToggleSelect: () => void;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({
@@ -112,7 +115,7 @@ function DraggableAssetCard({
   });
 
   return (
-    <div ref={setNodeRef} className={cn("group relative", isDragging && "opacity-40")}>
+    <div ref={setNodeRef} className={cn("group relative", (isDragging || dimmed) && "opacity-40")}>
       <a href={`/admin/assets/${asset._id}`} className="block">
         <Card className="hover:border-foreground/50 overflow-hidden pt-0 transition-colors">
           <div className="relative">
@@ -259,10 +262,18 @@ function FolderRow({
 // Drag overlay (ghost while dragging)
 // -----------------------------------------------
 
-function AssetDragOverlay({ asset }: { asset: AssetItem }) {
+function AssetDragOverlay({ asset, count }: { asset: AssetItem; count: number }) {
   return (
-    <div className="w-40" style={{ transform: "rotate(2deg) scale(0.95)" }}>
-      <Card className="overflow-hidden pt-0 shadow-lg">
+    <div className="relative w-40" style={{ transform: "rotate(2deg) scale(0.95)" }}>
+      {count > 1 && (
+        <>
+          <div className="bg-card absolute inset-0 translate-x-1.5 translate-y-1.5 rounded-xl border shadow-md" />
+          <span className="bg-primary text-primary-foreground absolute -top-2 -right-2 z-10 rounded-full px-2 py-0.5 text-xs font-semibold shadow">
+            {count} assets
+          </span>
+        </>
+      )}
+      <Card className="relative overflow-hidden pt-0 shadow-lg">
         <div className="relative">
           {asset.mimeType.startsWith("image/") ? (
             <div className="bg-muted/30 aspect-square w-full overflow-hidden">
@@ -287,6 +298,20 @@ function AssetDragOverlay({ asset }: { asset: AssetItem }) {
   );
 }
 
+// Reload either way: a partial failure still moved some assets.
+async function moveAssets(ids: string[], folderId: string | null) {
+  await Promise.all(
+    ids.map((id) =>
+      fetch(`/api/cms/assets/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder: folderId }),
+      }),
+    ),
+  );
+  location.reload();
+}
+
 // -----------------------------------------------
 // Main component
 // -----------------------------------------------
@@ -298,6 +323,7 @@ const SEARCH_DEBOUNCE_MS = 150;
 export default function AssetsGrid({
   folders,
   assets: initialAssets,
+  breadcrumbs,
   scope,
   search,
   page: initialPage,
@@ -306,6 +332,8 @@ export default function AssetsGrid({
 }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeAsset, setActiveAsset] = useState<AssetItem | null>(null);
+  // Dragging a selected asset carries the whole selection; any other asset moves alone.
+  const [dragIds, setDragIds] = useState<string[]>([]);
   const [query, setQuery] = useState(search);
 
   // Real folder id for the current scope (null for the "all"/"unfiled" scopes) —
@@ -323,6 +351,9 @@ export default function AssetsGrid({
   // Folder dialog state
   const [createOpen, setCreateOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+  // "" = top level; null = nothing picked yet.
+  const [moveTarget, setMoveTarget] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkUsage, setBulkUsage] = useState<{ tone: "warn" | "muted"; message: string } | null>(null);
@@ -338,6 +369,7 @@ export default function AssetsGrid({
   // Context menu
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const [menuSource, setMenuSource] = useState<"sidebar" | "heading">("sidebar");
 
   const [uploading, setUploading] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);
@@ -380,6 +412,17 @@ export default function AssetsGrid({
     walk("", 0);
     return rows;
   }, [folders]);
+
+  // Where the active folder may go: anywhere except itself and its own subtree.
+  const moveOptions = useMemo(() => {
+    if (!activeFolderId) return [];
+    const excluded = new Set([activeFolderId]);
+    for (const { folder } of folderTree) {
+      if (folder.parent && excluded.has(folder.parent)) excluded.add(folder._id);
+    }
+    return folderTree.filter(({ folder }) => !excluded.has(folder._id));
+  }, [folderTree, activeFolderId]);
+  const activeFolderParent = folders.find((f) => f._id === activeFolderId)?.parent ?? "";
 
   // --- Live filter + pagination (client-side, mirrors the Cmd+K palette) ---
 
@@ -541,43 +584,44 @@ export default function AssetsGrid({
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      const asset = items.find((a) => a._id === event.active.id);
+      const id = String(event.active.id);
+      const asset = items.find((a) => a._id === id);
       if (asset) setActiveAsset(asset);
+      setDragIds(selectedIds.has(id) ? Array.from(selectedIds) : [id]);
       document.body.style.cursor = "grabbing";
     },
-    [items],
+    [items, selectedIds],
   );
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    document.body.style.cursor = "";
-    setActiveAsset(null);
-    const { active, over } = event;
-    if (!over) return;
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      document.body.style.cursor = "";
+      setActiveAsset(null);
+      setDragIds([]);
+      const { over } = event;
+      if (!over) return;
 
-    const assetId = String(active.id);
-    const dropData = over.data.current as { type: string; folderId: string | null } | undefined;
-    if (!dropData || dropData.type !== "folder") return;
+      const dropData = over.data.current as { type: string; folderId: string | null } | undefined;
+      if (!dropData || dropData.type !== "folder") return;
 
-    fetch(`/api/cms/assets/${assetId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ folder: dropData.folderId || null }),
-    }).then((res) => {
-      if (res.ok) location.reload();
-    });
-  }, []);
+      void moveAssets(dragIds, dropData.folderId || null);
+    },
+    [dragIds],
+  );
 
   const handleDragCancel = useCallback(() => {
     document.body.style.cursor = "";
     setActiveAsset(null);
+    setDragIds([]);
   }, []);
 
   // --- Folder actions ---
 
-  function openMenu(folderId: string, folderName: string, rect: DOMRect) {
+  function openMenu(folderId: string, folderName: string, rect: DOMRect, source: "sidebar" | "heading" = "sidebar") {
     setActiveFolderId(folderId);
     setActiveFolderName(folderName);
-    setMenuPos({ top: rect.bottom + 4, left: rect.right - 160 });
+    setMenuSource(source);
+    setMenuPos({ top: rect.bottom + 4, left: source === "heading" ? rect.left : rect.right - 160 });
     setMenuOpen(true);
   }
 
@@ -681,6 +725,23 @@ export default function AssetsGrid({
     }
   }
 
+  async function handleMoveFolder() {
+    if (moveTarget === null || moveTarget === activeFolderParent) return;
+    setLoading(true);
+    setError(null);
+    const res = await fetch("/api/cms/assets/folders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "move", id: activeFolderId, parent: moveTarget || null }),
+    });
+    if (res.ok) location.reload();
+    else {
+      setLoading(false);
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      setError(body?.error ?? "Failed to move folder.");
+    }
+  }
+
   async function handleDeleteFolder() {
     setLoading(true);
     setError(null);
@@ -689,7 +750,9 @@ export default function AssetsGrid({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "delete", id: activeFolderId }),
     });
-    if (res.ok) location.reload();
+    // The open folder is gone; its assets landed in Unfiled.
+    if (res.ok && activeFolderId === scope) location.assign(assetsUrl({ scope: "unfiled" }));
+    else if (res.ok) location.reload();
     else {
       setLoading(false);
       setError("Failed to delete folder.");
@@ -795,7 +858,7 @@ export default function AssetsGrid({
                   active={scope === folder._id}
                   Icon={Folder}
                   onOpenMenu={openMenu}
-                  menuActive={menuOpen && activeFolderId === folder._id}
+                  menuActive={menuOpen && menuSource === "sidebar" && activeFolderId === folder._id}
                 />
               ))}
             </nav>
@@ -803,6 +866,53 @@ export default function AssetsGrid({
 
           {/* ── Main: search, grid, pagination ── */}
           <div className="min-w-0 space-y-4 lg:border-l lg:pl-8">
+            <div className="flex min-h-8 items-center gap-1">
+              {currentFolderId ? (
+                <>
+                  <nav aria-label="Folder path" className="flex min-w-0 items-center gap-1 text-lg">
+                    {breadcrumbs.map((crumb, index) =>
+                      index < breadcrumbs.length - 1 ? (
+                        <span key={crumb.id} className="flex min-w-0 items-center gap-1">
+                          <a
+                            href={assetsUrl({ scope: crumb.id })}
+                            className="text-muted-foreground hover:text-foreground truncate transition-colors"
+                          >
+                            {crumb.label}
+                          </a>
+                          <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+                        </span>
+                      ) : (
+                        <h2 key={crumb.id} className="truncate font-semibold tracking-tight">
+                          {crumb.label}
+                        </h2>
+                      ),
+                    )}
+                  </nav>
+                  <button
+                    type="button"
+                    title="Folder options"
+                    className={cn(
+                      "text-muted-foreground hover:text-foreground hover:bg-accent shrink-0 rounded-md p-1.5 transition-colors",
+                      menuOpen && menuSource === "heading" && "bg-accent text-foreground",
+                    )}
+                    onClick={(e) =>
+                      openMenu(
+                        currentFolderId,
+                        breadcrumbs.at(-1)?.label ?? "",
+                        e.currentTarget.getBoundingClientRect(),
+                        "heading",
+                      )
+                    }
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </button>
+                </>
+              ) : (
+                <h2 className="text-lg font-semibold tracking-tight">
+                  {scope === "unfiled" ? "Unfiled" : "All assets"}
+                </h2>
+              )}
+            </div>
             <div className="bg-background sticky top-0 z-20 -mx-0.5 flex items-center justify-between gap-3 px-0.5 py-3">
               <div className="relative w-full sm:max-w-xs">
                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
@@ -914,6 +1024,7 @@ export default function AssetsGrid({
                     key={asset._id}
                     asset={asset}
                     selected={selectedIds.has(asset._id)}
+                    dimmed={dragIds.length > 1 && dragIds.includes(asset._id)}
                     onToggleSelect={() => toggleSelect(asset._id)}
                   />
                 ))}
@@ -960,7 +1071,9 @@ export default function AssetsGrid({
       </section>
 
       {/* Drag overlay */}
-      <DragOverlay dropAnimation={null}>{activeAsset && <AssetDragOverlay asset={activeAsset} />}</DragOverlay>
+      <DragOverlay dropAnimation={null}>
+        {activeAsset && <AssetDragOverlay asset={activeAsset} count={dragIds.length} />}
+      </DragOverlay>
 
       {/* Folder context menu */}
       {menuOpen && (
@@ -981,6 +1094,19 @@ export default function AssetsGrid({
           >
             <Pencil className="size-3.5" />
             Rename
+          </button>
+          <button
+            type="button"
+            className="hover:bg-accent flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm"
+            onClick={() => {
+              setMenuOpen(false);
+              setMoveTarget(null);
+              resetDialogState();
+              setMoveOpen(true);
+            }}
+          >
+            <FolderInput className="size-3.5" />
+            Move to…
           </button>
           <button
             type="button"
@@ -1035,6 +1161,61 @@ export default function AssetsGrid({
       </Dialog>
 
       {/* Rename folder dialog */}
+      <Dialog open={moveOpen} onOpenChange={setMoveOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move &ldquo;{activeFolderName}&rdquo;</DialogTitle>
+            <DialogDescription>Choose where this folder and everything in it should go.</DialogDescription>
+          </DialogHeader>
+          <div className="-mx-1 max-h-72 space-y-0.5 overflow-y-auto py-1" role="listbox" aria-label="Destination">
+            {[
+              { id: "", label: "Top level", depth: 0 },
+              ...moveOptions.map(({ folder, depth }) => ({ id: folder._id, label: folder.name, depth: depth + 1 })),
+            ].map((option) => {
+              const isCurrent = option.id === activeFolderParent;
+              return (
+                <button
+                  key={option.id || "top"}
+                  type="button"
+                  role="option"
+                  aria-selected={moveTarget === option.id}
+                  disabled={isCurrent}
+                  onClick={() => setMoveTarget(option.id)}
+                  style={{ paddingLeft: `${0.5 + option.depth * 1}rem` }}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-md py-1.5 pr-2 text-left text-sm transition-colors",
+                    moveTarget === option.id ? "bg-accent text-foreground" : "hover:bg-accent/60",
+                    isCurrent && "text-muted-foreground cursor-default hover:bg-transparent",
+                  )}
+                >
+                  {option.id ? (
+                    <Folder className="text-muted-foreground size-4 shrink-0" />
+                  ) : (
+                    <Images className="text-muted-foreground size-4 shrink-0" />
+                  )}
+                  <span className="truncate">{option.label}</span>
+                  {isCurrent && <span className="text-muted-foreground ml-auto shrink-0 text-xs">Current</span>}
+                </button>
+              );
+            })}
+          </div>
+          {error && <p className="text-destructive text-sm">{error}</p>}
+          <DialogFooter className="mt-2">
+            <DialogClose>
+              <Button variant="outline" type="button">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              onClick={handleMoveFolder}
+              disabled={moveTarget === null || moveTarget === activeFolderParent || loading}
+            >
+              Move
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent>
           <DialogHeader>

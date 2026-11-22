@@ -307,6 +307,10 @@ function buildAssetFilter(schema: ReturnType<typeof getSchema>, options: { folde
   return conditions.length ? and(...conditions) : undefined;
 }
 
+export class FolderMoveError extends Error {
+  override name = "FolderMoveError";
+}
+
 export const folders = {
   async create(name: string, parent?: string | null): Promise<FolderRecord> {
     const db = await getDb();
@@ -351,6 +355,21 @@ export const folders = {
     const db = await getDb();
     const schema = getSchema();
     await db.update(schema.cmsAssetFolders).set({ name }).where(eq(schema.cmsAssetFolders._id, id));
+    return this.findById(id);
+  },
+
+  /** Moves a folder under `parent` (null = top level). Refuses a move into itself or its own subtree. */
+  async move(id: string, parent: string | null): Promise<FolderRecord | null> {
+    const all = await this.findAll();
+    const byId = new Map(all.map((folder) => [folder._id, folder]));
+    if (!byId.has(id)) return null;
+    if (parent !== null && !byId.has(parent)) throw new FolderMoveError("The target folder does not exist.");
+    for (let cursor = parent; cursor; cursor = byId.get(cursor)?.parent ?? null) {
+      if (cursor === id) throw new FolderMoveError("A folder can't be moved into itself or one of its subfolders.");
+    }
+    const db = await getDb();
+    const schema = getSchema();
+    await db.update(schema.cmsAssetFolders).set({ parent }).where(eq(schema.cmsAssetFolders._id, id));
     return this.findById(id);
   },
 

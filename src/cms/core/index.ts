@@ -172,7 +172,7 @@ export {
 } from "./auth-engine";
 export type { AccountSecurity, AdminSession, AuthEndpointRule, SessionUser, SsoDenial } from "./auth-engine";
 
-export { assets, folders, stripMissingAssetImages } from "./assets";
+export { assets, folders, FolderMoveError, stripMissingAssetImages } from "./assets";
 export type { AssetRecord, FolderRecord } from "./assets";
 export { AssetInUseError, countAssetUsage, findAssetUsage } from "./asset-usage";
 export type { AssetUsageRef, AssetUsageResult } from "./asset-usage";

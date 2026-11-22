@@ -11,7 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as generatedSchema from "./fixtures/project/src/cms/.generated/schema";
 import config from "./fixtures/config";
 import { createCms } from "../api";
-import { assets, stripMissingAssetImages } from "../assets";
+import { assets, FolderMoveError, folders, stripMissingAssetImages } from "../assets";
 import { AssetInUseError, countAssetUsage, findAssetUsage } from "../asset-usage";
 import { setUsageConfig } from "../asset-usage";
 import { configureCmsRuntime, resetCmsRuntime } from "../runtime";
@@ -332,5 +332,29 @@ describe("stripMissingAssetImages", () => {
     };
 
     expect(await stripMissingAssetImages(document)).toBe(document);
+  });
+});
+
+describe("folders.move", () => {
+  it("moves a folder under another folder and back to the top level", async () => {
+    const a = await folders.create("Move A");
+    const b = await folders.create("Move B");
+    expect((await folders.move(b._id, a._id))?.parent).toBe(a._id);
+    expect((await folders.move(b._id, null))?.parent).toBeNull();
+  });
+
+  it("refuses a move into the folder itself or its own subtree", async () => {
+    const root = await folders.create("Cycle root");
+    const child = await folders.create("Cycle child", root._id);
+    const grandchild = await folders.create("Cycle grandchild", child._id);
+    await expect(folders.move(root._id, root._id)).rejects.toThrow(FolderMoveError);
+    await expect(folders.move(root._id, grandchild._id)).rejects.toThrow(FolderMoveError);
+    expect((await folders.findById(root._id))?.parent).toBeNull();
+  });
+
+  it("refuses a missing target and reports a missing folder", async () => {
+    const folder = await folders.create("Lonely");
+    await expect(folders.move(folder._id, "nope")).rejects.toThrow(FolderMoveError);
+    expect(await folders.move("missing", null)).toBeNull();
   });
 });
