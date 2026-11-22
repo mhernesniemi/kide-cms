@@ -1,6 +1,6 @@
 # Kide CMS
 
-The CMS that lives in your app. For Vite-powered frameworks: **Astro** and **SvelteKit** (beta).
+The CMS that lives in your app. For Vite-powered frameworks: **Astro** and **SvelteKit**.
 
 Define collections in TypeScript and get a generated admin UI and typed content API.
 
@@ -33,7 +33,7 @@ pnpx create-kide-app
 Pick a framework:
 
 - **Astro** - one integration in `astro.config.mjs`.
-- **SvelteKit** (beta) - a Vite plugin plus a one-line `handle` hook.
+- **SvelteKit** - a Vite plugin plus a one-line `handle` hook.
 
 Pick how the runtime lives in your project:
 

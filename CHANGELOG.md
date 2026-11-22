@@ -11,7 +11,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 
 ### Added
 
-- **SvelteKit support (beta).** Kide now runs on Vite-powered frameworks: Astro and SvelteKit. A SvelteKit
+- **SvelteKit support (new).** Kide now runs on Vite-powered frameworks: Astro and SvelteKit. A SvelteKit
   project adds `kideSvelteKit()` to `vite.config.ts` and `export { handle } from "@kidecms/core/sveltekit/hooks"`
   to `src/hooks.server.ts`; the rest of the CMS (collections, local API, admin, Node and Cloudflare targets) is
   shared. See `adapters/sveltekit/README.md`.
