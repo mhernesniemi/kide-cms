@@ -47,12 +47,22 @@ if (previewKey && previewKey !== "true") {
 // hint cookie (set by the auth middleware on admin visits) is present, and only
 // then verifies the real session via the edit-bar endpoint. Renders into a shadow
 // root so site CSS can't leak in. Skipped in preview mode (the editor is already
-// editing in another tab) and on admin pages.
-if (
-  !new URLSearchParams(location.search).has("preview") &&
-  !location.pathname.startsWith("/admin") &&
-  document.cookie.split("; ").includes("kide-editor=1")
-) {
+// editing in another tab) and on admin pages. Sites with client-side navigation call
+// refreshEditBar() after each one, so the chip follows the page being shown.
+let editBarHost: HTMLElement | null = null;
+let editBarRequest = 0;
+
+export function refreshEditBar() {
+  editBarHost?.remove();
+  editBarHost = null;
+  const request = ++editBarRequest;
+  if (
+    new URLSearchParams(location.search).has("preview") ||
+    location.pathname.startsWith("/admin") ||
+    !document.cookie.split("; ").includes("kide-editor=1")
+  ) {
+    return;
+  }
   const marker = document.querySelector("[data-cms-doc]");
   const ref = marker?.getAttribute("data-cms-doc");
   if (ref) {
@@ -66,7 +76,8 @@ if (
         return r.ok ? r.json() : null;
       })
       .then((data: { editUrl: string; status: string | null } | null) => {
-        if (!data) return;
+        // A newer navigation started its own request; this page is gone.
+        if (!data || request !== editBarRequest) return;
         const host = document.createElement("div");
         const shadow = host.attachShadow({ mode: "open" });
         // Static markup only — editUrl embeds a caller-suppliable document id, so
@@ -92,7 +103,10 @@ if (
           </a>`;
         shadow.querySelector("a")!.setAttribute("href", data.editUrl);
         document.body.appendChild(host);
+        editBarHost = host;
       })
       .catch(() => {});
   }
 }
+
+refreshEditBar();

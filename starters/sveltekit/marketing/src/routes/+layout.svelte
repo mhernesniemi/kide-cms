@@ -1,23 +1,24 @@
 <script lang="ts">
   import "@/styles/public.css";
-  import { onMount } from "svelte";
+  import { afterNavigate } from "$app/navigation";
   import { page } from "$app/state";
 
   let { data, children } = $props();
 
-  // Live preview + edit bar; a no-op unless an editor opened the page.
-  onMount(() => {
-    import("@kidecms/core/client/preview");
+  // Live preview + edit bar: loaded on the first page, and the edit bar follows each
+  // client-side navigation. A no-op unless an editor opened the page.
+  afterNavigate(({ type }) => {
+    import("@kidecms/core/client/preview").then((preview) => {
+      if (type !== "enter") preview.refreshEditBar();
+    });
   });
 </script>
 
 <!-- cmsDoc ("<collection>:<id>") marks which document this page renders — the edit bar
-     uses it to show logged-in editors an "Edit this page" chip. Full page loads
-     (data-sveltekit-reload) keep it and live preview in step with the current page. -->
+     uses it to show logged-in editors an "Edit this page" chip. -->
 <div
   class="flex min-h-screen flex-col overflow-x-clip bg-white text-gray-950 antialiased"
   data-cms-doc={page.data.cmsDoc}
-  data-sveltekit-reload
 >
   <header class="border-b border-gray-200">
     <div class="mx-auto flex max-w-5xl items-center gap-10 px-6 py-5">
