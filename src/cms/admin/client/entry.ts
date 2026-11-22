@@ -1,15 +1,5 @@
 import "virtual:kide/admin-css";
-import type { ComponentType } from "react";
-import { customFields } from "virtual:kide/custom-fields";
-import { defineIslandElement } from "./island-element";
-import { islands, type IslandName } from "./islands";
 
-const CUSTOM_PREFIX = "custom:";
-
-const loadComponent = async (name: string): Promise<ComponentType<any> | undefined> => {
-  if (name.startsWith(CUSTOM_PREFIX)) return customFields[name.slice(CUSTOM_PREFIX.length)];
-  const load = islands[name as IslandName];
-  return load ? (await load()).default : undefined;
-};
-
-defineIslandElement(loadComponent);
+// The entry is served under a fixed, query-busted URL, so lazily loaded chunks must never
+// import from it (they'd load a second copy). Everything else lives behind this import.
+void import("./boot");

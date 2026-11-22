@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import assets from "virtual:kide/admin-assets";
 import type { CmsContext, CmsRoute } from "../../routes/context";
-import { resetIslands } from "./island";
+import { resetIslands } from "./island-server";
 
 /** Admin stylesheet and browser entry; goes inside every admin page's <head>. */
 export function AdminAssets() {
@@ -46,16 +46,4 @@ export const definePage =
     return renderPage(<Page {...result} />);
   };
 
-export const getCookie = (request: Request, name: string) => {
-  for (const part of (request.headers.get("cookie") ?? "").split(/;\s*/)) {
-    const index = part.indexOf("=");
-    if (index > 0 && part.slice(0, index) === name) {
-      try {
-        return decodeURIComponent(part.slice(index + 1));
-      } catch {
-        return part.slice(index + 1);
-      }
-    }
-  }
-  return undefined;
-};
+export { getCookie } from "../lib/cookies";

@@ -163,10 +163,24 @@ export default function UnsavedGuard({
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
+  // Back/forward inside the admin app can't be cancelled; the app asks first instead.
+  useEffect(() => {
+    window.__kideGuard = (href) => {
+      if (submittingRef.current || !dirtyRef.current) return false;
+      setPendingHref(href);
+      return true;
+    };
+    return () => {
+      delete window.__kideGuard;
+    };
+  }, []);
+
   const handleDiscard = useCallback(() => {
     if (pendingHref) {
       dirtyRef.current = false;
-      window.location.assign(pendingHref);
+      setPendingHref(null);
+      if (window.__kideApp) void window.__kideApp.navigate(pendingHref);
+      else window.location.assign(pendingHref);
     }
   }, [pendingHref]);
 

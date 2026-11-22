@@ -1,5 +1,4 @@
 import type { ImagePreset } from "./define";
-import { getStorage } from "./runtime";
 
 const ALLOWED_WIDTHS = [320, 480, 640, 768, 960, 1024, 1280, 1536, 1920];
 const ALLOWED_FORMATS = ["webp", "avif", "jpeg", "png"] as const;
@@ -180,6 +179,8 @@ export async function transformImage(
   // The adapter rejects traversal by throwing; that's the same miss as an absent file.
   let source: ArrayBuffer | null;
   try {
+    // Lazy: the runtime is server-only, and URL helpers here also run in the admin's browser bundle.
+    const { getStorage } = await import("./runtime");
     source = await getStorage().getFile(src);
   } catch {
     source = null;

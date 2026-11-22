@@ -2,46 +2,35 @@ import type { ReactNode } from "react";
 import { cms } from "virtual:kide/api";
 import config from "virtual:kide/config";
 import { collaboration } from "virtual:kide/runtime";
-import {
-  ChevronDown,
-  Clock,
-  FileText,
-  FolderTree,
-  Image,
-  Layers,
-  Menu,
-  PencilRuler,
-  Plus,
-  Users,
-  Inbox,
-  Link2,
-  MessageSquare,
-  Search,
-  icons as lucideIcons,
-} from "lucide-react";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { icons as lucideIcons } from "lucide-react";
 
-// Any Lucide icon, by name ("ArrowRightLeft" or "arrow-right-left"). Rendered on the server, so
-// the full set costs the browser nothing.
+// Any Lucide icon, by name ("ArrowRightLeft" or "arrow-right-left"), rendered to SVG on the
+// server so the full set costs the browser nothing.
 const warnedIcons = new Set<string>();
-const navIcon = (name: string | undefined, fallback: any = Layers) => {
+const iconSvgCache = new Map<string, string>();
+const navIcon = (name: string | undefined, fallback: NavItem["icon"] = { key: "layers" }): NavItem["icon"] => {
   if (!name) return fallback;
+  const cached = iconSvgCache.get(name);
+  if (cached) return { svg: cached };
   const pascal = name.replace(/(^|[-_\s])([a-z0-9])/g, (_, __, c: string) => c.toUpperCase());
   const icon = (lucideIcons as Record<string, any>)[name] ?? (lucideIcons as Record<string, any>)[pascal];
-  if (!icon && !warnedIcons.has(name)) {
-    warnedIcons.add(name);
-    console.warn(`[kide] Unknown admin icon "${name}"; see https://lucide.dev/icons for names.`);
+  if (!icon) {
+    if (!warnedIcons.has(name)) {
+      warnedIcons.add(name);
+      console.warn(`[kide] Unknown admin icon "${name}"; see https://lucide.dev/icons for names.`);
+    }
+    return fallback;
   }
-  return icon ?? fallback;
+  const svg = renderToStaticMarkup(createElement(icon, { className: "size-4 shrink-0 stroke-1" }));
+  iconSvgCache.set(name, svg);
+  return { svg };
 };
 
-import CommandPalette from "../components/CommandPalette";
-import MobileSidebar from "../components/MobileSidebar";
-import SidebarUserMenu from "../components/SidebarUserMenu";
-import { Toast } from "../components/Toast";
-import { cn } from "../lib/utils";
+import { AdminShell, type NavItem, type ShellData } from "./AdminShell";
 import { eligibleCollabSlugs, loadNeedsYou } from "../lib/collaboration";
 import { canRead } from "../lib/access";
-import { Island } from "../render/island";
 import { AdminAssets } from "../render/page";
 import { isApprover, resolveCollaboration } from "../../core";
 import type { CmsContext } from "../../routes/context";
@@ -129,8 +118,9 @@ const SEARCH_SCRIPT = `(function () {
   });
   var isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
   if (!isMac) {
+    // Inside the admin app React owns this markup and swaps the label itself.
     document.querySelectorAll("[data-cms-search-kbd]").forEach(function (el) {
-      el.textContent = "Ctrl+K";
+      if (!el.closest("#kide-app")) el.textContent = "Ctrl+K";
     });
   }
 })();`;
@@ -141,12 +131,14 @@ const TOAST_SCRIPT = `(function () {
   if (!status) return;
   p.delete("_toast");
   p.delete("_msg");
-  history.replaceState({}, "", location.pathname + (p.size ? "?" + p : ""));
+  // A sheet's parent reads _toast off the frame's URL to tell a save happened.
+  if (window.parent === window) history.replaceState({}, "", location.pathname + (p.size ? "?" + p : ""));
   // Error toasts stay longer (5s) than success toasts (3s)
   var delay = status === "error" ? 5200 : 3200;
   setTimeout(function () {
     var el = document.getElementById("admin-toast");
-    if (el) el.remove();
+    // React owns the app's toast; its animation already hides it.
+    if (el && !el.closest("#kide-app")) el.remove();
   }, delay);
 })();`;
 
@@ -216,43 +208,28 @@ export async function loadAdminLayout({ url, locals }: Pick<CmsContext, "url" | 
 
 export type AdminLayoutData = Awaited<ReturnType<typeof loadAdminLayout>>;
 
-type AdminLayoutProps = {
-  layout: AdminLayoutData;
-  title?: string;
+export type ShellOptions = {
   collections?: CollectionNavEntry[];
   activeCollection?: string | null;
   embed?: boolean;
   customNav?: Array<{ label: string; href: string; icon?: string; weight?: number }>;
-  children?: ReactNode;
 };
 
-export function AdminLayout({
-  layout,
-  title = "Admin",
-  collections = [],
-  activeCollection = null,
-  embed = false,
-  customNav = [],
-  children,
-}: AdminLayoutProps) {
+/** Everything the chrome renders, as plain data: the browser renders it on navigation too. */
+export function buildShell(layout: AdminLayoutData, options: ShellOptions = {}): ShellData {
+  const { collections = [], activeCollection = null, embed = false, customNav = [] } = options;
   const { user, toastStatus, toastMessage, hasNeedsYou, needsYouCount, unreadSubmissions, currentPath } = layout;
-  const collectionEntries = collections as CollectionNavEntry[];
   const librarySlugs = new Set(["shared-sections", "taxonomies", "menus", "forms", "authors"]);
-  const pinnedIcons: Record<string, any> = {
-    "shared-sections": Link2,
-    taxonomies: FolderTree,
-    menus: Menu,
-    forms: MessageSquare,
-    authors: PencilRuler,
-    users: Users,
+  const pinnedIcons: Record<string, NavItem["icon"]> = {
+    "shared-sections": { key: "link2" },
+    taxonomies: { key: "folderTree" },
+    menus: { key: "menu" },
+    forms: { key: "messageSquare" },
+    authors: { key: "pencilRuler" },
+    users: { key: "users" },
   };
 
-  // Collections that should never appear as a top-level sidebar entry.
-  const hiddenFromSidebar = new Set<string>();
-
-  const visibleCollections = collectionEntries.filter(
-    (c) => !hiddenFromSidebar.has(c.slug) && c.admin?.sidebar !== false,
-  );
+  const visibleCollections = collections.filter((c) => c.admin?.sidebar !== false);
   const hasSingletons = visibleCollections.some((c) => c.singleton);
   const singletonSlugs = new Set(visibleCollections.filter((c) => c.singleton).map((c) => c.slug));
   const isActiveSingles =
@@ -263,17 +240,14 @@ export function AdminLayout({
     if (librarySlugs.has(collection.slug)) return "Library";
     return "Content";
   };
-
   const fallbackWeightFor = (collection: CollectionNavEntry) => {
     if (collection.slug === "shared-sections") return 5;
     if (collection.slug === "taxonomies") return 20;
     if (collection.slug === "menus") return 30;
     if (collection.slug === "forms") return 40;
     if (collection.slug === "authors") return 50;
-    if (collection.slug === "users") return 10;
     return 10;
   };
-
   const groupWeightFor = (group: string) => {
     if (group === "Content") return 0;
     if (group === "Library") return 10;
@@ -282,27 +256,12 @@ export function AdminLayout({
     return 50;
   };
 
-  type NavItem = {
-    href: string;
-    label: string;
-    singularLabel?: string;
-    Icon: any;
-    active: boolean;
-    newHref?: string;
-    weight: number;
-    group: string;
-    badge?: number;
-    /** Word after the count. "new" suits an inbox of arrivals; a work queue is not new. */
-    badgeLabel?: string;
-  };
-  const navItems: NavItem[] = [];
-
-  // Built-in nav items with default weights (spaced by 10 for easy interleaving)
+  const navItems: Array<NavItem & { weight: number; group: string }> = [];
   if (hasNeedsYou) {
     navItems.push({
       href: "/admin/needs-you",
       label: "Needs you",
-      Icon: Inbox,
+      icon: { key: "inbox" },
       active: activeCollection === "needs-you",
       badge: needsYouCount > 0 ? needsYouCount : undefined,
       badgeLabel: "open",
@@ -310,66 +269,57 @@ export function AdminLayout({
       group: "Content",
     });
   }
-
   navItems.push({
     href: "/admin/recent",
     label: "Recent",
-    Icon: Clock,
+    icon: { key: "clock" },
     active: activeCollection === "recent",
     weight: 0,
     group: "Content",
   });
-
-  const navCollections = visibleCollections.filter((c) => !c.singleton);
-  for (const c of navCollections) {
-    const group = c.admin?.group ?? fallbackGroupFor(c);
+  for (const c of visibleCollections.filter((c) => !c.singleton)) {
     navItems.push({
       href: `/admin/${c.slug}`,
       label: c.labels.plural,
       singularLabel: c.labels.singular,
-      Icon: c.admin?.icon ? navIcon(c.admin.icon) : (pinnedIcons[c.slug] ?? Layers),
+      icon: c.admin?.icon ? navIcon(c.admin.icon) : (pinnedIcons[c.slug] ?? { key: "layers" }),
       active: activeCollection === c.slug,
       // Submissions are created by end users filling out forms, not added manually.
       newHref: c.slug === "form-submissions" ? undefined : `/admin/${c.slug}/new`,
       weight: c.admin?.weight ?? fallbackWeightFor(c),
-      group,
+      group: c.admin?.group ?? fallbackGroupFor(c),
       badge: c.slug === "form-submissions" && unreadSubmissions > 0 ? unreadSubmissions : undefined,
     });
   }
-
   if (hasSingletons) {
     navItems.push({
       href: "/admin/singles",
       label: "Singles",
-      Icon: FileText,
+      icon: { key: "fileText" },
       active: isActiveSingles,
       weight: 20,
       group: "Content",
     });
   }
-
   navItems.push({
     href: "/admin/assets",
     label: "Assets",
-    Icon: Image,
+    icon: { key: "image" },
     active: activeCollection === "assets",
     weight: 40,
     group: "Library",
   });
-
-  // Custom nav items from admin config
   for (const item of customNav) {
     navItems.push({
       href: item.href,
       label: item.label,
-      Icon: navIcon(item.icon),
+      icon: navIcon(item.icon),
       active: currentPath === item.href || currentPath.startsWith(item.href + "/"),
       weight: item.weight ?? 50,
       group: "Custom",
     });
   }
 
-  // Sort all items by weight (stable sort preserves order within same weight)
   navItems.sort(
     (a, b) =>
       groupWeightFor(a.group) - groupWeightFor(b.group) || a.weight - b.weight || a.label.localeCompare(b.label),
@@ -377,83 +327,24 @@ export function AdminLayout({
   const navGroups = [...new Set(navItems.map((item) => item.group))]
     .sort((a, b) => groupWeightFor(a) - groupWeightFor(b) || a.localeCompare(b))
     .map((group) => {
-      const items = navItems.filter((item) => item.group === group);
+      const items = navItems.filter((item) => item.group === group).map(({ weight: _w, group: _g, ...item }) => item);
       const active = items.some((item) => item.active);
       const collapsed = !active && !["Content", "Library", "Team"].includes(group);
       return { group, items, active, collapsed };
     })
     .filter((entry) => entry.items.length > 0);
 
-  const renderNav = (mobile: boolean) => (
-    <nav className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
-      {navGroups.map(({ group, items, active, collapsed }) => (
-        <details
-          key={group}
-          className="group/nav-section space-y-1"
-          data-nav-group={group}
-          data-active={active ? "true" : "false"}
-          open={!collapsed}
-        >
-          <summary
-            className={cn(
-              "hover:text-foreground flex cursor-pointer list-none items-center justify-between rounded-md px-3 py-1 text-[11px] font-medium tracking-wide uppercase transition-colors marker:hidden [&::-webkit-details-marker]:hidden",
-              mobile ? "text-muted-foreground/70" : "text-muted-foreground/80",
-            )}
-          >
-            <span>{group}</span>
-            <ChevronDown
-              className={cn(mobile ? "size-3" : "size-3.5", "transition-transform group-open/nav-section:rotate-180")}
-            />
-          </summary>
-          {items.map((item) => (
-            <div
-              key={item.href}
-              className={cn(
-                "group relative rounded-lg",
-                item.active ? "bg-foreground/10 dark:bg-accent" : "hover:bg-foreground/5 dark:hover:bg-accent/60",
-              )}
-            >
-              <a
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 text-sm",
-                  mobile ? "py-2.5" : "py-1.5",
-                  item.newHref && "pr-8",
-                  item.active ? "text-accent-foreground" : "text-foreground/70 group-hover:text-foreground",
-                )}
-              >
-                <item.Icon className="size-4 shrink-0 stroke-1" />
-                <span className="flex-1">{item.label}</span>
-                {item.badge ? (
-                  <span className="text-muted-foreground/80 text-xs tabular-nums">
-                    {item.badge > 99 ? "99+" : item.badge} {item.badgeLabel ?? "new"}
-                  </span>
-                ) : null}
-              </a>
-              {item.newHref && (
-                <a
-                  href={item.newHref}
-                  title={`Add new ${(item.singularLabel ?? item.label).toLowerCase()}`}
-                  className="text-foreground/40 hover:text-foreground/70 absolute top-1/2 right-1.5 hidden -translate-y-1/2 rounded p-1 group-hover:block"
-                >
-                  <Plus className="size-3.5" />
-                </a>
-              )}
-            </div>
-          ))}
-        </details>
-      ))}
-    </nav>
-  );
+  return {
+    user: user ? { name: String(user.name), email: String(user.email) } : null,
+    toastStatus,
+    toastMessage,
+    embed,
+    navGroups,
+  };
+}
 
-  const userMenu = user && (
-    <Island
-      name="SidebarUserMenu"
-      component={SidebarUserMenu}
-      props={{ userName: user.name, userEmail: user.email, logoutAction: "/api/cms/auth/logout" }}
-    />
-  );
-
+/** The HTML document around every admin page: head, theme and timezone bootstrapping, assets. */
+export function AdminDocument({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -477,68 +368,7 @@ export function AdminLayout({
         <AdminAssets />
       </head>
       <body className="bg-background text-foreground min-h-screen antialiased">
-        <Island name="CommandPalette" component={CommandPalette} />
-        {embed ? (
-          <main className="mx-auto w-full px-4 py-6 lg:px-8 lg:py-8">{children}</main>
-        ) : (
-          <div
-            className="min-h-screen min-[1400px]:grid"
-            style={{ gridTemplateColumns: "17rem 1fr", transition: "grid-template-columns 150ms ease" }}
-          >
-            {/* ── Desktop sidebar ──────────────────────────────────────────── */}
-            <aside className="bg-sidebar/40 sticky top-0 mt-1 hidden h-screen overflow-hidden border-r backdrop-blur transition-transform duration-150 ease-in-out min-[1400px]:flex min-[1400px]:flex-col">
-              <div className="px-3 pt-4 pb-1">
-                <button
-                  type="button"
-                  data-cms-search-trigger
-                  data-slot="button"
-                  className="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground/90 flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:cursor-text"
-                  aria-label="Search content"
-                >
-                  <Search className="size-4 shrink-0 stroke-1" />
-                  <span className="flex-1 text-left">Search…</span>
-                  <kbd
-                    data-cms-search-kbd
-                    className="text-foreground/45 inline-flex items-center gap-1 rounded border px-1.5 py-0.5 font-sans text-[12px] leading-none font-medium"
-                  >
-                    <span className="text-[13px] leading-none">⌘</span>
-                    <span>K</span>
-                  </kbd>
-                </button>
-              </div>
-
-              {renderNav(false)}
-              <div className="border-t px-3 pt-2 pb-2">{userMenu}</div>
-            </aside>
-
-            <div className="min-w-0">
-              {/* ── Mobile header ────────────────────────────────────────── */}
-              <header className="bg-background/95 supports-backdrop-filter:bg-background/75 flex items-center gap-3 border-b px-4 py-3 backdrop-blur min-[1400px]:hidden">
-                <Island name="MobileSidebar" component={MobileSidebar}>
-                  <div className="px-3 pt-4 pb-1">
-                    <button
-                      type="button"
-                      data-cms-search-trigger
-                      data-slot="button"
-                      className="bg-background/60 hover:bg-background border-input text-muted-foreground hover:text-foreground flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors"
-                      aria-label="Search content"
-                    >
-                      <Search className="size-4 shrink-0 stroke-1" />
-                      <span className="flex-1 text-left">Search…</span>
-                    </button>
-                  </div>
-
-                  {renderNav(true)}
-                  <div className="border-t px-3 py-2">{userMenu}</div>
-                </Island>
-              </header>
-
-              <main className="mx-auto w-full max-w-[1900px]">{children}</main>
-            </div>
-          </div>
-        )}
-
-        {toastStatus && <Toast status={toastStatus} message={toastMessage} />}
+        {children}
 
         {/* Shown when an editor island fails to hydrate, so a failed load never looks like empty content. */}
         <div
@@ -572,4 +402,24 @@ export function AdminLayout({
       </body>
     </html>
   );
+}
+
+type AdminLayoutProps = ShellOptions & {
+  layout: AdminLayoutData;
+  title?: string;
+  children?: ReactNode;
+};
+
+/** A full admin page outside the app router (account, asset detail, custom Astro pages). */
+export function AdminLayout({ layout, title = "Admin", children, ...options }: AdminLayoutProps) {
+  return (
+    <AdminDocument title={title}>
+      <AdminShell shell={buildShell(layout, options)}>{children}</AdminShell>
+    </AdminDocument>
+  );
+}
+
+/** The chrome for a page of the admin app, as data. */
+export async function loadShell(context: Pick<CmsContext, "url" | "locals">, options: ShellOptions = {}) {
+  return buildShell(await loadAdminLayout(context), options);
 }

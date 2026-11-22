@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { submitForm } from "../lib/navigate";
 
 type Props = {
   formId: string;
@@ -35,7 +36,7 @@ export default function TranslationActions({ formId, language, showUnpublish, sh
     const input = form?.querySelector<HTMLInputElement>('input[name="_action"]');
     if (!form || !input) return;
     input.value = action;
-    form.submit();
+    void submitForm(form);
   };
 
   return (
@@ -69,9 +70,7 @@ export default function TranslationActions({ formId, language, showUnpublish, sh
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogClose>
-              <Button variant="outline">Cancel</Button>
-            </AlertDialogClose>
+            <AlertDialogClose render={<Button variant="outline" type="button" />}>Cancel</AlertDialogClose>
             <Button variant="destructive" onClick={() => submitAction("delete-translation")}>
               Delete
             </Button>

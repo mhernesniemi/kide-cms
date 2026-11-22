@@ -6,6 +6,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 
 import { MIN_QUERY_LENGTH, useDocumentSearch, type DocumentHit } from "../lib/use-document-search";
+import { navigateTo } from "../lib/navigate";
 
 type Result = DocumentHit;
 
@@ -93,7 +94,7 @@ export default function CommandPalette() {
                     key={itemValue(item)}
                     value={itemValue(item)}
                     onSelect={() => {
-                      window.location.href = item.editUrl;
+                      navigateTo(item.editUrl);
                       setOpen(false);
                     }}
                     className="cursor-pointer px-3"

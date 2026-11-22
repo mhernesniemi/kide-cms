@@ -6,6 +6,7 @@ import { renderSVG } from "uqr";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { navigateTo } from "../lib/navigate";
 
 const AUTH_BASE = "/api/cms/auth";
 
@@ -30,7 +31,7 @@ const post = async (path: string, body: Record<string, unknown>) => {
 const reloadWith = (message: string) => {
   const url = new URL(window.location.href);
   url.search = new URLSearchParams({ _toast: "success", _msg: message }).toString();
-  window.location.assign(url.toString());
+  navigateTo(url.pathname + url.search);
 };
 
 function BackupCodes({ codes }: { codes: string[] }) {

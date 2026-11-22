@@ -5,6 +5,7 @@ import { KeyRound, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "./ui/button";
+import { navigateTo } from "../lib/navigate";
 
 const AUTH_BASE = "/api/cms/auth";
 
@@ -13,7 +14,7 @@ type Passkey = { id: string; name: string | null; createdAt: string | null };
 const reloadWith = (message: string) => {
   const url = new URL(window.location.href);
   url.search = new URLSearchParams({ _toast: "success", _msg: message }).toString();
-  window.location.assign(url.toString());
+  navigateTo(url.pathname + url.search);
 };
 
 const deviceName = () => {

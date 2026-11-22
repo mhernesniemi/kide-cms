@@ -3,7 +3,7 @@ import { act, createElement, useState, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { defineIslandElement } from "../client/island-element";
-import { Island, resetIslands } from "../render/island";
+import { Island, resetIslands } from "../render/island-server";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 

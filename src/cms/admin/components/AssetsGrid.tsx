@@ -46,6 +46,7 @@ import {
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { navigateTo, refreshPage } from "../lib/navigate";
 
 type AssetItem = {
   _id: string;
@@ -309,7 +310,7 @@ async function moveAssets(ids: string[], folderId: string | null) {
       }),
     ),
   );
-  location.reload();
+  refreshPage();
 }
 
 // -----------------------------------------------
@@ -498,9 +499,7 @@ export default function AssetsGrid({
           }
           // Single upload → its detail view (matches the old form-flow redirect).
           if (uploaded && !Array.isArray(uploaded)) {
-            window.location.assign(
-              `/admin/assets/${(uploaded as { _id: string })._id}?_toast=success&_msg=Asset+uploaded`,
-            );
+            navigateTo(`/admin/assets/${(uploaded as { _id: string })._id}?_toast=success&_msg=Asset+uploaded`);
             return; // keep the busy state until navigation
           }
           setUploading(false);
@@ -702,7 +701,7 @@ export default function AssetsGrid({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "create", name: createName.trim(), parent: currentFolderId }),
     });
-    if (res.ok) location.reload();
+    if (res.ok) refreshPage();
     else {
       setLoading(false);
       setError("Failed to create folder.");
@@ -718,7 +717,7 @@ export default function AssetsGrid({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "rename", id: activeFolderId, name: renameName.trim() }),
     });
-    if (res.ok) location.reload();
+    if (res.ok) refreshPage();
     else {
       setLoading(false);
       setError("Failed to rename folder.");
@@ -734,7 +733,7 @@ export default function AssetsGrid({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "move", id: activeFolderId, parent: moveTarget || null }),
     });
-    if (res.ok) location.reload();
+    if (res.ok) refreshPage();
     else {
       setLoading(false);
       const body = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -751,8 +750,8 @@ export default function AssetsGrid({
       body: JSON.stringify({ action: "delete", id: activeFolderId }),
     });
     // The open folder is gone; its assets landed in Unfiled.
-    if (res.ok && activeFolderId === scope) location.assign(assetsUrl({ scope: "unfiled" }));
-    else if (res.ok) location.reload();
+    if (res.ok && activeFolderId === scope) navigateTo(assetsUrl({ scope: "unfiled" }));
+    else if (res.ok) refreshPage();
     else {
       setLoading(false);
       setError("Failed to delete folder.");
@@ -771,7 +770,7 @@ export default function AssetsGrid({
       setError("Failed to delete assets.");
       return;
     }
-    location.reload();
+    refreshPage();
   }
 
   const emptyStateMessage = query.trim()
@@ -1147,11 +1146,7 @@ export default function AssetsGrid({
             </div>
             {error && <p className="text-destructive text-sm">{error}</p>}
             <DialogFooter className="mt-4">
-              <DialogClose>
-                <Button variant="outline" type="button">
-                  Cancel
-                </Button>
-              </DialogClose>
+              <DialogClose render={<Button variant="outline" type="button" />}>Cancel</DialogClose>
               <Button type="submit" disabled={!createName.trim() || loading}>
                 Create
               </Button>
@@ -1201,11 +1196,7 @@ export default function AssetsGrid({
           </div>
           {error && <p className="text-destructive text-sm">{error}</p>}
           <DialogFooter className="mt-2">
-            <DialogClose>
-              <Button variant="outline" type="button">
-                Cancel
-              </Button>
-            </DialogClose>
+            <DialogClose render={<Button variant="outline" type="button" />}>Cancel</DialogClose>
             <Button
               onClick={handleMoveFolder}
               disabled={moveTarget === null || moveTarget === activeFolderParent || loading}
@@ -1239,11 +1230,7 @@ export default function AssetsGrid({
             </div>
             {error && <p className="text-destructive text-sm">{error}</p>}
             <DialogFooter className="mt-4">
-              <DialogClose>
-                <Button variant="outline" type="button">
-                  Cancel
-                </Button>
-              </DialogClose>
+              <DialogClose render={<Button variant="outline" type="button" />}>Cancel</DialogClose>
               <Button type="submit" disabled={!renameName.trim() || renameName.trim() === activeFolderName || loading}>
                 Rename
               </Button>
@@ -1264,11 +1251,7 @@ export default function AssetsGrid({
           </DialogHeader>
           {error && <p className="text-destructive text-sm">{error}</p>}
           <DialogFooter className="mt-2">
-            <DialogClose>
-              <Button variant="outline" type="button">
-                Cancel
-              </Button>
-            </DialogClose>
+            <DialogClose render={<Button variant="outline" type="button" />}>Cancel</DialogClose>
             <Button variant="destructive" onClick={handleDeleteFolder} disabled={loading}>
               <Trash2 className="size-3.5" />
               Delete
@@ -1289,11 +1272,7 @@ export default function AssetsGrid({
           </DialogHeader>
           {error && <p className="text-destructive text-sm">{error}</p>}
           <DialogFooter className="mt-2">
-            <DialogClose>
-              <Button variant="outline" type="button">
-                Cancel
-              </Button>
-            </DialogClose>
+            <DialogClose render={<Button variant="outline" type="button" />}>Cancel</DialogClose>
             <Button variant="destructive" onClick={handleBulkDelete} disabled={loading}>
               <Trash2 className="size-3.5" />
               Delete

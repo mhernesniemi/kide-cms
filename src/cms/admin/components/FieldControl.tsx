@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import type { FieldConfig } from "../../core";
-import { serializeFieldValue, humanize } from "../../core";
+import type { ColorOption, FieldConfig } from "../../core/define";
+import { humanize } from "../../core/admin";
+import { serializeFieldValue } from "../../core/values";
 import { customFields } from "virtual:kide/custom-fields";
-import config from "virtual:kide/config";
 import ImagePicker from "./ImagePicker";
 import TreeItemsEditor from "./TreeItemsEditor";
 import RichTextEditor from "./RichTextEditor";
@@ -60,6 +60,8 @@ export type FieldControlProps = {
    * user may not write to it) — the save-as-shared action stays hidden. */
   sharedSectionsAvailable?: boolean;
   labelActions?: ReactNode;
+  /** The project's `admin.colors` palette, the default for color fields. */
+  colorPalette?: ColorOption[];
 };
 
 export function FieldControl(props: FieldControlProps) {
@@ -103,7 +105,7 @@ export function FieldControl(props: FieldControlProps) {
 
   // Build serializable block-types metadata for the BlockEditor (`blocks` field) and
   // the inline block inserter (`content` field). Both share the same block-type shape.
-  const colorPalette = config.admin?.colors ?? [];
+  const colorPalette = props.colorPalette ?? [];
 
   const toSubFieldMeta = (subField: FieldConfig): SubFieldMeta => ({
     type: subField.type,

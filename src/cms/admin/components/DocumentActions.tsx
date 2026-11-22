@@ -32,6 +32,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { navigateTo, submitForm } from "../lib/navigate";
 
 type Version = {
   version: number;
@@ -118,9 +119,9 @@ export default function DocumentActions({
       });
       if (!res.ok) throw new Error("Duplicate failed");
       const created = await res.json();
-      window.location.assign(`/admin/${collectionSlug}/${created._id}?_toast=success&_msg=Document+duplicated`);
+      navigateTo(`/admin/${collectionSlug}/${created._id}?_toast=success&_msg=Document+duplicated`);
     } catch {
-      window.location.assign(`${window.location.pathname}?_toast=error&_msg=Failed+to+duplicate`);
+      navigateTo(`${window.location.pathname}?_toast=error&_msg=Failed+to+duplicate`);
     }
   };
 
@@ -139,7 +140,7 @@ export default function DocumentActions({
       }
       forceInput.value = "1";
     }
-    form.submit();
+    void submitForm(form);
   };
 
   const submitSchedule = () => {
@@ -179,7 +180,7 @@ export default function DocumentActions({
     }
     unpublishAtInput.value = unpublishAt ? new Date(unpublishAt).toISOString() : "";
 
-    form.submit();
+    void submitForm(form);
   };
 
   // Saves the document with its new original language (and any pending edits).
@@ -194,7 +195,7 @@ export default function DocumentActions({
       form.appendChild(input);
     }
     input.value = language;
-    form.submit();
+    void submitForm(form);
   };
 
   const restoreVersion = (version: number) => {
@@ -216,7 +217,7 @@ export default function DocumentActions({
     addInput("redirectTo", redirectTo ?? window.location.pathname + window.location.search);
 
     document.body.appendChild(form);
-    form.submit();
+    void submitForm(form).finally(() => form.remove());
   };
 
   const sortedVersions = versions.slice().sort((a, b) => Number(b.version) - Number(a.version));
@@ -360,9 +361,7 @@ export default function DocumentActions({
             </div>
           </div>
           <DialogFooter>
-            <DialogClose>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
+            <DialogClose render={<Button variant="outline" type="button" />}>Cancel</DialogClose>
             <Button onClick={submitSchedule} disabled={!publishAt}>
               <CalendarClock className="mr-2 size-4" />
               Schedule
@@ -399,9 +398,7 @@ export default function DocumentActions({
               </select>
             </div>
             <DialogFooter>
-              <DialogClose>
-                <Button variant="outline">Cancel</Button>
-              </DialogClose>
+              <DialogClose render={<Button variant="outline" type="button" />}>Cancel</DialogClose>
               <Button onClick={submitLanguage} disabled={!language || language === contentLanguage}>
                 Change language
               </Button>
@@ -419,9 +416,7 @@ export default function DocumentActions({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogClose>
-              <Button variant="outline">Cancel</Button>
-            </AlertDialogClose>
+            <AlertDialogClose render={<Button variant="outline" type="button" />}>Cancel</AlertDialogClose>
             <Button variant="destructive" onClick={() => submitAction("delete", forceOnConfirm)}>
               Delete
             </Button>

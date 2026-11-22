@@ -3,7 +3,7 @@
 // Kide's own pages render AdminLayout.tsx directly; this wraps it around the page's slot.
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
-import { resetIslands } from "../render/island";
+import { resetIslands } from "../render/island-server";
 import { AdminLayout, loadAdminLayout } from "./AdminLayout";
 
 type Props = {

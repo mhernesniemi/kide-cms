@@ -1,37 +1,35 @@
 import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
-import { AdminLayout, loadAdminLayout, type AdminLayoutData } from "../../admin/layouts/AdminLayout";
-import { getCookie, definePage } from "../../admin/render/page";
+import type { AppPayload, ViewKind } from "../../admin/app/AdminApp";
+import { buildShell, loadAdminLayout } from "../../admin/layouts/AdminLayout";
+import { getCookie } from "../../admin/render/page";
+import { defineAppPage } from "../../admin/render/app-page";
 import { AccessDeniedView } from "../../admin/views/AccessDeniedView";
-import { EditView, loadEditView, type EditViewData } from "../../admin/views/EditView";
-import { ListView, loadListView } from "../../admin/views/ListView";
-import { NeedsYouView, loadNeedsYouView } from "../../admin/views/NeedsYouView";
-import { RecentView, loadRecentView } from "../../admin/views/RecentView";
-import { SinglesView, loadSinglesView } from "../../admin/views/SinglesView";
+import { EditView } from "../../admin/views/EditView";
+import { loadEditView } from "../../admin/views/EditView.load";
+import { ListView } from "../../admin/views/ListView";
+import { loadListView } from "../../admin/views/ListView.load";
+import { NeedsYouView } from "../../admin/views/NeedsYouView";
+import { loadNeedsYouView } from "../../admin/views/NeedsYouView.load";
+import { RecentView } from "../../admin/views/RecentView";
+import { loadRecentView } from "../../admin/views/RecentView.load";
+import { SinglesView } from "../../admin/views/SinglesView";
+import { loadSinglesView } from "../../admin/views/SinglesView.load";
 import { canRead } from "../../admin/lib/access";
 import { getWorkingLocale } from "../../admin/lib/locale";
 import { initDateFormat, resolveAdminRoute } from "../../core";
 import type { CmsContext } from "../context";
 
-type View =
-  | { kind: "recent"; data: Awaited<ReturnType<typeof loadRecentView>> }
-  | { kind: "needs-you"; data: Awaited<ReturnType<typeof loadNeedsYouView>> }
-  | { kind: "singles"; data: Awaited<ReturnType<typeof loadSinglesView>> }
-  | { kind: "denied" }
-  | { kind: "list"; data: Awaited<ReturnType<typeof loadListView>> }
-  | { kind: "edit"; data: EditViewData }
-  | { kind: "none" };
-
-type Props = {
-  layout: AdminLayoutData;
-  title: string;
-  collections: typeof config.collections;
-  activeCollection: string;
-  embed: boolean;
-  view: View;
+const views: Partial<Record<ViewKind, React.ComponentType<any>>> = {
+  recent: RecentView,
+  "needs-you": NeedsYouView,
+  singles: SinglesView,
+  denied: AccessDeniedView,
+  list: ListView,
+  edit: EditView,
 };
 
-const load = async (context: CmsContext): Promise<Props | Response> => {
+const load = async (context: CmsContext): Promise<AppPayload | Response> => {
   const { url, locals, params, redirect } = context;
   initDateFormat(config, getCookie(context.request, "tz"));
 
@@ -76,7 +74,7 @@ const load = async (context: CmsContext): Promise<Props | Response> => {
 
   const workingLocale = getWorkingLocale(context.request, config.locales?.supported ?? []);
   const layout = await loadAdminLayout(context);
-  let view: View = { kind: "none" };
+  let view: AppPayload["view"] = { kind: "none" };
   if (route.kind === "recent") view = { kind: "recent", data: await loadRecentView(user, workingLocale) };
   else if (route.kind === "needs-you") view = { kind: "needs-you", data: await loadNeedsYouView(user, workingLocale) };
   else if (route.kind === "singles") view = { kind: "singles", data: await loadSinglesView(user, workingLocale) };
@@ -94,27 +92,16 @@ const load = async (context: CmsContext): Promise<Props | Response> => {
     view = { kind: "edit", data };
   }
 
-  return { layout, title, collections: accessibleCollections, activeCollection, embed: isEmbed, view };
+  return {
+    title,
+    shell: buildShell(layout, {
+      collections: accessibleCollections,
+      activeCollection,
+      embed: isEmbed,
+      customNav: config.admin?.nav,
+    }),
+    view,
+  };
 };
 
-function AdminPage({ layout, title, collections, activeCollection, embed, view }: Props) {
-  return (
-    <AdminLayout
-      layout={layout}
-      title={title}
-      collections={collections}
-      activeCollection={activeCollection}
-      embed={embed}
-      customNav={config.admin?.nav}
-    >
-      {view.kind === "recent" && <RecentView {...view.data} />}
-      {view.kind === "needs-you" && <NeedsYouView {...view.data} />}
-      {view.kind === "singles" && <SinglesView {...view.data} />}
-      {view.kind === "denied" && <AccessDeniedView />}
-      {view.kind === "list" && <ListView {...view.data} />}
-      {view.kind === "edit" && <EditView {...view.data} />}
-    </AdminLayout>
-  );
-}
-
-export const GET = definePage(load, AdminPage);
+export const GET = defineAppPage(load, (kind) => views[kind] ?? null);

@@ -51,6 +51,7 @@ import { Input } from "./ui/input";
 import { DEFAULT_DATE_SETTINGS, formatDateWith, type DateSettings } from "../../core/date-format";
 import { cn } from "../lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { navigateTo } from "../lib/navigate";
 
 type DataTableColumn = {
   key: string;
@@ -332,7 +333,7 @@ export default function DocumentsDataTable({
         const tag = (e.target as HTMLElement).tagName;
         if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
         if ((e.target as HTMLElement).isContentEditable) return;
-        window.location.assign(newHref);
+        navigateTo(newHref);
       }
     };
     document.addEventListener("keydown", handleKeydown);
@@ -398,7 +399,7 @@ export default function DocumentsDataTable({
         const url = new URL(window.location.href);
         url.searchParams.set("_toast", "success");
         url.searchParams.set("_msg", `${count} ${label} marked as ${newStatus}`);
-        window.location.assign(url.pathname + url.search);
+        navigateTo(url.pathname + url.search);
       } catch (error) {
         const msg = error instanceof Error ? error.message : "Status change failed";
         if (isServerMode) {
@@ -408,7 +409,7 @@ export default function DocumentsDataTable({
         const url = new URL(window.location.href);
         url.searchParams.set("_toast", "error");
         url.searchParams.set("_msg", msg);
-        window.location.assign(url.pathname + url.search);
+        navigateTo(url.pathname + url.search);
       }
     },
     [collectionSlug, isServerMode, serverPage, serverSort, serverSearch, fetchPage],
@@ -433,7 +434,7 @@ export default function DocumentsDataTable({
           });
           if (!response.ok) throw new Error("Failed to duplicate document.");
           const created = await response.json();
-          window.location.assign(`/admin/${rowCollection}/${created._id}?_toast=success&_msg=Document+duplicated`);
+          navigateTo(`/admin/${rowCollection}/${created._id}?_toast=success&_msg=Document+duplicated`);
           return;
         }
 
@@ -474,7 +475,7 @@ export default function DocumentsDataTable({
         const url = new URL(window.location.href);
         url.searchParams.set("_toast", "success");
         url.searchParams.set("_msg", msg);
-        window.location.assign(url.pathname + url.search);
+        navigateTo(url.pathname + url.search);
       } catch (error) {
         const msg = error instanceof Error ? error.message : "Action failed";
         if (isServerMode) {
@@ -484,7 +485,7 @@ export default function DocumentsDataTable({
         const url = new URL(window.location.href);
         url.searchParams.set("_toast", "error");
         url.searchParams.set("_msg", msg);
-        window.location.assign(url.pathname + url.search);
+        navigateTo(url.pathname + url.search);
       }
     },
     [collectionSlug, isServerMode, serverPage, serverSort, serverSearch, fetchPage],
@@ -647,9 +648,7 @@ export default function DocumentsDataTable({
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => window.location.assign(row.original.editHref)}>
-                  Edit document
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigateTo(row.original.editHref)}>Edit document</DropdownMenuItem>
                 {duplicateEnabled && !row.original.singleton && (
                   <DropdownMenuItem
                     disabled={isPending}
@@ -801,7 +800,7 @@ export default function DocumentsDataTable({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
                 {languageFilter.options.map((option) => (
-                  <DropdownMenuItem key={option.value} onClick={() => window.location.assign(option.href)}>
+                  <DropdownMenuItem key={option.value} onClick={() => navigateTo(option.href)}>
                     <Check
                       className={cn("size-4", option.value === languageFilter.active ? "opacity-100" : "opacity-0")}
                     />
@@ -823,7 +822,7 @@ export default function DocumentsDataTable({
                 <DropdownMenuLabel>Selected actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {selectedRows.length === 1 && (
-                  <DropdownMenuItem onClick={() => window.location.assign(selectedRows[0].editHref)}>
+                  <DropdownMenuItem onClick={() => navigateTo(selectedRows[0].editHref)}>
                     Edit document
                   </DropdownMenuItem>
                 )}
@@ -1005,9 +1004,7 @@ export default function DocumentsDataTable({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogClose>
-              <Button variant="outline">Cancel</Button>
-            </AlertDialogClose>
+            <AlertDialogClose render={<Button variant="outline" type="button" />}>Cancel</AlertDialogClose>
             <Button
               variant="destructive"
               onClick={() => {

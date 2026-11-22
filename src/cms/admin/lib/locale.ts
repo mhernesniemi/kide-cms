@@ -1,4 +1,4 @@
-import { getCookie } from "../render/page";
+import { getCookie } from "./cookies";
 
 const COOKIE = "kide_locale";
 

@@ -218,7 +218,7 @@ async function bootAndProbe(dir) {
       const res = await fetch(`${base}${pathname}`, { redirect: "manual" });
       const body = await safeText(res);
       assert(
-        res.status !== 200 || !/kide-island|"items"/.test(body),
+        res.status !== 200 || !/kide-island|kide-app|"items"/.test(body),
         `anonymous GET ${pathname} → ${res.status}, served Kide content`,
       );
     }
@@ -226,7 +226,13 @@ async function bootAndProbe(dir) {
     const recent = await fetch(`${base}/admin/recent`, authed());
     const recentHtml = await safeText(recent);
     assert(recent.status === 200, `GET /admin/recent → ${recent.status}\n${recentHtml.slice(0, 500)}`);
-    assert(recentHtml.includes("<kide-island"), "admin page rendered no islands");
+    assert(recentHtml.includes('id="kide-app"'), "admin page rendered no app root");
+    // In-app navigation: the same URL answers with the page's data instead of a document.
+    const recentData = await fetch(`${base}/admin/recent`, {
+      headers: { ...authed().headers, "x-kide-nav": "1" },
+    });
+    const recentPayload = await recentData.json().catch(() => null);
+    assert(recentPayload?.view?.kind === "recent", `in-app GET /admin/recent → ${JSON.stringify(recentPayload)}`);
     const script = recentHtml.match(/src="(\/_kide\/admin\.js\?v=[^"]+)"/)?.[1];
     const style = recentHtml.match(/href="(\/_kide\/admin\.css\?v=[^"]+)"/)?.[1];
     assert(script && style, "admin page does not link the /_kide bundle");

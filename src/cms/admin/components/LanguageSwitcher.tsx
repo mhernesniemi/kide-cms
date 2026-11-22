@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { languageName } from "../../core";
+import { languageName } from "../../core/admin";
 import { cn } from "../lib/utils";
 
 type State = { status: string; outdated?: boolean };
