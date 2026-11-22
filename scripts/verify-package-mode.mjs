@@ -36,6 +36,7 @@ try {
   rmSync(path.join(project, "src/cms/package.json"), { force: true });
   rmSync(path.join(project, "pnpm-workspace.yaml"), { force: true });
   rmSync(path.join(project, "adapters"), { recursive: true, force: true });
+  rmSync(path.join(project, "packages"), { recursive: true, force: true });
 
   const pkgPath = path.join(project, "package.json");
   const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
@@ -139,7 +140,7 @@ async function bootAndProbe(project) {
       ...process.env,
       PORT: String(port),
       HOST: "127.0.0.1",
-      KIDE_AUTH_SECRET: "verify-only-secret-0123456789abcdef",
+      KIDE_SECRET: "verify-only-secret-0123456789abcdef",
     },
   });
   let output = "";
@@ -165,7 +166,7 @@ async function bootAndProbe(project) {
     });
     const setupRes = await fetch(`${base}/api/cms/auth/setup`, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: base },
+      headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: base, "Sec-Fetch-Site": "same-origin" },
       body: setupBody,
       redirect: "manual",
     });
@@ -191,7 +192,7 @@ async function bootAndProbe(project) {
     form.set("file", new Blob([png], { type: "image/png" }), "probe.png");
     const uploadRes = await fetch(`${base}/api/cms/assets/upload`, {
       method: "POST",
-      headers: { cookie, Origin: base },
+      headers: { cookie, Origin: base, "Sec-Fetch-Site": "same-origin" },
       body: form,
       redirect: "manual",
     });

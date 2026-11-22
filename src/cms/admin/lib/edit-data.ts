@@ -7,7 +7,9 @@ import {
 import { canRead, canWrite } from "./access";
 
 type User = { id: string; role?: string; email?: string } | null | undefined;
-type CmsRuntime = Record<string, any> & { meta: { getRouteForDocument: (slug: string, doc: any) => string } };
+type CmsRuntime = Record<string, any> & {
+  meta: { getRouteForDocument: (slug: string, doc: any, locale?: string | null) => string };
+};
 type RuntimeContext = Record<string, unknown>;
 type CollectionLike = { slug: string; fields: Record<string, any> };
 
@@ -28,11 +30,15 @@ export async function loadDocument(
   requestedLocale: string | null,
   defaultLocale: string,
   runtimeContext: RuntimeContext,
+  preferredLocale?: string,
 ): Promise<LoadedDocument> {
   const base = await collectionApi.findById(documentId, { status: "any" }, runtimeContext);
   if (!base) return { doc: null, baseDoc: null, baseLocale: defaultLocale, locale: defaultLocale, versions: [] };
   const baseLocale = String(base._sourceLocale ?? defaultLocale);
-  const locale = requestedLocale ?? baseLocale;
+  // Without an explicit tab, open the editor's working language when the document has it.
+  const available = Array.isArray(base._availableLocales) ? (base._availableLocales as string[]) : [];
+  const locale =
+    requestedLocale ?? (preferredLocale && available.includes(preferredLocale) ? preferredLocale : baseLocale);
   const doc =
     locale === baseLocale ? base : await collectionApi.findById(documentId, { status: "any", locale }, runtimeContext);
   const versions = await collectionApi.versions(documentId, runtimeContext);

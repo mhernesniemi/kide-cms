@@ -1,0 +1,75 @@
+import { Fragment } from "react";
+import { languageName } from "../../core";
+import { cn } from "../lib/utils";
+
+type State = { status: string; outdated?: boolean };
+
+const DOT: Record<string, string> = {
+  published: "bg-emerald-500",
+  changed: "bg-amber-500",
+  scheduled: "bg-violet-500",
+  draft: "bg-blue-500",
+};
+
+export function LanguageSwitcher({
+  locales,
+  selected,
+  baseLocale,
+  states,
+  hrefFor,
+}: {
+  locales: string[];
+  selected: string;
+  baseLocale: string;
+  states: Record<string, State | undefined>;
+  hrefFor: (locale: string) => string;
+}) {
+  const describe = (locale: string) => {
+    const state = states[locale];
+    const parts = [languageName(locale)];
+    if (locale === baseLocale) parts.push("original");
+    parts.push(state ? state.status : "not translated yet");
+    if (state?.outdated) parts.push("original changed since");
+    return parts.join(" · ");
+  };
+
+  return (
+    <nav aria-label="Language" className="bg-muted inline-flex h-8 items-center gap-0.5 rounded-lg border p-0.5">
+      {[baseLocale, ...locales.filter((locale) => locale !== baseLocale)].map((locale, index) => {
+        const state = states[locale];
+        return (
+          <Fragment key={locale}>
+            {index === 1 && <span className="bg-border mx-0.5 h-4 w-px" />}
+            <a
+              href={hrefFor(locale)}
+              title={describe(locale)}
+              aria-label={describe(locale)}
+              aria-current={selected === locale ? "page" : undefined}
+              className={cn(
+                "inline-flex h-full min-w-9 items-center justify-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors",
+                selected === locale
+                  ? "bg-background text-foreground shadow-sm"
+                  : state
+                    ? "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground/50 hover:text-muted-foreground",
+              )}
+            >
+              {state ? (
+                <span
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    DOT[state.status] ?? DOT.draft,
+                    state.outdated && "ring-2 ring-amber-500/40",
+                  )}
+                />
+              ) : (
+                <span className="size-1.5 rounded-full border border-current opacity-60" />
+              )}
+              {locale.toUpperCase()}
+            </a>
+          </Fragment>
+        );
+      })}
+    </nav>
+  );
+}

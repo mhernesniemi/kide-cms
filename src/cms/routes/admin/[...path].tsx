@@ -9,6 +9,7 @@ import { NeedsYouView, loadNeedsYouView } from "../../admin/views/NeedsYouView";
 import { RecentView, loadRecentView } from "../../admin/views/RecentView";
 import { SinglesView, loadSinglesView } from "../../admin/views/SinglesView";
 import { canRead } from "../../admin/lib/access";
+import { getWorkingLocale } from "../../admin/lib/locale";
 import { initDateFormat, resolveAdminRoute } from "../../core";
 import type { CmsContext } from "../context";
 
@@ -73,16 +74,17 @@ const load = async (context: CmsContext): Promise<Props | Response> => {
   const activeCollection =
     route.kind === "recent" ? "recent" : route.kind === "needs-you" ? "needs-you" : (collectionSlug ?? "singles");
 
+  const workingLocale = getWorkingLocale(context.request, config.locales?.supported ?? []);
   const layout = await loadAdminLayout(context);
   let view: View = { kind: "none" };
-  if (route.kind === "recent") view = { kind: "recent", data: await loadRecentView(user) };
-  else if (route.kind === "needs-you") view = { kind: "needs-you", data: await loadNeedsYouView(user) };
-  else if (route.kind === "singles") view = { kind: "singles", data: await loadSinglesView(user) };
+  if (route.kind === "recent") view = { kind: "recent", data: await loadRecentView(user, workingLocale) };
+  else if (route.kind === "needs-you") view = { kind: "needs-you", data: await loadNeedsYouView(user, workingLocale) };
+  else if (route.kind === "singles") view = { kind: "singles", data: await loadSinglesView(user, workingLocale) };
   else if (!canAccessCurrent) view = { kind: "denied" };
   else if (route.kind === "list" && collection)
-    view = { kind: "list", data: await loadListView(url, user, collection) };
+    view = { kind: "list", data: await loadListView(url, user, collection, workingLocale) };
   else if ((route.kind === "new" || route.kind === "edit") && collection) {
-    const data = await loadEditView(url, user, redirect, {
+    const data = await loadEditView(url, user, redirect, workingLocale, {
       collection,
       mode: route.kind,
       documentId: route.kind === "edit" ? route.documentId : undefined,

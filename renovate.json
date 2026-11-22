@@ -1,0 +1,79 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Helsinki",
+  "schedule": ["before 9am on monday"],
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
+  "rangeStrategy": "update-lockfile",
+  "platformAutomerge": false,
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "automerge": true
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "schedule": ["before 9am on monday"]
+  },
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "matchCurrentVersion": "/^0\\./",
+      "matchUpdateTypes": ["minor"],
+      "automerge": false
+    },
+    {
+      "groupName": "astro",
+      "matchPackageNames": ["astro", "@astrojs/**"]
+    },
+    {
+      "groupName": "cloudflare",
+      "matchPackageNames": ["wrangler", "miniflare", "workerd", "@cloudflare/**"]
+    },
+    {
+      "groupName": "github actions",
+      "matchManagers": ["github-actions"]
+    },
+    {
+      "description": "Node and pnpm versions are policy decisions made by hand",
+      "matchDepTypes": ["engines", "packageManager"],
+      "enabled": false
+    },
+    {
+      "matchDepNames": ["node"],
+      "enabled": false
+    },
+    {
+      "description": "Security pins in pnpm.overrides are maintained by hand",
+      "matchDepTypes": ["pnpm.overrides"],
+      "enabled": false
+    },
+    {
+      "description": "Renaming it changes vitest.workers.config.ts, a project-owned file",
+      "matchPackageNames": ["@cloudflare/vitest-pool-workers"],
+      "matchUpdateTypes": ["replacement"],
+      "enabled": false
+    },
+    {
+      "description": "TypeScript 6 deprecates baseUrl in project-owned tsconfigs",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<6"
+    },
+    {
+      "description": "v2+ flags prerender in injected routes unless the project-owned eslint.config.mjs opts out",
+      "matchPackageNames": ["eslint-plugin-astro"],
+      "allowedVersions": "<2"
+    }
+  ],
+  "major": {
+    "dependencyDashboardApproval": true
+  }
+}

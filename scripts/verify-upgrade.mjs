@@ -341,7 +341,7 @@ async function bootAndProbe(project, port) {
       ...process.env,
       PORT: String(port),
       HOST: "127.0.0.1",
-      KIDE_AUTH_SECRET: "verify-only-secret-0123456789abcdef",
+      KIDE_SECRET: "verify-only-secret-0123456789abcdef",
     },
   });
   let output = "";
@@ -370,7 +370,7 @@ async function bootAndProbe(project, port) {
 
     const setupRes = await fetch(`${base}/api/cms/auth/setup`, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: base },
+      headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: base, "Sec-Fetch-Site": "same-origin" },
       body: new URLSearchParams({
         name: "Verify Admin",
         email: "verify@example.com",

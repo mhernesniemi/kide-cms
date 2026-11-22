@@ -196,6 +196,22 @@ describe("where operators", () => {
     expect(await (cms as any).posts.find({ where, locale: "en", status: "any" })).toEqual([]);
   });
 
+  it("reads collections without drafts with a published status filter", async () => {
+    const author = await (cms as any).authors.create({ name: "No drafts", slug: "no-drafts" });
+    expect((await (cms as any).authors.findById(author._id, { status: "published" }))?._id).toBe(author._id);
+  });
+
+  it("lets a translation without its own body inherit the original's", async () => {
+    const body = { type: "root", children: [{ type: "paragraph", children: [{ type: "text", value: "Shared" }] }] };
+    const post = await (cms as any).posts.create({ title: "Inherit", slug: "inherit-en", body });
+    await (cms as any).posts.upsertTranslation(post._id, "fi", { title: "Peritty", slug: "inherit-fi", body: null });
+    const fi = await (cms as any).posts.findById(post._id, { locale: "fi", status: "any" });
+    expect(fi.title).toBe("Peritty");
+    expect(fi.body).toEqual(body);
+    await (cms as any).posts.upsertTranslation(post._id, "fi", { body: {} });
+    expect((await (cms as any).posts.findById(post._id, { locale: "fi", status: "any" })).body).toEqual(body);
+  });
+
   it("rejects unknown and mismatched operators", async () => {
     await expect(findOps({ category: { like: "ops" } })).rejects.toThrow(/Unknown where operator/);
     await expect(findOps({ category: { contains: "ops" } })).rejects.toThrow(/isn't supported/);
@@ -335,6 +351,19 @@ describe("drafts and publishing", () => {
     expect(scheduled._publishAt).toBe(future);
   });
 
+  it("publishes a due document once when two schedulers overlap", async () => {
+    await (cms as any).scheduled.processPublishing();
+    const post = await (cms as any).posts.create({ title: "Overlap post" });
+    await (cms as any).posts.schedule(post._id, new Date(Date.now() - 60_000).toISOString());
+
+    const runs = await Promise.all([
+      (cms as any).scheduled.processPublishing(),
+      (cms as any).scheduled.processPublishing(),
+    ]);
+    expect(runs[0].published + runs[1].published).toBe(1);
+    expect((await (cms as any).posts.findById(post._id, { status: "any" }))._status).toBe("published");
+  });
+
   it("keeps a scheduled end date through publishing", async () => {
     const post = await (cms as any).posts.create({ title: "Campaign post" });
     const start = new Date(Date.now() - 60_000).toISOString();
@@ -448,6 +477,69 @@ describe("translations", () => {
     );
     const moved = await (cms as any).authors.update(author._id, { _sourceLocale: "en" });
     expect(moved._sourceLocale).toBe("en");
+  });
+
+  it("keeps translation drafts off the site until that language is published", async () => {
+    const posts = (cms as any).posts;
+    const post = await posts.create({ title: "Lifecycle", slug: "lifecycle", _status: "published" });
+    await posts.upsertTranslation(post._id, "fi", { title: "Elinkaari", slug: "elinkaari" });
+
+    const draftLive = await posts.findById(post._id, { locale: "fi" });
+    expect(draftLive.title).toBe("Lifecycle");
+    expect(draftLive._availableLocales).toEqual(["en"]);
+    expect(await posts.findOne({ slug: "elinkaari", locale: "fi" })).toBeNull();
+    expect((await posts.findById(post._id, { status: "any" }))._localeStates.fi.status).toBe("draft");
+
+    await posts.publishTranslation(post._id, "fi");
+    expect((await posts.findById(post._id, { locale: "fi" })).title).toBe("Elinkaari");
+    expect((await posts.findOne({ slug: "elinkaari", locale: "fi" }))?._id).toBe(post._id);
+
+    // Editing a published translation parks the live text until it's published again.
+    await posts.upsertTranslation(post._id, "fi", { title: "Elinkaari 2", slug: "elinkaari" });
+    expect((await posts.findById(post._id, { locale: "fi" })).title).toBe("Elinkaari");
+    expect((await posts.findById(post._id, { status: "any" }))._localeStates.fi.status).toBe("changed");
+    await posts.discardTranslationDraft(post._id, "fi");
+    expect((await posts.findById(post._id, { locale: "fi", status: "any" })).title).toBe("Elinkaari");
+
+    await posts.unpublishTranslation(post._id, "fi");
+    expect((await posts.findById(post._id, { locale: "fi" })).title).toBe("Lifecycle");
+    expect(await posts.count({ locale: "fi", availability: "exact", where: { _id: post._id } })).toBe(0);
+    expect(await posts.count({ locale: "fi", availability: "exact", where: { _id: post._id }, status: "any" })).toBe(1);
+
+    await posts.upsertTranslation(post._id, "fi", { title: "Suoraan", _status: "published" });
+    expect((await posts.findById(post._id, { locale: "fi" })).title).toBe("Suoraan");
+
+    expect(await posts.deleteTranslation(post._id, "fi")).toBe(true);
+    expect((await posts.findById(post._id, { status: "any" }))._availableLocales).toEqual(["en"]);
+  });
+
+  it("falls back to the original for empty translation fields and flags outdated translations", async () => {
+    const authors = (cms as any).authors;
+    const author = await authors.create({ name: "Outdated", description: "Original" });
+    await authors.upsertTranslation(author._id, "fi", { description: "" });
+    const required = await (cms as any).posts.create({ title: "Required", slug: "required-tr" });
+    await (cms as any).posts.upsertTranslation(required._id, "fi", { title: null, slug: "vaadittu" });
+    expect((await (cms as any).posts.findById(required._id, { locale: "fi", status: "any" })).title).toBe("Required");
+    expect((await authors.getTranslations(author._id)).fi.description).toBeNull();
+    expect((await authors.findById(author._id, { locale: "fi" })).description).toBe("Original");
+
+    expect((await authors.findById(author._id))._localeStates.fi.outdated).toBeUndefined();
+    await authors.update(author._id, { description: "Original, edited" });
+    expect((await authors.findById(author._id))._localeStates.fi.outdated).toBe(true);
+    await authors.markTranslationCurrent(author._id, "fi");
+    expect((await authors.findById(author._id))._localeStates.fi.outdated).toBeUndefined();
+    await authors.update(author._id, { description: "Original, edited again" });
+    await authors.upsertTranslation(author._id, "fi", { description: "Päivitetty" });
+    expect((await authors.findById(author._id))._localeStates.fi.outdated).toBeUndefined();
+  });
+
+  it("routes a document read in a locale it lacks by its own language", async () => {
+    const posts = (cms as any).posts;
+    const fiOnly = await posts.create({ title: "Vain suomeksi", slug: "vain-suomeksi", _sourceLocale: "fi" });
+    const readInEnglish = await posts.findById(fiOnly._id, { locale: "en", status: "any" });
+    expect(cms.meta.getRouteForDocument("posts", readInEnglish)).toBe(
+      cms.meta.getRouteForDocument("posts", readInEnglish, "fi"),
+    );
   });
 
   it("filters on a translatable boolean field under a locale", async () => {

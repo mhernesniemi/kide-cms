@@ -132,3 +132,5 @@ declare module "virtual:kide/block-data" {
     status: "published" | "any";
   }) => import("../core").PrepareBlock;
 }
+
+declare module "virtual:kide/admin-css";

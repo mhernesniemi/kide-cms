@@ -61,13 +61,21 @@ export const FIELD_MODEL: Record<string, FieldModelEntry> = {
   link: {
     storage: "json",
     control: "link control (internal page picker / external URL + label + new-tab)",
-    valueShape: "{ type:'internal'|'external', url:string, label?:string, newTab?:boolean }",
+    valueShape:
+      "{ type:'internal'|'external'|'custom', url:string, label?:string, newTab?:boolean } — or { type:'reference', docId, collection, url } for an internal document",
   },
   "taxonomy-terms": {
     storage: "json",
     control: "term tree editor (nested, sortable; feeds taxonomy-select fields by slug)",
     valueShape:
       "Array<{ id:string, name:string, slug:string, children:Term[] }> — `children` required on every term (use [])",
+  },
+  "taxonomy-select": {
+    storage: "text (json with hasMany)",
+    control: "term picker over a `taxonomies` document (searchable tree; chips when hasMany)",
+    valueShape:
+      "term slug string — or slug[] with hasMany; slugs must exist in the taxonomy's terms (per locale when translatable)",
+    notes: "Declare with fields.taxonomy({ taxonomy: '<taxonomies doc slug>', hasMany? }).",
   },
   "menu-items": {
     storage: "json",

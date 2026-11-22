@@ -9,11 +9,12 @@ import type { AdminUser } from "./types";
 
 const RECENT_LIMIT = 50;
 
-export async function loadRecentView(user: AdminUser) {
+export async function loadRecentView(user: AdminUser, workingLocale?: string) {
   const runtimeContext = user ? { user } : {};
   const cmsRuntime = cms as Record<string, any>;
   const defaultLocale = config.locales?.default ?? "en";
   const locales = config.locales?.supported ?? [];
+  const contentLocale = workingLocale ?? defaultLocale;
 
   // Bulk/system collections hidden from the sidebar (redirects, logs, …) are not
   // "recent work" either — and they tend to be the biggest tables.
@@ -50,7 +51,7 @@ export async function loadRecentView(user: AdminUser) {
   for (const candidate of candidates.slice(0, RECENT_LIMIT)) {
     // find() (not findById) so per-document read rules apply exactly as in ListView.
     const [doc] = await cmsRuntime[candidate.collection.slug].find(
-      { where: { _id: candidate.id }, status: "any", locale: defaultLocale, limit: 1 },
+      { where: { _id: candidate.id }, status: "any", locale: contentLocale, limit: 1 },
       runtimeContext,
     );
     if (doc) allEntries.push({ doc, collection: candidate.collection });
@@ -69,6 +70,7 @@ export async function loadRecentView(user: AdminUser) {
       status,
       singleton: cc.singleton,
       locales: Array.isArray(doc._availableLocales) ? doc._availableLocales.map((l) => String(l)) : [defaultLocale],
+      localeStates: doc._localeStates as Record<string, { status: string; outdated?: boolean }> | undefined,
       searchText: displayTitle,
       values: {
         title: displayTitle,
@@ -79,10 +81,10 @@ export async function loadRecentView(user: AdminUser) {
     };
   });
 
-  return { recentRows, showLocalesColumn };
+  return { recentRows, showLocalesColumn, locales };
 }
 
-export function RecentView({ recentRows, showLocalesColumn }: Awaited<ReturnType<typeof loadRecentView>>) {
+export function RecentView({ recentRows, showLocalesColumn, locales }: Awaited<ReturnType<typeof loadRecentView>>) {
   return (
     <section className="space-y-6 px-4 py-6 lg:py-8 lg:pr-8 lg:pl-12">
       <div className="flex items-start justify-between gap-4">
@@ -104,6 +106,7 @@ export function RecentView({ recentRows, showLocalesColumn }: Awaited<ReturnType
           data: recentRows,
           searchPlaceholder: "Filter recent entries...",
           showLocalesColumn,
+          supportedLocales: showLocalesColumn ? locales : undefined,
         }}
       />
     </section>

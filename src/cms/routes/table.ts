@@ -32,6 +32,7 @@ export const cmsRoutes: RouteDefinition[] = [
   { pattern: "/api/cms/ai/alt-text", load: () => import("./api/ai/alt-text") },
   { pattern: "/api/cms/ai/seo", load: () => import("./api/ai/seo") },
   { pattern: "/api/cms/ai/translate", load: () => import("./api/ai/translate") },
+  { pattern: "/api/cms/health", load: () => import("./api/health") },
   { pattern: "/api/cms/cron/publish", load: () => import("./api/cron/publish") },
   { pattern: "/api/cms/cron/tasks", load: () => import("./api/cron/tasks") },
   { pattern: "/api/cms/webhooks/[provider]", load: () => import("./api/webhooks/[provider]") },

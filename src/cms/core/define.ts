@@ -11,6 +11,8 @@ export type LocaleConfig = {
 export type AdminFieldComponent = {
   component?: string;
   placeholder?: string;
+  /** `taxonomy-select`: slug of the `taxonomies` document whose terms are offered (falls back to `placeholder`). */
+  taxonomy?: string;
   position?: "content" | "sidebar";
   rows?: number;
   help?: string;
@@ -198,7 +200,8 @@ export type CollectionConfig = {
   slug: string;
   labels: CollectionLabels;
   labelField?: string;
-  pathPrefix?: string;
+  /** URL prefix for public pages (`"blog"`), or one per locale (`{ en: "blogs", fi: "blogit" }`). */
+  pathPrefix?: string | Record<string, string>;
   preview?: boolean | string;
   /** Whether documents may be picked as internal link targets in the admin.
    * Defaults to true for non-singleton collections with a `slug` field; set
@@ -403,13 +406,13 @@ export type AdminAuthConfig = {
 export type ColorOption = { label: string; value: string };
 
 export type AdminConfig = {
-  /** BCP-47 locale for admin date/time display (e.g. "en-US", "en-GB", "fi-FI"). Default "en-US". */
+  /** BCP-47 locale for admin date/time display (e.g. "en-US", "en-GB", "fi-FI"). Default "en-GB". Edits within the last day show as relative time. */
   dateFormat?: string;
   /** IANA time zone for admin date/time display (e.g. "Europe/Helsinki"). Overrides the browser's zone. */
   timeZone?: string;
   /**
    * Overrides for how admin dates/times are rendered, merged over the defaults
-   * (numeric date + 2-digit hour/minute). Use e.g. `{ hour12: false }` for 24-hour time,
+   * (short month name + 2-digit hour/minute). Use e.g. `{ hour12: false }` for 24-hour time,
    * `{ second: "2-digit" }` to show seconds, or `{ hour: undefined, minute: undefined }` for date-only.
    */
   dateTimeFormat?: Intl.DateTimeFormatOptions;
@@ -609,6 +612,24 @@ export const fields = {
       ...(options ?? {}),
       admin: { ...(options?.admin ?? {}), component: "link" },
     }),
+  /**
+   * Term picker over a `taxonomies` document. Stores the term slug, or an array of slugs
+   * with `hasMany`. Mark it `translatable` when terms differ per locale.
+   */
+  taxonomy: (
+    options: { taxonomy: string; hasMany?: boolean } & Omit<TextFieldConfig, "type" | "defaultValue">,
+  ): TextFieldConfig | JsonFieldConfig => {
+    const { taxonomy, hasMany, ...rest } = options;
+    const admin = {
+      ...(rest.admin ?? {}),
+      component: "taxonomy-select",
+      taxonomy,
+      placeholder: rest.admin?.placeholder ?? taxonomy,
+    };
+    return hasMany
+      ? createField<JsonFieldConfig>("json", { ...(rest as Omit<JsonFieldConfig, "type">), admin })
+      : createField<TextFieldConfig>("text", { ...rest, admin });
+  },
   relation: (options: Omit<RelationFieldConfig, "type">) => createField<RelationFieldConfig>("relation", options),
   array: (options: Omit<ArrayFieldConfig, "type">) => createField<ArrayFieldConfig>("array", options),
   json: (options?: Omit<JsonFieldConfig, "type">) => createField<JsonFieldConfig>("json", options),
@@ -653,6 +674,30 @@ export const getCollectionMap = (config: CMSConfig) =>
   Object.fromEntries(config.collections.map((collection) => [collection.slug, collection]));
 
 export const getDefaultLocale = (config: CMSConfig) => config.locales?.default ?? null;
+
+/**
+ * Public path of a document: `/<locale>/<prefix>/<slug>`. The default locale has no locale
+ * segment, the prefix can differ per locale, and a prefix-less `home` slug is the site root.
+ */
+export const documentRoute = (
+  collection: Pick<CollectionConfig, "pathPrefix">,
+  doc: Record<string, unknown>,
+  locale?: string | null,
+  defaultLocale?: string | null,
+): string => {
+  const { pathPrefix } = collection;
+  const raw =
+    typeof pathPrefix === "string"
+      ? pathPrefix
+      : pathPrefix
+        ? (pathPrefix[locale ?? ""] ?? pathPrefix[defaultLocale ?? ""] ?? "")
+        : "";
+  const prefix = raw.replace(/^\/+|\/+$/g, "");
+  const slug = String(doc.slug ?? "");
+  const localeSegment = locale && locale !== defaultLocale ? `/${locale}` : "";
+  const path = prefix ? `/${prefix}/${slug}` : slug === "home" ? "" : `/${slug}`;
+  return `${localeSegment}${path}` || "/";
+};
 
 export const getTranslatableFieldNames = (collection: CollectionConfig) =>
   Object.entries(collection.fields)

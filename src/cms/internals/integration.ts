@@ -2,6 +2,7 @@ import type { AstroIntegration } from "astro";
 import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { allowedDomainsFromOrigin } from "./allowed-domains";
 import { defaultGeneratorPath, runGenerator, scheduledWorkerSource, startDevSchemaSync } from "./dev-tasks";
 import { kide } from "./vite-plugin";
 
@@ -40,8 +41,14 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
   return {
     name: "kide-cms",
     hooks: {
-      "astro:config:setup": ({ command, updateConfig, injectRoute, injectScript, addMiddleware }) => {
+      "astro:config:setup": ({ command, config, updateConfig, injectRoute, injectScript, addMiddleware }) => {
         const root = process.cwd();
+
+        // Build-time: the adapter bakes allowedDomains into the server. A project's own setting wins.
+        const allowedDomains = allowedDomainsFromOrigin(process.env.CMS_TRUSTED_ORIGIN);
+        if (allowedDomains && !config.security?.allowedDomains?.length) {
+          updateConfig({ security: { allowedDomains } });
+        }
 
         updateConfig({
           vite: {

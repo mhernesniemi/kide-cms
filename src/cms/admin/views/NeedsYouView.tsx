@@ -8,10 +8,11 @@ import { canRead, getVisualStatus } from "../lib/access";
 import { REVIEW_STATE_META, eligibleCollabSlugs, loadNeedsYou } from "../lib/collaboration";
 import type { AdminUser } from "./types";
 
-export async function loadNeedsYouView(user: AdminUser) {
+export async function loadNeedsYouView(user: AdminUser, workingLocale?: string) {
   const runtimeContext = user ? { user } : {};
   const cmsRuntime = cms as Record<string, any>;
   const defaultLocale = config.locales?.default ?? "en";
+  const contentLocale = workingLocale ?? defaultLocale;
 
   const eligible = eligibleCollabSlugs(config, user, resolveCollaboration, canRead);
   const approver = isApprover(config, user?.role);
@@ -29,7 +30,7 @@ export async function loadNeedsYouView(user: AdminUser) {
     const api = cmsRuntime[item.collectionSlug];
     if (!collection || !api) continue;
     const doc = await api
-      .findById(item.documentId, { status: "any", locale: defaultLocale }, runtimeContext)
+      .findById(item.documentId, { status: "any", locale: contentLocale }, runtimeContext)
       .catch(() => null);
     if (!doc) continue;
     hydrated.push({ item, doc, collection });

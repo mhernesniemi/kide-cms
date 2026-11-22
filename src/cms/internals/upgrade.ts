@@ -240,10 +240,10 @@ const resolveCommit = (repoDir: string, ref: string) => {
 };
 
 // Template-only dirs that never exist in scaffolded projects — excluded from packets.
-const TEMPLATE_ONLY_PREFIXES = ["starters/"];
+const TEMPLATE_ONLY_PREFIXES = ["starters/", "packages/"];
 
 const listChangedFiles = (repoDir: string, fromCommit: string, toCommit: string) => {
-  const output = run("git", ["diff", "--name-only", fromCommit, toCommit], { cwd: repoDir });
+  const output = run("git", ["diff", "--no-renames", "--name-only", fromCommit, toCommit], { cwd: repoDir });
   return output
     .split("\n")
     .map((line) => line.trim())
@@ -253,11 +253,11 @@ const listChangedFiles = (repoDir: string, fromCommit: string, toCommit: string)
 
 const diffForPaths = (repoDir: string, fromCommit: string, toCommit: string, files: string[]) => {
   if (files.length === 0) return "";
-  return runRaw("git", ["diff", "--binary", fromCommit, toCommit, "--", ...files], { cwd: repoDir });
+  return runRaw("git", ["diff", "--no-renames", "--binary", fromCommit, toCommit, "--", ...files], { cwd: repoDir });
 };
 
 const changedFilesJson = (repoDir: string, fromCommit: string, toCommit: string) => {
-  const output = run("git", ["diff", "--name-status", fromCommit, toCommit], { cwd: repoDir });
+  const output = run("git", ["diff", "--no-renames", "--name-status", fromCommit, toCommit], { cwd: repoDir });
   return output
     .split("\n")
     .map((line) => line.trim())
@@ -344,6 +344,9 @@ const choosePacketDir = (cwd: string, fromRef: string, targetRef: string) => {
 const backupFiles = (cwd: string, packetDir: string, files: string[]) => {
   const backupDir = path.join(packetDir, "backup");
   mkdirSync(backupDir, { recursive: true });
+  // Snapshots are pre-upgrade copies, not project code: keep `eslint .` out of them. ESLint
+  // resolves config per directory, so this works whatever the project's root config says.
+  writeFileSync(path.join(backupDir, "eslint.config.mjs"), 'export default [{ ignores: ["**/*"] }];\n');
   const backedUp: string[] = [];
   const missing: string[] = [];
   const entries: BackupEntry[] = [];

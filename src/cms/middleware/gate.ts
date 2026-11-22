@@ -9,7 +9,9 @@ import {
 import type { RequestScope, SessionUser } from "../core";
 import { eq } from "drizzle-orm";
 import type { CmsContext } from "../routes/context";
+import { isSameOriginRequest } from "./csrf";
 import { isGuardedPath } from "./paths";
+import { startSchedulerOnce } from "./scheduler";
 
 import config from "virtual:kide/config";
 import "virtual:kide/runtime";
@@ -65,6 +67,7 @@ export const kideMiddleware = async (context: CmsContext, next: Next) => {
 
 const handle = async (context: CmsContext, next: Next) => {
   const { pathname } = context.url;
+  startSchedulerOnce(context);
 
   // `?preview` exposes draft content on public pages; require a session (unauth → strip it).
   if (context.url.searchParams.has("preview")) {
@@ -125,25 +128,7 @@ const handle = async (context: CmsContext, next: Next) => {
     pathname.startsWith("/api/cms/webhooks/") ||
     pathname.startsWith("/api/cms/forms/submit/");
   if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && !isMachineEndpoint) {
-    // Compare against an explicitly configured origin when set (robust behind a proxy that
-    // may rewrite Host); otherwise fall back to the request's own origin.
-    const host = publicOrigin(context.request);
-    const origin = context.request.headers.get("origin");
-    const referer = context.request.headers.get("referer");
-    const secFetchSite = context.request.headers.get("sec-fetch-site");
-
-    let refererOk = false;
-    if (!origin && referer) {
-      try {
-        refererOk = new URL(referer).origin === host;
-      } catch {
-        refererOk = false;
-      }
-    }
-    const originOk = origin === host;
-    // Reject an explicit cross-site Fetch-Metadata signal, or the absence of any
-    // trustworthy same-origin signal (the hole the old `if (origin && ...)` left open).
-    if (secFetchSite === "cross-site" || !(originOk || refererOk)) {
+    if (!isSameOriginRequest(context.request.headers, publicOrigin(context.request))) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { "Content-Type": "application/json" },

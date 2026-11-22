@@ -590,12 +590,14 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
                         .filter(Boolean)
                         .join("  ")}
                     >
-                      <span className="truncate font-medium">{getItemLabel(item, variant)}</span>
+                      <span className="min-w-0 truncate font-medium">{getItemLabel(item, variant)}</span>
                       {variant === "menu" && (
-                        <span className="text-muted-foreground truncate text-xs">{getItemSublabel(item, variant)}</span>
+                        <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
+                          {getItemSublabel(item, variant)}
+                        </span>
                       )}
                       {variant === "menu" && item.target === "_blank" && (
-                        <span className="text-muted-foreground text-xs">(new tab)</span>
+                        <span className="text-muted-foreground shrink-0 text-xs">(new tab)</span>
                       )}
                     </div>
                     <div className="flex shrink-0 items-center gap-0.5">
@@ -818,9 +820,11 @@ export default function TreeItemsEditor({ name, value, variant, label, linkOptio
             >
               <GripVertical className="text-muted-foreground/50 size-3.5" />
               <span className="size-6 shrink-0" />
-              <span className="truncate font-medium">{getItemLabel(activeItem, variant)}</span>
+              <span className="min-w-0 truncate font-medium">{getItemLabel(activeItem, variant)}</span>
               {variant === "menu" && (
-                <span className="text-muted-foreground truncate text-xs">{getItemSublabel(activeItem, variant)}</span>
+                <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
+                  {getItemSublabel(activeItem, variant)}
+                </span>
               )}
             </div>
           )}

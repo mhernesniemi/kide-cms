@@ -1,9 +1,9 @@
 name: Release
 
 # Publishes @kidecms/core to npm when a v* tag is pushed. The tag version must
-# match src/cms/package.json (and the root template version). Requires the
-# NPM_TOKEN repository secret (npm automation token with publish rights to the
-# @kidecms scope).
+# match src/cms/package.json (and the root template version). Publishes through
+# npm Trusted Publishing (OIDC): @kidecms/core trusts this repo's release.yml, so
+# no npm token is stored.
 
 on:
   push:
@@ -17,15 +17,17 @@ jobs:
       contents: write # GitHub Release creation
       id-token: write # npm provenance
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # verify-upgrade.mjs needs the previous v* tag reachable from HEAD
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 22.23.4
           cache: pnpm
           registry-url: https://registry.npmjs.org
+      # Trusted Publishing needs npm >= 11.5.1; Node 22 bundles npm 10.
+      - run: npm install -g npm@^11.5.1
       - run: pnpm install --frozen-lockfile
 
       - name: Tag matches package version
@@ -40,6 +42,8 @@ jobs:
       # Full gate — a tag push does not trigger the branch CI workflow, so the
       # release must run everything itself before publishing.
       - run: pnpm check
+      - run: pnpm --filter @kidecms/wordpress check
+      - run: pnpm --filter @kidecms/wordpress test
       - run: pnpm test
       - run: pnpm test:workers
       - run: pnpm verify:pack
@@ -52,15 +56,32 @@ jobs:
       - run: pnpm verify:starters
       - run: node scripts/verify-upgrade.mjs
 
+      # Versioned on its own: skipped when this version is already on npm. pnpm pack
+      # rewrites the workspace:* dev dependency; npm publishes the tarball (OIDC).
+      - name: Publish @kidecms/wordpress
+        working-directory: packages/wordpress
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "@kidecms/wordpress@$VERSION" version >/dev/null 2>&1; then
+            echo "@kidecms/wordpress@$VERSION already published"
+            exit 0
+          fi
+          pnpm pack --pack-destination "$RUNNER_TEMP"
+          npm publish "$RUNNER_TEMP/kidecms-wordpress-$VERSION.tgz" --provenance --access public
+
+      # npm itself, not pnpm, so the OIDC exchange runs (src/cms has no workspace: deps).
       - name: Publish @kidecms/core
-        run: pnpm --filter @kidecms/core publish --no-git-checks --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        working-directory: src/cms
+        run: npm publish --provenance
 
       # Notes come from the tag's CHANGELOG section; the title stays the bare
       # tag — edit on github.com to append a descriptive suffix if wanted.
       - name: Create GitHub Release
         run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists"
+            exit 0
+          fi
           VERSION="${GITHUB_REF_NAME#v}"
           awk -v ver="$VERSION" '$0 ~ "^## \\[" ver "\\]" {flag=1;next} /^## \[/ {flag=0} flag' CHANGELOG.md > /tmp/release-notes.md
           if [ ! -s /tmp/release-notes.md ]; then

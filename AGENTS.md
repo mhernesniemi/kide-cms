@@ -22,11 +22,12 @@ Kide is a code-first CMS inside Astro (collections in `src/cms/collections/`, lo
 
 ```bash
 pnpm cms:generate && pnpm cms:push     # sync schema (renames/drops: --recreate=slug --allow-data-loss)
-node --import tsx scripts/your-import.ts   # see MIGRATING.md for the importer recipe
-pnpm cms:reindex                       # build search (or context.reindex())
 ```
 
-**Full playbook + WordPress recipe: read [`MIGRATING.md`](./MIGRATING.md).** (Also available as the `/migrate` skill where project skills are loaded — but the file is the source of truth.)
+- **WordPress:** use the mapping pipeline from `@kidecms/wordpress` (`pnpm add -D @kidecms/wordpress`): `pnpm exec kide-wp scout <dump> --uploads <dir>` → write `migration/<type>.map.ts` → `pnpm exec kide-wp plan` until READY → `apply` → `verify`.
+- **Other sources:** write an importer script with `load()` (below), then `pnpm cms:reindex`.
+
+**WordPress playbook:** `node_modules/@kidecms/wordpress/PLAYBOOK.md` once the plugin is installed (also the `/migrate` skill).
 
 A migration script bootstraps with `createCmsContext()` and uses `load()` (validate + create):
 
@@ -34,14 +35,20 @@ A migration script bootstraps with `createCmsContext()` and uses `load()` (valid
 import { createCmsContext } from "@kidecms/core/context";
 const { cms, assets, load, reindex, dispose } = await createCmsContext();
 
-// dry run first — fix everything it flags before importing for real
-const report = await load(items, { dryRun: true });
-if (report.failed) {
-  console.log(report.invalid);
+const items = source.map((row) => ({
+  collection: "posts",
+  data: { _id: `src-${row.id}`, title: row.title, body: buildContent(row), _status: "published" },
+  translations: row.fi ? { fi: { title: row.fi.title } } : undefined,
+}));
+
+// dry run first — fix everything it flags, including warnings, before importing for real
+const dry = await load(items, { dryRun: true });
+if (dry.failed || dry.warnings.length) {
+  console.log(JSON.stringify({ invalid: dry.invalid, warnings: dry.warnings }, null, 2));
   process.exit(1);
 }
 
-await load(items); // { _system:true, _skipSearch:true } by default
+await load(items); // { _system:true, _skipSearch:true } by default; throws ImportFailedError if any document fails
 await reindex();
 await dispose();
 ```
@@ -49,14 +56,15 @@ await dispose();
 ## Invariants & gotchas (these are what bite first-try)
 
 - **API method names:** `cms.<collection>.find / findOne / findById / create / createMany / upsert / update / delete / count / publish / unpublish / schedule / versions / restore / getTranslations / upsertTranslation`. A document's base row is written in `_sourceLocale` (defaults to `locales.default`; pass it on `create` for content that only exists in another language); `find({ locale, availability: "exact" })` lists only documents that exist in that locale. There is no `findMany` (that's Prisma/Payload) — it fails at runtime with "is not a function"; `pnpm check` catches it at the type level.
-- **Schema sync is `cms:push`** (non-interactive). A column **rename/drop** can't be auto-resolved headlessly → run `RECREATE=<slugs> pnpm cms:push` (drops + recreates those tables; data loss, fine for a DB you're repopulating). The dev server also auto-pushes on boot — stop it before running scripts (SQLite single-writer).
+- **Schema sync is `cms:push`** (non-interactive). A column **rename/drop** can't be auto-resolved headlessly → run `RECREATE=<slugs> pnpm cms:push --allow-data-loss` (drops + recreates those tables; data loss, fine for a DB you're repopulating). The dev server also auto-pushes on boot — stop it before running scripts (SQLite single-writer).
 - **Bulk writes:** pass `{ _system: true, _skipSearch: true }` (the default in `load()`), then `reindex()` once. Don't index per document.
 - **Wipe before re-import:** `cms.<collection>.deleteMany({}, { _system: true })`. Combine with caller-supplied `_id`s so re-runs replace, not duplicate.
 - **Slugs default `unique: true`** — set `fields.slug({ unique: false })` for hierarchical or per-locale reused slugs.
 - **Field controls matter.** Use the right field so the admin shows a real control, not JSON: `fields.relation({ hasMany: true })` (multi-pick), `fields.color()` (swatch picker), `fields.link()` (URL+label), `fields.image()` (asset picker), and for object lists `fields.json({ admin: { component: "repeater" }, itemFields: { … } })` (typed repeater rows). See `MODEL.md` for the full table.
 - **`content` field** stores any `{ type:'root', children:[…] }` doc as-is; inline block `fields` are **not** validated, so you control their shape — but declare `blocks` so the editor renders them. Build prose with `htmlToRichText(html)`; the stored inline-block discriminator is `type:'block'`.
 - **Images:** `assets.upload(file, { alt, dedupe: true })` returns `{ storagePath }`; store that string in image fields. `dedupe` makes re-runs idempotent (content-hash), no external map needed.
-- **Translations:** base-locale row + `cms.<col>.upsertTranslation(id, locale, translatableFields)`. Declare locales in `cms.config.ts`.
+- **Translations:** base-locale row + `cms.<col>.upsertTranslation(id, locale, translatableFields)`. Declare locales in `cms.config.ts`. Content that only exists in another language needs `_sourceLocale` set, or it lands under the default locale.
+- **Personal data:** leave out authors and other personal fields unless the user has cleared them.
 - **Published vs draft is the importer's call** — filter the source if you only want published content.
 
 ## Building an app on Kide

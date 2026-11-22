@@ -10,6 +10,7 @@ import { register } from "tsx/esm/api";
 const COMMANDS = {
   generate: "./generator.ts",
   push: "./push.ts",
+  migrate: "./migrate.ts",
   seed: "./seed.ts",
   admin: "./create-admin.ts",
   reindex: "./reindex.ts",
@@ -22,7 +23,7 @@ const COMMANDS = {
 
 const [command, ...rest] = process.argv.slice(2);
 
-if (!command || !(command in COMMANDS)) {
+if (!(command in COMMANDS)) {
   console.error(`Usage: kide <command> [options]\n\nCommands:\n  ${Object.keys(COMMANDS).join("\n  ")}`);
   process.exit(command ? 1 : 0);
 }

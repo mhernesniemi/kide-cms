@@ -2,13 +2,16 @@ import { Fragment } from "react";
 import { Archive, ArrowUpRight, Dot, Lock } from "lucide-react";
 
 import { AdminCard } from "../components/AdminCard";
-import AiGenerateButton from "../components/AiGenerateButton";
+import AiFieldActions from "../components/AiFieldActions";
+import type { AiAction } from "../components/AiGenerateButton";
 import CollaborationReviewBar from "../components/CollaborationReviewBar";
 import DocumentActions from "../components/DocumentActions";
 import DocumentLock from "../components/DocumentLock";
 import LiveHeading from "../components/LiveHeading";
 import UnsavedGuard from "../components/UnsavedGuard";
 import { FieldControl } from "../components/FieldControl";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import TranslationActions from "../components/TranslationActions";
 import SelectField from "../components/SelectField";
 import { StatusBadge } from "../components/ui/badge";
 import { buttonVariants } from "../components/ui/button";
@@ -23,7 +26,9 @@ import {
   getLabelField,
   getSharedBlockTypes,
   isApprover,
+  languageName,
   resolveCollaboration,
+  type LocaleState,
 } from "../../core";
 import {
   canDelete,
@@ -49,6 +54,7 @@ import { ReverseReferencesList } from "./edit/ReverseReferencesList";
 
 import { Island } from "../render/island";
 import { cn } from "../lib/utils";
+import { workingLocaleCookie } from "../lib/locale";
 import type { AdminUser } from "./types";
 
 type CollectionLike = {
@@ -58,7 +64,7 @@ type CollectionLike = {
   drafts?: boolean;
   auth?: boolean;
   preview?: boolean | string;
-  pathPrefix?: string;
+  pathPrefix?: string | Record<string, string>;
   fields: Record<string, any>;
 };
 
@@ -75,13 +81,15 @@ export async function loadEditView(
   url: URL,
   user: AdminUser,
   redirect: (path: string) => Response,
+  workingLocale: string | undefined,
   { collection, mode, documentId, variant = "editorial" }: EditViewArgs,
 ) {
   const runtimeContext = user ? { user } : {};
   const cmsRuntime = cms as Record<string, any> & { meta: typeof cms.meta };
   const locales = config.locales?.supported ?? [];
   const defaultLocale = config.locales?.default ?? "en";
-  const requestedLocale = url.searchParams.get("locale");
+  const localeParam = url.searchParams.get("locale");
+  const requestedLocale = localeParam && locales.includes(localeParam) ? localeParam : null;
   const aiEnabled = isAiEnabled();
   const collectionApi = cmsRuntime[collection.slug];
   const isSingleton = collection.singleton === true;
@@ -100,7 +108,14 @@ export async function loadEditView(
   let selectedLocale = requestedLocale ?? defaultLocale;
   if (mode === "edit" && documentId) {
     try {
-      const loaded = await loadDocument(collectionApi, documentId, requestedLocale, defaultLocale, runtimeContext);
+      const loaded = await loadDocument(
+        collectionApi,
+        documentId,
+        requestedLocale,
+        defaultLocale,
+        runtimeContext,
+        workingLocale,
+      );
       if (!loaded.doc) return redirect(`/admin/${collection.slug}`);
       doc = loaded.doc;
       baseDoc = loaded.baseDoc;
@@ -210,11 +225,68 @@ export async function loadEditView(
   const previewKey = hasPreview && documentId ? `${collection.slug}:${documentId}` : null;
   const previewUrl =
     hasPreview && previewKey
-      ? `${typeof collection.preview === "string" ? collection.preview : cms.meta.getRouteForDocument(collection.slug, doc)}?preview=${encodeURIComponent(previewKey)}`
+      ? `${typeof collection.preview === "string" ? collection.preview : cms.meta.getRouteForDocument(collection.slug, doc, hasLocales ? selectedLocale : undefined)}?preview=${encodeURIComponent(previewKey)}`
       : null;
 
-  const getCurrentValue = (fieldName: string) => (doc ? doc[fieldName] : undefined);
+  // Per-language status of the document, from the base read (status "any").
+  const localeStates = (baseDoc?._localeStates ?? {}) as Record<string, LocaleState | undefined>;
+  const translationState = translationMode ? localeStates[selectedLocale] : undefined;
+  const selectedLanguage = languageName(selectedLocale);
+  const baseLanguage = languageName(baseLocale);
+  // The translation's own values: an empty field is one that still falls back to the original.
+  const ownTranslation: Record<string, unknown> =
+    translationMode && documentId
+      ? ((await collectionApi.getTranslations(documentId, runtimeContext))[selectedLocale] ?? {})
+      : {};
+  const isTranslatable = (fieldName: string) => Boolean(collection.fields[fieldName]?.translatable);
   const getSharedValue = (fieldName: string) => (baseDoc ? baseDoc[fieldName] : undefined);
+  const getCurrentValue = (fieldName: string) => {
+    if (!translationMode) return doc ? doc[fieldName] : undefined;
+    return isTranslatable(fieldName) ? (ownTranslation[fieldName] ?? undefined) : getSharedValue(fieldName);
+  };
+  // Shared fields stay visible in a translation for context, edited only in the original.
+  const isLocked = (fieldName: string) => isFieldReadOnly(fieldName) || (translationMode && !isTranslatable(fieldName));
+  // An empty text or image field shows the original as its placeholder: what the site falls back to.
+  const fieldFor = (fieldName: string) => {
+    const field = collection.fields[fieldName];
+    const plainText =
+      (["text", "slug", "email"].includes(field.type) && !field.admin?.component) || field.type === "image";
+    const original = getSharedValue(fieldName);
+    if (!translationMode || !isTranslatable(fieldName) || !plainText || typeof original !== "string" || !original)
+      return field;
+    return { ...field, admin: { ...field.admin, placeholder: original } };
+  };
+  const aiActions = (fieldName: string): AiAction[] => {
+    if (!aiEnabled || isLocked(fieldName)) return [];
+    const field = collection.fields[fieldName];
+    const actions: AiAction[] = [];
+    const original = getSharedValue(fieldName);
+    // Machine translation only makes sense for prose; ids, images and structured values stay as they are.
+    const prose = field.type === "richText" || (field.type === "text" && !field.admin?.component);
+    if (translationMode && isTranslatable(fieldName) && prose && original) {
+      actions.push({
+        label: `Translate from ${baseLanguage}`,
+        endpoint: "/api/cms/ai/translate",
+        payload: {
+          text: typeof original === "object" ? JSON.stringify(original) : String(original),
+          sourceLocale: baseLocale,
+          targetLocale: selectedLocale,
+          fieldName,
+          fieldType: field.type === "richText" ? "richText" : "text",
+        },
+        targetField: fieldName,
+      });
+    }
+    if (fieldName === "seoDescription") {
+      actions.push({
+        label: "Generate description",
+        endpoint: "/api/cms/ai/seo",
+        payload: { title: getCurrentValue("title") ?? "", excerpt: getCurrentValue("excerpt") ?? "" },
+        targetField: fieldName,
+      });
+    }
+    return actions;
+  };
 
   // Editorial collaboration UI — shown only for collections in the collaboration
   // list, and only on normal document edits (not submissions or the translation form).
@@ -247,7 +319,6 @@ export async function loadEditView(
     documentId,
     variant,
     locales,
-    aiEnabled,
     isSingleton,
     isFieldHidden,
     isFieldReadOnly,
@@ -255,6 +326,14 @@ export async function loadEditView(
     versions,
     baseLocale,
     selectedLocale,
+    requestedLocale,
+    localeStates,
+    translationState,
+    selectedLanguage,
+    baseLanguage,
+    isLocked,
+    fieldFor,
+    aiActions,
     canSave,
     canDeleteDoc,
     canDuplicate,
@@ -271,7 +350,6 @@ export async function loadEditView(
     submittedFields,
     submissionContextEntries,
     formatSubmissionValue,
-    translatableFields,
     hasLocales,
     translationMode,
     availableLocales,
@@ -285,7 +363,6 @@ export async function loadEditView(
     previewKey,
     previewUrl,
     getCurrentValue,
-    getSharedValue,
     showCollab,
     collabData,
     publishBlocked,
@@ -303,14 +380,20 @@ export function EditView(props: EditViewData) {
     documentId,
     variant,
     locales,
-    aiEnabled,
     isSingleton,
     isFieldHidden,
-    isFieldReadOnly,
     doc,
     versions,
     baseLocale,
     selectedLocale,
+    requestedLocale,
+    localeStates,
+    translationState,
+    selectedLanguage,
+    baseLanguage,
+    isLocked,
+    fieldFor,
+    aiActions,
     canSave,
     canDeleteDoc,
     canDuplicate,
@@ -327,7 +410,6 @@ export function EditView(props: EditViewData) {
     submittedFields,
     submissionContextEntries,
     formatSubmissionValue,
-    translatableFields,
     hasLocales,
     translationMode,
     availableLocales,
@@ -341,11 +423,16 @@ export function EditView(props: EditViewData) {
     previewKey,
     previewUrl,
     getCurrentValue,
-    getSharedValue,
     showCollab,
     collabData,
     publishBlocked,
   } = props;
+  const labelActions = (fieldName: string) => {
+    const actions = aiActions(fieldName);
+    return actions.length > 0 ? (
+      <Island name="AiFieldActions" component={AiFieldActions} props={{ actions }} />
+    ) : undefined;
+  };
   return (
     <>
       <section className="space-y-14">
@@ -381,7 +468,11 @@ export function EditView(props: EditViewData) {
                     />
                   )}
                 </h1>
-                {mode === "edit" && doc && collection.drafts && <StatusBadge status={getVisualStatus(doc)} styled />}
+                {mode === "edit" && doc && translationMode
+                  ? (collection.drafts || !translationState) && (
+                      <StatusBadge status={translationState?.status ?? "not translated"} styled />
+                    )
+                  : mode === "edit" && doc && collection.drafts && <StatusBadge status={getVisualStatus(doc)} styled />}
               </div>
               {isSubmissionView && doc && (
                 <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1 text-xs">
@@ -397,7 +488,7 @@ export function EditView(props: EditViewData) {
                 className="flex flex-wrap items-center gap-2 sm:flex-shrink-0 sm:justify-end"
                 data-kide-refresh="actions"
               >
-                {hasPreview && previewUrl && !translationMode && (
+                {hasPreview && previewUrl && (
                   <>
                     <a href={previewUrl} target="_blank" className={buttonVariants({ variant: "outline" })}>
                       Preview
@@ -408,47 +499,17 @@ export function EditView(props: EditViewData) {
                 )}
                 {hasLocales && mode === "edit" && (
                   <>
-                    {/* One segmented control: the language being edited is the raised segment. */}
-                    <div className="bg-muted inline-flex h-8 items-center gap-0.5 rounded-lg border p-0.5">
-                      {locales.map((locale) => (
-                        <a
-                          key={locale}
-                          href={`/admin/${collection.slug}/${documentId}?locale=${locale}`}
-                          title={
-                            locale === baseLocale
-                              ? "Original language"
-                              : availableLocales.has(locale)
-                                ? undefined
-                                : "Not translated yet"
-                          }
-                          aria-current={selectedLocale === locale ? "page" : undefined}
-                          className={cn(
-                            "inline-flex h-full min-w-9 items-center justify-center rounded-md px-2.5 text-xs font-medium transition-colors",
-                            selectedLocale === locale
-                              ? "bg-background text-foreground shadow-sm"
-                              : availableLocales.has(locale)
-                                ? "text-muted-foreground hover:text-foreground"
-                                : "text-muted-foreground/50 hover:text-muted-foreground",
-                          )}
-                        >
-                          {locale.toUpperCase()}
-                        </a>
-                      ))}
-                    </div>
+                    <LanguageSwitcher
+                      locales={locales}
+                      selected={selectedLocale}
+                      baseLocale={baseLocale}
+                      states={localeStates}
+                      hrefFor={(locale: string) => `/admin/${collection.slug}/${documentId}?locale=${locale}`}
+                    />
                     <div className="bg-border mx-1 h-6 w-px" />
                   </>
                 )}
-                {translationMode ? (
-                  <button
-                    className={buttonVariants({ variant: "outline" })}
-                    type="submit"
-                    form="translation-form"
-                    value="save"
-                    disabled
-                  >
-                    Save translation
-                  </button>
-                ) : isSubmissionView && documentId ? (
+                {isSubmissionView && documentId ? (
                   <form method="post" action={getFormAction(collection.slug, documentId)}>
                     <input type="hidden" name="_action" value="update" />
                     <input type="hidden" name="status" value={doc?.status === "archived" ? "read" : "archived"} />
@@ -496,11 +557,13 @@ export function EditView(props: EditViewData) {
                           value="publish"
                           disabled={
                             mode === "edit" &&
-                            !(
-                              doc?._status === "draft" ||
-                              doc?._status === "scheduled" ||
-                              (doc && getVisualStatus(doc) === "changed")
-                            )
+                            (translationMode
+                              ? !(translationState?.status === "draft" || translationState?.status === "changed")
+                              : !(
+                                  doc?._status === "draft" ||
+                                  doc?._status === "scheduled" ||
+                                  (doc && getVisualStatus(doc) === "changed")
+                                ))
                           }
                         >
                           Publish
@@ -529,11 +592,26 @@ export function EditView(props: EditViewData) {
                       languages:
                         // collide with the new original language, so the API refuses the change.
                         hasLocales && availableLocales.size === 1
-                          ? locales.map((locale) => ({ value: locale, label: locale.toUpperCase() }))
+                          ? locales.map((locale) => ({ value: locale, label: languageName(locale) }))
                           : undefined,
                       contentLanguage: baseLocale,
                       restoreEndpoint: getFormAction(collection.slug, documentId),
                       redirectTo: url.pathname + url.search,
+                    }}
+                  />
+                )}
+                {translationMode && translationState && canSave && (
+                  <Island
+                    name="TranslationActions"
+                    component={TranslationActions}
+                    props={{
+                      formId: "document-form",
+                      language: selectedLanguage,
+                      showUnpublish: Boolean(
+                        collection.drafts &&
+                        (translationState.status === "published" || translationState.status === "changed"),
+                      ),
+                      showDiscard: translationState.status === "changed",
                     }}
                   />
                 )}
@@ -582,19 +660,20 @@ export function EditView(props: EditViewData) {
                   name="UnsavedGuard"
                   component={UnsavedGuard}
                   props={{
-                    formId: translationMode ? "translation-form" : "document-form",
+                    formId: "document-form",
                     isNew: mode === "new",
                     isDraft: Boolean(
-                      !translationMode &&
                       collection.drafts &&
-                      (doc?._status === "draft" ||
-                        doc?._status === "scheduled" ||
-                        (doc && getVisualStatus(doc) === "changed")),
+                      (translationMode
+                        ? translationState?.status === "draft" || translationState?.status === "changed"
+                        : doc?._status === "draft" ||
+                          doc?._status === "scheduled" ||
+                          (doc && getVisualStatus(doc) === "changed")),
                     ),
                   }}
                 />
               </div>
-              <div id="document-edit-area" data-preview-channel={!translationMode ? previewKey : undefined}>
+              <div id="document-edit-area" data-preview-channel={previewKey ?? undefined}>
                 {collection.slug === "users" && mode === "edit" && url.searchParams.get("signInInvite") && (
                   <AdminCard title={url.searchParams.get("emailSent") === "true" ? "Invitation sent" : "Sign-in link"}>
                     <p className="text-muted-foreground text-sm">
@@ -624,7 +703,7 @@ export function EditView(props: EditViewData) {
                   </AdminCard>
                 )}
 
-                {!translationMode && (
+                {
                   <form
                     id="document-form"
                     method="post"
@@ -636,10 +715,28 @@ export function EditView(props: EditViewData) {
                         : "max-w-3xl",
                     )}
                   >
-                    <input type="hidden" name="_action" value={mode === "new" ? "create" : "update"} />
+                    <input
+                      type="hidden"
+                      name="_action"
+                      value={translationMode ? "save-translation" : mode === "new" ? "create" : "update"}
+                    />
+                    {translationMode && <input type="hidden" name="locale" value={selectedLocale} />}
                     <input type="hidden" name="redirectTo" value={url.pathname + url.search} />
 
                     <div className="min-w-0 space-y-7">
+                      {translationState?.outdated && (
+                        <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-800 dark:text-amber-300">
+                          <p>The {baseLanguage} original has changed since this translation was saved.</p>
+                          <button
+                            type="submit"
+                            name="_action"
+                            value="confirm-translation"
+                            className="shrink-0 underline underline-offset-2 hover:no-underline"
+                          >
+                            Mark as up to date
+                          </button>
+                        </div>
+                      )}
                       {isSubmissionView ? (
                         <AdminCard title="Submission">
                           <table className="w-full text-sm">
@@ -679,9 +776,10 @@ export function EditView(props: EditViewData) {
                             <FieldControl
                               key={fieldName}
                               name={fieldName}
-                              field={collection.fields[fieldName]}
+                              field={fieldFor(fieldName)}
                               value={getCurrentValue(fieldName)}
-                              readOnly={isFieldReadOnly(fieldName)}
+                              readOnly={isLocked(fieldName)}
+                              labelActions={labelActions(fieldName)}
                               relationMeta={relationMetaByField[fieldName]}
                               relationOptions={relationLabelsByField[fieldName] ?? []}
                               linkableCollections={linkableCollections}
@@ -755,9 +853,10 @@ export function EditView(props: EditViewData) {
                                     <div key={fieldName}>
                                       <FieldControl
                                         name={fieldName}
-                                        field={collection.fields[fieldName]}
+                                        field={fieldFor(fieldName)}
                                         value={getCurrentValue(fieldName)}
-                                        readOnly={isFieldReadOnly(fieldName)}
+                                        readOnly={isLocked(fieldName)}
+                                        labelActions={labelActions(fieldName)}
                                         relationMeta={relationMetaByField[fieldName]}
                                         relationOptions={relationLabelsByField[fieldName] ?? []}
                                         linkableCollections={linkableCollections}
@@ -765,23 +864,6 @@ export function EditView(props: EditViewData) {
                                         sharedSectionOptions={sharedSectionOptions}
                                         sharedSectionsAvailable={sharedSectionsAvailable}
                                       />
-                                      {aiEnabled && fieldName === "seoDescription" && !isFieldReadOnly(fieldName) && (
-                                        <div className="mt-1.5">
-                                          <Island
-                                            name="AiGenerateButton"
-                                            component={AiGenerateButton}
-                                            props={{
-                                              endpoint: "/api/cms/ai/seo",
-                                              payload: {
-                                                title: getCurrentValue("title") ?? "",
-                                                excerpt: getCurrentValue("excerpt") ?? "",
-                                              },
-                                              targetField: fieldName,
-                                              label: "Generate description",
-                                            }}
-                                          />
-                                        </div>
-                                      )}
                                     </div>
                                   ))}
                               </div>
@@ -812,7 +894,7 @@ export function EditView(props: EditViewData) {
                                   name: "_sourceLocale",
                                   value: baseLocale,
                                   placeholder: "Select a language",
-                                  items: locales.map((locale) => ({ value: locale, label: locale.toUpperCase() })),
+                                  items: locales.map((locale) => ({ value: locale, label: languageName(locale) })),
                                 }}
                               />
                               <p className="text-muted-foreground text-xs">
@@ -853,8 +935,10 @@ export function EditView(props: EditViewData) {
                                         <dd className="text-foreground/70">{formatDate(doc._createdAt)}</dd>
                                       </div>
                                       <div className="flex gap-2 lg:justify-between">
-                                        <dt>Updated</dt>
-                                        <dd className="text-foreground/70">{formatDate(doc._updatedAt)}</dd>
+                                        <dt>{translationMode ? `${selectedLanguage} updated` : "Updated"}</dt>
+                                        <dd className="text-foreground/70">
+                                          {formatDate(translationMode ? translationState?.updatedAt : doc._updatedAt)}
+                                        </dd>
                                       </div>
                                     </dl>
                                   );
@@ -874,83 +958,20 @@ export function EditView(props: EditViewData) {
                       </div>
                     )}
                   </form>
-                )}
-
-                {translationMode && (
-                  <div className="space-y-6">
-                    <form
-                      id="translation-form"
-                      method="post"
-                      action={getFormAction(collection.slug, documentId)}
-                      className="max-w-3xl"
-                    >
-                      <input type="hidden" name="_action" value="save-translation" />
-                      <input type="hidden" name="locale" value={selectedLocale} />
-                      <input type="hidden" name="redirectTo" value={url.pathname + url.search} />
-
-                      <div className="grid gap-7">
-                        {translatableFields
-                          .filter((fn) => !isFieldHidden(fn))
-                          .map((fieldName) => {
-                            const fieldDef = collection.fields[fieldName];
-                            const fieldType =
-                              fieldDef.type === "richText" ? "richText" : fieldDef.type === "slug" ? "slug" : "text";
-                            const sourceValue = getSharedValue(fieldName);
-                            const sourceText =
-                              typeof sourceValue === "object" && sourceValue !== null
-                                ? JSON.stringify(sourceValue)
-                                : String(sourceValue ?? "");
-                            return (
-                              <div key={fieldName}>
-                                <FieldControl
-                                  name={fieldName}
-                                  field={fieldDef}
-                                  value={getCurrentValue(fieldName)}
-                                  readOnly={isFieldReadOnly(fieldName)}
-                                  relationMeta={relationMetaByField[fieldName]}
-                                  relationOptions={relationLabelsByField[fieldName] ?? []}
-                                  linkableCollections={linkableCollections}
-                                  sharedBlockTypes={sharedBlockTypes}
-                                  sharedSectionOptions={sharedSectionOptions}
-                                  sharedSectionsAvailable={sharedSectionsAvailable}
-                                />
-                                {aiEnabled &&
-                                  sourceText &&
-                                  fieldDef.type !== "slug" &&
-                                  fieldDef.type !== "blocks" &&
-                                  fieldDef.type !== "content" && (
-                                    <div className="mt-1.5">
-                                      <Island
-                                        name="AiGenerateButton"
-                                        component={AiGenerateButton}
-                                        props={{
-                                          endpoint: "/api/cms/ai/translate",
-                                          payload: {
-                                            text: sourceText,
-                                            sourceLocale: baseLocale,
-                                            targetLocale: selectedLocale,
-                                            fieldName,
-                                            fieldType,
-                                          },
-                                          targetField: fieldName,
-                                          label: `Translate from ${baseLocale.toUpperCase()}`,
-                                        }}
-                                      />
-                                    </div>
-                                  )}
-                              </div>
-                            );
-                          })}
-                      </div>
-                    </form>
-                  </div>
-                )}
+                }
               </div>
             </>
           )}
         </div>
       </section>
       <EditScripts />
+      {requestedLocale && hasLocales && (
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `document.cookie=${JSON.stringify(workingLocaleCookie(requestedLocale))};`,
+          }}
+        />
+      )}
     </>
   );
 }

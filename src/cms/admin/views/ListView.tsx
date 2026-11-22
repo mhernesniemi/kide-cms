@@ -10,6 +10,7 @@ import { collaboration } from "virtual:kide/runtime";
 import { REVIEW_STATE_META } from "../lib/collaboration";
 import {
   formatDate,
+  getDateSettings,
   formatFieldValue,
   formatPagePath,
   getPageHref,
@@ -17,6 +18,7 @@ import {
   getListColumns,
   getTranslatableFieldNames,
   humanize,
+  languageName,
   resolveCollaboration,
 } from "../../core";
 import { canDelete, canWrite, getVisualStatus } from "../lib/access";
@@ -28,12 +30,12 @@ export type CollectionLike = {
   drafts?: boolean;
   auth?: boolean;
   preview?: boolean | string;
-  pathPrefix?: string;
+  pathPrefix?: string | Record<string, string>;
   fields: Record<string, any>;
   views?: Record<string, any>;
 };
 
-export async function loadListView(url: URL, user: AdminUser, collection: CollectionLike) {
+export async function loadListView(url: URL, user: AdminUser, collection: CollectionLike, workingLocale?: string) {
   const runtimeContext = user ? { user } : {};
   const cmsRuntime = cms as Record<string, any>;
   const defaultLocale = config.locales?.default ?? "en";
@@ -59,17 +61,15 @@ export async function loadListView(url: URL, user: AdminUser, collection: Collec
     next.searchParams.delete("page");
     return next.pathname + next.search;
   };
-  // "fi" → "Finnish" (the admin UI is English); unknown codes fall back to the code.
-  const languageNames = new Intl.DisplayNames(["en"], { type: "language", fallback: "code" });
-  const languageName = (locale: string) => languageNames.of(locale) ?? locale.toUpperCase();
   const langOptions = [
     { value: "", label: "All languages" },
     ...locales.map((locale) => ({ value: locale, label: `In ${languageName(locale)}` })),
-    ...locales
-      .filter((locale) => locale !== defaultLocale)
-      .map((locale) => ({ value: `missing:${locale}`, label: `Missing ${languageName(locale)}` })),
+    ...locales.map((locale) => ({ value: `missing:${locale}`, label: `Missing ${languageName(locale)}` })),
   ].map((option) => ({ ...option, href: langHref(option.value) }));
   const activeLang = langFilter ? langParam : "";
+  // Titles read in the filtered language, else the one the editor last worked in.
+  const contentLocale = langFilter?.locale ?? workingLocale ?? defaultLocale;
+  const localeQuery = { locale: contentLocale, availability: langFilter?.availability };
 
   const viewConfig = collection.views ?? {};
   const defaultSort = viewConfig.list?.defaultSort ?? { field: "_updatedAt", direction: "desc" };
@@ -87,7 +87,7 @@ export async function loadListView(url: URL, user: AdminUser, collection: Collec
     collectionApi.find(
       {
         status: "any",
-        locale: langFilter?.locale ?? defaultLocale,
+        locale: contentLocale,
         availability: langFilter?.availability,
         sort: currentSort,
         limit: PAGE_SIZE,
@@ -99,7 +99,7 @@ export async function loadListView(url: URL, user: AdminUser, collection: Collec
     collectionApi.count(
       {
         status: "any",
-        locale: langFilter?.locale ?? defaultLocale,
+        locale: contentLocale,
         availability: langFilter?.availability,
         search: searchParam || undefined,
       },
@@ -211,6 +211,7 @@ export async function loadListView(url: URL, user: AdminUser, collection: Collec
       editHref: `/admin/${collection.slug}/${entry._id}${langFilter ? `?locale=${langFilter.locale}` : ""}`,
       status: getVisualStatus(entry),
       locales: Array.isArray(entry._availableLocales) ? entry._availableLocales.map((l) => String(l)) : [defaultLocale],
+      localeStates: entry._localeStates as Record<string, { status: string; outdated?: boolean }> | undefined,
       searchText: String(entry[getLabelField(collection)] ?? entry.slug ?? entry._id ?? ""),
       pageHref: pagePath ? getPageHref(pagePath, !collection.drafts || entry._status === "published") : undefined,
       values: Object.fromEntries(displayColumns.map((column) => [column, formatColumnValue(column, entry, pagePath)])),
@@ -233,6 +234,7 @@ export async function loadListView(url: URL, user: AdminUser, collection: Collec
     currentPage,
     currentSort,
     searchParam,
+    localeQuery,
   };
 }
 
@@ -252,6 +254,7 @@ export function ListView({
   currentPage,
   currentSort,
   searchParam,
+  localeQuery,
 }: Awaited<ReturnType<typeof loadListView>>) {
   return (
     <section className="space-y-6 px-4 py-6 lg:py-8 lg:pr-8 lg:pl-12">
@@ -287,6 +290,9 @@ export function ListView({
             sortable: !column.startsWith("__"),
           })),
           data: tableRows,
+          dateSettings: getDateSettings(),
+          supportedLocales: showLocalesColumn ? locales : undefined,
+          localeQuery: showLocalesColumn ? localeQuery : undefined,
           searchPlaceholder: `Filter ${collection.labels.plural.toLowerCase()}...`,
           languageFilter: showLocalesColumn ? { active: activeLang, options: langOptions } : undefined,
           serverPagination: {

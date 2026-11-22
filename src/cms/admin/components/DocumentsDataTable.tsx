@@ -48,6 +48,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Input } from "./ui/input";
+import { DEFAULT_DATE_SETTINGS, formatDateWith, type DateSettings } from "../../core/date-format";
 import { cn } from "../lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
@@ -59,12 +60,37 @@ type DataTableColumn = {
   sortable?: boolean;
 };
 
+type LocaleState = { status: string; outdated?: boolean };
+
+const LOCALE_DOT: Record<string, string> = {
+  published: "bg-emerald-500",
+  changed: "bg-amber-500",
+  scheduled: "bg-violet-500",
+  draft: "bg-blue-500",
+};
+
+const languageNames = new Intl.DisplayNames(["en"], { type: "language", fallback: "code" });
+const languageLabel = (locale: string) => {
+  try {
+    return languageNames.of(locale) ?? locale.toUpperCase();
+  } catch {
+    return locale.toUpperCase();
+  }
+};
+
+const describeLocale = (locale: string, state: LocaleState | undefined) =>
+  [languageLabel(locale), state ? state.status : "not translated yet", state?.outdated ? "original changed since" : ""]
+    .filter(Boolean)
+    .join(" · ");
+
 type DataTableRow = {
   id: string;
   editHref: string;
   status?: string;
   singleton?: boolean;
   locales: string[];
+  /** Per-language status; with `supportedLocales` the column shows every language, translated or not. */
+  localeStates?: Record<string, LocaleState>;
   searchText: string;
   values: Record<string, string>;
   /** Live URL for the "__page" column (e.g. Singles), rendered as an external link. */
@@ -101,19 +127,11 @@ type DocumentsDataTableProps = {
   statusOptions?: string[];
   /** Language filter in the toolbar (multilingual collections only); each option is a server-side link. */
   languageFilter?: { active: string; options: Array<{ value: string; label: string; href: string }> };
-};
-
-const formatDateClient = (value: unknown): string => {
-  if (!value) return "\u2014";
-  const date = new Date(String(value));
-  if (isNaN(date.getTime())) return String(value);
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  dateSettings?: DateSettings;
+  /** Every content language, so rows show which ones are still missing. */
+  supportedLocales?: string[];
+  /** Locale and availability the server-side list was read with; re-fetches keep them. */
+  localeQuery?: { locale: string; availability?: "exact" | "missing" };
 };
 
 const getVisualStatus = (d: Record<string, unknown>): string => {
@@ -126,10 +144,10 @@ const getVisualStatus = (d: Record<string, unknown>): string => {
 // Rebuilds row values after a client-side re-fetch (sort/search/page change). The
 // "__page"/"__usage" values are pre-computed server-side (see the collection GET route)
 // since they aren't stored fields — this just reads them back.
-const formatRowValue = (columnKey: string, entry: Record<string, unknown>): string => {
+const formatRowValue = (columnKey: string, entry: Record<string, unknown>, dateSettings: DateSettings): string => {
   if (columnKey === "_status") return getVisualStatus(entry);
   if (columnKey === "__usage") return `${Number(entry.__usage ?? 0)} places`;
-  if (columnKey === "_updatedAt" || columnKey === "_createdAt") return formatDateClient(entry[columnKey]);
+  if (columnKey === "_updatedAt" || columnKey === "_createdAt") return formatDateWith(entry[columnKey], dateSettings);
   return String(entry[columnKey] ?? "—");
 };
 
@@ -170,6 +188,9 @@ export default function DocumentsDataTable({
   serverPagination,
   statusOptions,
   languageFilter,
+  dateSettings = DEFAULT_DATE_SETTINGS,
+  supportedLocales,
+  localeQuery,
 }: DocumentsDataTableProps) {
   const isServerMode = !!serverPagination;
 
@@ -241,6 +262,10 @@ export default function DocumentsDataTable({
         if (search) {
           params.set("search", search);
         }
+        if (localeQuery) {
+          params.set("locale", localeQuery.locale);
+          if (localeQuery.availability) params.set("availability", localeQuery.availability);
+        }
 
         const response = await fetch(`/api/cms/${collectionSlug}?${params}`);
         if (!response.ok) throw new Error("Failed to fetch");
@@ -249,16 +274,19 @@ export default function DocumentsDataTable({
         setServerData(
           result.docs.map((entry: Record<string, unknown>) => ({
             id: String(entry._id),
-            editHref: `/admin/${collectionSlug}/${entry._id}`,
+            editHref: `/admin/${collectionSlug}/${entry._id}${localeQuery?.availability ? `?locale=${localeQuery.locale}` : ""}`,
             status: getVisualStatus(entry),
             locales: Array.isArray(entry._availableLocales)
               ? (entry._availableLocales as string[])
               : defaultLocale
                 ? [defaultLocale]
                 : [],
+            localeStates: entry._localeStates as Record<string, LocaleState> | undefined,
             searchText: String(entry[labelField] ?? entry.slug ?? entry._id ?? ""),
             pageHref: entry._pageHref as string | undefined,
-            values: Object.fromEntries(columns.map((column) => [column.key, formatRowValue(column.key, entry)])),
+            values: Object.fromEntries(
+              columns.map((column) => [column.key, formatRowValue(column.key, entry, dateSettings)]),
+            ),
           })),
         );
         setServerTotalDocs(result.totalDocs);
@@ -286,7 +314,7 @@ export default function DocumentsDataTable({
         setIsLoading(false);
       }
     },
-    [isServerMode, collectionSlug, columns, defaultLocale, labelField],
+    [isServerMode, collectionSlug, columns, defaultLocale, labelField, dateSettings, localeQuery],
   );
 
   // Cleanup debounce timer
@@ -552,26 +580,54 @@ export default function DocumentsDataTable({
               accessorFn: (row: DataTableRow) => row.locales.join(", "),
               id: "locales",
               header: ({ column }: { column: Column<DataTableRow, unknown> }) => (
-                <DataTableColumnHeader column={column} title="Locales" />
+                <DataTableColumnHeader column={column} title="Languages" />
               ),
-              cell: ({ row }: { row: { original: DataTableRow } }) => (
-                <div className="flex flex-wrap gap-1.5">
-                  {row.original.locales.map((locale) => (
-                    <a
-                      key={locale}
-                      href={`${row.original.editHref.split("?")[0]}?locale=${locale}`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Badge
-                        variant="outline"
-                        className="text-muted-foreground hover:border-foreground/50 hover:text-foreground uppercase transition-colors"
-                      >
-                        {locale}
-                      </Badge>
-                    </a>
-                  ))}
-                </div>
-              ),
+              cell: ({ row }: { row: { original: DataTableRow } }) => {
+                const base = row.original.editHref.split("?")[0];
+                const states = row.original.localeStates;
+                const listed = supportedLocales && states ? supportedLocales : row.original.locales;
+                // The API lists the original language first in _localeStates.
+                const original = states ? Object.keys(states)[0] : undefined;
+                const shown = original ? [original, ...listed.filter((locale) => locale !== original)] : listed;
+                return (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {shown.map((locale, index) => {
+                      const state = states?.[locale];
+                      const missing = Boolean(states) && !state;
+                      const label = states ? describeLocale(locale, state) : languageLabel(locale);
+                      return (
+                        <React.Fragment key={locale}>
+                          {original && index === 1 && <span className="bg-border h-4 w-px" />}
+                          <a
+                            href={`${base}?locale=${locale}`}
+                            title={label}
+                            aria-label={label}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "gap-1.5 uppercase transition-colors",
+                                missing
+                                  ? "text-muted-foreground/60 hover:text-muted-foreground border-dashed"
+                                  : "text-muted-foreground hover:border-foreground/50 hover:text-foreground",
+                                state?.outdated && "border-amber-500/60",
+                              )}
+                            >
+                              {state && (
+                                <span
+                                  className={cn("size-1.5 rounded-full", LOCALE_DOT[state.status] ?? LOCALE_DOT.draft)}
+                                />
+                              )}
+                              {locale}
+                            </Badge>
+                          </a>
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                );
+              },
             } as ColumnDef<DataTableRow>,
           ]
         : []),
@@ -654,6 +710,7 @@ export default function DocumentsDataTable({
       duplicateEnabled,
       deleteEnabled,
       showLocalesColumn,
+      supportedLocales,
       isPending,
       primaryColumnKey,
       isServerMode,

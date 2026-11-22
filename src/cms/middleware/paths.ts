@@ -7,4 +7,5 @@ export const isGuardedPath = (pathname: string) =>
   (pathname.startsWith("/admin") || pathname.startsWith("/api/cms")) &&
   // Public despite the /api/cms prefix: cmsImageUrl() puts these URLs on public pages.
   // Only reads files under public/, which are served unauthenticated anyway.
-  !pathname.startsWith("/api/cms/img/");
+  !pathname.startsWith("/api/cms/img/") &&
+  pathname !== "/api/cms/health";

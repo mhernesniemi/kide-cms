@@ -61,7 +61,10 @@ const validateField = (
       break;
     case "json": {
       const component = field.admin?.component;
-      if (component === "taxonomy-terms" || component === "menu-items") {
+      if (component === "taxonomy-select") {
+        if (!Array.isArray(value) || value.some((v) => typeof v !== "string"))
+          errors.push({ field: name, message: "taxonomy-select (hasMany) expects an array of term slugs" });
+      } else if (component === "taxonomy-terms" || component === "menu-items") {
         if (!Array.isArray(value)) errors.push({ field: name, message: `${component} expects an array` });
         else validateTree(name, component, value, warnings);
       } else if (field.itemFields && Array.isArray(value)) validateRows(name, field.itemFields, value, warnings);
@@ -357,7 +360,8 @@ export const importDocuments = async (
       const created = await cms[item.collection].create(item.data, context);
       report.created++;
       for (const [locale, overlay] of Object.entries(item.translations ?? {})) {
-        await cms[item.collection].upsertTranslation(created._id, locale, overlay, context);
+        const live = item.data._status === "published" ? { _status: "published" } : {};
+        await cms[item.collection].upsertTranslation(created._id, locale, { ...overlay, ...live }, context);
         report.translated++;
       }
     } catch (e) {

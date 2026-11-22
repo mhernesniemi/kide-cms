@@ -7,6 +7,278 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.42.2] - 2026-11-22
+
+### Changed
+
+- **`MIGRATING.md` is gone from the project root.** The WordPress playbook ships with the importer as
+  `node_modules/@kidecms/wordpress/PLAYBOOK.md` (`@kidecms/wordpress` 0.2.1); the generic `load()` notes
+  are in `AGENTS.md`.
+
+## [0.42.1] - 2026-11-22
+
+### Fixed
+
+- **`pnpm add` in embedded projects** works without `-w`: the scaffolded and ejected `pnpm-workspace.yaml`
+  sets `ignoreWorkspaceRootCheck: true`. Existing embedded projects: add that line to their
+  `pnpm-workspace.yaml`.
+
+## [0.42.0] - 2026-11-22
+
+### Breaking
+
+- **The WordPress importer has its own command.** `kide import` is gone from core's CLI; run
+  `pnpm exec kide-wp <command>` from `@kidecms/wordpress` 0.2.0 instead (`scout`, `sample`, `plan`, `apply`,
+  `verify`, `check-live`, same flags). 0.41.0 also removed `@kidecms/core/importer`: mappings import
+  `defineMapping` and `skipSource` from `@kidecms/wordpress`.
+
+### Fixed
+
+- **`.nvmrc`** pins Node 22.23.4, matching the `engines` minimum (was 22.23.0).
+
+## [0.41.0] - 2026-11-21
+
+### Added
+
+- **`@kidecms/wordpress`:** the WordPress importer moved out of core into its own plugin package
+  (`pnpm add -D @kidecms/wordpress`; mappings import from it instead of `@kidecms/core/importer`, and
+  `kide import` runs it). It parses with WordPress's own `@wordpress/block-serialization-default-parser`,
+  `@wordpress/shortcode` and `@wordpress/autop`.
+
+- **Collection presets and standard blocks.** `presets.forms`, `presets.formSubmissions`, `presets.menus`,
+  `presets.taxonomies` and `presets.redirects`, plus `standardBlocks()` (accordion, table, video, audio, embed, code, html, and `form` with `{ forms: true }`),
+  from `@kidecms/core`. The marketing starter uses the presets instead of its own copies.
+- **WordPress importer:**
+  - Several mappings can share a source type, split by `filter` (posts into collections by category).
+  - `ctx.menuItems`, `ctx.termTree` and `ctx.form` build menus, term trees and Gravity Forms.
+  - Core details/table/video/audio/embed/html/media-text/cover/shortcode blocks, legacy `core-embed/*`, and
+    Gravity Forms blocks and `[gravityform]` shortcodes convert without handlers.
+  - `kide import --help` lists commands and flags; a drop list shared between mappings no longer reports
+    patterns another mapping uses as stale; `url-change` records need no `drop` entries.
+  - Shortcode handlers can return content nodes; block handlers get `b.children()` to build a parent
+    block (a carousel) from its child blocks.
+  - Internal links to documents whose route changed are rewritten to the new route.
+  - Bedrock installs are detected.
+  - Downloaded media is cached in `~/.cache/kide/import-media` (`KIDE_MEDIA_CACHE`), so re-runs and fresh
+    projects don't fetch the source site again.
+
+### Fixed
+
+- **`cms:upgrade`** deletes files a release moved elsewhere; before, git rename detection left them in place.
+- **WordPress importer:**
+  - Files the source answers 4xx for no longer fail their documents on `apply`: the references are
+    dropped and reported.
+  - Reading a block's `innerHTML` alongside `inner()` no longer counts its text twice.
+  - Media-modal and REST snapshots in block attributes, shortcode-like text in block JSON, Yoast scores
+    and menu-item bookkeeping no longer need `drop` entries.
+  - `verify` reads every locale the way the site serves it and flags empty fields and lost blocks.
+  - Default ids are unique across sources (`wp-form-4`, `wp-redirect-3`; posts stay `wp-<id>`), and a
+    duplicate id blocks the plan with the sources involved instead of crashing it. Imports of forms or
+    redirects with the old default ids are recreated under the new ones on the next `apply`.
+  - Gravity Forms Chained Selects keep every level; fields read in `filter` count as covered; the
+    translation advice ignores fields that are empty in both languages; `check-live` credits text from
+    documents a page embeds (forms) and no longer calls plugin output "drift".
+- **WordPress importer (round 3):** `apply` refuses while the database schema is behind the config;
+  core code/preformatted blocks keep their text verbatim (`code` block); markup-only blocks become an
+  `html` block or a warning instead of vanishing; Polylang's per-language copies of one file count as
+  one medium; empty ACF repeaters stage as `[]`; `ctx.termTree(src, { split: true })` and `termSlugs`
+  split bundled terms; Gravity Forms CAPTCHA and page-break fields are left out; files the source
+  answered 4xx for aren't retried until `apply --all`. `MenuItem` and `TermNode` are exported.
+- **API:** `findById(id, { status })` reads collections without drafts instead of returning null.
+- **WordPress importer (round 10):** inner content a block handler or auto-mapped block leaves out now
+  fails the text check instead of vanishing at 100% recall; an auto-mapped block's saved markup needs no
+  `drop`; taxonomy fields match terms whatever their spelling (`jobTitles` ← `job_title`).
+- **WordPress importer (round 9):** a handler that reads `innerHTML` and converts pieces of it with
+  `ctx.text`/`richText` gets that text counted once; a block's `heading`/`title` also fills from a heading
+  nested in a group.
+- **WordPress importer (round 8):** `b.auto()` gives a block handler the auto-mapped fields to spread and
+  override; field names also match `<name>Id` / `<name>Url`; a media snapshot of a deleted attachment falls
+  back to its URL.
+- **API:** `meta.isTranslatableField` (used by the MCP translation tool) follows the same rule as storage, so
+  translatable image, date, number, boolean and relation fields can be translated there too.
+- **WordPress importer (round 7):** Yoast `%%…%%` default patterns aren't staged as SEO content; taxonomy
+  fields match snake_case taxonomies (`jobTitle` ← `job_title`); script/style bodies aren't scanned for
+  shortcodes; an empty `--uploads` folder falls back to downloading; each stale drop is reported once; core blocks without a built-in conversion map by name like plugin blocks;
+  a block's unfilled repeater takes one row per child block and its unfilled heading/title its heading
+  child's text; a 4xx at the source is cached (`.gone` in the media cache) so fresh projects don't ask again.
+- **WordPress importer (round 6):** plugin blocks (not just ACF) map onto a same-named declared block from
+  their attributes; `auto` leaves unresolved references out with a warning, turns post ids in link fields
+  into reference links, drops empty rows, and falls back to same-named ACF meta; the plan drops redirects
+  that point at themselves, hide a moved document's route or duplicate another; `--help` on any
+  `kide import` subcommand only prints usage.
+- **WordPress importer (round 5):** `ctx.auto(src)` fills a collection by field name and type (post columns,
+  terms, Yoast SEO, ACF meta), and ACF blocks map onto the declared block of the same name; every internal
+  URL value is rewritten to moved documents' routes, Redirection targets included; translations that
+  leave a text field empty are reported; the profile shows each type's URL prefixes and nested URLs,
+  collapses data-keyed objects, and lists attributes of core blocks without a built-in conversion.
+- **WordPress importer (round 4):** the schema check compares the database with the config itself (the
+  generated schema is stale too until `cms:push`); `verify` also flags translations the site serves with
+  the original's value; `check-live` pages are cached in `~/.cache/kide/import-live` like media.
+- **Translations:** a translation that clears a field (`null`, an empty rich-text/content document or
+  `{}`) inherits the original instead of hiding it.
+- **WordPress importer:** term names decode HTML entities, and so does the text check; media downloads
+  allow 5 minutes per file.
+
+## [0.40.0] - 2026-11-21
+
+### Added
+
+- **Mark a translation as up to date.** An outdated translation can be confirmed from the editor
+  without changing it; new API `markTranslationCurrent(id, locale)`.
+
+### Changed
+
+- **Languages column** lists the original language first, set apart from its translations.
+
+## [0.39.1] - 2026-11-19
+
+### Fixed
+
+- **Release publishing.** 0.39.0 was tagged but never reached npm; 0.39.1 is the same release, now
+  published through npm Trusted Publishing. See 0.39.0 below for the changes.
+
+## [0.39.0] - 2026-11-18
+
+### Added
+
+- **WordPress importer** (`pnpm exec kide import`, mappings via `@kidecms/core/importer`): scout a MySQL
+  dump, map post types with `defineMapping`, then `plan` → `apply` → `verify` → `check-live`. Reads ACF,
+  Gutenberg, Polylang/WPML, menus, Yoast permalinks, Gravity Forms and Redirection. `plan` blocks on
+  unmapped fields, invalid values, missing references or media, bundled terms and lost text, and advises
+  which fields to make translatable.
+- **Per-language translation drafts.** In draft-enabled collections each translation has its own
+  status: new translations start as drafts, edits to a published one stay off the site until it is
+  published again. New API: `publishTranslation`, `unpublishTranslation`, `discardTranslationDraft`,
+  `deleteTranslation`; `upsertTranslation` takes `_status: "published"`. Reads with `status: "any"`
+  carry `_localeStates`, and translations saved before the original changed are flagged outdated.
+- **`fields.taxonomy({ taxonomy, hasMany })`**: a term picker over a `taxonomies` document; `hasMany`
+  stores an array of slugs.
+- **Per-locale `pathPrefix`** (`{ en: "blogs", fi: "blogit" }`) and `documentRoute()`; routes, search and
+  preview follow the document's language.
+
+### Changed
+
+- **Translation editing in the admin**: one layout for every language, shared fields disabled, empty
+  fields show the original as placeholder, a language switcher with per-language status, a Languages
+  column showing every language, "Missing <language>" filters for all languages, and a remembered
+  working language.
+- **Admin dates** default to `17 Nov 2026, 21:38` (`dateFormat: "en-GB"`), with relative times for the
+  last 24 hours. List columns default to Updated only.
+- **AI field actions** moved to a sparkle menu in the field's label row; AI stays off while
+  `AI_API_KEY` is the `.env.example` placeholder.
+- **`admin.icon`** accepts any Lucide icon name and warns about unknown ones.
+- Empty translation fields fall back to the original, so `required` no longer applies to translations.
+
+### Upgrade notes
+
+- Package mode: `pnpm add @kidecms/core@latest`, then `pnpm cms:push`: translation tables gain
+  `_status`, `_published`, `_updated_at` and `_source_hash`. Existing translations stay published.
+- Code that calls `upsertTranslation` for published documents in draft-enabled collections should pass
+  `_status: "published"` (or call `publishTranslation`); a new translation is otherwise a draft.
+- Set `admin.dateFormat: "en-US"` to keep the previous date order.
+
+## [0.38.0] - 2026-11-16
+
+### Changed
+
+- **Dependencies updated**, including Astro 7.4.12, `@astrojs/node` 11.1.13, `@astrojs/react` 7,
+  Better Auth 1.7.23, Tiptap 3.34, AI SDK 7 (`ai`) with `@ai-sdk/openai` 4, and pnpm 10.34.9.
+  The Astro and pnpm bumps fix published security advisories.
+- **`better-sqlite3` 13 is supported.** The peer range is now `^12.0.0 || ^13.0.0`, so existing
+  projects keep working on 12.
+
+### Upgrade notes
+
+- Package mode: `pnpm add @kidecms/core@latest`. Also bump `astro` to 7.4.12 or newer for the
+  security fixes.
+
+## [0.37.0] - 2026-11-16
+
+### Changed
+
+- **`KIDE_AUTH_SECRET` is now `KIDE_SECRET`.** It's Kide's one application secret, not only an
+  auth setting. `KIDE_AUTH_SECRET` and `BETTER_AUTH_SECRET` still work as fallbacks, so existing
+  deployments need no change; rename the variable when convenient. Keep the same value: a new
+  one signs everyone out and breaks existing two-factor enrolments.
+
+## [0.36.0] - 2026-10-27
+
+### Changed
+
+- **Node.js 22.23.4 or newer is required.** Astro 7.4.2 raised its minimum to the October 2026
+  Node.js security release. Update Node before upgrading.
+- **Dependencies bumped** within their current majors, including Astro 7.4.2, `@astrojs/node`
+  11.1.9, Better Auth 1.7.14 and Tiptap 3.32.
+
+### Fixed
+
+- **Admin saves work when the Node adapter doesn't trust the `Host` header.** `@astrojs/node`
+  11.1.7+ only trusts `Host` for domains in `security.allowedDomains` and otherwise reports the
+  request URL as `localhost`, which made Kide's CSRF check reject same-origin admin requests.
+  The check now accepts the browser's `Sec-Fetch-Site: same-origin` first, falling back to
+  `Origin`/`Referer`.
+- **`CMS_TRUSTED_ORIGIN` sets Astro's `security.allowedDomains`** when present at build time and
+  the project hasn't configured its own, so `Astro.url` reports the real host behind a proxy.
+
+## [0.35.1] - 2026-10-27
+
+### Fixed
+
+- **Embedded upgrades pass lint again.** The upgrade packet's `backup/` copies of managed files
+  were linted by `eslint .`, so a backed-up `.mjs` file failed `pnpm check` after upgrading. The
+  backup folder now carries its own ESLint config that ignores it. 0.35.0 was never published to
+  npm because of this; 0.35.1 ships its changes.
+
+## [0.35.0] - 2026-10-27
+
+Node deploy features for container platforms. All opt-in through env vars; existing projects need
+no changes.
+
+### Added
+
+- **Health endpoint.** `GET /api/cms/health` returns `200` when the database answers with the CMS
+  schema in place, otherwise `503`. For deploy healthchecks and uptime monitors.
+- **Migrations on Node.** `CMS_MIGRATE_ON_BOOT=1` applies the committed migrations in
+  `src/cms/migrations/` (the same files D1 uses) on the first database connection, using only
+  drizzle-orm. `kide migrate` applies them from the CLI, `kide migrate --baseline` marks them
+  applied on a database synced with `cms:push`, and `kide migrate --check` fails CI when a schema
+  change has no migration. `CMS_MIGRATIONS_DIR` overrides the folder.
+- **In-process scheduler.** `CMS_SCHEDULER=1` runs scheduled publishing and background tasks every
+  minute inside a long-running Node server, replacing an external cron.
+- **`CMS_CACHE_DIR`** moves the resized-image cache (default `./.cms-cache`) to a persistent volume.
+
+### Fixed
+
+- **Overlapping schedulers publish once.** Each due document is claimed before it's published or
+  unpublished, so two cron runs at the same time (e.g. old and new containers during a deploy) no
+  longer fire hooks and webhooks twice.
+
+## [0.34.0] - 2026-10-27
+
+### Added
+
+- **S3-compatible storage profile.** Uploads can live in any S3-compatible bucket (AWS S3, UpCloud
+  Object Storage, Hetzner, MinIO, R2's S3 API): point `src/cms/adapters/storage.ts` at
+  `@kidecms/core/platform/s3/storage` and set `S3_BUCKET`, `S3_ACCESS_KEY_ID`,
+  `S3_SECRET_ACCESS_KEY` (plus `S3_ENDPOINT` / `S3_REGION` / `S3_PREFIX` as needed). Opt-in;
+  existing projects need no changes.
+
+### Changed
+
+- **Image resizing on Node reads originals through the storage adapter** instead of the uploads
+  directory on disk, so resizing works with any adapter, including custom ones.
+
+## [0.33.1] - 2026-10-20
+
+### Fixed
+
+- **Soft line breaks survive saving.** A Shift+Enter break in a rich-text or content field was
+  dropped on save; it's now stored as `\n` in the text value (the shape `htmlToRichText` and
+  `createRichTextFromPlainText` already produce) and rendered as `<br />`.
+- **Pasted formatting the CMS can't store no longer vanishes on save.** The editors no longer enable
+  underline, strike, inline code, code blocks or horizontal rules, so pasted or shortcut-typed
+  formatting falls back to plain text. Pasted code blocks previously lost their text entirely.
+
 ## [0.33.0] - 2026-10-13
 
 ### Fixed

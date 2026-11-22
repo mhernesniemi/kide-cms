@@ -29,135 +29,7 @@ import { cn } from "../lib/utils";
 import { toggleHeading } from "../lib/editor-commands";
 import { openPreviewChannel } from "../lib/preview-channel";
 import ImageBrowseDialog from "./ImageBrowseDialog";
-
-// -----------------------------------------------
-// CMS AST ↔ Tiptap JSON conversion
-// -----------------------------------------------
-
-export type CmsNode = {
-  type: string;
-  value?: string;
-  level?: number;
-  ordered?: boolean;
-  bold?: boolean;
-  italic?: boolean;
-  children?: CmsNode[];
-  [key: string]: unknown;
-};
-
-export type CmsDocument = {
-  type: "root";
-  children: CmsNode[];
-};
-
-export const cmsNodeToTiptap = (node: CmsNode): any => {
-  if (node.type === "text") {
-    const marks: any[] = [];
-    if (node.bold) marks.push({ type: "bold" });
-    if (node.italic) marks.push({ type: "italic" });
-    if (node.href) marks.push({ type: "link", attrs: { href: node.href, target: node.target ?? null } });
-    return { type: "text", text: node.value ?? "", ...(marks.length > 0 ? { marks } : {}) };
-  }
-  if (node.type === "paragraph") {
-    const content = (node.children ?? []).map(cmsNodeToTiptap).filter(Boolean);
-    return { type: "paragraph", ...(content.length > 0 ? { content } : {}) };
-  }
-  if (node.type === "heading") {
-    const content = (node.children ?? []).map(cmsNodeToTiptap).filter(Boolean);
-    return {
-      type: "heading",
-      attrs: { level: node.level ?? 2 },
-      ...(content.length > 0 ? { content } : {}),
-    };
-  }
-  if (node.type === "list") {
-    const content = (node.children ?? []).map(cmsNodeToTiptap).filter(Boolean);
-    return {
-      type: node.ordered ? "orderedList" : "bulletList",
-      ...(content.length > 0 ? { content } : {}),
-    };
-  }
-  if (node.type === "list-item") {
-    const content = (node.children ?? []).map(cmsNodeToTiptap).filter(Boolean);
-    // Tiptap expects list items to contain paragraphs
-    const wrapped = content.map((c: any) => (c.type === "paragraph" ? c : { type: "paragraph", content: [c] }));
-    return { type: "listItem", ...(wrapped.length > 0 ? { content: wrapped } : {}) };
-  }
-  if (node.type === "quote") {
-    const content = (node.children ?? []).map(cmsNodeToTiptap).filter(Boolean);
-    return { type: "blockquote", ...(content.length > 0 ? { content } : {}) };
-  }
-  if (node.type === "image") {
-    return { type: "image", attrs: { src: node.src ?? "", alt: node.alt ?? "", title: node.title ?? "" } };
-  }
-  return null;
-};
-
-const cmsToTiptap = (doc: CmsDocument | null | undefined): any => {
-  if (!doc || doc.type !== "root") {
-    return { type: "doc", content: [{ type: "paragraph" }] };
-  }
-  const content = doc.children.map(cmsNodeToTiptap).filter(Boolean);
-  return { type: "doc", content: content.length > 0 ? content : [{ type: "paragraph" }] };
-};
-
-export const tiptapNodeToCms = (node: any): CmsNode | null => {
-  if (node.type === "text") {
-    const result: CmsNode = { type: "text", value: node.text ?? "" };
-    if (node.marks) {
-      for (const mark of node.marks) {
-        if (mark.type === "bold") result.bold = true;
-        if (mark.type === "italic") result.italic = true;
-        if (mark.type === "link") {
-          result.href = mark.attrs?.href ?? "";
-          if (mark.attrs?.target) result.target = mark.attrs.target;
-        }
-      }
-    }
-    return result;
-  }
-  if (node.type === "paragraph") {
-    return {
-      type: "paragraph",
-      children: (node.content ?? []).map(tiptapNodeToCms).filter(Boolean),
-    };
-  }
-  if (node.type === "heading") {
-    return {
-      type: "heading",
-      level: node.attrs?.level ?? 2,
-      children: (node.content ?? []).map(tiptapNodeToCms).filter(Boolean),
-    };
-  }
-  if (node.type === "bulletList" || node.type === "orderedList") {
-    return {
-      type: "list",
-      ordered: node.type === "orderedList",
-      children: (node.content ?? []).map(tiptapNodeToCms).filter(Boolean),
-    };
-  }
-  if (node.type === "listItem") {
-    return {
-      type: "list-item",
-      children: (node.content ?? []).map(tiptapNodeToCms).filter(Boolean),
-    };
-  }
-  if (node.type === "blockquote") {
-    return {
-      type: "quote",
-      children: (node.content ?? []).map(tiptapNodeToCms).filter(Boolean),
-    };
-  }
-  if (node.type === "image") {
-    return { type: "image", src: node.attrs?.src ?? "", alt: node.attrs?.alt ?? "", title: node.attrs?.title ?? "" };
-  }
-  return null;
-};
-
-const tiptapToCms = (json: any): CmsDocument => ({
-  type: "root",
-  children: (json.content ?? []).map(tiptapNodeToCms).filter(Boolean),
-});
+import { starterKitOptions, cmsToTiptap, tiptapToCms } from "./richtext-tiptap";
 
 // -----------------------------------------------
 // Toolbar button
@@ -458,8 +330,7 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
       setBaseline(JSON.stringify(tiptapToCms(editor.getJSON())));
     },
     extensions: [
-      // StarterKit bundles its own Link; disabled so the configured one below is the only registration.
-      StarterKit.configure({ link: false }),
+      StarterKit.configure(starterKitOptions),
       EditorImage,
       Markdown,
       Link.configure({

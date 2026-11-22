@@ -60,7 +60,7 @@ export const createCmsContext = async <TCms = ReturnType<typeof createCms>>() =>
     /** The machine-readable content model (same as `.kide/model.json`). */
     model: () => describeModel(config),
     /** Rebuild the search index for all searchable collections (uses this config's locales). */
-    reindex: () => reindexAll(config.collections, config.locales?.supported ?? []),
+    reindex: () => reindexAll(config.collections, config.locales?.supported ?? [], config.locales?.default),
     /** Create the FTS search schema if missing (call before indexing). */
     ensureSearchSchema,
     /** Await all fire-and-forget search/audit tasks queued so far. */

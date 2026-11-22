@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { FieldConfig } from "../../core";
 import { serializeFieldValue, humanize } from "../../core";
 import { customFields } from "virtual:kide/custom-fields";
@@ -58,6 +59,7 @@ export type FieldControlProps = {
   /** False when the project registers no `shared-sections` collection (or the
    * user may not write to it) — the save-as-shared action stays hidden. */
   sharedSectionsAvailable?: boolean;
+  labelActions?: ReactNode;
 };
 
 export function FieldControl(props: FieldControlProps) {
@@ -156,7 +158,7 @@ export function FieldControl(props: FieldControlProps) {
 
   return (
     <div
-      className="grid gap-2"
+      className="group/field grid gap-2"
       data-field-name={name}
       {...(field.condition
         ? {
@@ -166,10 +168,13 @@ export function FieldControl(props: FieldControlProps) {
         : {})}
     >
       {!isTreeEditor && field.type !== "boolean" && (
-        <Label htmlFor={name}>
-          {label}
-          {field.required ? " *" : ""}
-        </Label>
+        <div className="flex min-h-5 items-center justify-between gap-2">
+          <Label htmlFor={name}>
+            {label}
+            {field.required ? " *" : ""}
+          </Label>
+          {props.labelActions}
+        </div>
       )}
       {field.type !== "boolean" && field.description && (
         <p className="text-muted-foreground -mt-1 text-xs leading-5">{field.description}</p>
@@ -204,19 +209,32 @@ export function FieldControl(props: FieldControlProps) {
             />
           )}
 
-          {field.type === "text" && field.admin?.component === "taxonomy-select" && !readOnly && (
-            <Island
-              name="TaxonomySelect"
-              component={TaxonomySelect}
-              props={{ name, value: serializedValue, taxonomySlug: field.admin?.placeholder ?? "" }}
-            />
-          )}
+          {(field.type === "text" || field.type === "json") &&
+            field.admin?.component === "taxonomy-select" &&
+            !readOnly && (
+              <Island
+                name="TaxonomySelect"
+                component={TaxonomySelect}
+                props={{
+                  name,
+                  value: field.type === "json" ? JSON.stringify(Array.isArray(value) ? value : []) : serializedValue,
+                  taxonomySlug: field.admin?.taxonomy ?? field.admin?.placeholder ?? "",
+                  multiple: field.type === "json",
+                }}
+              />
+            )}
 
-          {field.type === "text" && field.admin?.component === "color" && !readOnly && (
+          {field.type === "text" && field.admin?.component === "color" && (
             <Island
               name="ColorField"
               component={ColorField}
-              props={{ name, value: serializedValue, placeholder, colors: field.admin?.colors ?? colorPalette }}
+              props={{
+                name,
+                disabled: readOnly,
+                value: serializedValue,
+                placeholder,
+                colors: field.admin?.colors ?? colorPalette,
+              }}
             />
           )}
 
@@ -507,7 +525,8 @@ export function FieldControl(props: FieldControlProps) {
               field.admin?.component !== "taxonomy-terms" &&
               field.admin?.component !== "shared-section-block" &&
               field.admin?.component !== "link" &&
-              field.admin?.component !== "repeater")) && (
+              field.admin?.component !== "repeater" &&
+              !(field.admin?.component === "taxonomy-select" && !readOnly))) && (
             <Textarea
               className={controlClass}
               id={name}

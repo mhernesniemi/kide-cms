@@ -14,7 +14,7 @@ src/
     adapters/             # db, email, storage adapters
     fields/               # Custom admin field components (user-authored .tsx, optional)
     runtime.ts            # Composition root — wires adapters into the core runtime
-    migrations/           # Drizzle migrations (Cloudflare D1 only — Node syncs via cms:push, no migrate-on-boot)
+    migrations/           # Drizzle migrations (D1 always; Node opt-in via CMS_MIGRATE_ON_BOOT / `kide migrate`, else cms:push)
     .generated/           # Auto-generated schema/types/validators/api (do not edit)
     # managed package dirs (published to npm; in package mode these live in node_modules):
     core/                 # CMS runtime library (define, api, auth, schema, content, ...)
@@ -22,7 +22,7 @@ src/
     routes/               # Admin pages (.tsx) + API routes, dispatched by Kide's own router (table.ts)
     middleware/           # Host-neutral request middleware (gate.ts) + the Astro wrapper (auth.ts)
     client/               # preview.ts — browser-side live-preview client
-    platform/             # node / cloudflare database + storage implementations
+    platform/             # node / cloudflare database + storage implementations, s3 storage
     internals/            # Runner scripts, integration.ts, cli.mjs (`kide` bin), virtual.d.ts
   components/             # App-level components (incl. BlockRenderer)
   layouts/, pages/, styles/, env.d.ts
@@ -94,7 +94,7 @@ Keep provider-specific code (API clients, sync logic, read models) in the app (`
 
 ## Admin auth (Better Auth)
 
-`core/auth-engine.ts` turns `admin.auth` into Better Auth options (`buildAdminAuthOptions`) — the generator reads the table layout from the same function, so plugin tables land in `.generated/schema.ts` as `cms_auth_*` and Better Auth's user fields as `_auth*` columns on `cms_users`. At runtime Better Auth reads and writes through an in-memory drizzle view of those tables (`id` ↔ `_id`, ISO-text dates ↔ `Date`); instances are cached per public origin (`getAdminAuth(request)`). Kide's own routes (`routes/api/auth/*`) keep the UX, rate limits and audit and call `auth.api.*` server-side; `routes/api/auth/[...all].ts` forwards only an allowlist of Better Auth endpoints (OAuth callbacks, two-factor, passkeys). Passwords live in credential accounts, never on the users row — always write them through the users collection API or `setCredentialPassword`. Kide creates admin users itself; Better Auth may only create SSO users with `provisioning: "jit"` (enforced in `databaseHooks.user.create.before`). Production needs `KIDE_AUTH_SECRET`.
+`core/auth-engine.ts` turns `admin.auth` into Better Auth options (`buildAdminAuthOptions`) — the generator reads the table layout from the same function, so plugin tables land in `.generated/schema.ts` as `cms_auth_*` and Better Auth's user fields as `_auth*` columns on `cms_users`. At runtime Better Auth reads and writes through an in-memory drizzle view of those tables (`id` ↔ `_id`, ISO-text dates ↔ `Date`); instances are cached per public origin (`getAdminAuth(request)`). Kide's own routes (`routes/api/auth/*`) keep the UX, rate limits and audit and call `auth.api.*` server-side; `routes/api/auth/[...all].ts` forwards only an allowlist of Better Auth endpoints (OAuth callbacks, two-factor, passkeys). Passwords live in credential accounts, never on the users row — always write them through the users collection API or `setCredentialPassword`. Kide creates admin users itself; Better Auth may only create SSO users with `provisioning: "jit"` (enforced in `databaseHooks.user.create.before`). Production needs `KIDE_SECRET`.
 
 ## Validation (IMPORTANT)
 
@@ -199,7 +199,7 @@ await dispose(); // flush fire-and-forget tasks, then close the DB
 
 ## Stack
 
-Astro 7, React 19, Drizzle ORM (SQLite dev), Zod, Tiptap, shadcn/ui, Tailwind CSS v4, Better Auth (admin sign-in; PBKDF2 password hashes), nanoid, Sharp (image optimization), pnpm, Node >=22.12.0
+Astro 7, React 19, Drizzle ORM (SQLite dev), Zod, Tiptap, shadcn/ui, Tailwind CSS v4, Better Auth (admin sign-in; PBKDF2 password hashes), nanoid, Sharp (image optimization), pnpm, Node >=22.23.4
 
 ## Field Types
 

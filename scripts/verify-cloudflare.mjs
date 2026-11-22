@@ -44,7 +44,7 @@ try {
   const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
   delete pkg.dependencies["@astrojs/node"];
   delete pkg.dependencies["sharp"];
-  pkg.dependencies["@astrojs/cloudflare"] = "~14.1.7";
+  pkg.dependencies["@astrojs/cloudflare"] = "~14.4.8";
   if (pkg.dependencies["better-sqlite3"]) {
     pkg.devDependencies["better-sqlite3"] = pkg.dependencies["better-sqlite3"];
     delete pkg.dependencies["better-sqlite3"];
@@ -68,7 +68,7 @@ try {
 
   // Production builds refuse to sign admin sessions without a secret; wrangler dev reads
   // local secrets from .dev.vars next to the config it boots with.
-  const devVars = "KIDE_AUTH_SECRET=verify-only-secret-0123456789abcdef\n";
+  const devVars = "KIDE_SECRET=verify-only-secret-0123456789abcdef\n";
   writeFileSync(path.join(dir, ".dev.vars"), devVars);
   writeFileSync(path.join(dir, "dist/server/.dev.vars"), devVars);
 
@@ -110,7 +110,7 @@ async function bootAndProbe(dir) {
     });
     const setupRes = await fetch(`${base}/api/cms/auth/setup`, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: base },
+      headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: base, "Sec-Fetch-Site": "same-origin" },
       body: setupBody,
       redirect: "manual",
     });
@@ -131,7 +131,7 @@ async function bootAndProbe(dir) {
     form.set("file", new Blob([png], { type: "image/png" }), "probe.png");
     const uploadRes = await fetch(`${base}/api/cms/assets/upload`, {
       method: "POST",
-      headers: { cookie, Origin: base },
+      headers: { cookie, Origin: base, "Sec-Fetch-Site": "same-origin" },
       body: form,
       redirect: "manual",
     });

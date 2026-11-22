@@ -8,11 +8,12 @@ import ImageBrowseDialog from "./ImageBrowseDialog";
 type Props = {
   name: string;
   value?: string;
+  /** Image used while this one is empty (a translation's original), shown faded. */
   placeholder?: string;
   onChange?: (value: string) => void;
 };
 
-export default function ImagePicker({ name, value: initialValue, onChange: onChangeProp }: Props) {
+export default function ImagePicker({ name, value: initialValue, placeholder, onChange: onChangeProp }: Props) {
   const [value, setValue] = useState(initialValue ?? "");
   const [assetId, setAssetId] = useState<string | null>(null);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
@@ -84,8 +85,14 @@ export default function ImagePicker({ name, value: initialValue, onChange: onCha
     <div className="space-y-3">
       <input ref={hiddenRef} type="hidden" name={name} value={value} />
 
+      {!value && placeholder && (
+        <div className="block size-40 overflow-hidden rounded-lg border border-dashed" title="Inherited">
+          <img src={thumbnail(placeholder)} alt="" className="size-full object-cover opacity-40" />
+        </div>
+      )}
+
       {value && (
-        <div className="group relative inline-block">
+        <div className="group relative w-fit">
           {isImage ? (
             <button
               type="button"

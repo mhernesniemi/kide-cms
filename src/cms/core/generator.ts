@@ -177,6 +177,14 @@ const generateTranslationsTable = (config: CMSConfig, collection: CollectionConf
     `  _entityId: text("_entity_id").notNull().references(() => ${mainVar}._id, { onDelete: "cascade" }),`,
     `  _languageCode: text("_language_code").notNull(),`,
   ];
+  // Mirrors the document's own draft model per language; existing rows default to live.
+  if (collection.drafts) {
+    columns.push(`  _status: text("_status").notNull().default("published"),`);
+    columns.push(`  _published: text("_published"),`);
+  }
+  columns.push(`  _updatedAt: text("_updated_at"),`);
+  // Hash of the original's translatable values when this translation was saved; a mismatch means outdated.
+  columns.push(`  _sourceHash: text("_source_hash"),`);
 
   for (const fieldName of translatableFields) {
     columns.push(generateColumnDef(fieldName, collection.fields[fieldName], { bare: true }));
@@ -598,7 +606,12 @@ const generateApiFile = (
     unpublish(id: string, ${ctx}): Promise<${baseName}Document>;
     schedule(id: string, publishAt: string, unpublishAt?: string | null, ${ctx}): Promise<${baseName}Document>;
     getTranslations(id: string, ${ctx}): Promise<Record<string, ${baseName}TranslationInput>>;
-    upsertTranslation(id: string, locale: string, data: ${baseName}TranslationInput, ${ctx}): Promise<${baseName}Document>;
+    upsertTranslation(id: string, locale: string, data: ${baseName}TranslationInput & { _status?: "draft" | "published" }, ${ctx}): Promise<${baseName}Document>;
+    publishTranslation(id: string, locale: string, ${ctx}): Promise<${baseName}Document>;
+    unpublishTranslation(id: string, locale: string, ${ctx}): Promise<${baseName}Document>;
+    discardTranslationDraft(id: string, locale: string, ${ctx}): Promise<${baseName}Document>;
+    markTranslationCurrent(id: string, locale: string, ${ctx}): Promise<${baseName}Document>;
+    deleteTranslation(id: string, locale: string, ${ctx}): Promise<boolean>;
   };`;
     })
     .join("\n");

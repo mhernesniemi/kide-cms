@@ -14,6 +14,7 @@ type Props = {
   /** Predefined palette (from `admin.colors` in cms.config.ts). */
   colors?: ColorOption[];
   onChange?: (value: string) => void;
+  disabled?: boolean;
 };
 
 function Swatch({ color }: { color: string }) {
@@ -22,7 +23,7 @@ function Swatch({ color }: { color: string }) {
   );
 }
 
-export default function ColorField({ name, value: initial, placeholder, colors = [], onChange }: Props) {
+export default function ColorField({ name, value: initial, placeholder, colors = [], onChange, disabled }: Props) {
   const [value, setValue] = useState(initial ?? "");
   const hiddenRef = useRef<HTMLInputElement>(null);
   const isInitial = useRef(true);
@@ -51,8 +52,8 @@ export default function ColorField({ name, value: initial, placeholder, colors =
     <div className="relative">
       {name && <input type="hidden" name={name} value={value} ref={hiddenRef} />}
 
-      <Select items={options} value={value} onValueChange={(v) => set((v as string) ?? "")}>
-        <SelectTrigger className={cn("w-full", value && "pr-14")}>
+      <Select items={options} value={value} disabled={disabled} onValueChange={(v) => set((v as string) ?? "")}>
+        <SelectTrigger className={cn("w-full", value && !disabled && "pr-14")}>
           {selected ? (
             <span className="flex flex-1 items-center gap-2">
               <Swatch color={selected.value} />
@@ -60,7 +61,9 @@ export default function ColorField({ name, value: initial, placeholder, colors =
               <span className="text-muted-foreground ml-auto font-mono text-xs">{selected.value}</span>
             </span>
           ) : (
-            <span className="text-muted-foreground flex-1 text-left">{placeholder || "Select a colour…"}</span>
+            <span className="text-muted-foreground flex-1 text-left">
+              {disabled ? "No colour" : placeholder || "Select a colour…"}
+            </span>
           )}
         </SelectTrigger>
         <SelectContent>
@@ -76,7 +79,7 @@ export default function ColorField({ name, value: initial, placeholder, colors =
         </SelectContent>
       </Select>
 
-      {value && (
+      {value && !disabled && (
         <button
           type="button"
           title="Clear"

@@ -281,10 +281,11 @@ server.registerTool(
   "kide_publish_document",
   {
     title: "Publish document",
-    description: "Publish a draft-enabled document by id.",
+    description: "Publish a draft-enabled document by id. With locale, publishes only that translation.",
     inputSchema: {
       collection: z.string().min(1),
       id: z.string().min(1),
+      locale: z.string().min(1).optional(),
     },
   },
   async (args) => toResult(await workerCall("publishDocument", args)),
@@ -294,10 +295,11 @@ server.registerTool(
   "kide_unpublish_document",
   {
     title: "Unpublish document",
-    description: "Unpublish a draft-enabled document by id.",
+    description: "Unpublish a draft-enabled document by id. With locale, unpublishes only that translation.",
     inputSchema: {
       collection: z.string().min(1),
       id: z.string().min(1),
+      locale: z.string().min(1).optional(),
     },
   },
   async (args) => toResult(await workerCall("unpublishDocument", args)),
@@ -335,7 +337,8 @@ server.registerTool(
   "kide_upsert_translation",
   {
     title: "Upsert translation",
-    description: "Create or update a locale translation. Only translatable fields are accepted.",
+    description:
+      "Create or update a locale translation. Only translatable fields are accepted. A new translation of a draft-enabled collection starts as a draft; publish it with kide_publish_document and locale.",
     inputSchema: {
       collection: z.string().min(1),
       id: z.string().min(1),

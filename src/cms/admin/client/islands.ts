@@ -4,6 +4,7 @@ type IslandModule = { default: ComponentType<any> };
 
 /** Every component a page may hydrate, loaded on demand in the browser. */
 export const islands = {
+  AiFieldActions: () => import("../components/AiFieldActions"),
   AiGenerateButton: () => import("../components/AiGenerateButton"),
   AssetsGrid: () => import("../components/AssetsGrid"),
   BlockEditor: () => import("../components/BlockEditor"),
@@ -30,6 +31,7 @@ export const islands = {
   SidebarUserMenu: () => import("../components/SidebarUserMenu"),
   SlugField: () => import("../components/SlugField"),
   TaxonomySelect: () => import("../components/TaxonomySelect"),
+  TranslationActions: () => import("../components/TranslationActions"),
   TreeItemsEditor: () => import("../components/TreeItemsEditor"),
   TreeSelect: () => import("../components/TreeSelect"),
   TwoFactorSettings: () => import("../components/TwoFactorSettings"),

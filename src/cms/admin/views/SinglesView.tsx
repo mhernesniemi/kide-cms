@@ -2,15 +2,16 @@ import config from "virtual:kide/config";
 import { cms } from "virtual:kide/api";
 import DocumentsDataTable from "../components/DocumentsDataTable";
 import { Island } from "../render/island";
-import { formatDate, formatPagePath, getPageHref, getTranslatableFieldNames } from "../../core";
+import { formatDate, getDateSettings, formatPagePath, getPageHref, getTranslatableFieldNames } from "../../core";
 import { canRead } from "../lib/access";
 import type { AdminUser } from "./types";
 
-export async function loadSinglesView(user: AdminUser) {
+export async function loadSinglesView(user: AdminUser, workingLocale?: string) {
   const runtimeContext = user ? { user } : {};
   const cmsRuntime = cms as Record<string, any>;
   const defaultLocale = config.locales?.default ?? "en";
   const locales = config.locales?.supported ?? [];
+  const contentLocale = workingLocale ?? defaultLocale;
 
   const singletonCollections = config.collections.filter((c) => c.singleton && canRead(config, user, c.slug));
   // Same rule as ListView: a Locales column is only meaningful with more than one
@@ -31,7 +32,7 @@ export async function loadSinglesView(user: AdminUser) {
   const singletonsData = await Promise.all(
     singletonCollections.map(async (sc) => {
       const api = cmsRuntime[sc.slug];
-      const singleDocs = await api.find({ status: "any", limit: 1, locale: defaultLocale }, runtimeContext);
+      const singleDocs = await api.find({ status: "any", limit: 1, locale: contentLocale }, runtimeContext);
       const singleDoc = singleDocs[0] ?? null;
       const pagePath = getPagePath(sc, singleDoc);
       return {
@@ -44,6 +45,7 @@ export async function loadSinglesView(user: AdminUser) {
             ? singleDoc._availableLocales.map((l: string) => String(l))
             : [defaultLocale]
           : [],
+        localeStates: singleDoc?._localeStates as Record<string, { status: string; outdated?: boolean }> | undefined,
         updatedAt: singleDoc ? formatDate(singleDoc._updatedAt) : "—",
         editHref: `/admin/${sc.slug}`,
         page: pagePath,
@@ -54,12 +56,13 @@ export async function loadSinglesView(user: AdminUser) {
     }),
   );
 
-  return { singletonsData, showLocalesColumn, anyDrafts: singletonCollections.some((c) => c.drafts) };
+  return { singletonsData, showLocalesColumn, locales, anyDrafts: singletonCollections.some((c) => c.drafts) };
 }
 
 export function SinglesView({
   singletonsData,
   showLocalesColumn,
+  locales,
   anyDrafts,
 }: Awaited<ReturnType<typeof loadSinglesView>>) {
   return (
@@ -74,6 +77,8 @@ export function SinglesView({
           collectionSlug: "singles",
           draftsEnabled: true,
           duplicateEnabled: false,
+          dateSettings: getDateSettings(),
+          supportedLocales: showLocalesColumn ? locales : undefined,
           title: "Singles",
           columns: [
             { key: "name", label: "Name" },
@@ -86,6 +91,7 @@ export function SinglesView({
             collectionSlug: s.collectionSlug,
             editHref: s.editHref,
             locales: s.locales,
+            localeStates: s.localeStates,
             searchText: `${s.label} ${s.collectionSlug}`,
             values: { name: s.label, __page: formatPagePath(s.page), _status: s.status, updatedAt: s.updatedAt },
             pageHref: s.pageHref ?? undefined,
