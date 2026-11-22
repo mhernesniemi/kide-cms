@@ -57,6 +57,19 @@ jobs:
         working-directory: src/cms
         run: npm publish --provenance
 
+      # Versioned on its own: skipped when this version is already on npm. pnpm pack
+      # rewrites the workspace:* dev dependency; npm publishes the tarball (OIDC).
+      - name: Publish @kidecms/wordpress
+        working-directory: packages/wordpress
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "@kidecms/wordpress@$VERSION" version >/dev/null 2>&1; then
+            echo "@kidecms/wordpress@$VERSION already published"
+            exit 0
+          fi
+          pnpm pack --pack-destination "$RUNNER_TEMP"
+          npm publish "$RUNNER_TEMP/kidecms-wordpress-$VERSION.tgz" --provenance --access public
+
       # Notes come from the tag's CHANGELOG section; the title stays the bare
       # tag — edit on github.com to append a descriptive suffix if wanted.
       - name: Create GitHub Release
