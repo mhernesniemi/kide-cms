@@ -1,4 +1,5 @@
 import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
+import { StaticEditorContent } from "./editor-static";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { Node } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -723,7 +724,12 @@ export default function ContentEditor({
           </div>
         </div>
       ) : (
-        <div className="prose prose-sm max-w-none" style={{ minHeight, padding: "0.625rem 0.75rem" }} />
+        <StaticEditorContent
+          value={cmsJson}
+          types={types}
+          className={cn("tiptap prose prose-sm max-w-none px-5 py-3 text-base", fullscreen && "pr-8")}
+          style={{ minHeight }}
+        />
       )}
 
       <ImageBrowseDialog

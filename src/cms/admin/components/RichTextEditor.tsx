@@ -1,4 +1,5 @@
 import { useEditor, EditorContent } from "@tiptap/react";
+import { StaticEditorContent } from "./editor-static";
 import StarterKit from "@tiptap/starter-kit";
 import { EditorImage } from "./EditorImage";
 import Link from "@tiptap/extension-link";
@@ -575,7 +576,11 @@ export default function RichTextEditor({ name, initialValue, rows = 10, onChange
       ) : editor ? (
         <EditorContent editor={editor} />
       ) : (
-        <div className="prose prose-sm max-w-none" style={{ minHeight, padding: "0.625rem 0.75rem" }} />
+        <StaticEditorContent
+          value={cmsJson}
+          className="tiptap prose prose-sm max-w-none text-base"
+          style={{ minHeight, padding: "0.625rem 0.75rem" }}
+        />
       )}
 
       <ImageBrowseDialog
