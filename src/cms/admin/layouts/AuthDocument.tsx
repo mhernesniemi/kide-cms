@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AdminAssets } from "../render/page";
+import { ADMIN_FAVICON } from "./favicon";
 
 const THEME_SCRIPT = `(function () {
   var t = localStorage.getItem("admin-theme") || "system";
@@ -22,8 +23,7 @@ export function AuthDocument({
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" type="image/svg+xml" href={ADMIN_FAVICON} />
         <title>{title}</title>
         {theme && <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />}
         <AdminAssets />

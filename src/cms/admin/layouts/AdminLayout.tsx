@@ -34,6 +34,7 @@ import { canRead } from "../lib/access";
 import { AdminAssets } from "../render/page";
 import { isApprover, resolveCollaboration } from "../../core";
 import type { CmsContext } from "../../routes/context";
+import { ADMIN_FAVICON } from "./favicon";
 
 const TZ_SCRIPT = `if (!document.cookie.includes("tz="))
   document.cookie = "tz=" + Intl.DateTimeFormat().resolvedOptions().timeZone + ";path=/;max-age=31536000";`;
@@ -350,8 +351,7 @@ export function AdminDocument({ title, children }: { title: string; children?: R
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" type="image/svg+xml" href={ADMIN_FAVICON} />
         <title>{title}</title>
         <script dangerouslySetInnerHTML={{ __html: TZ_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />

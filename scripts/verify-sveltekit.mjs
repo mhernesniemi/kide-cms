@@ -43,6 +43,8 @@ try {
   ]) {
     rmSync(path.join(dir, astroOnly), { recursive: true, force: true });
   }
+  // Astro's favicon.ico; the overlay brings the Svelte favicon.svg.
+  rmSync(path.join(dir, "public/favicon.ico"), { force: true });
   const overlay = path.join(dir, "adapters/sveltekit");
   cpSync(overlay, dir, {
     recursive: true,
