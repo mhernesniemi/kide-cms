@@ -7,6 +7,14 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.42.1] - 2026-11-22
+
+### Fixed
+
+- **`pnpm add` in embedded projects** works without `-w`: the scaffolded and ejected `pnpm-workspace.yaml`
+  sets `ignoreWorkspaceRootCheck: true`. Existing embedded projects: add that line to their
+  `pnpm-workspace.yaml`.
+
 ## [0.42.0] - 2026-11-22
 
 ### Breaking
