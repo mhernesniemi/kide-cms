@@ -7,6 +7,19 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.43.1] - 2026-11-22
+
+### Fixed
+
+- SvelteKit projects on Cloudflare resize images: the SvelteKit `wrangler.toml` now declares the Images binding
+  (`[images] binding = "IMAGES"`), which the Astro adapter adds on its own. Existing SvelteKit Cloudflare projects:
+  add those two lines to `wrangler.toml`.
+
+### Changed
+
+- The `@kidecms/core` README, `AGENTS.md` and the SvelteKit adapter notes describe Kide as the CMS for
+  Vite-powered frameworks (Astro and SvelteKit) and name `KIDE_SECRET` as the production secret.
+
 ## [0.43.0] - 2026-11-22
 
 ### Added
