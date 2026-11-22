@@ -1,3 +1,5 @@
 packages:
   - src/cms
   - packages/*
+# The root is the app, not a monorepo root: let `pnpm add` install here without -w.
+ignoreWorkspaceRootCheck: true

@@ -124,7 +124,7 @@ const eject = () => {
   cpSync(path.join(packageRoot, "package.json"), path.join(corePath, "package.json"));
 
   if (!hasWorkspaceFile) {
-    writeFileSync(workspacePath, "packages:\n  - src/cms\n");
+    writeFileSync(workspacePath, "packages:\n  - src/cms\nignoreWorkspaceRootCheck: true\n");
   }
 
   rootPkg.dependencies["@kidecms/core"] = "workspace:*";
