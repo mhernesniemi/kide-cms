@@ -7,24 +7,35 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
-## [Unreleased]
+## [0.43.0] - 2026-11-22
 
 ### Added
 
 - **SvelteKit support (new).** Kide now runs on Vite-powered frameworks: Astro and SvelteKit. A SvelteKit
   project adds `kideSvelteKit()` to `vite.config.ts` and `export { handle } from "@kidecms/core/sveltekit/hooks"`
   to `src/hooks.server.ts`; the rest of the CMS (collections, local API, admin, Node and Cloudflare targets) is
-  shared. See `adapters/sveltekit/README.md`.
+  shared, and public pages use SvelteKit's own routing. `create-kide-app` asks which framework to scaffold. See
+  `adapters/sveltekit/README.md`.
 - `@kidecms/core/vite` (`kide()`) and `@kidecms/core/handler` (`handleKideRequest`) for wiring Kide into other
   Vite hosts.
+- **Asset folders:** the open folder's heading has a ⋯ menu (Rename, Move to…, Delete), folders can be moved
+  into other folders, and dragging a selection of assets moves all of them.
 
 ### Changed
 
-- The admin no longer renders through Astro: pages are server-rendered React with hydrated islands, and every
-  `/admin/*`, `/api/cms/*` and `/uploads/*` request goes through Kide's own router. Astro projects need no changes.
-  Embedded projects with edits to admin `.astro` views should port them to the `.tsx` equivalents in
-  `src/cms/admin/`.
+- **The admin is a single-page app.** The first visit is server-rendered; after that, navigation fetches only
+  the next page's data and renders it in the browser, and saving updates the page in place. Astro projects need
+  no changes. Embedded projects that edited admin views should port those edits: views are React (`.tsx`), split
+  into a server loader (`admin/views/*.load.ts`) and a render (`admin/views/*.tsx`).
+- Rich text and content fields show their content before the editor loads, instead of an empty box.
+- The admin has its own favicon (Kide's mark, adapting to light and dark), and SvelteKit sites get the Svelte
+  favicon; a project's `public/favicon.svg` is now only the public site's.
 - Custom admin pages in Astro projects keep using `@kidecms/core/admin/layouts/AdminLayout.astro`.
+
+### Fixed
+
+- The asset edit sheet closes and refreshes after a save again.
+- Delete and other dialogs no longer nest a button inside a button.
 
 ## [0.42.2] - 2026-11-22
 
