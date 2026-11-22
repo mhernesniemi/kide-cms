@@ -16,6 +16,10 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
   `verify`, `check-live`, same flags). 0.41.0 also removed `@kidecms/core/importer`: mappings import
   `defineMapping` and `skipSource` from `@kidecms/wordpress`.
 
+### Fixed
+
+- **`.nvmrc`** pins Node 22.23.4, matching the `engines` minimum (was 22.23.0).
+
 ## [0.41.0] - 2026-11-21
 
 ### Added
