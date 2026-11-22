@@ -1,6 +1,6 @@
 # Kide CMS
 
-Code-first, single-schema CMS built inside Astro 7. The CMS runtime is the `@kidecms/core` workspace package embedded at `src/cms/` (linked via `pnpm-workspace.yaml` + `"@kidecms/core": "workspace:*"`). The same package can be installed from npm instead ("package mode") — this repo is both the embedded template and the package source. In this repo you edit the runtime directly — own your code.
+Code-first, single-schema CMS that runs inside a Vite-powered app: Astro 7 (this repo's template) or SvelteKit (`adapters/sveltekit`). The CMS runtime is the `@kidecms/core` workspace package embedded at `src/cms/` (linked via `pnpm-workspace.yaml` + `"@kidecms/core": "workspace:*"`). The same package can be installed from npm instead ("package mode") — this repo is both the embedded template and the package source. In this repo you edit the runtime directly — own your code.
 
 ## Repo Structure
 

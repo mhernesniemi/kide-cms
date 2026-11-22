@@ -1,6 +1,6 @@
 # AGENTS.md — building on and migrating content into Kide
 
-Kide is a code-first CMS inside Astro (collections in `src/cms/collections/`, local SQLite in dev). If you're an agent **importing content from another CMS** (WordPress, Payload, Contentful, …), read this first — it removes the guesswork that makes migrations fail on the first try. **Building app features on top of Kide** (member areas, synced data, background jobs)? Read [Building an app on Kide](#building-an-app-on-kide) first.
+Kide is a code-first CMS that runs inside your Astro or SvelteKit app (collections in `src/cms/collections/`, local SQLite in dev). If you're an agent **importing content from another CMS** (WordPress, Payload, Contentful, …), read this first — it removes the guesswork that makes migrations fail on the first try. **Building app features on top of Kide** (member areas, synced data, background jobs)? Read [Building an app on Kide](#building-an-app-on-kide) first.
 
 > **Upgrading the vendored Kide core instead?** (Embedded/ejected projects only — package mode upgrades with `pnpm add @kidecms/core@latest`.) Run `pnpm cms:upgrade <target-tag>` first, then read `.kide/upgrade/<from>-to-<to>/agent-instructions.md`. The packet is agent-agnostic: use it with Codex, Claude, Cursor, or manually. Preserve project-specific collections, adapters, migrations, public pages, and custom components unless the packet shows an upstream change that clearly belongs in this client. To abandon an upgrade attempt, run `pnpm cms:restore` or preview with `pnpm cms:restore --dry-run`.
 
@@ -77,7 +77,7 @@ What the code won't tell you until it bites:
 - **Don't put tenancy in `access.read`.** With a read rule, `find`/`count` load every matching row and filter in JS before `limit`/`offset`. For per-customer data, query with `_system: true` and an explicit `where` on the owner instead.
 - **The local API has no joins, `OR` or projection.** Relations store ids (resolve with `where: { _id: { in: ids } }`); scope with equality `where`s and filter the rest in code when the set is small.
 - **Background work:** declare handlers in `integrations.tasks` and recurring runs in `integrations.schedules`; enqueue with `cms.tasks.enqueue(type, payload)`. On Node, call `/api/cms/cron/tasks` (and `/api/cms/cron/publish` for scheduled publishing) from cron with `Authorization: Bearer $CRON_SECRET`; nothing runs them otherwise.
-- **Never cache personalised pages:** keep them out of `routeRules` (or call `Astro.cache.set(false)`).
+- **Never cache personalised pages:** in Astro, keep them out of `routeRules` (or call `Astro.cache.set(false)`); in SvelteKit, don't set cache headers on them.
 - **Scripts get typed collections** with `createCmsContext<typeof import("@/cms/.generated/api").cms>()`. Stop the dev server first — SQLite has a single writer.
 
 ## Validation checklist (definition of done)

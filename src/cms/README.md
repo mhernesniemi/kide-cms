@@ -1,6 +1,6 @@
 # @kidecms/core
 
-The runtime behind [Kide CMS](https://github.com/mhernesniemi/kide-cms) — a code-first CMS built for Astro. Define collections in TypeScript, get a generated admin UI and typed content API.
+The runtime behind [Kide CMS](https://github.com/mhernesniemi/kide-cms), the CMS that lives in your app. For Vite-powered frameworks: Astro and SvelteKit. Define collections in TypeScript, get a generated admin UI and typed content API.
 
 You normally don't install this package directly. Scaffold a project with:
 
