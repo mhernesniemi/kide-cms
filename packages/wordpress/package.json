@@ -1,7 +1,6 @@
 {
   "name": "@kidecms/wordpress",
   "version": "0.1.0",
-  "private": true,
   "description": "WordPress → Kide CMS importer: scout a MySQL dump, map it with defineMapping, then plan → apply → verify → check-live.",
   "type": "module",
   "license": "MIT",
@@ -28,5 +27,10 @@
   "scripts": {
     "check": "tsc --noEmit -p .",
     "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mhernesniemi/kide-cms.git",
+    "directory": "packages/wordpress"
   }
 }
