@@ -12,6 +12,10 @@ compatibility_flags = ["nodejs_compat", "nodejs_compat_populate_process_env"]  #
 binding = "ASSETS"
 directory = ".svelte-kit/cloudflare"
 
+# Resizes uploads on request; without it images are served at their original size.
+[images]
+binding = "IMAGES"
+
 [[d1_databases]]
 binding = "CMS_DB"
 database_name = "{{PROJECT_NAME}}-db"
