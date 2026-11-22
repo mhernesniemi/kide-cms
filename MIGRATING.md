@@ -7,21 +7,21 @@ Goal: an import where the admin is correct on the first real run (proper field
 controls, resolved images/relations, working locales and search) and where you can
 **prove** nothing was silently lost.
 
-## WordPress: the `kide import` pipeline
+## WordPress: the `kide-wp` pipeline
 
 For WordPress, don't write an importer script. You write **mappings** (source →
 Kide as plain functions) and the pipeline does the rest: parsing (with WordPress's own
 block, shortcode and autop code), staging, coverage accounting, validation, media,
 incremental writes and reconciliation. It's the `@kidecms/wordpress` plugin:
-`pnpm add -D @kidecms/wordpress` adds the `kide import` command and the mapping API.
+`pnpm add -D @kidecms/wordpress` adds the `kide-wp` command and the mapping API.
 
 ```bash
-pnpm exec kide import scout <dump.sql[.gz]> --uploads <wp-content/uploads>   # stage the source, write .kide/import/profile.md
-pnpm exec kide import sample <type> [--id N]                                 # see real staged records
-pnpm exec kide import plan                                                   # run mappings → .kide/import/ledger.md (exit 1 = blocked)
-pnpm exec kide import apply                                                  # write changed docs only, upload media, prune stale docs
-pnpm exec kide import verify                                                 # read everything back, reconcile with the plan
-pnpm exec kide import check-live                                             # compare with the rendered live site → live.md
+pnpm exec kide-wp scout <dump.sql[.gz]> --uploads <wp-content/uploads>   # stage the source, write .kide/import/profile.md
+pnpm exec kide-wp sample <type> [--id N]                                 # see real staged records
+pnpm exec kide-wp plan                                                   # run mappings → .kide/import/ledger.md (exit 1 = blocked)
+pnpm exec kide-wp apply                                                  # write changed docs only, upload media, prune stale docs
+pnpm exec kide-wp verify                                                 # read everything back, reconcile with the plan
+pnpm exec kide-wp check-live                                             # compare with the rendered live site → live.md
 ```
 
 The loop is **scout → model (Kide-native) → map → plan until READY → apply → verify →
@@ -263,9 +263,9 @@ translation group becomes one document (the version written first is the base, w
 `_sourceLocale` set to its language) plus an overlay per other locale with its translatable fields.
 
 Source types are independent, so mappings can be written **in parallel** (one agent per
-type). `pnpm exec kide import plan --only post` checks one type without saving the plan.
+type). `pnpm exec kide-wp plan --only post` checks one type without saving the plan.
 `--show <wp id or record key>` (`--show 12`, `--show form:4`) prints the planned document for
-one record; `kide import sample <type> --full` shows records without truncation.
+one record; `kide-wp sample <type> --full` shows records without truncation.
 
 ### 4. Plan until READY
 

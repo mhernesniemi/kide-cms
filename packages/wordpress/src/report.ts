@@ -110,7 +110,7 @@ export const renderLedger = (plan: PlanResult): string => {
     "# Import plan ledger",
     "",
     plan.blocking.length
-      ? `**BLOCKED** — ${plan.blocking.length} problem(s). \`kide import apply\` refuses until they're fixed:`
+      ? `**BLOCKED** — ${plan.blocking.length} problem(s). \`kide-wp apply\` refuses until they're fixed:`
       : `**READY** — every source path is mapped or dropped; ${plan.docs.length} documents planned.`,
     "",
     ...plan.blocking.map((b) => `- ${b}`),
