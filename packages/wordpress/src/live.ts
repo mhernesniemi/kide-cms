@@ -1,5 +1,5 @@
 /**
- * `kide import check-live`: the rendered source site is the judge. Every planned document with a
+ * `kide-wp check-live`: the rendered source site is the judge. Every planned document with a
  * WordPress permalink is fetched from the live site; its visible content blocks must be found in
  * the Kide document. Catches content a theme renders from somewhere the database checks can't
  * see (template fields, options pages, widgets). Text shared by many pages (navigation, footer,
@@ -83,7 +83,7 @@ export const checkLive = async (
   options: { baseUrl?: string; concurrency?: number; limit?: number; refresh?: boolean } = {},
 ): Promise<LiveReport> => {
   const plan = loadPlan(staging);
-  if (!plan) throw new Error("No plan yet — run `kide import plan` first.");
+  if (!plan) throw new Error("No plan yet — run `kide-wp plan` first.");
   const base = (options.baseUrl ?? getMeta(staging, "siteUrl") ?? "").replace(/\/$/, "");
   if (!base) throw new Error("No site URL — pass --base <https://site>.");
   const records = new Map(loadRecords(staging).map((r) => [r.key, r]));

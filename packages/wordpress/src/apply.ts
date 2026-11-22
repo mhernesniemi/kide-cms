@@ -1,5 +1,5 @@
 /**
- * `kide import apply`: write the stored plan incrementally. Unchanged documents
+ * `kide-wp apply`: write the stored plan incrementally. Unchanged documents
  * (same hash, still present) are skipped, media is uploaded once in parallel and
  * remembered, writes are batched in transactions with a savepoint per document,
  * and documents the importer created earlier but the plan no longer contains are
@@ -107,7 +107,7 @@ export const applyImport = async (
 ): Promise<ApplyReport> => {
   const started = Date.now();
   const plan = loadPlan(staging);
-  if (!plan) throw new Error("No plan yet — run `kide import plan` first.");
+  if (!plan) throw new Error("No plan yet — run `kide-wp plan` first.");
   if (plan.blocking.length && !options.force)
     throw new Error(
       `The plan is blocked (${plan.blocking.length} problem(s), see .kide/import/ledger.md). Fix them or pass --force.`,

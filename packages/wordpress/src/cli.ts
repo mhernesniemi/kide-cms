@@ -1,12 +1,12 @@
 /**
  * Mapping-driven content import (WordPress for now).
  *
- *   kide import scout <dump.sql[.gz]> [--uploads <wp-content/uploads dir>] [--media-base <url>] [--site-url <url>] [--prefix wp_]
- *   kide import sample <type> [--id <n>] [--n 2] [--full]
- *   kide import plan [--only <type,type>] [--show <id|key>] [--min-recall 0.95]
- *   kide import apply [--all] [--force] [--no-prune] [--concurrency 12]
- *   kide import verify [--min-recall 0.95]
- *   kide import check-live [--base <url>] [--min-score 0.9] [--concurrency 6] [--limit N] [--refresh]
+ *   kide-wp scout <dump.sql[.gz]> [--uploads <wp-content/uploads dir>] [--media-base <url>] [--site-url <url>] [--prefix wp_]
+ *   kide-wp sample <type> [--id <n>] [--n 2] [--full]
+ *   kide-wp plan [--only <type,type>] [--show <id|key>] [--min-recall 0.95]
+ *   kide-wp apply [--all] [--force] [--no-prune] [--concurrency 12]
+ *   kide-wp verify [--min-recall 0.95]
+ *   kide-wp check-live [--base <url>] [--min-score 0.9] [--concurrency 6] [--limit N] [--refresh]
  *
  * Mappings live in migration/*.map.ts. Outputs go to .kide/import/.
  */
@@ -27,7 +27,7 @@ import { loadProjectConfig, loadProjectRuntime } from "@kidecms/core/internals/p
 // Per-document audit lines would bury the report on a real site.
 process.env.CMS_LOG_LEVEL ??= "warn";
 
-const USAGE = `Usage: kide import <command>  (playbook: MIGRATING.md)
+const USAGE = `Usage: kide-wp <command>  (playbook: MIGRATING.md)
 
   scout <dump.sql[.gz]> [--uploads <dir>] [--site-url <url>] [--media-base <url>] [--prefix wp_]
   sample <type> [--id <n>] [--n 2] [--full]       staged records of a source type
@@ -52,7 +52,7 @@ const option = (name: string) => {
 const positional = args.filter((a, i) => !a.startsWith("--") && !args[i - 1]?.startsWith("--"));
 const out = (file: string) => path.relative(process.cwd(), path.join(importDir(), file));
 const fail = (message: string): never => {
-  console.error(`[kide import] ${message}`);
+  console.error(`[kide-wp] ${message}`);
   process.exit(1);
 };
 
@@ -70,7 +70,7 @@ const shorten = (value: unknown, full: boolean): unknown => {
 try {
   switch (command) {
     case "scout": {
-      const dump = positional[0] ?? fail("usage: kide import scout <dump.sql[.gz]> [--uploads <dir>]");
+      const dump = positional[0] ?? fail("usage: kide-wp scout <dump.sql[.gz]> [--uploads <dir>]");
       const started = Date.now();
       let uploads = option("uploads") ? path.resolve(option("uploads")!) : undefined;
       // A Bedrock checkout has an empty uploads folder (just .gitkeep): download from the site instead.
@@ -78,7 +78,7 @@ try {
         uploads &&
         !readdirSync(uploads, { recursive: true }).some((f) => !String(f).split("/").pop()!.startsWith("."))
       ) {
-        console.log(`[kide import] ${uploads} holds no files — media will be downloaded from the site on apply.`);
+        console.log(`[kide-wp] ${uploads} holds no files — media will be downloaded from the site on apply.`);
         uploads = undefined;
       }
       const summary = await scoutWordPress(staging, path.resolve(dump), {
@@ -95,16 +95,16 @@ try {
       writeFileSync(path.join(importDir(), "profile.md"), renderProfile(meta, profile, loadMedia(staging)));
       writeFileSync(path.join(importDir(), "profile.json"), JSON.stringify({ meta, types: profile }, null, 2));
       console.log(
-        `[kide import] Staged ${summary.records} records + ${summary.media} media from ${summary.siteUrl || dump} (prefix ${summary.prefix}) in ${Date.now() - started}ms.`,
+        `[kide-wp] Staged ${summary.records} records + ${summary.media} media from ${summary.siteUrl || dump} (prefix ${summary.prefix}) in ${Date.now() - started}ms.`,
       );
       for (const [type, n] of Object.entries(summary.types).sort((a, b) => b[1] - a[1]))
         console.log(`  ${type.padEnd(28)} ${n}`);
-      console.log(`Read ${out("profile.md")}, then write migration/<type>.map.ts and run \`kide import plan\`.`);
+      console.log(`Read ${out("profile.md")}, then write migration/<type>.map.ts and run \`kide-wp plan\`.`);
       break;
     }
 
     case "sample": {
-      const type = positional[0] ?? fail("usage: kide import sample <type> [--id <n>] [--n 2] [--full]");
+      const type = positional[0] ?? fail("usage: kide-wp sample <type> [--id <n>] [--n 2] [--full]");
       const id = option("id");
       const n = Number(option("n") ?? 2);
       const list = loadRecords(staging).filter((r) => r.type === type && (!id || String(r.id) === id));
@@ -137,7 +137,7 @@ try {
         const issues = l.issues.filter((i) => i.kind !== "warning").length;
         return `  ${l.source.padEnd(24)} → ${String(l.collection).padEnd(16)} ${String(l.docs).padStart(5)} docs · ${open} unaccounted · ${issues} issues · recall min ${(l.recall.min * 100).toFixed(1)}%`;
       });
-      console.log(`[kide import] Planned ${plan.docs.length} documents in ${plan.durationMs}ms.`);
+      console.log(`[kide-wp] Planned ${plan.docs.length} documents in ${plan.durationMs}ms.`);
       console.log(totals.join("\n"));
       if (plan.blocking.length) {
         console.log(`\nBLOCKED (${plan.blocking.length}) — details in ${out("ledger.md")}:`);
@@ -159,7 +159,7 @@ try {
         concurrency: option("concurrency") ? Number(option("concurrency")) : undefined,
       });
       console.log(
-        `[kide import] ${r.created} created · ${r.updated} updated · ${r.unchanged} unchanged · ${r.deleted} deleted · media ${r.media.uploaded} uploaded, ${r.media.reused} reused · ${r.durationMs}ms`,
+        `[kide-wp] ${r.created} created · ${r.updated} updated · ${r.unchanged} unchanged · ${r.deleted} deleted · media ${r.media.uploaded} uploaded, ${r.media.reused} reused · ${r.durationMs}ms`,
       );
       if (r.media.missing.length)
         console.log(`  ${r.media.missing.length} file(s) missing at the source (4xx), their references dropped:`);
@@ -167,7 +167,7 @@ try {
       for (const f of r.media.failed.slice(0, 20)) console.log(`  media failed: ${f.key} — ${f.message}`);
       for (const f of r.failed.slice(0, 20)) console.log(`  failed: ${f.docId} — ${f.message}`);
       if (r.failed.length || r.media.failed.length) process.exitCode = 1;
-      else console.log("Run `kide import verify` to reconcile the CMS against the plan.");
+      else console.log("Run `kide-wp verify` to reconcile the CMS against the plan.");
       break;
     }
 
@@ -182,7 +182,7 @@ try {
         path.join(importDir(), "verify.md"),
         `# Verify\n\n${r.ok}/${r.checked} documents match the plan.\n\n${lines.join("\n")}\n`,
       );
-      console.log(`[kide import] ${r.ok}/${r.checked} documents match the plan.`);
+      console.log(`[kide-wp] ${r.ok}/${r.checked} documents match the plan.`);
       for (const l of lines.slice(0, 30)) console.log(`  ${l}`);
       if (r.problems.length) process.exitCode = 1;
       break;
@@ -203,7 +203,7 @@ try {
       const below = ok.filter((p) => score(p) < minScore);
       const mean = ok.length ? ok.reduce((a, p) => a + score(p), 0) / ok.length : 1;
       console.log(
-        `[kide import] ${r.pages.length} live pages in ${Date.now() - started}ms · mean ${(mean * 100).toFixed(1)}% · ${below.length} below ${(minScore * 100).toFixed(0)}% · ${ok.filter((p) => p.skipped.length).length} show skipped-source text · ${ok.filter((p) => p.drift.length).length} with text not in the dump · ${r.pages.length - ok.length} not 200 · ${r.failed.length} failed`,
+        `[kide-wp] ${r.pages.length} live pages in ${Date.now() - started}ms · mean ${(mean * 100).toFixed(1)}% · ${below.length} below ${(minScore * 100).toFixed(0)}% · ${ok.filter((p) => p.skipped.length).length} show skipped-source text · ${ok.filter((p) => p.drift.length).length} with text not in the dump · ${r.pages.length - ok.length} not 200 · ${r.failed.length} failed`,
       );
       console.log(`Details: ${out("live.md")}`);
       if (below.length || r.failed.length) process.exitCode = 1;

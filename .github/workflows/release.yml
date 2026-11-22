@@ -52,11 +52,6 @@ jobs:
       - run: pnpm verify:starters
       - run: node scripts/verify-upgrade.mjs
 
-      # npm itself, not pnpm, so the OIDC exchange runs (src/cms has no workspace: deps).
-      - name: Publish @kidecms/core
-        working-directory: src/cms
-        run: npm publish --provenance
-
       # Versioned on its own: skipped when this version is already on npm. pnpm pack
       # rewrites the workspace:* dev dependency; npm publishes the tarball (OIDC).
       - name: Publish @kidecms/wordpress
@@ -69,6 +64,11 @@ jobs:
           fi
           pnpm pack --pack-destination "$RUNNER_TEMP"
           npm publish "$RUNNER_TEMP/kidecms-wordpress-$VERSION.tgz" --provenance --access public
+
+      # npm itself, not pnpm, so the OIDC exchange runs (src/cms has no workspace: deps).
+      - name: Publish @kidecms/core
+        working-directory: src/cms
+        run: npm publish --provenance
 
       # Notes come from the tag's CHANGELOG section; the title stays the bare
       # tag — edit on github.com to append a descriptive suffix if wanted.

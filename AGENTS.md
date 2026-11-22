@@ -24,7 +24,7 @@ Kide is a code-first CMS inside Astro (collections in `src/cms/collections/`, lo
 pnpm cms:generate && pnpm cms:push     # sync schema (renames/drops: --recreate=slug --allow-data-loss)
 ```
 
-- **WordPress:** use the mapping pipeline from `@kidecms/wordpress` (`pnpm add -D @kidecms/wordpress`): `pnpm exec kide import scout <dump> --uploads <dir>` → write `migration/<type>.map.ts` → `pnpm exec kide import plan` until READY → `apply` → `verify`.
+- **WordPress:** use the mapping pipeline from `@kidecms/wordpress` (`pnpm add -D @kidecms/wordpress`): `pnpm exec kide-wp scout <dump> --uploads <dir>` → write `migration/<type>.map.ts` → `pnpm exec kide-wp plan` until READY → `apply` → `verify`.
 - **Other sources:** write an importer script with `load()` (below), then `pnpm cms:reindex`.
 
 **Full playbook: read [`MIGRATING.md`](./MIGRATING.md).** (Also available as the `/migrate` skill where project skills are loaded, but the file is the source of truth.)

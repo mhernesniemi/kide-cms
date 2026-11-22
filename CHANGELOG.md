@@ -7,6 +7,15 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [Unreleased]
+
+### Breaking
+
+- **The WordPress importer has its own command.** `kide import` is gone from core's CLI; run
+  `pnpm exec kide-wp <command>` from `@kidecms/wordpress` 0.2.0 instead (`scout`, `sample`, `plan`, `apply`,
+  `verify`, `check-live`, same flags). 0.41.0 also removed `@kidecms/core/importer`: mappings import
+  `defineMapping` and `skipSource` from `@kidecms/wordpress`.
+
 ## [0.41.0] - 2026-11-21
 
 ### Added

@@ -1,5 +1,5 @@
 /**
- * `kide import verify`: read every planned document back through the CMS API and
+ * `kide-wp verify`: read every planned document back through the CMS API and
  * reconcile it with the plan — present, every planned field still filled, media
  * resolved, translations stored, and the source text actually in the database.
  */
@@ -19,7 +19,7 @@ export type VerifyReport = {
 
 export const verifyImport = async (staging: Staging, options: { minRecall?: number } = {}): Promise<VerifyReport> => {
   const plan = loadPlan(staging);
-  if (!plan) throw new Error("No plan yet — run `kide import plan` first.");
+  if (!plan) throw new Error("No plan yet — run `kide-wp plan` first.");
   const minRecall = options.minRecall ?? 0.95;
   const { cms, config, dispose } = await createCmsContext();
   const records = new Map(loadRecords(staging).map((r) => [r.key, r]));

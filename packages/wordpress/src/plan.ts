@@ -1,5 +1,5 @@
 /**
- * `kide import plan`: run every mapping over the staged source and produce
+ * `kide-wp plan`: run every mapping over the staged source and produce
  *   - the documents to write (validated, hashed, media as placeholder tokens),
  *   - a coverage ledger: every source path mapped, dropped with a reason, or unaccounted,
  *   - integrity checks: dangling refs, missing media, text recall per record.
