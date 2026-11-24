@@ -7,6 +7,17 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.43.2] - 2026-11-24
+
+### Added
+
+- The assets view shows a folder's subfolders as tiles above its assets. Click one to open it, or drop assets on it
+  to move them there.
+
+### Changed
+
+- Kide is documented as the CMS for Astro. SvelteKit support stays in the runtime but is no longer advertised.
+
 ## [0.43.1] - 2026-11-22
 
 ### Fixed
