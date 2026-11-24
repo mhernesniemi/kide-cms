@@ -543,11 +543,11 @@ describe("translations", () => {
     expect(afterPublish).not.toHaveBeenCalled();
 
     await posts.publishTranslation(post._id, "fi");
-    expect(beforePublish).toHaveBeenCalledOnce();
+    expect(beforePublish).toHaveBeenCalledWith(expect.objectContaining({ title: "Koukussa" }), expect.anything());
     expect(afterPublish).toHaveBeenCalledWith(expect.objectContaining({ title: "Koukussa" }), expect.anything());
 
     await posts.upsertTranslation(post._id, "fi", { title: "Koukussa 2", _status: "published" });
-    expect(beforePublish).toHaveBeenCalledTimes(2);
+    expect(beforePublish).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Koukussa 2" }), expect.anything());
     expect(afterPublish).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Koukussa 2" }), expect.anything());
   });
 

@@ -1762,7 +1762,10 @@ export const createCms = (config: CMSConfig) => {
         // Before publish hook
         const publishHookContext = getHookContext(collection, "publish", context);
         if (collection.drafts && publishNow) {
-          await collection.hooks?.beforePublish?.(existing, publishHookContext);
+          // The translation about to be published: its current text plus the new changes
+          const current = (await this.findById(id, { locale, status: "any" }, context))!;
+          const incoming = Object.entries(transformedFiltered).map(([key, value]) => [key, value ?? existing[key]]);
+          await collection.hooks?.beforePublish?.({ ...current, ...Object.fromEntries(incoming) }, publishHookContext);
         }
 
         if (existingTranslation) {
@@ -1807,9 +1810,12 @@ export const createCms = (config: CMSConfig) => {
 
       async publishTranslation(id: string, locale: string, context: RuntimeContext = {}) {
         if (!collection.drafts) throw new Error(`${collection.labels.singular} does not support draft status.`);
-        const { db, tables, existing } = await translationAccess(id, locale, "publish", context);
+        const { db, tables } = await translationAccess(id, locale, "publish", context);
         const hookContext = getHookContext(collection, "publish", context);
-        await collection.hooks?.beforePublish?.(existing, hookContext);
+        await collection.hooks?.beforePublish?.(
+          (await this.findById(id, { locale, status: "any" }, context))!,
+          hookContext,
+        );
         await db
           .update(tables.translations)
           .set({ _status: "published", _published: null, _updatedAt: now() })
