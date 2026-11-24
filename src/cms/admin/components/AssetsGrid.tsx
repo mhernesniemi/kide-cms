@@ -260,6 +260,31 @@ function FolderRow({
 }
 
 // -----------------------------------------------
+// Subfolder tile (main pane; drop target + link)
+// -----------------------------------------------
+
+function SubfolderTile({ folder }: { folder: FolderItem }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `tile-${folder._id}`,
+    data: { type: "folder", folderId: folder._id },
+  });
+
+  return (
+    <a
+      ref={setNodeRef}
+      href={assetsUrl({ scope: folder._id })}
+      className={cn(
+        "bg-card hover:bg-foreground/5 flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm transition-colors",
+        isOver && "bg-primary/15 border-primary/40",
+      )}
+    >
+      <Folder className="text-muted-foreground size-4 shrink-0" />
+      <span className="truncate">{folder.name}</span>
+    </a>
+  );
+}
+
+// -----------------------------------------------
 // Drag overlay (ghost while dragging)
 // -----------------------------------------------
 
@@ -773,6 +798,11 @@ export default function AssetsGrid({
     refreshPage();
   }
 
+  const subfolders =
+    currentFolderId && !query.trim()
+      ? folders.filter((f) => f.parent === currentFolderId).sort((a, b) => a.name.localeCompare(b.name))
+      : [];
+
   const emptyStateMessage = query.trim()
     ? `No assets match “${query.trim()}”.`
     : scope === "unfiled"
@@ -1009,6 +1039,14 @@ export default function AssetsGrid({
               </div>
             )}
 
+            {subfolders.length > 0 && (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                {subfolders.map((folder) => (
+                  <SubfolderTile key={folder._id} folder={folder} />
+                ))}
+              </div>
+            )}
+
             {/* Grid or empty state. Keep the current grid visible while a new
                 filter/page loads (dimmed) to avoid an empty-then-fill flash. */}
             {items.length > 0 ? (
@@ -1032,7 +1070,7 @@ export default function AssetsGrid({
               <Card>
                 <CardContent className="text-muted-foreground py-12 text-center text-sm">Searching…</CardContent>
               </Card>
-            ) : (
+            ) : subfolders.length > 0 ? null : (
               <div className="bg-field-subtle flex h-40 flex-col items-center justify-center gap-3 rounded-lg border border-dashed">
                 <ImagePlus className="text-muted-foreground/30 size-12" />
                 <p className="text-muted-foreground text-sm">{emptyStateMessage}</p>
