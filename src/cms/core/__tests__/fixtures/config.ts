@@ -74,6 +74,7 @@ const posts = defineCollection({
       }
       return data;
     },
+    beforePublish: (doc) => doc,
     afterPublish(doc, context) {
       context.cache?.invalidate({ tags: ["posts", "home", `post:${doc._id}`] });
     },
