@@ -1,5 +1,7 @@
 # Kide CMS
 
+[![Built with Astro](https://astro.badg.es/v2/built-with-astro/tiny.svg)](https://astro.build)
+
 The CMS that lives in your **Astro** app.
 
 Define collections in TypeScript and get a generated admin UI and typed content API.
