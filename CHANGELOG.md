@@ -7,6 +7,13 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.43.3] - 2026-11-25
+
+### Fixed
+
+- New Cloudflare projects using the npm package no longer fail their first request in `pnpm dev` with "runtime not
+  initialized" ([#20](https://github.com/mhernesniemi/kide-cms/issues/20)).
+
 ## [0.43.2] - 2026-11-24
 
 ### Added
