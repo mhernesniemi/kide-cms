@@ -7,6 +7,12 @@ changed, or against a newer tag to see what upstream has fixed since.
 Format: [Keep a Changelog](https://keepachangelog.com). Versions are git tags
 (`v<version>`) on this repo; `create-kide-app` scaffolds from the latest tag.
 
+## [0.43.4] - 2026-11-25
+
+### Fixed
+
+- New embedded Cloudflare projects no longer fail their first admin page in `pnpm dev` with "Invalid hook call".
+
 ## [0.43.3] - 2026-11-25
 
 ### Fixed
