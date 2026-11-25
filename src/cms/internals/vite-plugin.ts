@@ -169,6 +169,8 @@ export function kide(options: KideViteOptions = {}): Plugin[] {
         ],
       },
     }),
+    // A pre-bundled server copy would hold its own runtime state, apart from the source the middleware loads.
+    configEnvironment: (name) => (name === "client" ? undefined : { optimizeDeps: { exclude: ["@kidecms/core"] } }),
     configResolved(config) {
       if (sharedDeps.conflicts.length > 0) config.logger.warn(formatConflicts(sharedDeps.conflicts));
     },
