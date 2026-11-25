@@ -66,6 +66,8 @@ pnpm cms:restore      # restore files from the latest upgrade backup
 pnpm verify:pack      # assert the @kidecms/core publish manifest ships only managed files
 pnpm verify:package   # assemble a package-mode project from HEAD, build+boot it, test eject
 pnpm verify:starters  # assemble each starters/* overlay, check+seed+build it
+node scripts/verify-scaffold.mjs   # real create-kide-app for every starter × mode × target, then `pnpm dev` + first request
+                                  # flags: --starter= --mode= --target=  env: KIDE_SCAFFOLDER=<local index.js>
 node scripts/verify-sveltekit.mjs  # assemble the SvelteKit target (adapters/sveltekit), check+build+boot it, drive real requests
                                   # flags: --starter=marketing  --target=cloudflare  --mode=package
 ```

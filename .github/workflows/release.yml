@@ -55,6 +55,13 @@ jobs:
       - run: node scripts/verify-sveltekit.mjs --target=cloudflare --starter=marketing
       - run: pnpm verify:starters
       - run: node scripts/verify-upgrade.mjs
+      # Real create-kide-app → `pnpm dev` → first request, for every starter × mode × target.
+      - run: git clone --depth 1 https://github.com/mhernesniemi/create-kide-app.git "$RUNNER_TEMP/create-kide-app"
+      - run: pnpm install --no-frozen-lockfile
+        working-directory: ${{ runner.temp }}/create-kide-app
+      - run: node scripts/verify-scaffold.mjs
+        env:
+          KIDE_SCAFFOLDER: ${{ runner.temp }}/create-kide-app/index.js
 
       # Versioned on its own: skipped when this version is already on npm. pnpm pack
       # rewrites the workspace:* dev dependency; npm publishes the tarball (OIDC).
