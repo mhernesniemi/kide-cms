@@ -2,6 +2,7 @@ import type { AstroIntegration } from "astro";
 import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Plugin } from "vite";
 import { allowedDomainsFromOrigin } from "./allowed-domains";
 import { defaultGeneratorPath, runGenerator, scheduledWorkerSource, startDevSchemaSync } from "./dev-tasks";
 import { kide } from "./vite-plugin";
@@ -13,6 +14,13 @@ import { kide } from "./vite-plugin";
 const packageDir = realpathSync(path.dirname(fileURLToPath(import.meta.url)));
 const packageRoot = path.dirname(packageDir);
 const packagePath = (...segments: string[]) => path.join(packageRoot, ...segments);
+
+// Embedded, Astro's server dep scan globs the SvelteKit adapter, whose unresolvable imports abort the scan.
+const skipSvelteKitScan: Plugin = {
+  name: "kide:skip-sveltekit-scan",
+  configEnvironment: (name) =>
+    name === "client" ? undefined : { optimizeDeps: { entries: [`!${packagePath("internals", "sveltekit")}/**`] } },
+};
 
 export interface CmsIntegrationOptions {
   /** Path to the CMS config file (default: "src/cms/cms.config") */
@@ -52,17 +60,20 @@ export default function cmsIntegration(options?: CmsIntegrationOptions): AstroIn
 
         updateConfig({
           vite: {
-            plugins: kide({
-              root,
-              configPath,
-              runtimePath,
-              generatedPath,
-              adaptersPath,
-              renderers: {
-                block: "src/components/BlockRenderer.astro",
-                content: "src/components/ContentRenderer.astro",
-              },
-            }),
+            plugins: [
+              ...kide({
+                root,
+                configPath,
+                runtimePath,
+                generatedPath,
+                adaptersPath,
+                renderers: {
+                  block: "src/components/BlockRenderer.astro",
+                  content: "src/components/ContentRenderer.astro",
+                },
+              }),
+              skipSvelteKitScan,
+            ],
           },
         });
 
