@@ -1759,6 +1759,15 @@ export const createCms = (config: CMSConfig) => {
           }
         }
 
+        // Before publish hook
+        const publishHookContext = getHookContext(collection, "publish", context);
+        if (collection.drafts && publishNow) {
+          // The translation about to be published: its current text plus the new changes
+          const current = (await this.findById(id, { locale, status: "any" }, context))!;
+          const incoming = Object.entries(transformedFiltered).map(([key, value]) => [key, value ?? existing[key]]);
+          await collection.hooks?.beforePublish?.({ ...current, ...Object.fromEntries(incoming) }, publishHookContext);
+        }
+
         if (existingTranslation) {
           await db
             .update(tables.translations)
@@ -1792,21 +1801,30 @@ export const createCms = (config: CMSConfig) => {
           });
         }
 
+        const result = (await this.findById(id, { locale, status: "any" }, context))!;
+        if (collection.drafts && publishNow) await collection.hooks?.afterPublish?.(result, publishHookContext);
         if (publishNow) auditContent("content.publish", slug, id, context);
         syncSearch(config, collection, id);
-        return (await this.findById(id, { locale, status: "any" }, context))!;
+        return result;
       },
 
       async publishTranslation(id: string, locale: string, context: RuntimeContext = {}) {
         if (!collection.drafts) throw new Error(`${collection.labels.singular} does not support draft status.`);
         const { db, tables } = await translationAccess(id, locale, "publish", context);
+        const hookContext = getHookContext(collection, "publish", context);
+        await collection.hooks?.beforePublish?.(
+          (await this.findById(id, { locale, status: "any" }, context))!,
+          hookContext,
+        );
         await db
           .update(tables.translations)
           .set({ _status: "published", _published: null, _updatedAt: now() })
           .where(and(eq(tables.translations._entityId, id), eq(tables.translations._languageCode, locale)));
+        const result = (await this.findById(id, { locale, status: "any" }, context))!;
+        await collection.hooks?.afterPublish?.(result, hookContext);
         auditContent("content.publish", slug, id, context);
         syncSearch(config, collection, id);
-        return (await this.findById(id, { locale, status: "any" }, context))!;
+        return result;
       },
 
       async unpublishTranslation(id: string, locale: string, context: RuntimeContext = {}) {

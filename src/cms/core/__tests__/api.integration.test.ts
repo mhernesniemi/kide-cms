@@ -7,7 +7,7 @@ import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { pushSQLiteSchema } from "drizzle-kit/api";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import * as generatedSchema from "./fixtures/project/src/cms/.generated/schema";
 import config from "./fixtures/config";
@@ -59,6 +59,8 @@ afterAll(() => {
   resetSchema();
   sqlite.close();
 });
+
+afterEach(() => vi.restoreAllMocks());
 
 describe("create", () => {
   it("creates a document with timestamps and an auto-generated slug", async () => {
@@ -299,6 +301,23 @@ describe("drafts and publishing", () => {
     expect(after?._id).toBe(post._id);
   });
 
+  it("runs the publish hooks when a document is published", async () => {
+    const hooks = config.collections.find((collection) => collection.slug === "posts")!.hooks!;
+    const beforePublish = vi.spyOn(hooks, "beforePublish");
+    const afterPublish = vi.spyOn(hooks, "afterPublish");
+    const post = await (cms as any).posts.create({ title: "Publish hooks" });
+
+    await (cms as any).posts.publish(post._id);
+    expect(beforePublish).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Publish hooks", _status: "draft" }),
+      expect.anything(),
+    );
+    expect(afterPublish).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Publish hooks", _status: "published" }),
+      expect.anything(),
+    );
+  });
+
   it("filters, searches, sorts and counts published reads by the published values, not pending edits", async () => {
     const post = await (cms as any).posts.create({
       title: "Pending live",
@@ -511,6 +530,25 @@ describe("translations", () => {
 
     expect(await posts.deleteTranslation(post._id, "fi")).toBe(true);
     expect((await posts.findById(post._id, { status: "any" }))._availableLocales).toEqual(["en"]);
+  });
+
+  it("runs the publish hooks when a translation is published", async () => {
+    const hooks = config.collections.find((collection) => collection.slug === "posts")!.hooks!;
+    const beforePublish = vi.spyOn(hooks, "beforePublish");
+    const afterPublish = vi.spyOn(hooks, "afterPublish");
+    const posts = (cms as any).posts;
+    const post = await posts.create({ title: "Hooked", slug: "hooked" });
+
+    await posts.upsertTranslation(post._id, "fi", { title: "Koukussa", slug: "koukussa" });
+    expect(afterPublish).not.toHaveBeenCalled();
+
+    await posts.publishTranslation(post._id, "fi");
+    expect(beforePublish).toHaveBeenCalledWith(expect.objectContaining({ title: "Koukussa" }), expect.anything());
+    expect(afterPublish).toHaveBeenCalledWith(expect.objectContaining({ title: "Koukussa" }), expect.anything());
+
+    await posts.upsertTranslation(post._id, "fi", { title: "Koukussa 2", _status: "published" });
+    expect(beforePublish).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Koukussa 2" }), expect.anything());
+    expect(afterPublish).toHaveBeenLastCalledWith(expect.objectContaining({ title: "Koukussa 2" }), expect.anything());
   });
 
   it("falls back to the original for empty translation fields and flags outdated translations", async () => {
